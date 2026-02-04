@@ -1,0 +1,18 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: ubuntu-packer-image
+  description: Ubuntu Packer VM image for Harvester
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/packer/ubuntu
+  tags:
+    - harvester
+    - packer
+    - ubuntu
+    - infrastructure
+spec:
+  type: packer-image
+  lifecycle: production
+  owner: platform-team
