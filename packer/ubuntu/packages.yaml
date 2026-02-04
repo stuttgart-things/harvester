@@ -1,4 +1,3 @@
----
 packages:
   - qemu-guest-agent
   - vim
@@ -7,3 +6,4 @@ packages:
   - jq
   - apache
   - zsh
+  - nginx
