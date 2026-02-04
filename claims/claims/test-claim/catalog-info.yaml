@@ -1,0 +1,18 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-claim
+  description: Crossplane claim (volumeclaim) - test-claim
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/claims
+    claim-machinery/template: volumeclaim
+  tags:
+    - crossplane
+    - claim
+    - volumeclaim
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
