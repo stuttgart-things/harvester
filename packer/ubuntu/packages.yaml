@@ -1,0 +1,9 @@
+---
+packages:
+  - qemu-guest-agent
+  - vim
+  - curl
+  - git
+  - jq
+  - apache
+  - zsh

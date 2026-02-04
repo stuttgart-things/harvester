@@ -1,0 +1,62 @@
+---
+name: Packer PR Build ubuntu25
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "harvester/packer/ubuntu25/**"
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  packer-build:
+    name: Build and upload upstream-jammy-u25
+    runs-on: kvm
+    environment: harvester
+    env:
+      PACKER_LOG: 0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show build parameters
+        run: |
+          echo "Packer dir            : harvester/packer/ubuntu25"
+          echo "Image name            : upstream-jammy-u25"
+          echo "Upload to Harvester   : true"
+          echo "Trigger               : ${{ github.event_name }}"
+          echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
+
+      - name: Packer init
+        working-directory: harvester/packer/ubuntu25
+        run: packer init .
+
+      - name: Packer build
+        working-directory: harvester/packer/ubuntu25
+        env:
+          PKR_VAR_image_name: upstream-jammy-u25
+          PKR_VAR_upload_to_harvester: "true"
+          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
+          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+        run: packer build .
+
+      - name: Auto-merge PR
+        if: success() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Build succeeded. Auto-merging PR #${{ github.event.pull_request.number }}..."
+          gh pr merge ${{ github.event.pull_request.number }} \
+            --auto \
+            --squash \
+            --delete-branch

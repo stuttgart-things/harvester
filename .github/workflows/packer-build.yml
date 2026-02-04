@@ -1,0 +1,78 @@
+name: Packer Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      packer_dir:
+        description: "Directory containing Packer configuration"
+        required: true
+        default: "harvester/packer/ubuntu"
+        type: string
+
+      template:
+        description: "Packer template (file or directory)"
+        required: true
+        default: "."
+        type: string
+
+      var_file:
+        description: "Optional Packer var-file"
+        required: false
+        type: string
+
+      image_name:
+        description: "Name of the VM image (used as Harvester VMI name)"
+        required: false
+        default: "ubuntu-dev"
+        type: string
+
+      upload_to_harvester:
+        description: "Upload image to Harvester after build"
+        required: false
+        default: false
+        type: boolean
+
+      packer_log:
+        description: "Enable Packer debug logging"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  packer-build:
+    name: Build image with Packer
+    runs-on: kvm
+    environment: ${{ inputs.upload_to_harvester && 'harvester' || '' }}
+    env:
+      PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Show inputs
+        run: |
+          echo "Packer dir            : ${{ inputs.packer_dir }}"
+          echo "Template              : ${{ inputs.template }}"
+          echo "Var file              : ${{ inputs.var_file }}"
+          echo "Image name            : ${{ inputs.image_name }}"
+          echo "Upload to Harvester   : ${{ inputs.upload_to_harvester }}"
+          echo "Packer log            : ${{ inputs.packer_log }}"
+
+      - name: Packer init
+        working-directory: ${{ inputs.packer_dir }}
+        run: packer init ${{ inputs.template }}
+
+      - name: Packer build
+        working-directory: ${{ inputs.packer_dir }}
+        env:
+          PKR_VAR_image_name: ${{ inputs.image_name }}
+          PKR_VAR_upload_to_harvester: ${{ inputs.upload_to_harvester }}
+          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
+          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+        run: |
+          if [ -n "${{ inputs.var_file }}" ]; then
+            packer build -var-file="${{ inputs.var_file }}" ${{ inputs.template }}
+          else
+            packer build ${{ inputs.template }}
+          fi
