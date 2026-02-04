@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - "harvester/packer/ubuntu25/**"
+      - "packer/ubuntu/**"
     types:
       - opened
       - synchronize

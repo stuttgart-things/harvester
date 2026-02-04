@@ -6,7 +6,7 @@ on:
       packer_dir:
         description: "Directory containing Packer configuration"
         required: true
-        default: "harvester/packer/ubuntu"
+        default: "packer/ubuntu"
         type: string
 
       template:
@@ -32,6 +32,12 @@ on:
         default: false
         type: boolean
 
+      runner:
+        description: "Runner label to execute the job on"
+        required: true
+        default: "kvm"
+        type: string
+
       packer_log:
         description: "Enable Packer debug logging"
         required: false
@@ -41,7 +47,7 @@ on:
 jobs:
   packer-build:
     name: Build image with Packer
-    runs-on: kvm
+    runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.upload_to_harvester && 'harvester' || '' }}
     env:
       PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
