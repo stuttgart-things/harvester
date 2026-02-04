@@ -31,18 +31,18 @@ jobs:
 
       - name: Show build parameters
         run: |
-          echo "Packer dir            : harvester/packer/ubuntu"
+          echo "Packer dir            : packer/ubuntu"
           echo "Image name            : upstream"
           echo "Upload to Harvester   : true"
           echo "Trigger               : ${{ github.event_name }}"
           echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
 
       - name: Packer init
-        working-directory: harvester/packer/ubuntu
+        working-directory: packer/ubuntu
         run: packer init .
 
       - name: Packer build
-        working-directory: harvester/packer/ubuntu
+        working-directory: packer/ubuntu
         env:
           PKR_VAR_image_name: upstream
           PKR_VAR_upload_to_harvester: "true"
