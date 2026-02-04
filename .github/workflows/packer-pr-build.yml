@@ -1,5 +1,5 @@
 ---
-name: Packer PR Build ubuntu25
+name: Packer PR Build ubuntu
 
 on:
   pull_request:
@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   packer-build:
-    name: Build and upload upstream-jammy-u25
+    name: Build and upload upstream
     runs-on: kvm
     environment: harvester
     env:
@@ -31,20 +31,20 @@ jobs:
 
       - name: Show build parameters
         run: |
-          echo "Packer dir            : harvester/packer/ubuntu25"
-          echo "Image name            : upstream-jammy-u25"
+          echo "Packer dir            : harvester/packer/ubuntu"
+          echo "Image name            : upstream"
           echo "Upload to Harvester   : true"
           echo "Trigger               : ${{ github.event_name }}"
           echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
 
       - name: Packer init
-        working-directory: harvester/packer/ubuntu25
+        working-directory: harvester/packer/ubuntu
         run: packer init .
 
       - name: Packer build
-        working-directory: harvester/packer/ubuntu25
+        working-directory: harvester/packer/ubuntu
         env:
-          PKR_VAR_image_name: upstream-jammy-u25
+          PKR_VAR_image_name: upstream
           PKR_VAR_upload_to_harvester: "true"
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
