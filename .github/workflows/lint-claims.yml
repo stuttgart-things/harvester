@@ -1,0 +1,22 @@
+name: Lint Claims
+
+on:
+  pull_request:
+    paths:
+      - "claims/**/*.yaml"
+      - "claims/**/*.yml"
+
+jobs:
+  yamllint:
+    name: Lint YAML claims
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Run yamllint
+        run: yamllint -c .yamllint.yml claims/
