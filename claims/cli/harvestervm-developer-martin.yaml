@@ -1,0 +1,50 @@
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: HarvesterVM
+metadata:
+  name: martin
+  namespace: default
+spec:
+  providerConfigRef: harvester
+  volume:
+    pvcName: martin-root
+    namespace: default
+    storageClassName: longhorn-image-m5bh6
+    storage: '160Gi'
+    accessModes:
+    - ReadWriteMany
+    volumeMode: Block
+    annotations:
+      harvesterhci.io/imageId: default/image-m5bh6
+  cloudInit:
+    vmName: martin
+    namespace: default
+    hostname: martin
+    domain: stuttgart-things.local
+    timezone: Europe/Berlin
+    packages:
+    - curl
+    packageUpdate: true
+    packageUpgrade: false
+    sshPasswordAuth: false
+    disableRoot: true
+  vm:
+    runStrategy: RerunOnFailure
+    evictionStrategy: LiveMigrateIfPossible
+    terminationGracePeriodSeconds: 120
+    os: ubuntu
+    machineType: q35
+    cpu:
+      cores: 16
+      sockets: 1
+      threads: 1
+    resources:
+      memory: '16Gi'
+      cpu: '16'
+    disks:
+    - name: rootdisk
+      bus: virtio
+    - name: cloudinitdisk
+      bus: virtio
+    networks:
+    - name: default
+      networkName: default/vms
