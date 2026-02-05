@@ -11,6 +11,7 @@ metadata:
     - packer
     - ubuntu
     - users-customized
+    - packages-customized
 spec:
   type: packer-image
   lifecycle: production
@@ -18,4 +19,6 @@ spec:
   dependsOn: []
   profile:
     addedUsers:
-      - sepp
+      - andre
+    addedPackages:
+      - htop
