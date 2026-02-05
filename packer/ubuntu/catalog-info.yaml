@@ -19,6 +19,6 @@ spec:
   dependsOn: []
   profile:
     addedUsers:
-      - seppo
+      - philipp
     addedPackages:
-      - nginx
+      - apache
