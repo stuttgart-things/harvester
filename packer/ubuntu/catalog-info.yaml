@@ -19,6 +19,6 @@ spec:
   dependsOn: []
   profile:
     addedUsers:
-      - andre
+      - seppo
     addedPackages:
-      - htop
+      - nginx
