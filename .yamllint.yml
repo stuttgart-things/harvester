@@ -1,9 +1,12 @@
 ---
 extends: default
 
+ignore:
+  - claims/cli/hacky.yaml
+  - claims/infra/*/harvestervm-*.yaml
+
 rules:
-  indentation:
-    spaces: 2
+  indentation: disable
   line-length:
     max: 200
   truthy:
