@@ -8,3 +8,4 @@ spec:
   targets:
     - ./packer/ubuntu/catalog-info.yaml
     - ./claims/infra/app-pvc/catalog-info.yaml
+    - ./claims/other-resources/abrechnungen/catalog-info.yaml
