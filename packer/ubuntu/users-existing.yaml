@@ -29,9 +29,3 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
       - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBXeNqdUpB5grzfatRTLef/EOpQ5iTK9dEdnrOWoQvSN andre@test # pragma: allowlist secret
-  - name: seppo
-    groups: sudo
-    shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
-    ssh_authorized_keys:
-      - ssh12334 # pragma: allowlist secret
