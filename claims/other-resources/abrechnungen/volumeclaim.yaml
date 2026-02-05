@@ -1,7 +1,7 @@
 apiVersion: resources.stuttgart-things.com/v1alpha1
 kind: VolumeClaim
 metadata:
-  name: app-data
+  name: abrechnungen
   namespace: default
 spec:
   accessModes:
