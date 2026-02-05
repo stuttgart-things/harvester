@@ -10,7 +10,6 @@ metadata:
     - harvester
     - packer
     - ubuntu
-    - users-customized
     - packages-customized
 spec:
   type: packer-image
@@ -18,7 +17,5 @@ spec:
   owner: platform-team
   dependsOn: []
   profile:
-    addedUsers:
-      - andre
     addedPackages:
-      - htop
+      - cmake
