@@ -1,0 +1,8 @@
+
+users:
+  - name: horst
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
+    ssh_authorized_keys:
+      - ssh123 # pragma: allowlist secret
