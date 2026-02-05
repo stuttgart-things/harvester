@@ -2,6 +2,8 @@
 extends: default
 
 rules:
+  indentation:
+    spaces: 2
   line-length:
     max: 200
   truthy:

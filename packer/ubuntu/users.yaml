@@ -1,35 +1,31 @@
 users:
+  - name: sthings
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOoe/pqEulMLsJRxBqgbDtdOftsCHq9K2hU1Xr99FQZA sthings@sthings-air12 # pragma: allowlist secret
   - name: mark
     groups: sudo
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
-      - ssh-ed25519
-        AAAAC3NzaC1lZDI1NTE5AAAAIB9KQ7pR7m0wqE2M3cZxkJk2y6mQvA4uWm8FqL1Rkz
-        mark@test
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIB9KQ7pR7m0wqE2M3cZxkJk2y6mQvA4uWm8FqL1Rkz mark@test # pragma: allowlist secret
   - name: tom
     groups: sudo
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
-      - ssh-ed25519
-        AAAAC3NzaC1lZDI1NTE5AAAAIDr5A2cXJp0ZBq9M8FQYH3wLkVt1SxE4mC6nR7U tom@test
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDr5A2cXJp0ZBq9M8FQYH3wLkVt1SxE4mC6nR7U tom@test # pragma: allowlist secret
   - name: travis
     groups: sudo
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGP3vK0mEJxZ7sA6y2wR9nT5QHcB8D4L1FqM
-        travis@test
-  - name: sepp
-    groups: sudo
-    shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    ssh_authorized_keys:
-      - ssh
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGP3vK0mEJxZ7sA6y2wR9nT5QHcB8D4L1FqM travis@test # pragma: allowlist secret
   - name: andre
     groups: sudo
     shell: /bin/bash
-    sudo: ALL=(ALL) NOPASSWD:ALL
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
-      - ssh123
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBXeNqdUpB5grzfatRTLef/EOpQ5iTK9dEdnrOWoQvSN andre@test # pragma: allowlist secret
