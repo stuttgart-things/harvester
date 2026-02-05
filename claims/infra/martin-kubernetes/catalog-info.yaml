@@ -1,0 +1,20 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: martin-kubernetes
+  description: Crossplane claim (harvestervm-developer) - martin-kubernetes
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/claims/infra/martin-kubernetes
+    claim-machinery/template: harvestervm-developer
+    claim-machinery/category: infra
+  tags:
+    - crossplane
+    - claim
+    - harvestervm-developer
+    - infra
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
