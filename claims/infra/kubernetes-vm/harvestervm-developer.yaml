@@ -1,0 +1,45 @@
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: HarvesterVM
+metadata:
+  name: kubernetes-vm
+  namespace: default
+spec:
+  providerConfigRef: dev
+  volume:
+    pvcName: kubernetes-vm-root
+    namespace: default
+    storageClassName: harvester-longhorn
+    storage: '10Gi'
+    accessModes:
+    - ReadWriteOnce
+    volumeMode: Filesystem
+  cloudInit:
+    vmName: kubernetes-vm
+    namespace: vms
+    hostname: kubernetes
+    domain: local
+    packageUpdate: true
+    packageUpgrade: false
+    sshPasswordAuth: false
+    disableRoot: true
+  vm:
+    runStrategy: RerunOnFailure
+    evictionStrategy: LiveMigrateIfPossible
+    terminationGracePeriodSeconds: 120
+    os: ubuntu
+    machineType: q35
+    cpu:
+      cores: 8
+      sockets: 1
+      threads: 1
+    resources:
+      memory: '8Gi'
+      cpu: '8'
+    disks:
+    - name: rootdisk
+      bus: virtio
+    - name: cloudinitdisk
+      bus: virtio
+    networks:
+    - name: default
+      networkName: default/default
