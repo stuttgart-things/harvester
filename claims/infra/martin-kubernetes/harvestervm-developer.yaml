@@ -4,7 +4,7 @@ metadata:
   name: martin-kubernetes
   namespace: default
 spec:
-  providerConfigRef: dev
+  providerConfigRef: harvester
   volume:
     pvcName: martin-kubernetes-root
     namespace: default
