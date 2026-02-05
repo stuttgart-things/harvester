@@ -1,0 +1,20 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: sdfdsf
+  description: Crossplane claim (volumeclaim) - sdfdsf
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/claims/infra/sdfdsf
+    claim-machinery/template: volumeclaim
+    claim-machinery/category: infra
+  tags:
+    - crossplane
+    - claim
+    - volumeclaim
+    - infra
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
