@@ -7,3 +7,4 @@ packages:
   - apache
   - zsh
   - htop
+  - nano
