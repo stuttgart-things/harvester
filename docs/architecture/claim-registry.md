@@ -33,21 +33,21 @@ claims:
     template: volumeclaim
     category: infra
     namespace: default
-    createdAt: "2025-06-15T10:00:00Z"
+    createdAt: "2026-02-04T19:43:28Z"
     createdBy: patrick
     source: backstage
     repository: stuttgart-things/harvester
     path: claims/infra/app-pvc
     status: active
-  - name: my-postgres
-    template: postgresql
-    category: apps
-    namespace: production
-    createdAt: "2025-07-01T14:30:00Z"
-    createdBy: claims-cli
-    source: cli
+  - name: abrechnungen
+    template: volumeclaim
+    category: other-resources
+    namespace: default
+    createdAt: "2026-02-05T17:45:56Z"
+    createdBy: patrick
+    source: backstage
     repository: stuttgart-things/harvester
-    path: claims/apps/my-postgres
+    path: claims/other-resources/abrechnungen
     status: active
 ```
 
@@ -57,7 +57,7 @@ claims:
 |-------|----------|-------------|
 | `name` | yes | Unique claim name (matches directory name) |
 | `template` | yes | Claim template used (e.g., `volumeclaim`, `postgresql`) |
-| `category` | yes | Category directory (`infra`, `apps`, `other-resources`) |
+| `category` | yes | Category directory (`infra`, `apps`, `other-resources`, `cli`) |
 | `namespace` | no | Kubernetes namespace for the claim |
 | `createdAt` | yes | ISO 8601 timestamp of creation |
 | `createdBy` | yes | User or service that created the claim |
