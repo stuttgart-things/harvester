@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Location
+metadata:
+  name: harvester-repo
+  description: Root catalog for the harvester repository
+spec:
+  targets:
+    - ../packer/ubuntu/catalog-info.yaml
+    - ../claims/infra/app-pvc/catalog-info.yaml
+    - ../claims/other-resources/abrechnungen/catalog-info.yaml

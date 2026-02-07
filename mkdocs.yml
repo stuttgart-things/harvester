@@ -1,0 +1,20 @@
+---
+site_name: Harvester
+site_description: GitOps repository for Crossplane claims and infrastructure resources
+repo_url: https://github.com/stuttgart-things/harvester
+edit_uri: edit/main/docs/
+
+nav:
+  - Home: index.md
+  - Architecture:
+      - Overview: architecture/overview.md
+      - Claim Lifecycle: architecture/claim-lifecycle.md
+      - Claim Registry: architecture/claim-registry.md
+  - Services:
+      - Claims CLI: services/claims-cli.md
+      - Claim Registry API: services/claim-registry-api.md
+      - Claim Status Collector: services/claim-status-collector.md
+  - Roadmap: roadmap.md
+
+plugins:
+  - techdocs-core

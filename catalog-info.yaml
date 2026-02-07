@@ -1,11 +1,15 @@
----
 apiVersion: backstage.io/v1alpha1
-kind: Location
+kind: System
 metadata:
-  name: harvester-repo
-  description: Root catalog for the harvester repository
+  name: harvester
+  description: GitOps repository for Crossplane claims and infrastructure resources
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/techdocs-ref: dir:.
+  tags:
+    - gitops
+    - crossplane
+    - claims
+    - infrastructure
 spec:
-  targets:
-    - ./packer/ubuntu/catalog-info.yaml
-    - ./claims/infra/app-pvc/catalog-info.yaml
-    - ./claims/other-resources/abrechnungen/catalog-info.yaml
+  owner: platform-team
