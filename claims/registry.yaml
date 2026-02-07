@@ -1,44 +1,33 @@
----
 apiVersion: claim-registry.io/v1alpha1
 kind: ClaimRegistry
 claims:
-  - name: app-pvc
-    template: volumeclaim
-    category: infra
-    namespace: default
-    createdAt: "2026-02-04T19:43:28Z"
-    createdBy: patrick
-    source: backstage
-    repository: stuttgart-things/harvester
-    path: claims/infra/app-pvc
-    status: active
-  - name: abrechnungen
-    template: volumeclaim
-    category: other-resources
-    namespace: default
-    createdAt: "2026-02-05T17:45:56Z"
-    createdBy: patrick
-    source: backstage
-    repository: stuttgart-things/harvester
-    path: claims/other-resources/abrechnungen
-    status: active
-  - name: hacky
-    template: volumeclaim
-    category: cli
-    namespace: default
-    createdAt: "2026-02-05T10:58:33Z"
-    createdBy: patrick
-    source: cli
-    repository: stuttgart-things/harvester
-    path: claims/cli/hacky.yaml
-    status: active
-  - name: harvestervm-developer-martin
-    template: harvestervm
-    category: cli
-    namespace: default
-    createdAt: "2026-02-05T17:57:18Z"
-    createdBy: patrick
-    source: cli
-    repository: stuttgart-things/harvester
-    path: claims/cli/harvestervm-developer-martin.yaml
-    status: active
+    - name: hacky
+      template: volumeclaim
+      category: cli
+      namespace: default
+      createdAt: "2026-02-05T10:58:33Z"
+      createdBy: patrick
+      source: cli
+      repository: stuttgart-things/harvester
+      path: claims/cli/hacky.yaml
+      status: active
+    - name: harvestervm-developer-martin
+      template: harvestervm
+      category: cli
+      namespace: default
+      createdAt: "2026-02-05T17:57:18Z"
+      createdBy: patrick
+      source: cli
+      repository: stuttgart-things/harvester
+      path: claims/cli/harvestervm-developer-martin.yaml
+      status: active
+    - name: demo-project
+      template: harborproject
+      category: ""
+      namespace: ""
+      createdAt: "2026-02-07T20:17:19Z"
+      createdBy: cli
+      source: cli
+      repository: ""
+      path: .
+      status: active
