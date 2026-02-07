@@ -31,3 +31,13 @@ claims:
       repository: stuttgart-things/harvester
       path: claims/cli/harvestervm-developer-martin.yaml
       status: active
+    - name: demo-project
+      template: harborproject
+      category: ""
+      namespace: ""
+      createdAt: "2026-02-07T20:17:19Z"
+      createdBy: cli
+      source: cli
+      repository: ""
+      path: .
+      status: active
