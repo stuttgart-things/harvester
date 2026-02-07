@@ -1,16 +1,6 @@
 apiVersion: claim-registry.io/v1alpha1
 kind: ClaimRegistry
 claims:
-    - name: abrechnungen
-      template: volumeclaim
-      category: other-resources
-      namespace: default
-      createdAt: "2026-02-05T17:45:56Z"
-      createdBy: patrick
-      source: backstage
-      repository: stuttgart-things/harvester
-      path: claims/other-resources/abrechnungen
-      status: active
     - name: hacky
       template: volumeclaim
       category: cli
