@@ -1,5 +1,5 @@
 ---
-name: Packer PR Build ubuntu
+name: Packer PR Build
 
 on:
   pull_request:
@@ -7,23 +7,61 @@ on:
       - main
     paths:
       - "packer/ubuntu/**"
+      - "packer/ubuntu25/**"
     types:
       - opened
       - synchronize
       - reopened
   workflow_dispatch:
+    inputs:
+      packer_dir:
+        description: "Packer directory to build"
+        required: true
+        default: "packer/ubuntu"
+        type: choice
+        options:
+          - packer/ubuntu
+          - packer/ubuntu25
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  packer-build:
-    name: Build and upload upstream
+  detect-targets:
+    name: Detect changed packer targets
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    outputs:
+      targets: ${{ steps.detect.outputs.targets }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed packer directories
+        id: detect
+        run: |
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu25|ubuntu)/' | sort -u | sed 's|/$||')
+          if [ -z "$CHANGED" ]; then
+            echo "targets=[]" >> "$GITHUB_OUTPUT"
+          else
+            JSON=$(echo "$CHANGED" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "targets=$JSON" >> "$GITHUB_OUTPUT"
+          fi
+
+  packer-build-pr:
+    name: "Build ${{ matrix.packer_dir }}"
+    needs: detect-targets
+    if: github.event_name == 'pull_request' && needs.detect-targets.outputs.targets != '[]'
     runs-on: kvm
     environment: harvester
     env:
       PACKER_LOG: 0
+    strategy:
+      matrix:
+        packer_dir: ${{ fromJson(needs.detect-targets.outputs.targets) }}
 
     steps:
       - name: Checkout repository
@@ -31,18 +69,18 @@ jobs:
 
       - name: Show build parameters
         run: |
-          echo "Packer dir            : packer/ubuntu"
+          echo "Packer dir            : ${{ matrix.packer_dir }}"
           echo "Image name            : upstream"
           echo "Upload to Harvester   : true"
           echo "Trigger               : ${{ github.event_name }}"
           echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
 
       - name: Packer init
-        working-directory: packer/ubuntu
+        working-directory: ${{ matrix.packer_dir }}
         run: packer init .
 
       - name: Packer build
-        working-directory: packer/ubuntu
+        working-directory: ${{ matrix.packer_dir }}
         env:
           PKR_VAR_image_name: upstream
           PKR_VAR_upload_to_harvester: "true"
@@ -60,3 +98,35 @@ jobs:
             --auto \
             --squash \
             --delete-branch
+
+  packer-build-dispatch:
+    name: "Build ${{ inputs.packer_dir }}"
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: kvm
+    environment: harvester
+    env:
+      PACKER_LOG: 0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Show build parameters
+        run: |
+          echo "Packer dir            : ${{ inputs.packer_dir }}"
+          echo "Image name            : upstream"
+          echo "Upload to Harvester   : true"
+          echo "Trigger               : ${{ github.event_name }}"
+
+      - name: Packer init
+        working-directory: ${{ inputs.packer_dir }}
+        run: packer init .
+
+      - name: Packer build
+        working-directory: ${{ inputs.packer_dir }}
+        env:
+          PKR_VAR_image_name: upstream
+          PKR_VAR_upload_to_harvester: "true"
+          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
+          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+        run: packer build .
