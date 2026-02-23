@@ -43,16 +43,21 @@ jobs:
       - name: Detect changed packer directories
         id: detect
         run: |
+          declare -A IMAGE_NAMES=(
+            ["packer/ubuntu"]="u22-dev"
+            ["packer/ubuntu25"]="u25-dev"
+          )
           CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu25|ubuntu)/' | sort -u | sed 's|/$||')
           if [ -z "$CHANGED" ]; then
             echo "targets=[]" >> "$GITHUB_OUTPUT"
           else
-            JSON=$(echo "$CHANGED" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu":"u22-dev","packer/ubuntu25":"u25-dev"}' \
+              'split("\n") | map(select(length > 0)) | map({"packer_dir": ., "image_name": $names[.]})')
             echo "targets=$JSON" >> "$GITHUB_OUTPUT"
           fi
 
   packer-build-pr:
-    name: "Build ${{ matrix.packer_dir }}"
+    name: "Build ${{ matrix.packer_dir }} (${{ matrix.image_name }})"
     needs: detect-targets
     if: github.event_name == 'pull_request' && needs.detect-targets.outputs.targets != '[]'
     runs-on: kvm
@@ -61,7 +66,7 @@ jobs:
       PACKER_LOG: 0
     strategy:
       matrix:
-        packer_dir: ${{ fromJson(needs.detect-targets.outputs.targets) }}
+        include: ${{ fromJson(needs.detect-targets.outputs.targets) }}
 
     steps:
       - name: Checkout repository
@@ -70,7 +75,7 @@ jobs:
       - name: Show build parameters
         run: |
           echo "Packer dir            : ${{ matrix.packer_dir }}"
-          echo "Image name            : upstream"
+          echo "Image name            : ${{ matrix.image_name }}"
           echo "Upload to Harvester   : true"
           echo "Trigger               : ${{ github.event_name }}"
           echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
@@ -82,7 +87,7 @@ jobs:
       - name: Packer build
         working-directory: ${{ matrix.packer_dir }}
         env:
-          PKR_VAR_image_name: upstream
+          PKR_VAR_image_name: ${{ matrix.image_name }}
           PKR_VAR_upload_to_harvester: "true"
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
@@ -111,10 +116,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Resolve image name
+        id: resolve
+        run: |
+          declare -A IMAGE_NAMES=(
+            ["packer/ubuntu"]="u22-dev"
+            ["packer/ubuntu25"]="u25-dev"
+          )
+          echo "image_name=${IMAGE_NAMES[${{ inputs.packer_dir }}]}" >> "$GITHUB_OUTPUT"
+
       - name: Show build parameters
         run: |
           echo "Packer dir            : ${{ inputs.packer_dir }}"
-          echo "Image name            : upstream"
+          echo "Image name            : ${{ steps.resolve.outputs.image_name }}"
           echo "Upload to Harvester   : true"
           echo "Trigger               : ${{ github.event_name }}"
 
@@ -125,7 +139,7 @@ jobs:
       - name: Packer build
         working-directory: ${{ inputs.packer_dir }}
         env:
-          PKR_VAR_image_name: upstream
+          PKR_VAR_image_name: ${{ steps.resolve.outputs.image_name }}
           PKR_VAR_upload_to_harvester: "true"
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
