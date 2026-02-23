@@ -2,23 +2,15 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: ubuntu-jammy-packer-image
-  description: Ubuntu 22.04 (Jammy) Packer Image for Harvester
+  name: ubuntu25-packer-image
+  description: Ubuntu 25.04 (Plucky) Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
     - ubuntu
-    - users-customized
-    - packages-customized
 spec:
   type: packer-image
   lifecycle: production
   owner: platform-team
-  dependsOn: []
-  profile:
-    addedUsers:
-      - philipp
-    addedPackages:
-      - apache

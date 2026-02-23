@@ -1,6 +1,6 @@
-# Ubuntu Jammy Base Image (Packer + QEMU)
+# Ubuntu Plucky Base Image (Packer + QEMU)
 
-Builds a Ubuntu 22.04 (Jammy) QEMU disk image with custom packages and users configured via cloud-init.
+Builds a Ubuntu 25.04 (Plucky) QEMU disk image with custom packages and users configured via cloud-init.
 
 ## Prerequisites
 
@@ -81,7 +81,7 @@ packer init .
 packer build .
 ```
 
-The output image (`ubuntu-jammy-base-amd64.img`) will be placed in the `output/` directory. The Harvester upload is skipped by default.
+The output image (`ubuntu-plucky-base-amd64.img`) will be placed in the `output/` directory. The Harvester upload is skipped by default.
 
 ### Build and upload to Harvester
 
@@ -100,27 +100,22 @@ Variables can be overridden at build time:
 
 ```bash
 # Custom image name
-packer build -var 'image_name=ubuntu-jammy-custom' .
+packer build -var 'image_name=ubuntu-plucky-custom' .
 
 # Custom YAML files
 packer build -var 'users_file=prod-users.yaml' -var 'packages_file=prod-packages.yaml' .
 
 # Custom output location
 packer build -var 'output_location=build/' .
-
-# Use a different Ubuntu source image
-packer build -var 'ubuntu_url=https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img' \
-             -var 'ubuntu_checksum=file:https://cloud-images.ubuntu.com/noble/current/SHA256SUMS' \
-             -var 'image_name=ubuntu-noble-base' .
 ```
 
 ### All variables
 
 | Variable          | Default                                  | Description                          |
 |-------------------|------------------------------------------|--------------------------------------|
-| `ubuntu_url`      | Ubuntu Jammy cloud image URL             | Source cloud image                   |
-| `ubuntu_checksum` | Jammy SHA256SUMS URL                     | Checksum for source image            |
-| `image_name`      | `ubuntu-jammy-base`                      | Output image name prefix             |
+| `ubuntu_url`      | Ubuntu Plucky cloud image URL            | Source cloud image                   |
+| `ubuntu_checksum` | Plucky SHA256SUMS URL                    | Checksum for source image            |
+| `image_name`      | `ubuntu-plucky-base`                     | Output image name prefix             |
 | `namespace`       | `default`                                | Namespace designation                |
 | `output_location` | `output/`                                | Directory for build output           |
 | `packages_file`   | `packages.yaml`                          | Path to packages YAML                |
@@ -138,7 +133,7 @@ Actions → Packer Build → Run workflow
 ```
 
 Inputs:
-- **packer_dir**: Directory containing the Packer config (default: `harvester/packer/ubuntu`)
+- **packer_dir**: Directory containing the Packer config (default: `harvester/packer/ubuntu25`)
 - **template**: Packer template target (default: `.`)
 - **var_file**: Optional `.pkrvars.hcl` file for overrides
 - **log_level**: Packer log verbosity (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`)
