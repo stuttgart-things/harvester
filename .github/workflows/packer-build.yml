@@ -6,8 +6,13 @@ on:
       packer_dir:
         description: "Directory containing Packer configuration"
         required: true
-        default: "packer/ubuntu"
-        type: string
+        default: "packer/ubuntu22"
+        type: choice
+        options:
+          - packer/ubuntu22
+          - packer/ubuntu25
+          - packer/opensuse-leap
+          - packer/rocky
 
       template:
         description: "Packer template (file or directory)"
@@ -23,7 +28,7 @@ on:
       image_name:
         description: "Name of the VM image (used as Harvester VMI name)"
         required: false
-        default: "ubuntu-dev"
+        default: "u22-dev"
         type: string
 
       upload_to_harvester:
