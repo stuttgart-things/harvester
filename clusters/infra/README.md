@@ -237,7 +237,3 @@ curl -sk https://vault.infra.sthings.lab/v1/pki/ca/pem -o sthings-lab-ca.crt
 # install it
 sudo cp sthings-lab-ca.crt /usr/local/share/ca-certificates/sthings-lab-ca.crt
 sudo update-ca-certificates
-
-
-
-

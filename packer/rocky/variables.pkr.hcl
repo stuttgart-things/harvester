@@ -5,7 +5,7 @@ variable "rocky_url" {
 
 variable "rocky_checksum" {
   type    = string
-  default = "15d81d3434b298142b2fdd8fb54aef2662684db5c082cc191c3c79762ed6360c"
+  default = "15d81d3434b298142b2fdd8fb54aef2662684db5c082cc191c3c79762ed6360c" # pragma: allowlist secret
 }
 
 variable "image_name" {

@@ -5,7 +5,7 @@ variable "opensuse_url" {
 
 variable "opensuse_checksum" {
   type    = string
-  default = "08ffa155237137770109fcf5174a560268cf6803091a9b2cdd3199799263fe1e"
+  default = "08ffa155237137770109fcf5174a560268cf6803091a9b2cdd3199799263fe1e" # pragma: allowlist secret
 }
 
 variable "image_name" {
