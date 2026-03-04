@@ -229,4 +229,15 @@ export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{
 
 terraform apply --auto-approve
 ```
-```
+
+
+# get CA cert from vault
+curl -sk https://vault.infra.sthings.lab/v1/pki/ca/pem -o sthings-lab-ca.crt
+
+# install it
+sudo cp sthings-lab-ca.crt /usr/local/share/ca-certificates/sthings-lab-ca.crt
+sudo update-ca-certificates
+
+
+
+
