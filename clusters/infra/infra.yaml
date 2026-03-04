@@ -60,7 +60,7 @@ spec:
     substitute:
       CERT_MANAGER_NAMESPACE: cert-manager
       CERT_MANAGER_SELFSIGNED_DOMAIN: "infra.sthings.lab"
-      CERT_MANAGER_SELFSIGNED_SECRET_NAME: wildcard-infra-sthings-tls
+      CERT_MANAGER_SELFSIGNED_SECRET_NAME: wildcard-infra-sthings-tls # pragma: allowlist secret
       CERT_MANAGER_SELFSIGNED_CERT_NAME: wildcard-infra-sthings-tls
       CERT_MANAGER_SELFSIGNED_CERT_NAMESPACE: default
       CERT_MANAGER_SELFSIGNED_ISSUER: vault-pki

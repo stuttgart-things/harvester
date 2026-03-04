@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"vault-base-setup","Source":"git::https://github.com/stuttgart-things/vault-base-setup.git","Dir":".terraform/modules/vault-base-setup"}]}
