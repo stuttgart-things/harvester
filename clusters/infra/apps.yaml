@@ -35,7 +35,7 @@ spec:
       OS_SHELL_PULL_POLICY: Always
       VAULT_INGRESS_HOSTNAME: vault
       VAULT_INGRESS_DOMAIN: infra.sthings.lab
-      ISSUER_NAME: cluster-ca
+      ISSUER_NAME: vault-pki
       ISSUER_KIND: ClusterIssuer
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

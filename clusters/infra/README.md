@@ -211,3 +211,22 @@ spec:
 ---
 EOF
 ```
+
+
+```bash
+# VERIFY CERTIFICATES ARE RE-ISSUED BY VAULT PKI
+kubectl get certificates -A
+kubectl get clusterissuer
+```
+
+
+```bash
+# INIT + APPLY
+terraform init
+terraform plan
+
+export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.root_token}' | base64 -d)
+
+terraform apply --auto-approve
+```
+```

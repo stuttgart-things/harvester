@@ -63,7 +63,7 @@ spec:
       CERT_MANAGER_SELFSIGNED_SECRET_NAME: wildcard-infra-sthings-tls
       CERT_MANAGER_SELFSIGNED_CERT_NAME: wildcard-infra-sthings-tls
       CERT_MANAGER_SELFSIGNED_CERT_NAMESPACE: default
-      CERT_MANAGER_SELFSIGNED_ISSUER: cluster-ca
+      CERT_MANAGER_SELFSIGNED_ISSUER: vault-pki
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
