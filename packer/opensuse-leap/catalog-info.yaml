@@ -2,15 +2,16 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: opensuse-leap-packer-image
-  description: openSUSE Leap 15.6 Packer Image for Harvester
+  name: suse15-dev-packer-image
+  description: suse15-dev Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
-    - opensuse
+    - opensuse-leap
     - users-customized
+    - packages-customized
 spec:
   type: packer-image
   lifecycle: production
@@ -18,4 +19,6 @@ spec:
   dependsOn: []
   profile:
     addedUsers:
-      - sthings
+      - horst
+    addedPackages:
+      - nano
