@@ -1,6 +1,6 @@
-# Rocky Linux 9 Base Image (Packer + QEMU)
+# Rocky Linux 9.7 Base Image (Packer + QEMU)
 
-Builds a Rocky Linux 9 QEMU disk image with custom packages and users configured via cloud-init.
+Builds a Rocky Linux 9.7 QEMU disk image with custom packages and users configured via cloud-init.
 
 ## Prerequisites
 
