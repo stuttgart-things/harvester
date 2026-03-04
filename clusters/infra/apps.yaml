@@ -1,0 +1,86 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: vault
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/vault
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      VAULT_VERSION: "1.9.0"
+      VAULT_NAMESPACE: vault
+      REGISTRY: ghcr.io
+      REPOSITORY: stuttgart-things/vault
+      TAG: 1.20.2-debian-12-r2
+      PULL_POLICY: Always
+      INGRESS_ENABLED: "false"
+      INGRESS_CLASS_NAME: nginx
+      STORAGE_CLASS: local-path
+      INJECTOR_ENABLED: "true"
+      INJECTOR_REPOSITORY: stuttgart-things/vault-k8s
+      INJECTOR_TAG: 1.7.0-debian-12-r4
+      INJECTOR_PULL_POLICY: Always
+      ENABLE_VOLUME_PERMISSIONS: "true"
+      OS_SHELL_REPOSITORY: stuttgart-things/os-shell
+      OS_SHELL_TAG: 12-debian-12-r50
+      OS_SHELL_PULL_POLICY: Always
+      VAULT_INGRESS_HOSTNAME: vault
+      VAULT_INGRESS_DOMAIN: infra.sthings.lab
+      ISSUER_NAME: cluster-ca
+      ISSUER_KIND: ClusterIssuer
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: vault-autounseal
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/vault/autounseal
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      VAULT_NAMESPACE: vault
+      UNSEAL_HELM_REPO_URL: https://pytoshka.github.io/vault-autounseal
+      VAULT_AUTOUNSEAL_VERSION: "0.5.3"
+      VAULT_AUTOUNSEAL_URL: http://vault-server.vault.svc:8200
+      VAULT_AUTOUNSEAL_LABEL_SELECTOR: app.kubernetes.io/component=server
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: vault-httproute
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/vault/httproute
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      VAULT_NAMESPACE: vault
+      GATEWAY_NAME: infra-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      VAULT_HOSTNAME: vault
+      VAULT_DOMAIN: infra.sthings.lab
+---
