@@ -34,7 +34,8 @@ source "qemu" "rocky_cloud" {
   # SSH configuration so that Packer can log into the Image
   ssh_password    = "superpassword" # pragma: allowlist secret
   ssh_username    = "rocky"
-  ssh_timeout     = "5m"
+  ssh_timeout             = "10m"
+  ssh_handshake_attempts  = -1
   shutdown_command = "sudo cloud-init clean --logs --machine-id && sudo shutdown -P now"
   headless        = true
 
