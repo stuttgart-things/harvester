@@ -1,0 +1,91 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-lb
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cilium/components/lb
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CILIUM_LB_IP_START: "192.168.10.150"
+      CILIUM_LB_IP_STOP: "192.168.10.150"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cert-manager/components/install
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CERT_MANAGER_NAMESPACE: cert-manager
+      CERT_MANAGER_VERSION: v1.19.1
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-selfsigned
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cert-manager
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cert-manager/components/selfsigned
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CERT_MANAGER_NAMESPACE: cert-manager
+      CERT_MANAGER_SELFSIGNED_DOMAIN: "infra.sthings.lab"
+      CERT_MANAGER_SELFSIGNED_SECRET_NAME: wildcard-infra-sthings-tls
+      CERT_MANAGER_SELFSIGNED_CERT_NAME: wildcard-infra-sthings-tls
+      CERT_MANAGER_SELFSIGNED_CERT_NAMESPACE: default
+      CERT_MANAGER_SELFSIGNED_ISSUER: cluster-ca
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-gateway
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cilium-lb
+    - name: cert-manager-selfsigned
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cilium/components/gateway
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CILIUM_GATEWAY_NAME: infra-sthings-gateway
+      CILIUM_GATEWAY_NAMESPACE: default
+      CILIUM_GATEWAY_DOMAIN: "infra.sthings.lab"
+      CILIUM_GATEWAY_TLS_SECRET: wildcard-infra-sthings-tls
