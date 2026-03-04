@@ -52,7 +52,7 @@ build {
   # Wait till Cloud-Init has finished setting up the image on first-boot
   provisioner "shell" {
       inline = [
-          "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; tail -n10 /var/log/cloud-init-output.log; sleep 5; done"
+          "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sudo tail -n10 /var/log/cloud-init-output.log; sleep 5; done"
       ]
   }
 
