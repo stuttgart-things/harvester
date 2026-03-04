@@ -3,14 +3,19 @@ apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: ubuntu25-packer-image
-  description: Ubuntu 25.04 (Plucky) Packer Image for Harvester
+  description: ubuntu25 Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
     - ubuntu
+    - users-customized
 spec:
   type: packer-image
   lifecycle: production
   owner: platform-team
+  dependsOn: []
+  profile:
+    addedUsers:
+      - sthings
