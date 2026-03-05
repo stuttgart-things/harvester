@@ -1,6 +1,6 @@
 users:
   - name: sthings
-    groups: sudo
+    groups: wheel
     shell: /bin/bash
     sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:

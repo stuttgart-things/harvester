@@ -1,0 +1,57 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: crossplane
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./cicd/crossplane
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CROSSPLANE_NAMESPACE: crossplane-system
+      CROSSPLANE_VERSION: "2.1.3"
+      CROSSPLANE_HELM_PROVIDER_VERSION: v1.0.6
+      CROSSPLANE_K8S_PROVIDER_VERSION: v1.2.0
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: crossplane-deployment
+      namespace: crossplane-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: crossplane
+      namespace: crossplane-system
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: crossplane-configs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: crossplane
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./cicd/crossplane/components/configs
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CROSSPLANE_CONFIG_CLOUD_CONFIG_VERSION: v0.5.1
+      CROSSPLANE_CONFIG_VOLUME_CLAIM_VERSION: v0.1.1
+      CROSSPLANE_CONFIG_STORAGE_PLATFORM_VERSION: v0.6.0
+      CROSSPLANE_CONFIG_ANSIBLE_RUN_VERSION: v12.0.0
+      CROSSPLANE_CONFIG_PIPELINE_INTEGRATION_VERSION: v0.1.2
+      CROSSPLANE_CONFIG_HARVESTER_VM_VERSION: v0.3.3

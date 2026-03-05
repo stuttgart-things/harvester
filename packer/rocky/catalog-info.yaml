@@ -1,0 +1,21 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: rocky-packer-image
+  description: Rocky Linux 9.7 Packer Image for Harvester
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+  tags:
+    - harvester
+    - packer
+    - rocky
+    - users-customized
+spec:
+  type: packer-image
+  lifecycle: production
+  owner: platform-team
+  dependsOn: []
+  profile:
+    addedUsers:
+      - sthings

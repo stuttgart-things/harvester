@@ -8,8 +8,8 @@
 
 Establish `claims/registry.yaml` as the source of truth for all managed claims.
 
-- [ ] Define registry schema (`claim-registry.io/v1alpha1`)
-- [ ] Create initial `claims/registry.yaml` with existing claims
+- [x] Define registry schema (`claim-registry.io/v1alpha1`)
+- [x] Create initial `claims/registry.yaml` with existing claims
 - [ ] Document schema and field reference
 - [ ] Update Backstage claim-to-pull-request template to write registry entries on create
 
@@ -24,19 +24,23 @@ Extend the claims CLI with delete functionality and registry integration.
   - [ ] Remove entry from parent `kustomization.yaml`
   - [ ] Remove entry from `claims/registry.yaml`
   - [ ] Create PR with deletion changes
-- [ ] `claims render` updates to write registry entry on create
+- [x] `claims render` updates to write registry entry on create
 - [ ] `claims list` subcommand (read from registry file or API)
 
 ### Phase 2: Claim Registry API
 
-**Repository:** `stuttgart-things/claim-registry` (new)
+**Repository:** `stuttgart-things/machinery-registry-api`
 
 Build a lightweight API that serves the claim inventory.
 
-- [ ] REST API (`GET /api/v1/claims`, `GET /api/v1/claims/{name}`)
-- [ ] Query filtering (category, template, status, source)
-- [ ] Git sync (poll `registry.yaml` from harvester repo)
-- [ ] Backstage integration (API proxy or custom catalog provider)
+- [x] REST API (`GET /api/v1/claims`, `GET /api/v1/claims/{name}`)
+- [x] Query filtering (category, template, status, source)
+- [x] Git sync (poll `registry.yaml` from harvester repo)
+- [x] Middleware stack (CORS, request ID, logging, error handler)
+- [x] Cobra CLI with env var configuration and graceful shutdown
+- [x] OpenAPI 3.0 spec and Redoc docs endpoint
+- [x] GoReleaser multi-platform build config
+- [x] Backstage catalog integration (API definition)
 - [ ] Container image and Helm chart
 
 ### Phase 3: Claim Status Collector

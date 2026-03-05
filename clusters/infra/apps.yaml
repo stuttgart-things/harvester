@@ -84,3 +84,51 @@ spec:
       VAULT_HOSTNAME: vault
       VAULT_DOMAIN: infra.sthings.lab
 ---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: headlamp
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/headlamp
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      HEADLAMP_NAMESPACE: headlamp
+      HEADLAMP_VERSION: "0.40.0"
+      GATEWAY_NAME: infra-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: headlamp
+      DOMAIN: infra.sthings.lab
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-ui
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/flux-web
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      FLUX_WEB_NAMESPACE: flux-system
+      FLUX_WEB_VERSION: "0.43.0"
+      GATEWAY_NAME: infra-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: flux-ui
+      DOMAIN: infra.sthings.lab
+---

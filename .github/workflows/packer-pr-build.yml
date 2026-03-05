@@ -6,8 +6,10 @@ on:
     branches:
       - main
     paths:
-      - "packer/ubuntu/**"
+      - "packer/ubuntu22/**"
       - "packer/ubuntu25/**"
+      - "packer/opensuse-leap/**"
+      - "packer/rocky/**"
     types:
       - opened
       - synchronize
@@ -17,11 +19,13 @@ on:
       packer_dir:
         description: "Packer directory to build"
         required: true
-        default: "packer/ubuntu"
+        default: "packer/ubuntu22"
         type: choice
         options:
-          - packer/ubuntu
+          - packer/ubuntu22
           - packer/ubuntu25
+          - packer/opensuse-leap
+          - packer/rocky
 
 permissions:
   contents: write
@@ -44,14 +48,16 @@ jobs:
         id: detect
         run: |
           declare -A IMAGE_NAMES=(
-            ["packer/ubuntu"]="u22-dev"
+            ["packer/ubuntu22"]="u22-dev"
             ["packer/ubuntu25"]="u25-dev"
+            ["packer/opensuse-leap"]="suse15-dev"
+            ["packer/rocky"]="rocky9-dev"
           )
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu25|ubuntu)/' | sort -u | sed 's|/$||')
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu22|ubuntu25|opensuse-leap|rocky)/' | sort -u | sed 's|/$||')
           if [ -z "$CHANGED" ]; then
             echo "targets=[]" >> "$GITHUB_OUTPUT"
           else
-            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu":"u22-dev","packer/ubuntu25":"u25-dev"}' \
+            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu22":"u22-dev","packer/ubuntu25":"u25-dev","packer/opensuse-leap":"suse15-dev","packer/rocky":"rocky9-dev"}' \
               'split("\n") | map(select(length > 0)) | map({"packer_dir": ., "image_name": $names[.]})')
             echo "targets=$JSON" >> "$GITHUB_OUTPUT"
           fi
@@ -120,8 +126,10 @@ jobs:
         id: resolve
         run: |
           declare -A IMAGE_NAMES=(
-            ["packer/ubuntu"]="u22-dev"
+            ["packer/ubuntu22"]="u22-dev"
             ["packer/ubuntu25"]="u25-dev"
+            ["packer/opensuse-leap"]="suse15-dev"
+            ["packer/rocky"]="rocky9-dev"
           )
           echo "image_name=${IMAGE_NAMES[${{ inputs.packer_dir }}]}" >> "$GITHUB_OUTPUT"
 

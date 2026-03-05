@@ -237,6 +237,7 @@ curl -sk https://vault.infra.sthings.lab/v1/pki/ca/pem -o sthings-lab-ca.crt
 # install it
 sudo cp sthings-lab-ca.crt /usr/local/share/ca-certificates/sthings-lab-ca.crt
 sudo update-ca-certificates
+<<<<<<< HEAD
 
 
 
@@ -390,3 +391,5 @@ subject=CN=harvester.sthings.lab
 - The backend service is `rancher:80` (not 443)
 - Cert renewal must be done manually — repeat steps 1–5 before expiry (90 days / 2160h)
 - To automate renewal, consider setting up the cross-cluster Vault issuer approach with CoreDNS forwarding for `sthings.lab`
+=======
+>>>>>>> a54bcff54915a910b2d6fc495ea2252c575fbcad

@@ -43,10 +43,8 @@ tasks:
         export --path {{ .EXPORT_PATH }}
         cat {{ .EXPORT_PATH }}
 
-  commit:
-    desc: Commit + push code into branch
-    deps:
-      - check
+  push:
+    desc: Stage, commit and push code (no pre-commit check)
     cmds:
       - git branch --set-upstream-to=origin/{{ .BRANCH }}
       - git pull
@@ -71,6 +69,13 @@ tasks:
           echo "No changes to commit."
         fi
       - git push origin -u {{ .BRANCH }}
+
+  commit:
+    desc: Commit + push code into branch (with local pre-commit check)
+    deps:
+      - check
+    cmds:
+      - task: push
 
   pr:
     desc: Create pull request into main

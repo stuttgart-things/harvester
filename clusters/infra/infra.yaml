@@ -88,4 +88,4 @@ spec:
       CILIUM_GATEWAY_NAME: infra-sthings-gateway
       CILIUM_GATEWAY_NAMESPACE: default
       CILIUM_GATEWAY_DOMAIN: "infra.sthings.lab"
-      CILIUM_GATEWAY_TLS_SECRET: wildcard-infra-sthings-tls
+      CILIUM_GATEWAY_TLS_SECRET: wildcard-infra-sthings-tls # pragma: allowlist secret
