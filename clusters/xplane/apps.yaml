@@ -1,0 +1,25 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: komoplane
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./cicd/komoplane
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      KOMOPLANE_NAME: komoplane
+      KOMOPLANE_NAMESPACE: komoplane
+      KOMOPLANE_VERSION: "0.1.6"
+      KOMOPLANE_HOSTNAME: komoplane
+      DOMAIN: xplane.sthings.lab
+      GATEWAY_NAME: xplane-sthings-gateway
+      GATEWAY_NAMESPACE: default
