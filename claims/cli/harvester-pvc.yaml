@@ -1,0 +1,17 @@
+---
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: VolumeClaim
+metadata:
+  name: hacky
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteMany
+  annotations:
+    description: A simple persistent volume claim for test data
+  namespace: default
+  providerConfigRef: harvester
+  pvcName: hacky
+  storage: '10Gi'
+  storageClassName: harvester-longhorn
+  volumeMode: Filesystem
