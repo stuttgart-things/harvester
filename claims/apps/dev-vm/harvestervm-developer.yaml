@@ -1,0 +1,48 @@
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: HarvesterVM
+metadata:
+  name: dev-vm
+  namespace: default
+spec:
+  providerConfigRef: harvester
+  volume:
+    pvcName: dev-vm-root
+    namespace: default
+    storageClassName: harvester-longhorn
+    storage: '40Gi'
+    accessModes:
+    - ReadWriteMany
+    volumeMode: Block
+  cloudInit:
+    vmName: dev-vm
+    namespace: default
+    hostname: dev
+    domain: stuttgart-things.local
+    timezone: Europe/Berlin
+    packages:
+    - curl
+    packageUpdate: true
+    packageUpgrade: false
+    sshPasswordAuth: false
+    disableRoot: true
+  vm:
+    runStrategy: RerunOnFailure
+    evictionStrategy: LiveMigrateIfPossible
+    terminationGracePeriodSeconds: 120
+    os: ubuntu
+    machineType: q35
+    cpu:
+      cores: 4
+      sockets: 1
+      threads: 1
+    resources:
+      memory: '4Gi'
+      cpu: '4'
+    disks:
+    - name: rootdisk
+      bus: virtio
+    - name: cloudinitdisk
+      bus: virtio
+    networks:
+    - name: default
+      networkName: default/vms
