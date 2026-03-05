@@ -58,8 +58,8 @@ spec:
   issuerRef:
     name: vault-pki
     kind: ClusterIssuer
-  commonName: test.sthings.lab
+  commonName: test.xplane.sthings.lab
   dnsNames:
-    - test.sthings.lab
+    - test.xplane.sthings.lab
 EOF
 ```
