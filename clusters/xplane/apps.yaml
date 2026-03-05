@@ -67,8 +67,37 @@ spec:
     substitute:
       CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
       CLAIM_MACHINERY_API_VERSION: v0.5.6
-      CLAIM_MACHINERY_PROFILE_PATH: https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/claims/api-template-profiles.yaml
+      CLAIM_MACHINERY_PROFILE_PATH: /etc/claim-machinery/profile.yaml
       HOSTNAME: claim-machinery-api
       DOMAIN: xplane.sthings.lab
       GATEWAY_NAME: xplane-sthings-gateway
       GATEWAY_NAMESPACE: default
+  patches:
+    - target:
+        kind: Kustomization
+        name: claim-machinery-api
+      patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            target:
+              kind: Deployment
+              name: claim-machinery-api
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: claim-machinery-api
+              spec:
+                template:
+                  spec:
+                    volumes:
+                      - name: profile-config
+                        configMap:
+                          name: claim-machinery-profile
+                    containers:
+                      - name: claim-machinery-api
+                        volumeMounts:
+                          - name: profile-config
+                            mountPath: /etc/claim-machinery
+                            readOnly: true

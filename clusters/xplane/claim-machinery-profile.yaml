@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claim-machinery-profile
+  namespace: claim-machinery
+data:
+  profile.yaml: |
+    ---
+    templates:
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-volumeclaim/templates/volumeclaim-simple.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-harborproject/templates/harborproject-simple.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-vspherevm/templates/vspherevm-simple.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-vspherevm/templates/vspherevm-labul.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-storageplatform/templates/storageplatform-nfs.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-storageplatform/templates/storageplatform-openebs.yaml
