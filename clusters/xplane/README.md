@@ -54,3 +54,108 @@ flux-bootstrap \
 ```
 
 </details>
+
+
+# 🔧 Crossplane Cluster Configuration via Dagger
+
+> Uses the `crossplane-configuration` Dagger module from `stuttgart-things/blueprints` to generate SOPS-encrypted cluster configs.
+
+---
+
+```bash
+# Set your AGE public key before running
+export AGE_PUB=age1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+---
+
+## 🚀 Add Clusters
+
+### in-cluster (xplane)
+
+<details>
+<summary>▶️ Generate encrypted config for <code>in-cluster</code></summary>
+
+```bash
+dagger call \
+  -m github.com/stuttgart-things/blueprints/crossplane-configuration@v1.67.0 \
+  add-cluster \
+  --clusterName=in-cluster \
+  --deploy-to-cluster=false \
+  --kubeconfig-cluster file:///home/sthings/.kube/xplane \
+  --encrypt-with-sops=true \
+  --age-public-key=env:AGE_PUB \
+  export \
+  --path=/home/sthings/harvester/clusters/xplane/in-cluster-config.yaml \
+  --progress plain \
+  -vv
+```
+
+**Output:** `~/harvester/clusters/xplane/in-cluster-config.yaml`
+
+</details>
+
+---
+
+### harvester
+
+<details>
+<summary>▶️ Generate encrypted config for <code>harvester</code></summary>
+
+```bash
+dagger call \
+  -m github.com/stuttgart-things/blueprints/crossplane-configuration@v1.67.0 \
+  add-cluster \
+  --clusterName=harvester \
+  --deploy-to-cluster=false \
+  --kubeconfig-cluster file:///home/sthings/.kube/harvester \
+  --encrypt-with-sops=true \
+  --age-public-key=env:AGE_PUB \
+  export \
+  --path=/home/sthings/harvester/clusters/xplane/harvester-config.yaml \
+  --progress plain \
+  -vv
+```
+
+**Output:** `~/harvester/clusters/xplane/harvester-config.yaml`
+
+</details>
+
+---
+
+## ⚙️ Flag Reference
+
+| Flag | Value | Description |
+|---|---|---|
+| `--clusterName` | `in-cluster` / `harvester` | Name to register the cluster under |
+| `--deploy-to-cluster` | `false` | Only generate config, don't apply it |
+| `--kubeconfig-cluster` | `file:///home/sthings/.kube/<name>` | Path to the target cluster kubeconfig |
+| `--encrypt-with-sops` | `true` | Encrypt output with SOPS |
+| `--age-public-key` | `env:AGE_PUB` | AGE public key read from environment |
+| `--progress` | `plain` | Plain text log output |
+| `-vv` | — | Verbose logging |
+
+---
+
+## 📁 Output Structure
+
+```
+~/harvester/clusters/xplane/
+├── in-cluster-config.yaml   # SOPS-encrypted
+└── harvester-config.yaml    # SOPS-encrypted
+```
+
+---
+
+## ⚠️ Notes
+
+- `--deploy-to-cluster=false` means configs are **only written to disk** — no changes are applied to the cluster
+- Output files are **SOPS-encrypted** with your AGE key — safe to commit to git
+- Decryption requires the corresponding **AGE private key** (`SOPS_AGE_KEY` or `~/.config/sops/age/keys.txt`)
+
+
+## INSTALL VAULT CA (ANSIBKE)
+
+```bash
+ansible-playbook clusters/infra/vault/install-ca-cert.yaml -i "infra.sthings.lab,xplane.sthings.lab" -u sthings --become
+```
