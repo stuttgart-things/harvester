@@ -212,13 +212,11 @@ spec:
 EOF
 ```
 
-
 ```bash
 # VERIFY CERTIFICATES ARE RE-ISSUED BY VAULT PKI
 kubectl get certificates -A
 kubectl get clusterissuer
 ```
-
 
 ```bash
 # INIT + APPLY
@@ -293,8 +291,24 @@ kubectl describe certificate wildcard-infra-sthings-tls -n default | grep Issuer
 - kubeconfigs for both clusters available
 
 ---
+# 🔐 Harvester TLS Certificate Setup
 
-## Step 1: Request Certificate from Infra Cluster
+> Complete guide for requesting, exporting, and applying a cert-manager certificate to Harvester via Vault PKI.
+
+---
+
+## 📋 Prerequisites
+
+- Access to both `infra` and `harvester` kubeconfigs
+- `cert-manager` with a `ClusterIssuer` named `vault-pki` configured on the infra cluster
+- `kubectl`, `openssl` available locally
+
+---
+
+## Step 1 — Request Certificate from Infra Cluster
+
+<details>
+<summary>📜 Apply Certificate resource to infra cluster</summary>
 
 ```bash
 export KUBECONFIG=~/.kube/infra.sthings.lab
@@ -318,7 +332,14 @@ spec:
 EOF
 ```
 
-## Step 2: Export Cert and Key
+</details>
+
+---
+
+## Step 2 — Export Cert and Key
+
+<details>
+<summary>💾 Extract TLS cert and key from the secret</summary>
 
 ```bash
 kubectl get secret harvester-tls -n default \
@@ -328,19 +349,26 @@ kubectl get secret harvester-tls -n default \
   -o jsonpath='{.data.tls\.key}' | base64 -d > harvester.key
 ```
 
-## Step 3: Import into Harvester
+</details>
+
+---
+
+## Step 3 — Import into Harvester
+
+<details>
+<summary>🚀 Create TLS secrets in the cattle-system namespace</summary>
 
 ```bash
 export KUBECONFIG=~/.kube/harvester
 
-# create/replace the rancher TLS secret
+# Create/replace the Rancher TLS secret
 kubectl create secret tls tls-rancher \
   --cert=harvester.crt \
   --key=harvester.key \
   -n cattle-system \
   --dry-run=client -o yaml | kubectl apply -f -
 
-# create secret for ingress
+# Create secret for ingress
 kubectl create secret tls harvester-ingress-tls \
   --cert=harvester.crt \
   --key=harvester.key \
@@ -348,7 +376,14 @@ kubectl create secret tls harvester-ingress-tls \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
-## Step 4: Patch the Ingress
+</details>
+
+---
+
+## Step 4 — Patch the Ingress
+
+<details>
+<summary>🔧 Patch rancher-expose ingress with TLS config</summary>
 
 ```bash
 kubectl patch ingress rancher-expose -n cattle-system \
@@ -378,33 +413,58 @@ kubectl patch ingress rancher-expose -n cattle-system \
   }'
 ```
 
-## Step 5: Verify
+> **Note:** The backend service is `rancher:80` — not port 443.
+
+</details>
+
+---
+
+## Step 5 — Verify
+
+<details>
+<summary>✅ Confirm the certificate is served correctly</summary>
 
 ```bash
 echo | openssl s_client -connect harvester.sthings.lab:443 2>/dev/null \
   | openssl x509 -noout -issuer -subject
 ```
 
-Expected output:
+**Expected output:**
+
 ```
 issuer=C=DE, O=sva, CN=sthings.lab
 subject=CN=harvester.sthings.lab
 ```
 
+</details>
+
 ---
 
-## Notes
+## ⚠️ Important Notes
 
-- Harvester uses **dynamiclistener** internally — replacing secrets alone is not enough, the ingress must be patched with TLS config
-- The backend service is `rancher:80` (not 443)
-- Cert renewal must be done manually — repeat steps 1–5 before expiry (90 days / 2160h)
-- To automate renewal, consider setting up the cross-cluster Vault issuer approach with CoreDNS forwarding for `sthings.lab`
+| Topic | Detail |
+|---|---|
+| **dynamiclistener** | Harvester uses it internally — replacing secrets alone is not enough, the ingress must be patched |
+| **Backend port** | Use `rancher:80`, not 443 |
+| **Cert renewal** | Manual — repeat steps 1–5 before expiry |
+| **Expiry** | 90 days / 2160h |
+| **Automation** | Consider cross-cluster Vault issuer with CoreDNS forwarding for `sthings.lab` |
 
+---
 
-## NFS-SERVER INSTALL
+---
+
+# 🗄️ NFS Server Install
+
+---
+
+## Ansible Setup
+
+<details>
+<summary>🐍 Install Ansible in a Python venv</summary>
 
 ```bash
-bash# Install venv package
+# Install venv package
 sudo apt update && sudo apt install -y python3-venv python3-pip
 
 # Create venv
@@ -418,23 +478,112 @@ pip install ansible==11.13.0
 
 # Verify
 ansible --version
-To make activation permanent (optional), add to your ~/.bashrc or ~/.zshrc:
-bashalias ansible-env='source ~/.venv/ansible/bin/activate'
-Or auto-activate on shell start:
-bashecho 'source ~/.venv/ansible/bin/activate' >> ~/.bashrc
-Check the exact version:
-bashpip show ansible | grep Version
-# Version: 11.13.0
-
-Note: Ansible 11.x corresponds to ansible-core 2.18.x under the hood — ansible --version will show the core version, which is expected.
 ```
 
+**Optional: Make activation permanent**
 
 ```bash
-ansible-galaxy install -r harvester/requirements.yaml 
+# Alias approach
+echo "alias ansible-env='source ~/.venv/ansible/bin/activate'" >> ~/.bashrc
 
-ansible-playbook sthings.baseos.nfs_server.yaml -i "infra.sthings.lab," -u sthings --become \
+# Or auto-activate on shell start
+echo 'source ~/.venv/ansible/bin/activate' >> ~/.bashrc
+```
+
+**Verify version:**
+
+```bash
+pip show ansible | grep Version
+# Version: 11.13.0
+```
+
+> **Note:** Ansible 11.x corresponds to `ansible-core 2.18.x` — `ansible --version` will show the core version, which is expected.
+
+</details>
+
+---
+
+## Run the NFS Playbook
+
+<details>
+<summary>▶️ Install NFS server via Ansible</summary>
+
+```bash
+ansible-galaxy install -r harvester/requirements.yaml
+
+ansible-playbook sthings.baseos.nfs_server.yaml \
+  -i "infra.sthings.lab," \
+  -u sthings \
+  --become \
   -e "nfs_network=192.168.10.0/24"
 ```
 
+</details>
 
+---
+
+## NFS CSI Driver (Flux / HelmRelease)
+
+<details>
+<summary>🔍 Check NFS CSI pod status</summary>
+
+```bash
+kubectl get pods -n kube-system | grep -E 'csi-nfs|snapshot-controller'
+kubectl get daemonset csi-nfs-node -n kube-system
+kubectl get deployment csi-nfs-controller -n kube-system
+```
+
+</details>
+
+<details>
+<summary>🛠️ Fix stuck HelmRelease for nfs-csi</summary>
+
+If the `HelmRelease/kube-system/nfs-csi` is stuck in **Failed** state, Flux won't proceed. Use the following steps to reset it:
+
+**1. Check the failure reason:**
+
+```bash
+flux get helmrelease -n kube-system nfs-csi
+
+# Full detail:
+kubectl describe helmrelease -n kube-system nfs-csi
+```
+
+**2. Force reconcile:**
+
+```bash
+flux reconcile helmrelease nfs-csi -n kube-system --force
+```
+
+**3. If still stuck — suspend + resume:**
+
+```bash
+flux suspend helmrelease nfs-csi -n kube-system
+flux resume helmrelease nfs-csi -n kube-system
+```
+
+**4. Reconcile the parent Kustomization:**
+
+```bash
+# Find the kustomization name first
+flux get kustomizations -A | grep nfs-csi
+
+# Then reconcile
+flux reconcile kustomization nfs-csi -n flux-system --force
+```
+
+</details>
+
+<details>
+<summary>🔎 Diagnose lingering HelmRelease failures</summary>
+
+If the HelmRelease keeps failing despite pods running, Helm chart health checks (readiness probes, jobs, hooks) may be timing out.
+
+```bash
+kubectl get events -n kube-system --sort-by='.lastTimestamp' | grep nfs-csi
+helm history nfs-csi -n kube-system
+```
+
+> **Tip:** To prevent timeout issues in the future, increase the install timeout in your `HelmRelease` spec — the Deployment/DaemonSet may just need more time to become ready.
+
+</details>
