@@ -12,8 +12,12 @@ Deploys a Vault-backed ClusterIssuer on the xplane cluster using the PKI engine 
 
 ```bash
 cd /home/sthings/projects/harvester/clusters/xplane/vault
+export KUBECONFIG=~/.kube/infra.sthings.lab
+export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.root_token}' | base64 -d)
+echo $VAULT_TOKEN
+
+export KUBECONFIG=~/.kube/xplane
 export VAULT_ADDR=https://vault.infra.sthings.lab
-export VAULT_TOKEN=<your-vault-token>
 export VAULT_SKIP_VERIFY=true
 terraform init
 terraform plan
