@@ -14,3 +14,6 @@ data:
       - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-vspherevm/templates/vspherevm-labul.yaml
       - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-storageplatform/templates/storageplatform-nfs.yaml
       - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-storageplatform/templates/storageplatform-openebs.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-harvestervm/templates/harvestervm-detailed.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-harvestervm/templates/harvestervm-developer.yaml
+      - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/claim-xplane-harvestervm/templates/harvestervm-expert.yaml
