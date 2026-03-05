@@ -392,7 +392,7 @@ kubectl patch ingress rancher-expose -n cattle-system \
     "spec": {
       "tls": [{
         "hosts": ["harvester.sthings.lab"],
-        "secretName": "harvester-ingress-tls"
+        "secretName": "harvester-ingress-tls" # pragma: allowlist secret
       }],
       "rules": [{
         "host": "harvester.sthings.lab",
