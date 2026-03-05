@@ -240,4 +240,153 @@ sudo update-ca-certificates
 
 
 
+Change these two values to switch from cluster-ca to vault-pki:
+vault Kustomization:
+yamlISSUER_NAME: vault-pki        # was: cluster-ca
+ISSUER_KIND: ClusterIssuer    # stays the same
+cert-manager-selfsigned Kustomization:
+yamlCERT_MANAGER_SELFSIGNED_ISSUER: vault-pki   # was: cluster-ca
+```
 
+So the flow becomes:
+```
+vault-pki (ClusterIssuer)
+  → signs wildcard-infra-sthings-tls
+    → used by cilium-gateway
+      → TLS for all *.infra.sthings.lab routes including vault itself
+After committing, force reconcile to pick up the changes immediately:
+bash
+
+```bash
+flux reconcile kustomization vault --with-source
+flux reconcile kustomization cert-manager-selfsigned --with-source
+flux reconcile kustomization cilium-gateway --with-source
+
+kubectl delete certificate wildcard-infra-sthings-tls -n default
+kubectl delete secret wildcard-infra-sthings-tls -n default
+flux reconcile kustomization cert-manager-selfsigned --with-source
+```
+
+Then verify the new cert is issued by vault-pki:
+
+```bash
+kubectl get certificate -A
+kubectl describe certificate wildcard-infra-sthings-tls -n default | grep Issuer
+```
+
+
+# Securing Harvester UI with Vault PKI (Manual Cert Approach)
+
+## Prerequisites
+
+- Vault PKI running on infra cluster with `vault-pki` ClusterIssuer
+- `harvester.sthings.lab` DNS resolving to `192.168.10.110`
+- kubeconfigs for both clusters available
+
+---
+
+## Step 1: Request Certificate from Infra Cluster
+
+```bash
+export KUBECONFIG=~/.kube/infra.sthings.lab
+
+kubectl apply -f - <<EOF
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harvester-tls
+  namespace: default
+spec:
+  secretName: harvester-tls
+  issuerRef:
+    name: vault-pki
+    kind: ClusterIssuer
+  commonName: harvester.sthings.lab
+  dnsNames:
+    - harvester.sthings.lab
+  duration: 2160h
+  renewBefore: 360h
+EOF
+```
+
+## Step 2: Export Cert and Key
+
+```bash
+kubectl get secret harvester-tls -n default \
+  -o jsonpath='{.data.tls\.crt}' | base64 -d > harvester.crt
+
+kubectl get secret harvester-tls -n default \
+  -o jsonpath='{.data.tls\.key}' | base64 -d > harvester.key
+```
+
+## Step 3: Import into Harvester
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+
+# create/replace the rancher TLS secret
+kubectl create secret tls tls-rancher \
+  --cert=harvester.crt \
+  --key=harvester.key \
+  -n cattle-system \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+# create secret for ingress
+kubectl create secret tls harvester-ingress-tls \
+  --cert=harvester.crt \
+  --key=harvester.key \
+  -n cattle-system \
+  --dry-run=client -o yaml | kubectl apply -f -
+```
+
+## Step 4: Patch the Ingress
+
+```bash
+kubectl patch ingress rancher-expose -n cattle-system \
+  --type merge \
+  -p '{
+    "spec": {
+      "tls": [{
+        "hosts": ["harvester.sthings.lab"],
+        "secretName": "harvester-ingress-tls"
+      }],
+      "rules": [{
+        "host": "harvester.sthings.lab",
+        "http": {
+          "paths": [{
+            "path": "/",
+            "pathType": "Prefix",
+            "backend": {
+              "service": {
+                "name": "rancher",
+                "port": {"number": 80}
+              }
+            }
+          }]
+        }
+      }]
+    }
+  }'
+```
+
+## Step 5: Verify
+
+```bash
+echo | openssl s_client -connect harvester.sthings.lab:443 2>/dev/null \
+  | openssl x509 -noout -issuer -subject
+```
+
+Expected output:
+```
+issuer=C=DE, O=sva, CN=sthings.lab
+subject=CN=harvester.sthings.lab
+```
+
+---
+
+## Notes
+
+- Harvester uses **dynamiclistener** internally — replacing secrets alone is not enough, the ingress must be patched with TLS config
+- The backend service is `rancher:80` (not 443)
+- Cert renewal must be done manually — repeat steps 1–5 before expiry (90 days / 2160h)
+- To automate renewal, consider setting up the cross-cluster Vault issuer approach with CoreDNS forwarding for `sthings.lab`
