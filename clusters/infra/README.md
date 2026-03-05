@@ -247,6 +247,12 @@ security find-certificate -c "sthings" /Library/Keychains/System.keychain
 ```
 
 
+## INSTALL IT (ANSIBKE)
+
+```bash
+ansible-playbook clusters/infra/vault/install-ca-cert.yaml -i "infra.sthings.lab,xplane.sthings.lab" -u sthings --become
+```
+
 Change these two values to switch from cluster-ca to vault-pki:
 vault Kustomization:
 yamlISSUER_NAME: vault-pki        # was: cluster-ca
