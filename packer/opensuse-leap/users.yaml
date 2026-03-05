@@ -12,3 +12,9 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
       - ssh-test # pragma: allowlist secret
+  - name: hans
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
+    ssh_authorized_keys:
+      - ssh-12334 # pragma: allowlist secret
