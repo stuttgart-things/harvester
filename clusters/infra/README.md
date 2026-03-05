@@ -231,14 +231,22 @@ terraform apply --auto-approve
 ```
 
 
-# get CA cert from vault
+# GET CA CERT FROM VAULT
 curl -sk https://vault.infra.sthings.lab/v1/pki/ca/pem -o sthings-lab-ca.crt
 
-# install it
+## INSTALL IT (UBUNTU)
+
+```bash
 sudo cp sthings-lab-ca.crt /usr/local/share/ca-certificates/sthings-lab-ca.crt
 sudo update-ca-certificates
-<<<<<<< HEAD
+```
 
+## INSTALL IT (MACOS)
+
+```bash
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain sthings-lab-ca.crt
+security find-certificate -c "sthings" /Library/Keychains/System.keychain
+```
 
 
 Change these two values to switch from cluster-ca to vault-pki:
@@ -391,5 +399,42 @@ subject=CN=harvester.sthings.lab
 - The backend service is `rancher:80` (not 443)
 - Cert renewal must be done manually — repeat steps 1–5 before expiry (90 days / 2160h)
 - To automate renewal, consider setting up the cross-cluster Vault issuer approach with CoreDNS forwarding for `sthings.lab`
-=======
->>>>>>> a54bcff54915a910b2d6fc495ea2252c575fbcad
+
+
+## NFS-SERVER INSTALL
+
+```bash
+bash# Install venv package
+sudo apt update && sudo apt install -y python3-venv python3-pip
+
+# Create venv
+python3 -m venv ~/.venv/ansible
+
+# Activate
+source ~/.venv/ansible/bin/activate
+
+# Install specific ansible version
+pip install ansible==11.13.0
+
+# Verify
+ansible --version
+To make activation permanent (optional), add to your ~/.bashrc or ~/.zshrc:
+bashalias ansible-env='source ~/.venv/ansible/bin/activate'
+Or auto-activate on shell start:
+bashecho 'source ~/.venv/ansible/bin/activate' >> ~/.bashrc
+Check the exact version:
+bashpip show ansible | grep Version
+# Version: 11.13.0
+
+Note: Ansible 11.x corresponds to ansible-core 2.18.x under the hood — ansible --version will show the core version, which is expected.
+```
+
+
+```bash
+ansible-galaxy install -r harvester/requirements.yaml 
+
+ansible-playbook sthings.baseos.nfs_server.yaml -i "infra.sthings.lab," -u sthings --become \
+  -e "nfs_network=192.168.10.0/24"
+```
+
+
