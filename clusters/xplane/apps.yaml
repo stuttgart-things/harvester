@@ -47,3 +47,28 @@ spec:
       GATEWAY_NAMESPACE: default
       HOSTNAME: headlamp
       DOMAIN: xplane.sthings.lab
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: claim-machinery-api
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/claim-machinery-api
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
+      CLAIM_MACHINERY_API_VERSION: v0.5.6
+      CLAIM_MACHINERY_PROFILE_PATH: https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/claims/api-template-profiles.yaml
+      HOSTNAME: claim-machinery-api
+      DOMAIN: xplane.sthings.lab
+      GATEWAY_NAME: xplane-sthings-gateway
+      GATEWAY_NAMESPACE: default
