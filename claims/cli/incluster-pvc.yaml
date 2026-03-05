@@ -2,16 +2,16 @@
 apiVersion: resources.stuttgart-things.com/v1alpha1
 kind: VolumeClaim
 metadata:
-  name: hacky
+  name: test-pvc-incluster
   namespace: default
 spec:
   accessModes:
   - ReadWriteOnce
   annotations:
-    description: A simple persistent volume claim for application data
+    description: A simple persistent volume claim for application data on xplane cluster
   namespace: default
   providerConfigRef: in-cluster
-  pvcName: hacky
+  pvcName: test-pvc-incluster
   storage: '2Gi'
   storageClassName: openebs-hostpath
   volumeMode: Filesystem
