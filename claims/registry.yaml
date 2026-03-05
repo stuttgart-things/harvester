@@ -1,16 +1,6 @@
 apiVersion: claim-registry.io/v1alpha1
 kind: ClaimRegistry
 claims:
-    - name: hacky
-      template: volumeclaim
-      category: cli
-      namespace: default
-      createdAt: "2026-02-05T10:58:33Z"
-      createdBy: patrick
-      source: cli
-      repository: stuttgart-things/harvester
-      path: claims/cli/hacky.yaml
-      status: active
     - name: harvestervm-developer-martin
       template: harvestervm
       category: cli
