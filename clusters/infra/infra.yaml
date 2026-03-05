@@ -115,3 +115,29 @@ spec:
       NFS_CSI_ENABLE_CRDS: "true"
       NFS_CSI_ENABLE_SNAPSHOTTER: "true"
 ---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: prometheus
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/prometheus
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      PROMETHEUS_NAMESPACE: monitoring
+      PROMETHEUS_VERSION: "28.13.0"
+      PROMETHEUS_STORAGE_CLASS: nfs4-csi
+      PROMETHEUS_STORAGE_SIZE: 10Gi
+      PROMETHEUS_RETENTION: 15d
+      GATEWAY_NAME: infra-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: prometheus
+      DOMAIN: infra.sthings.lab
