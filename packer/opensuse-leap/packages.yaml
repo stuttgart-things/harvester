@@ -5,3 +5,4 @@ packages:
   - git
   - jq
   - nano
+  - nginx
