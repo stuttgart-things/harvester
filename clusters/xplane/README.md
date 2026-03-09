@@ -159,3 +159,19 @@ dagger call \
 ```bash
 ansible-playbook clusters/infra/vault/install-ca-cert.yaml -i "infra.sthings.lab,xplane.sthings.lab" -u sthings --become
 ```
+
+
+## INSTALL CLAIMS
+
+```bash
+cd /tmp
+wget https://github.com/stuttgart-things/claims/releases/download/v0.7.2/claims_0.7.2_linux_amd64.tar.gz
+tar xvfz claims_0.7.2_linux_amd64.tar.gz 
+sudo mv claims /usr/bin/claims && sudo chmod +x /usr/bin/claims
+claims version
+```
+
+```bash
+export CLAIM_API_URL=https://claim-machinery-api.xplane.sthings.labc
+claims render
+```
