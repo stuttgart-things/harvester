@@ -25,7 +25,7 @@ spec:
     domain: cluster.local
   kustomize:
     patches:
-    - patch: |-
+    - patch: |- # pragma: allowlist secret
         - op: add
           path: /spec/decryption
           value:
@@ -51,4 +51,4 @@ spec:
     url: https://github.com/stuttgart-things/harvester
     ref: refs/heads/main
     path: clusters/platform
-    pullSecret: git-token-auth
+    pullSecret: git-token-auth # pragma: allowlist secret

@@ -2,6 +2,53 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
+  annotations:
+    managed-by: kcl-flux-kustomizations
+    template: clusterbook
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: clusterbook
+  namespace: flux-system
+spec:
+  force: false
+  interval: '5m'
+  path: './apps/clusterbook'
+  postBuild:
+    substitute:
+      CLUSTERBOOK_NAMESPACE: clusterbook
+      CLUSTERBOOK_VERSION: v1.20.1
+      CLUSTERBOOK_HOSTNAME: clusterbook
+      GATEWAY_NAME: infra-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      DOMAIN: infra.sthings.lab
+      FLUX_SOURCE_API_VERSION: v1
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  timeout: '5m'
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: clusterbook-configuration
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: clusterbook
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/infra/seeds
+  prune: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
   name: vault
   namespace: flux-system
 spec:
