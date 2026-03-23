@@ -1,0 +1,35 @@
+---
+name: Flux Kustomizations
+functions:
+  - name: clusterbook-assign-ip
+    type: http
+    method: POST
+    url: "${CLUSTERBOOK_URL}/api/v1/networks/${networkKey}/reserve"
+    headers:
+      Content-Type: application/json
+    body:
+      cluster: "${cluster}"
+      status: "${status}"
+      create_dns: "${createDns}"
+    response:
+      extract: "ip"
+templates:
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-clusterbook-app.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-cilium-lb.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-cert-manager-install.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-gitrepository.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-cilium-gateway.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-cert-manager-selfsigned.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-openebs.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-vault.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-vault-autounseal.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-vault-httproute.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-flux-web.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-headlamp.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-prometheus.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-nfs-csi.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-trust-manager.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-uptime-kuma.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-install.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-functions.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-configs.yaml
