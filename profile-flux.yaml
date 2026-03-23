@@ -33,3 +33,5 @@ templates:
   - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-install.yaml
   - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-functions.yaml
   - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-crossplane-configs.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-minio.yaml
+  - /home/sthings/projects/kcl/flux/claim-flux-kustomizations/templates/flux-kustomization-minio-httproute.yaml
