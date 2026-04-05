@@ -1,0 +1,20 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: bla
+  description: Crossplane claim (harborproject) - bla
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/claims/apps/bla
+    claim-machinery/template: harborproject
+    claim-machinery/category: apps
+  tags:
+    - crossplane
+    - claim
+    - harborproject
+    - apps
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
