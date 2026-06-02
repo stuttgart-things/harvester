@@ -75,8 +75,9 @@ jobs:
     runs-on: kvm
     environment: harvester
     env:
-      PACKER_LOG: 0
+      PACKER_LOG: 1 # DEBUG: temporary, surfaces QEMU launch error; revert to 0
     strategy:
+      fail-fast: false # DEBUG: temporary, let every target report its own result
       matrix:
         include: ${{ fromJson(needs.detect-targets.outputs.targets) }}
 
