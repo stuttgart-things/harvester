@@ -64,3 +64,28 @@ spec:
       CERT_MANAGER_SELFSIGNED_CERT_NAME: wildcard-platform-sthings-tls
       CERT_MANAGER_SELFSIGNED_CERT_NAMESPACE: default
       CERT_MANAGER_SELFSIGNED_ISSUER: vault-pki
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium-gateway
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cilium-lb
+    - name: cert-manager-selfsigned
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cilium/components/gateway
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CILIUM_GATEWAY_NAME: platform-sthings-gateway
+      CILIUM_GATEWAY_NAMESPACE: default
+      CILIUM_GATEWAY_DOMAIN: "platform.sthings.lab"
+      CILIUM_GATEWAY_TLS_SECRET: wildcard-platform-sthings-tls # pragma: allowlist secret

@@ -11,12 +11,12 @@ Deploys a Vault-backed ClusterIssuer on the platform cluster using the PKI engin
 ## Run
 
 ```bash
-cd /home/sthings/projects/harvester/clusters/platform/vault
+cd /home/sthings/harvester/clusters/platform/vault
 export KUBECONFIG=~/.kube/infra.sthings.lab
 export VAULT_TOKEN=$(kubectl get secret vault-root-token -n vault -o jsonpath='{.data.root_token}' | base64 -d)
 echo $VAULT_TOKEN
 
-export KUBECONFIG=~/.kube/platform
+export KUBECONFIG=~/.kube/platform.sthings.lab
 export VAULT_ADDR=https://vault.infra.sthings.lab
 export VAULT_SKIP_VERIFY=true
 terraform init
