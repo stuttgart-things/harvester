@@ -26,7 +26,7 @@ variable "vault_addr" {
 variable "kubeconfig_path" {
   type        = string
   description = "Path to kubeconfig"
-  default     = "/home/sthings/.kube/platform"
+  default     = "/home/sthings/.kube/platform.sthings.lab"
 }
 
 variable "cluster_name" {
