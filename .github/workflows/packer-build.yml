@@ -10,7 +10,7 @@ on:
         type: choice
         options:
           - packer/ubuntu22
-          - packer/ubuntu25
+          - packer/ubuntu26
           - packer/opensuse-leap
           - packer/rocky
 

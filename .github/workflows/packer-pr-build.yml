@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - "packer/ubuntu22/**"
-      - "packer/ubuntu25/**"
+      - "packer/ubuntu26/**"
       - "packer/opensuse-leap/**"
       - "packer/rocky/**"
     types:
@@ -23,7 +23,7 @@ on:
         type: choice
         options:
           - packer/ubuntu22
-          - packer/ubuntu25
+          - packer/ubuntu26
           - packer/opensuse-leap
           - packer/rocky
 
@@ -49,15 +49,15 @@ jobs:
         run: |
           declare -A IMAGE_NAMES=(
             ["packer/ubuntu22"]="u22-dev"
-            ["packer/ubuntu25"]="u25-dev"
+            ["packer/ubuntu26"]="u26-dev"
             ["packer/opensuse-leap"]="suse15-dev"
             ["packer/rocky"]="rocky9-dev"
           )
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu22|ubuntu25|opensuse-leap|rocky)/' | sort -u | sed 's|/$||')
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu22|ubuntu26|opensuse-leap|rocky)/' | sort -u | sed 's|/$||')
           if [ -z "$CHANGED" ]; then
             echo "targets=[]" >> "$GITHUB_OUTPUT"
           else
-            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu22":"u22-dev","packer/ubuntu25":"u25-dev","packer/opensuse-leap":"suse15-dev","packer/rocky":"rocky9-dev"}' \
+            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu22":"u22-dev","packer/ubuntu26":"u26-dev","packer/opensuse-leap":"suse15-dev","packer/rocky":"rocky9-dev"}' \
               'split("\n") | map(select(length > 0)) | map({"packer_dir": ., "image_name": $names[.]})')
             echo "targets=$JSON" >> "$GITHUB_OUTPUT"
           fi
@@ -127,7 +127,7 @@ jobs:
         run: |
           declare -A IMAGE_NAMES=(
             ["packer/ubuntu22"]="u22-dev"
-            ["packer/ubuntu25"]="u25-dev"
+            ["packer/ubuntu26"]="u26-dev"
             ["packer/opensuse-leap"]="suse15-dev"
             ["packer/rocky"]="rocky9-dev"
           )

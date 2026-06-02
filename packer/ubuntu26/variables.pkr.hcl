@@ -1,16 +1,16 @@
 variable "ubuntu_url" {
   type    = string
-  default = "https://cloud-images.ubuntu.com/plucky/current/plucky-server-cloudimg-amd64.img"
+  default = "https://cloud-images.ubuntu.com/resolute/current/resolute-server-cloudimg-amd64.img"
 }
 
 variable "ubuntu_checksum" {
   type    = string
-  default = "file:https://cloud-images.ubuntu.com/plucky/current/SHA256SUMS"
+  default = "file:https://cloud-images.ubuntu.com/resolute/current/SHA256SUMS"
 }
 
 variable "image_name" {
   type    = string
-  default = "ubuntu-plucky-base"
+  default = "ubuntu-resolute-base"
 }
 
 variable "namespace" {

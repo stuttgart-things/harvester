@@ -1,6 +1,6 @@
-# Ubuntu Plucky Base Image (Packer + QEMU)
+# Ubuntu Resolute Base Image (Packer + QEMU)
 
-Builds a Ubuntu 25.04 (Plucky) QEMU disk image with custom packages and users configured via cloud-init.
+Builds a Ubuntu 26.04 LTS (Resolute) QEMU disk image with custom packages and users configured via cloud-init.
 
 ## Prerequisites
 
@@ -81,7 +81,7 @@ packer init .
 packer build .
 ```
 
-The output image (`ubuntu-plucky-base-amd64.img`) will be placed in the `output/` directory. The Harvester upload is skipped by default.
+The output image (`ubuntu-resolute-base-amd64.img`) will be placed in the `output/` directory. The Harvester upload is skipped by default.
 
 ### Build and upload to Harvester
 
@@ -100,7 +100,7 @@ Variables can be overridden at build time:
 
 ```bash
 # Custom image name
-packer build -var 'image_name=ubuntu-plucky-custom' .
+packer build -var 'image_name=ubuntu-resolute-custom' .
 
 # Custom YAML files
 packer build -var 'users_file=prod-users.yaml' -var 'packages_file=prod-packages.yaml' .
@@ -113,9 +113,9 @@ packer build -var 'output_location=build/' .
 
 | Variable          | Default                                  | Description                          |
 |-------------------|------------------------------------------|--------------------------------------|
-| `ubuntu_url`      | Ubuntu Plucky cloud image URL            | Source cloud image                   |
-| `ubuntu_checksum` | Plucky SHA256SUMS URL                    | Checksum for source image            |
-| `image_name`      | `ubuntu-plucky-base`                     | Output image name prefix             |
+| `ubuntu_url`      | Ubuntu Resolute cloud image URL            | Source cloud image                   |
+| `ubuntu_checksum` | Resolute SHA256SUMS URL                    | Checksum for source image            |
+| `image_name`      | `ubuntu-resolute-base`                     | Output image name prefix             |
 | `namespace`       | `default`                                | Namespace designation                |
 | `output_location` | `output/`                                | Directory for build output           |
 | `packages_file`   | `packages.yaml`                          | Path to packages YAML                |
@@ -133,7 +133,7 @@ Actions → Packer Build → Run workflow
 ```
 
 Inputs:
-- **packer_dir**: Directory containing the Packer config (default: `harvester/packer/ubuntu25`)
+- **packer_dir**: Directory containing the Packer config (default: `harvester/packer/ubuntu26`)
 - **template**: Packer template target (default: `.`)
 - **var_file**: Optional `.pkrvars.hcl` file for overrides
 - **log_level**: Packer log verbosity (`TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`)
