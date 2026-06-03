@@ -2,14 +2,14 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: u25-dev-packer-image
-  description: u25-dev Packer Image for Harvester
+  name: u26-dev-packer-image
+  description: u26-dev Packer Image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
-    - ubuntu25
+    - ubuntu26
     - users-customized
     - packages-customized
 spec:
@@ -18,7 +18,5 @@ spec:
   owner: platform-team
   dependsOn: []
   profile:
-    addedUsers:
-      - hans
-    addedPackages:
-      - apache
+    addedUsers: []
+    addedPackages: []

@@ -7,7 +7,7 @@ on:
       - main
     paths:
       - "packer/ubuntu22/**"
-      - "packer/ubuntu25/**"
+      - "packer/ubuntu26/**"
       - "packer/opensuse-leap/**"
       - "packer/rocky/**"
     types:
@@ -23,9 +23,15 @@ on:
         type: choice
         options:
           - packer/ubuntu22
-          - packer/ubuntu25
+          - packer/ubuntu26
           - packer/opensuse-leap
           - packer/rocky
+
+      upload_to_harvester:
+        description: "Upload the built image to Harvester (uncheck for a build-only run)"
+        required: false
+        default: true
+        type: boolean
 
 permissions:
   contents: write
@@ -49,15 +55,15 @@ jobs:
         run: |
           declare -A IMAGE_NAMES=(
             ["packer/ubuntu22"]="u22-dev"
-            ["packer/ubuntu25"]="u25-dev"
+            ["packer/ubuntu26"]="u26-dev"
             ["packer/opensuse-leap"]="suse15-dev"
             ["packer/rocky"]="rocky9-dev"
           )
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu22|ubuntu25|opensuse-leap|rocky)/' | sort -u | sed 's|/$||')
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -oP '^packer/(ubuntu22|ubuntu26|opensuse-leap|rocky)/' | sort -u | sed 's|/$||')
           if [ -z "$CHANGED" ]; then
             echo "targets=[]" >> "$GITHUB_OUTPUT"
           else
-            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu22":"u22-dev","packer/ubuntu25":"u25-dev","packer/opensuse-leap":"suse15-dev","packer/rocky":"rocky9-dev"}' \
+            JSON=$(echo "$CHANGED" | jq -R -s -c --argjson names '{"packer/ubuntu22":"u22-dev","packer/ubuntu26":"u26-dev","packer/opensuse-leap":"suse15-dev","packer/rocky":"rocky9-dev"}' \
               'split("\n") | map(select(length > 0)) | map({"packer_dir": ., "image_name": $names[.]})')
             echo "targets=$JSON" >> "$GITHUB_OUTPUT"
           fi
@@ -114,7 +120,7 @@ jobs:
     name: "Build ${{ inputs.packer_dir }}"
     if: github.event_name == 'workflow_dispatch'
     runs-on: kvm
-    environment: harvester
+    environment: ${{ inputs.upload_to_harvester && 'harvester' || '' }}
     env:
       PACKER_LOG: 0
 
@@ -127,7 +133,7 @@ jobs:
         run: |
           declare -A IMAGE_NAMES=(
             ["packer/ubuntu22"]="u22-dev"
-            ["packer/ubuntu25"]="u25-dev"
+            ["packer/ubuntu26"]="u26-dev"
             ["packer/opensuse-leap"]="suse15-dev"
             ["packer/rocky"]="rocky9-dev"
           )
@@ -137,7 +143,7 @@ jobs:
         run: |
           echo "Packer dir            : ${{ inputs.packer_dir }}"
           echo "Image name            : ${{ steps.resolve.outputs.image_name }}"
-          echo "Upload to Harvester   : true"
+          echo "Upload to Harvester   : ${{ inputs.upload_to_harvester }}"
           echo "Trigger               : ${{ github.event_name }}"
 
       - name: Packer init
@@ -148,7 +154,7 @@ jobs:
         working-directory: ${{ inputs.packer_dir }}
         env:
           PKR_VAR_image_name: ${{ steps.resolve.outputs.image_name }}
-          PKR_VAR_upload_to_harvester: "true"
+          PKR_VAR_upload_to_harvester: ${{ inputs.upload_to_harvester }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
         run: packer build .
