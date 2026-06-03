@@ -17,7 +17,7 @@ spec:
   postBuild:
     substitute:
       CLUSTERBOOK_NAMESPACE: clusterbook
-      CLUSTERBOOK_VERSION: v1.25.7
+      CLUSTERBOOK_VERSION: v1.25.8
       CLUSTERBOOK_HOSTNAME: clusterbook
       GATEWAY_NAME: infra-sthings-gateway
       GATEWAY_NAMESPACE: default
