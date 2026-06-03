@@ -4,5 +4,7 @@ packages:
   - curl
   - git
   - jq
+  - apache
   - zsh
   - htop
+  - nginx
