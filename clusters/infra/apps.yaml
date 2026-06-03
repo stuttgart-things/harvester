@@ -25,7 +25,7 @@ spec:
       FLUX_SOURCE_API_VERSION: v1
       DDWRT_ENABLED: "true"
       DDWRT_HOST: 192.168.10.1
-      DDWRT_USER: sthings
+      DDWRT_USER: root
       DDWRT_ZONE: sthings.lab
     substituteFrom:
       - kind: Secret
