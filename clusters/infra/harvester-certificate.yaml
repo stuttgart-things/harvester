@@ -1,0 +1,25 @@
+---
+# Cluster-specific single-host certificate for the Harvester UI/API endpoint.
+# Lives here (not in the generic stuttgart-things/flux cert-manager definition)
+# because the hostname is specific to this cluster.
+#
+# Issued by the vault-pki ClusterIssuer. On first reconcile Flux adopts the
+# pre-existing, hand-managed harvester-tls secret via server-side-apply
+# (no re-issue, no owner conflict) as long as only this manifest manages it.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harvester-tls
+  namespace: default
+spec:
+  commonName: harvester.sthings.lab
+  dnsNames:
+    - harvester.sthings.lab
+  secretName: harvester-tls # pragma: allowlist secret
+  issuerRef:
+    name: vault-pki
+    kind: ClusterIssuer
+  duration: 2160h # 90 days
+  renewBefore: 360h # renew 15 days before expiry
+  privateKey:
+    rotationPolicy: Always
