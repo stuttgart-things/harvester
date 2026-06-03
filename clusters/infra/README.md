@@ -446,13 +446,134 @@ subject=CN=harvester.sthings.lab
 
 ---
 
+## Step 6 — Renew an Expired Certificate
+
+> Use this when the cert in the Harvester cluster has expired (browser shows
+> an expired/invalid certificate). The `harvester-tls` **Certificate** on the
+> infra cluster is managed by cert-manager and auto-renews (`renewBefore: 360h`);
+> only the **static copy** in the Harvester cluster goes stale. So in most cases
+> you just need to re-copy the already-renewed secret — no re-issue needed.
+
+<details>
+<summary>1️⃣ Check whether the infra source is already fresh</summary>
+
+```bash
+export KUBECONFIG=~/.kube/infra.sthings.lab
+
+kubectl get certificate harvester-tls -n default          # READY should be True
+kubectl get secret harvester-tls -n default \
+  -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -subject -dates
+```
+
+- `notAfter` in the **future** → source is fresh, skip to step 3.
+- `notAfter` in the **past** → cert-manager renewal is stuck, force it in step 2.
+
+</details>
+
+<details>
+<summary>2️⃣ (Only if the source is also expired) Force renewal on infra</summary>
+
+```bash
+export KUBECONFIG=~/.kube/infra.sthings.lab
+
+# Preferred (cmctl):
+cmctl renew harvester-tls -n default
+
+# Without cmctl — delete the secret, cert-manager reissues immediately:
+kubectl delete secret harvester-tls -n default
+kubectl get certificate harvester-tls -n default -w        # wait for READY=True
+```
+
+> ⚠️ The `vault-pki` signing token expires periodically (720h TTL). If renewal
+> fails here, the Vault token is likely expired — fix the issuer first.
+
+</details>
+
+<details>
+<summary>3️⃣ Re-export and re-import into Harvester (both secrets!)</summary>
+
+```bash
+export KUBECONFIG=~/.kube/infra.sthings.lab
+kubectl get secret harvester-tls -n default -o jsonpath='{.data.tls\.crt}' | base64 -d > harvester.crt
+kubectl get secret harvester-tls -n default -o jsonpath='{.data.tls\.key}' | base64 -d > harvester.key
+
+export KUBECONFIG=~/.kube/harvester
+kubectl create secret tls tls-rancher           --cert=harvester.crt --key=harvester.key -n cattle-system --dry-run=client -o yaml | kubectl apply -f -
+kubectl create secret tls harvester-ingress-tls --cert=harvester.crt --key=harvester.key -n cattle-system --dry-run=client -o yaml | kubectl apply -f -
+
+rm harvester.crt harvester.key
+```
+
+> `--dry-run=client | apply` replaces the secret contents in place. The ingress
+> patch from Step 4 stays intact and does **not** need to be repeated. Both
+> `tls-rancher` and `harvester-ingress-tls` share the same cert, so update both.
+
+</details>
+
+<details>
+<summary>4️⃣ Restart Rancher so it reloads the new serving cert</summary>
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+kubectl rollout restart deployment/rancher -n cattle-system
+```
+
+</details>
+
+<details>
+<summary>5️⃣ Verify</summary>
+
+```bash
+echo | openssl s_client -connect harvester.sthings.lab:443 -servername harvester.sthings.lab 2>/dev/null \
+  | openssl x509 -noout -dates
+```
+
+The browser should now show a valid certificate.
+
+</details>
+
+<details>
+<summary>ℹ️ DCUI "Management URL not ready" after renewal — expected</summary>
+
+The Harvester node console (DCUI) checks the **internal VIP**
+(`internal-server-url`, e.g. `https://10.53.82.114`), which is served by
+Rancher's own **dynamiclistener** self-signed cert — a separate path from the
+vault-pki browser cert. After the Rancher restart, dynamiclistener regenerates
+its leaf cert and the DCUI status lags for a few minutes.
+
+It is **cosmetic** as long as the cluster is healthy:
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+kubectl get clusters.management.cattle.io local \
+  -o jsonpath='{range .status.conditions[*]}{.type}={.status}{"\n"}{end}'
+# Ready=True / Connected=True / Updated=True / Provisioned=True
+```
+
+If healthy, reload the console / re-login and wait a few minutes — **do not
+reboot the node**. To inspect the internal VIP cert (only reachable from inside
+the cluster):
+
+```bash
+kubectl run cert-check --rm -i --restart=Never --image=alpine --command -- \
+  sh -c 'apk add --no-cache openssl >/dev/null 2>&1; \
+         echo | openssl s_client -connect 10.53.82.114:443 -servername harvester.sthings.lab 2>/dev/null \
+         | openssl x509 -noout -subject -issuer -dates'
+```
+
+An `issuer=...dynamiclistener-ca...` here is normal and healthy.
+
+</details>
+
+---
+
 ## ⚠️ Important Notes
 
 | Topic | Detail |
 |---|---|
 | **dynamiclistener** | Harvester uses it internally — replacing secrets alone is not enough, the ingress must be patched |
 | **Backend port** | Use `rancher:80`, not 443 |
-| **Cert renewal** | Manual — repeat steps 1–5 before expiry |
+| **Cert renewal** | Source on infra auto-renews; the Harvester copy is static — re-copy it (see Step 6) |
 | **Expiry** | 90 days / 2160h |
 | **Automation** | Consider cross-cluster Vault issuer with CoreDNS forwarding for `sthings.lab` |
 
