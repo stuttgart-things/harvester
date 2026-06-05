@@ -29,6 +29,20 @@ spec:
     - kind: Secret
       name: harbor-secrets
       optional: false
+  # Single-node platform cluster: keep harbor lean (registry / pull-through
+  # cache only). Disable trivy (vuln scanner) and exporter (metrics) so their
+  # CPU requests don't exceed the node's remaining allocatable.
+  patches:
+    - target:
+        kind: HelmRelease
+        name: harbor
+      patch: |
+        - op: add
+          path: /spec/values/trivy/enabled
+          value: false
+        - op: add
+          path: /spec/values/exporter/enabled
+          value: false
   prune: true
   retryInterval: '1m'
   sourceRef:
