@@ -114,3 +114,34 @@ spec:
       NFS_CSI_VERSION: v4.13.1
       NFS_CSI_ENABLE_CRDS: "true"
       NFS_CSI_ENABLE_SNAPSHOTTER: "true"
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: trust-manager
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cert-manager-selfsigned
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/trust-manager
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      TRUST_MANAGER_NAMESPACE: cert-manager
+      TRUST_MANAGER_VERSION: "0.22.0"
+      TRUST_BUNDLE_NAME: cluster-trust-bundle
+      TRUST_BUNDLE_CA_SECRET: cluster-ca-secret
+      TRUST_BUNDLE_CA_KEY: ca.crt
+      TRUST_BUNDLE_VAULT_CA_SECRET: vault-pki-ca
+      TRUST_BUNDLE_VAULT_CA_KEY: ca.crt
+      TRUST_BUNDLE_TARGET_KEY: trust-bundle.pem
+      TRUST_BUNDLE_SECRET_NAME: tls-ca
+      TRUST_BUNDLE_SECRET_TARGET_KEY: cacerts.pem
+      TRUST_BUNDLE_SECRET_NAMESPACE: cattle-system
