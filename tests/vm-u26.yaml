@@ -1,0 +1,70 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: u26-test-root
+  namespace: default
+  annotations:
+    harvesterhci.io/imageId: "default/u26-dev"
+spec:
+  accessModes: ["ReadWriteMany"]
+  volumeMode: Block
+  storageClassName: lh-7f7c570a-a326-4232-b291-3f2a946aeadf
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: u26-test
+  namespace: default
+  labels:
+    harvesterhci.io/creator: harvester
+    harvesterhci.io/os: linux
+spec:
+  runStrategy: RerunOnFailure
+  template:
+    metadata:
+      labels:
+        harvesterhci.io/vmName: u26-test
+    spec:
+      domain:
+        cpu: { cores: 2, sockets: 1, threads: 1 }
+        memory: { guest: 2Gi }
+        resources:
+          requests: { cpu: "1", memory: 2Gi }
+        machine: { type: q35 }
+        devices:
+          disks:
+            - name: rootdisk
+              bootOrder: 1
+              disk: { bus: virtio }
+            - name: cloudinitdisk
+              disk: { bus: virtio }
+          interfaces:
+            - name: nic-0
+              bridge: {}
+              model: virtio
+      networks:
+        - name: nic-0
+          multus:
+            networkName: default/vms
+      volumes:
+        - name: rootdisk
+          persistentVolumeClaim:
+            claimName: u26-test-root
+        - name: cloudinitdisk
+          cloudInitNoCloud:
+            userData: |
+              #cloud-config
+              hostname: u26-test
+              package_update: true
+              packages:
+                - qemu-guest-agent
+              runcmd:
+                - systemctl enable --now qemu-guest-agent
+            networkData: |
+              version: 2
+              ethernets:
+                eth0:
+                  dhcp4: true
