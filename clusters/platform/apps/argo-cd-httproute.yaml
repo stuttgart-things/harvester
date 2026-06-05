@@ -15,7 +15,7 @@ spec:
   prune: true
   wait: true
   dependsOn:
-    - name: argo-cd
+    - name: argocd-platform-argo-cd
   postBuild:
     substitute:
       ARGO_CD_NAMESPACE: argocd
