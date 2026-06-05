@@ -1,0 +1,38 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: argo-cd
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./cicd/argo-cd
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      ARGO_CD_VERSION: "9.4.15"
+      ARGO_CD_NAMESPACE: argocd
+      ARGO_CD_INGRESS_ENABLED: "false"
+      INGRESS_HOSTNAME: argocd
+      INGRESS_DOMAIN: platform.sthings.lab
+      INGRESS_SECRET_NAME: argocd-server-tls # pragma: allowlist secret
+      ISSUER_NAME: vault-pki
+      ISSUER_KIND: ClusterIssuer
+      ARGO_CD_PASSWORD_MTIME: "2026-03-23T02:00:00UTC" # pragma: allowlist secret
+      AVP_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
+      AVP_TRUST_BUNDLE_KEY: trust-bundle.pem
+      AVP_SSL_CERT_DIR: /etc/ssl/custom
+    substituteFrom:
+      - kind: Secret
+        name: argocd-secrets
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: argocd-deployment
+      namespace: argocd
