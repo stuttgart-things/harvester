@@ -16,7 +16,7 @@ metadata:
   name: backstage-helm-overrides
   namespace: backstage
 data:
-  imageTag: "v1.4.0"
+  imageTag: "v1.3.4"
 ---
 # Catalog locations (sthings-harvester instance). Must contain the User
 # entities GitHub sign-in (usernameMatchingUserEntityName) resolves against.
