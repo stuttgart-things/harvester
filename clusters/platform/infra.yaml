@@ -142,6 +142,6 @@ spec:
       TRUST_BUNDLE_VAULT_CA_SECRET: vault-pki-ca
       TRUST_BUNDLE_VAULT_CA_KEY: ca.crt
       TRUST_BUNDLE_TARGET_KEY: trust-bundle.pem
-      TRUST_BUNDLE_SECRET_NAME: tls-ca
-      TRUST_BUNDLE_SECRET_TARGET_KEY: cacerts.pem
-      TRUST_BUNDLE_SECRET_NAMESPACE: cattle-system
+      TRUST_BUNDLE_SECRET_NAME: tls-ca # pragma: allowlist secret
+      TRUST_BUNDLE_SECRET_TARGET_KEY: cacerts.pem # pragma: allowlist secret
+      TRUST_BUNDLE_SECRET_NAMESPACE: cattle-system # pragma: allowlist secret
