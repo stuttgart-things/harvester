@@ -30,8 +30,10 @@ spec:
       name: harbor-secrets
       optional: false
   # Single-node platform cluster: keep harbor lean (registry / pull-through
-  # cache only). Disable trivy (vuln scanner) and exporter (metrics) so their
-  # CPU requests don't exceed the node's remaining allocatable.
+  # cache only). Disable trivy (vuln scanner) and exporter (metrics), and drop
+  # resource requests to "none" — the node's CPU requests are already ~96%
+  # allocated (yet only ~15% used), so the default presets prevent the
+  # rolling-update surge pods from scheduling.
   patches:
     - target:
         kind: HelmRelease
@@ -43,6 +45,27 @@ spec:
         - op: add
           path: /spec/values/exporter/enabled
           value: false
+        - op: add
+          path: /spec/values/core/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/jobservice/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/portal/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/registry/server/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/registry/controller/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/postgresql/primary/resourcesPreset
+          value: none
+        - op: add
+          path: /spec/values/redis/master/resourcesPreset
+          value: none
   prune: true
   retryInterval: '1m'
   sourceRef:
