@@ -345,4 +345,3 @@ kubectl get virtualmachineimages.harvesterhci.io -A                # images -> A
 ```
 
 UI/API reachable at `https://<VIP>` (and `https://harvester-vip.sthings.lab` if the DNS record was added).
-
