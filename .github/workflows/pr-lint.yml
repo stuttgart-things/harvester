@@ -1,0 +1,35 @@
+---
+name: PR Lint
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "clusters/**"
+      - ".pre-commit-config.yaml"
+      - ".github/workflows/pr-lint.yml"
+    types:
+      - opened
+      - reopened
+      - synchronize
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  Pre-Commit:
+    name: Pre-Commit (Dagger)
+    # Reusable workflow that runs pre-commit through the stuttgart-things
+    # dagger Linting module. Unlike `dagger call ... lint-yaml` (report-only),
+    # this fails the job when a hook reports findings, so it gates the PR.
+    uses: stuttgart-things/github-workflow-templates/.github/workflows/call-pre-commit.yaml@main
+    with:
+      runs-on: ubuntu-latest
+      src: .
+      config-path: .pre-commit-config.yaml
+      # Skip hooks that target Dockerfiles / shell scripts (not GitOps YAML)
+      # and would otherwise need docker-in-docker on the runner.
+      skip-hooks: "hadolint-docker,shellcheck"
+    secrets: inherit # pragma: allowlist secret
