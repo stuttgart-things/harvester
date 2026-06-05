@@ -1,0 +1,30 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: harbor-httproute
+  namespace: flux-system
+spec:
+  dependsOn:
+  - name: harbor
+  force: false
+  interval: '1h'
+  path: './apps/harbor/httproute'
+  postBuild:
+    substitute:
+      HARBOR_NAMESPACE: harbor
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HARBOR_HOSTNAME: harbor
+      HARBOR_DOMAIN: platform.sthings.lab
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  suspend: false
+  timeout: '5m'
+  wait: true
