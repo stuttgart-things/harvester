@@ -77,6 +77,7 @@ spec:
   dependsOn:
     - name: cilium-lb
     - name: cert-manager-selfsigned
+    - name: cert-harbor-wildcard
   sourceRef:
     kind: GitRepository
     name: flux-infra
@@ -89,6 +90,57 @@ spec:
       CILIUM_GATEWAY_NAMESPACE: default
       CILIUM_GATEWAY_DOMAIN: "platform.sthings.lab"
       CILIUM_GATEWAY_TLS_SECRET: wildcard-platform-sthings-tls # pragma: allowlist secret
+  # Extra listener for the harbor pull-through-cache wildcard subdomain
+  # (*.harbor.<domain>) — the base *.<domain> cert/listener doesn't cover the
+  # two-level subdomain used by harbor-project-proxy.
+  patches:
+    - target:
+        group: gateway.networking.k8s.io
+        version: v1
+        kind: Gateway
+      patch: |
+        - op: add
+          path: /spec/listeners/-
+          value:
+            name: https-harbor
+            hostname: "*.harbor.platform.sthings.lab"
+            port: 443
+            protocol: HTTPS
+            allowedRoutes:
+              namespaces:
+                from: All
+            tls:
+              mode: Terminate
+              certificateRefs:
+                - kind: Secret
+                  group: ""
+                  name: wildcard-harbor-platform-sthings-tls
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-harbor-wildcard
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cert-manager-selfsigned
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cert-manager/components/extra-certificate
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      EXTRA_CERT_NAME: wildcard-harbor-platform-sthings-tls
+      EXTRA_CERT_NAMESPACE: default
+      EXTRA_CERT_SECRET_NAME: wildcard-harbor-platform-sthings-tls # pragma: allowlist secret
+      EXTRA_CERT_DOMAIN: harbor.platform.sthings.lab
+      EXTRA_CERT_ISSUER: vault-pki
+      EXTRA_CERT_ISSUER_KIND: ClusterIssuer
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
