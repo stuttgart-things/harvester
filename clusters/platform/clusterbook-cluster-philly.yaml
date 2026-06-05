@@ -1,0 +1,32 @@
+---
+# Registers the 'philly' downstream cluster via clusterbook: reserves IP/DNS
+# (networkKey + createDNS) through ProviderConfig 'default', reads the kubeconfig
+# from secret argocd/philly, and writes an Argo CD cluster-secret with the labels
+# below (which gate platform ApplicationSets).
+apiVersion: clusterbook.stuttgart-things.com/v1alpha1
+kind: ClusterbookCluster
+metadata:
+  name: philly
+  namespace: clusterbook-system
+spec:
+  networkKey: "10.31.101"
+  clusterName: philly
+  createDNS: true
+  preserveKubeconfigServer: true
+  kubeconfigSecretRef:
+    name: philly
+    namespace: argocd
+  providerConfigRef:
+    name: default
+  argocdNamespace: argocd
+  labels:
+    env: lab
+    role: mgmt
+    auto-project: "true"
+    network-platform: "true"
+    network-platform/cilium-lb: "true"
+    network-platform/cilium-gateway: "true"
+    network-platform/cert-manager-install: "true"
+    network-platform/cert-manager-selfsigned: "true"
+    network-platform/cert-manager-cluster-ca: "true"
+  releaseOnDelete: true
