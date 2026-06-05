@@ -19,7 +19,7 @@ sthings ALL=(ALL) NOPASSWD: ALL
 
 
 sudo apt -y install python3.13-venv
-sudo python3 -m venv /opt/k3s-venv  
+sudo python3 -m venv /opt/k3s-venv
 sudo chown -R sthings:sthings /opt/k3s-venv
 
 /opt/k3s-venv/bin/python3 -m ensurepip

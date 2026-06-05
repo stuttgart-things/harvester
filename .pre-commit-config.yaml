@@ -1,4 +1,7 @@
-exclude: ^\.task/
+# Skip SOPS-encrypted files: hooks must never rewrite them (whitespace/EOF
+# edits invalidate the SOPS MAC), and detect-secrets only sees ciphertext —
+# the encrypted values and age recipients are false positives.
+exclude: '(^\.task/|^secrets/|\.enc\.ya?ml$|secrets?\.ya?ml$)'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
