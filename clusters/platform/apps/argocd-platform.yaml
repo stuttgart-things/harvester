@@ -43,6 +43,9 @@ spec:
       AVP_SSL_CERT_DIR: /etc/ssl/custom
       CLUSTERBOOK_OPERATOR_NAMESPACE: clusterbook-system
       CLUSTERBOOK_OPERATOR_VERSION: v0.19.0
+      # clusterbook backend for the bundled ClusterbookProviderConfig/default
+      CLUSTERBOOK_API_URL: https://clusterbook.infra.sthings.lab
+      CLUSTERBOOK_INSECURE_SKIP_VERIFY: "false"
     substituteFrom:
       - kind: Secret
         name: argocd-secrets
