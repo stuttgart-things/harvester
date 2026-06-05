@@ -1,0 +1,39 @@
+---
+# Prerequisites the backstage app itself doesn't create — applied by the
+# flux-system sync before the backstage Kustomization reconciles.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: backstage
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team
+---
+# imageTag is passed via ConfigMap (not Flux substitution) so Helm keeps it a
+# string; consumed by release.yaml valuesFrom -> backstage.image.tag.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-helm-overrides
+  namespace: backstage
+data:
+  imageTag: "v1.4.0"
+---
+# Catalog locations (sthings-harvester instance). Must contain the User
+# entities GitHub sign-in (usernameMatchingUserEntityName) resolves against.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-catalog-config
+  namespace: backstage
+data:
+  app-config.catalog.yaml: |
+    catalog:
+      locations:
+        - type: url
+          target: https://github.com/stuttgart-things/backstage-resources/blob/main/org/sthings-harvester/org.yaml
+          rules:
+            - allow: [User, Group]
+        - type: url
+          target: https://github.com/stuttgart-things/backstage-resources/blob/main/services/sthings-harvester/catalog-index.yaml
+          rules:
+            - allow: [Component, Location, System, API, Resource, Template]
