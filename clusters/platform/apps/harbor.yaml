@@ -21,7 +21,7 @@ spec:
       INGRESS_CLASS_NAME: nginx
       ISSUER_NAME: vault-pki
       ISSUER_KIND: ClusterIssuer
-      STORAGE_CLASS: nfs4-csi
+      STORAGE_CLASS: local-path
       HARBOR_PV_SIZE_REGISTRY: 12Gi
       HARBOR_PV_SIZE_TRIVY: 5Gi
       HARBOR_PV_SIZE_JOBSERVICE: 1Gi
