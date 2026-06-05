@@ -137,9 +137,9 @@ spec:
       TRUST_MANAGER_NAMESPACE: cert-manager
       TRUST_MANAGER_VERSION: "0.22.0"
       TRUST_BUNDLE_NAME: cluster-trust-bundle
-      TRUST_BUNDLE_CA_SECRET: cluster-ca-secret
+      TRUST_BUNDLE_CA_SECRET: cluster-ca-secret # pragma: allowlist secret
       TRUST_BUNDLE_CA_KEY: ca.crt
-      TRUST_BUNDLE_VAULT_CA_SECRET: vault-pki-ca
+      TRUST_BUNDLE_VAULT_CA_SECRET: vault-pki-ca # pragma: allowlist secret
       TRUST_BUNDLE_VAULT_CA_KEY: ca.crt
       TRUST_BUNDLE_TARGET_KEY: trust-bundle.pem
       TRUST_BUNDLE_SECRET_NAME: tls-ca # pragma: allowlist secret
