@@ -20,7 +20,7 @@ spec:
       INGRESS_HOSTNAME_CONSOLE: artifacts-console
       INGRESS_HOSTNAME_API: artifacts
       INGRESS_DOMAIN: platform.sthings.lab
-      STORAGE_CLASS: nfs4-csi
+      STORAGE_CLASS: local-path
       MINIO_STORAGE_SIZE: '10Gi'
     substituteFrom:
     - kind: Secret
