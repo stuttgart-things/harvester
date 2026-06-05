@@ -1,0 +1,13 @@
+---
+# Create the argocd namespace in the platform sync so the SOPS-encrypted
+# argocd-sops-age-key Secret (namespace: argocd) can be applied before the
+# argo-cd app itself runs. Without this the flux-system sync fails the whole
+# batch with "namespaces argocd not found", which also blocks argocd-secrets
+# and deadlocks the argo-cd Kustomization. Labels match cicd/argo-cd's
+# requirements.yaml so the two managers agree on the object.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argocd
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team
