@@ -1,0 +1,40 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: harbor-project-proxy
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: harbor
+  force: false
+  interval: '1h'
+  path: './apps/harbor/components/project-proxy'
+  postBuild:
+    substitute:
+      HARBOR_NAMESPACE: harbor
+      HARBOR_HOSTNAME: harbor
+      HARBOR_DOMAIN: platform.sthings.lab
+      # Exposure is via the Gateway API HTTPRoute (already deployed by the
+      # harbor-httproute Kustomization, which includes the wildcard
+      # *.harbor.<domain> route to the harbor-project-proxy service), so the
+      # chart's own nginx ingress is disabled.
+      INGRESS_ENABLED: 'false'
+      INGRESS_CLASS_NAME: nginx
+      HARBOR_PROJECT_PROXY_VERSION: '0.0.1'
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  suspend: false
+  timeout: '5m'
+  wait: true
+  healthChecks:
+    - apiVersion: helm.toolkit.fluxcd.io/v2
+      kind: HelmRelease
+      name: harbor-project-proxy
+      namespace: harbor
