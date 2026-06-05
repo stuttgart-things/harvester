@@ -76,6 +76,9 @@ jobs:
     environment: harvester
     env:
       PACKER_LOG: 0
+      # Set repo/env variable UPLOAD_TO_HARVESTER=false while Harvester is down.
+      # Unset/true keeps the normal upload + auto-merge behaviour.
+      UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
     strategy:
       matrix:
         include: ${{ fromJson(needs.detect-targets.outputs.targets) }}
@@ -88,7 +91,7 @@ jobs:
         run: |
           echo "Packer dir            : ${{ matrix.packer_dir }}"
           echo "Image name            : ${{ matrix.image_name }}"
-          echo "Upload to Harvester   : true"
+          echo "Upload to Harvester   : ${{ env.UPLOAD_TO_HARVESTER }}"
           echo "Trigger               : ${{ github.event_name }}"
           echo "PR number             : ${{ github.event.pull_request.number || 'N/A' }}"
 
@@ -100,13 +103,13 @@ jobs:
         working-directory: ${{ matrix.packer_dir }}
         env:
           PKR_VAR_image_name: ${{ matrix.image_name }}
-          PKR_VAR_upload_to_harvester: "true"
+          PKR_VAR_upload_to_harvester: ${{ env.UPLOAD_TO_HARVESTER }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
         run: packer build .
 
       - name: Auto-merge PR
-        if: success() && github.event_name == 'pull_request'
+        if: success() && github.event_name == 'pull_request' && env.UPLOAD_TO_HARVESTER == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
