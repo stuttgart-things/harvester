@@ -60,12 +60,6 @@ spec:
         - op: add
           path: /spec/values/registry/controller/resourcesPreset
           value: none
-        - op: add
-          path: /spec/values/postgresql/primary/resourcesPreset
-          value: none
-        - op: add
-          path: /spec/values/redis/master/resourcesPreset
-          value: none
   prune: true
   retryInterval: '1m'
   sourceRef:
