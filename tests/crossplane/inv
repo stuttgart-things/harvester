@@ -1,0 +1,5 @@
+
+[initial_master_node]
+192.168.10.143
+[additional_master_nodes]
+[workers]
