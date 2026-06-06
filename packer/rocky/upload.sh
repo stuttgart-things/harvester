@@ -70,7 +70,9 @@ yq -j '.metadata.name = "'"${IMAGE_NAME}"'" | .spec.displayName = "'"${IMAGE_NAM
     "https://${HARVESTER_VIP}/v1/harvester/harvesterhci.io.virtualmachineimages/${NAMESPACE}" &> /dev/null
 
 echo "Uploading image ${IMAGE_FILE} (${IMAGE_SIZE} bytes)..."
-curl -sk -X POST \
+# Force HTTP/1.1: large multipart uploads over HTTP/2 fail with curl exit 92
+# (CURLE_HTTP2_STREAM / framing-layer stream error) against Harvester.
+curl -sk -X POST --http1.1 \
   -H "Authorization: Bearer ${TOKEN}" \
   -F "chunk=@${IMAGE_FILE}" \
   "https://${HARVESTER_VIP}/v1/harvester/harvesterhci.io.virtualmachineimages/${NAMESPACE}/${IMAGE_NAME}?action=upload&size=${IMAGE_SIZE}"
