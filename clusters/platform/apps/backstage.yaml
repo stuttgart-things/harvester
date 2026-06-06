@@ -1,35 +1,35 @@
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: app
-  name: backstage
-  namespace: flux-system
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/backstage
-  prune: true
-  wait: true
-  postBuild:
-    substitute:
-      BACKSTAGE_NAMESPACE: backstage
-      BACKSTAGE_VERSION: "2.6.3"
-      BACKSTAGE_IMAGE_REGISTRY: ghcr.io
-      BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
-      BACKSTAGE_STORAGE_CLASS: local-path
-      BACKSTAGE_REPLICAS: "1"
-      BACKSTAGE_APP_TITLE: Stuttgart Things Backstage
-      BACKSTAGE_ORGANIZATION_NAME: stuttgart-things
-      DOMAIN: platform.sthings.lab
-      GATEWAY_NAME: platform-sthings-gateway
-      GATEWAY_NAMESPACE: default
-    substituteFrom:
-      - kind: Secret
-        name: backstage-secrets-subst
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   labels:
+#     app.kubernetes.io/managed-by: flux
+#     kustomization.stuttgart-things.com/type: app
+#   name: backstage
+#   namespace: flux-system
+# spec:
+#   interval: 1h
+#   retryInterval: 1m
+#   timeout: 10m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-apps
+#   path: ./apps/backstage
+#   prune: true
+#   wait: true
+#   postBuild:
+#     substitute:
+#       BACKSTAGE_NAMESPACE: backstage
+#       BACKSTAGE_VERSION: "2.6.3"
+#       BACKSTAGE_IMAGE_REGISTRY: ghcr.io
+#       BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
+#       BACKSTAGE_STORAGE_CLASS: local-path
+#       BACKSTAGE_REPLICAS: "1"
+#       BACKSTAGE_APP_TITLE: Stuttgart Things Backstage
+#       BACKSTAGE_ORGANIZATION_NAME: stuttgart-things
+#       DOMAIN: platform.sthings.lab
+#       GATEWAY_NAME: platform-sthings-gateway
+#       GATEWAY_NAMESPACE: default
+#     substituteFrom:
+#       - kind: Secret
+#         name: backstage-secrets-subst

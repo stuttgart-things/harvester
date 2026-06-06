@@ -4,7 +4,7 @@ execute_baseos: true
 manage_filesystem: false
 
 vault_instances:
-  - https://https://vault.infra.sthings.lab
+  - https://vault.infra.sthings.lab
 
 # RKE2 CLUSTER
 rke_state: present
