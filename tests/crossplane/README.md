@@ -67,22 +67,7 @@ cat inv
 ## 4. Provision RKE2 with Dagger
 
 ```bash
-dagger call -m github.com/stuttgart-things/blueprints/vm@v2.4.1 execute-ansible-encrypt-and-commit \
---src "." \
---playbooks ./plays.yaml \
---inventory ./inv \
---ssh-user=env:SSH_USER \
---ssh-password=env:SSH_PASSWORD \
---requirements-data requirements-data.yaml \
---parameters-file vars.yaml \
---git-repository "stuttgart-things/harvester" \
---git-branch main \
---git-commit-message "Add encrypted kubeconfig for k3s cluster infra" \
---git-destination-path "secrets" \
---git-token=env:GITHUB_TOKEN \
---export-paths "/tmp/crossplane.yaml" \
---age-public-key=env:AGE_PUB \
---progress plain -vv
+dagger call -m github.com/stuttgart-things/blueprints/vm@v2.4.1 execute-ansible-encrypt-and-commit --src "." --playbooks ./plays.yaml --inventory ./inv --ssh-user=env:SSH_USER --ssh-password=env:SSH_PASSWORD --requirements-data requirements-data.yaml --parameters-file vars.yaml --git-repository "stuttgart-things/harvester" --git-branch main --git-commit-message "Add encrypted kubeconfig for k3s cluster infra" --git-destination-path "secrets" --git-token=env:GITHUB_TOKEN --export-paths "/tmp/crossplane.yaml" --age-public-key=env:AGE_PUB --progress plain -vv
 ```
 
 The kubeconfig is fetched to `/tmp/kubeconfig` (see `fetched_kubeconfig_path`
