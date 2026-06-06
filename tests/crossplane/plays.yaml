@@ -1,4 +1,8 @@
 ---
+- name: Filesystem setup
+  ansible.builtin.import_playbook: ./fs.yaml
+  when: execute_baseos | default(true) | bool
+
 - name: Base setup
   ansible.builtin.import_playbook: sthings.baseos.setup
   when: execute_baseos | default(true) | bool

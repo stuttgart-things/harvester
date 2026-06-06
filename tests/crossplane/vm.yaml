@@ -14,6 +14,12 @@ spec:
     requests:
       storage: 60Gi
 ---
+# accessModes: ReadWriteMany is wrong for a single-VM root disk. A boot disk attached to one VM should be ReadWriteOnce. RWX on a block boot volume invites a second instance attaching the same disk — with RerunOnFailure that's an unlikely-but-real path to filesystem corruption. Set it to ReadWriteOnce unless you specifically need live-migration, and even then RWX block has caveats.
+# The storageClassName is a hardcoded Longhorn UUID (lh-7f7c570a-...). That's the auto-generated per-image class tied to default/u26-dev. It works, but it's brittle: it'll break the moment you rebuild the image or move this manifest to another cluster, and it's unreadable. If you're templating these VMs (which you are, via the IDP/scaffolder path), reference a named StorageClass or parameterize it rather than pinning the UUID.
+# No node affinity in this version. The live VM you dumped earlier had network.harvesterhci.io/mgmt: true affinity pinning it to the mgmt node — this manifest doesn't. On a single-node Harvester it makes no difference, but if you ever add nodes, the absence means it can schedule anywhere, which may or may not be what you want. Just be aware the two manifests aren't equivalent.
+# A couple of optional nice-to-haves, not blockers: there's no terminationGracePeriodSeconds (the live VM had 120 — KubeVirt defaults are fine, but explicit is nicer for a stateful node), and qemu-guest-agent install via cloud-init means first-boot needs network + package mirror reachable, which you've clearly got.
+# What I would not touch: the storage path itself. The fio numbers (0.6 ms p99 fdatasync) proved Longhorn is performing fine here, so there's no reason to drop to single-replica or relocate etcd. The slow first boot was the CPU mismatch, not the disk — fix the requests.cpu and you've addressed the real thing.
+# So the minimal diff is: cpu request → match cores, and accessModes → ReadWriteOnce. Want me to hand you the corrected manifest in full?
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
@@ -33,7 +39,7 @@ spec:
         cpu: { cores: 8, sockets: 1, threads: 1 }
         memory: { guest: 16Gi }
         resources:
-          requests: { cpu: "4", memory: 16Gi }
+          requests: { cpu: "8", memory: 16Gi }
         machine: { type: q35 }
         devices:
           disks:
