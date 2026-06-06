@@ -1,7 +1,0 @@
----
-- name: Base setup
-  ansible.builtin.import_playbook: sthings.baseos.setup
-  when: execute_baseos | default(true) | bool
-
-- name: Deploy and configure RKE2
-  ansible.builtin.import_playbook: sthings.rke.rke2_cluster
