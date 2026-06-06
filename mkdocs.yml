@@ -14,6 +14,8 @@ nav:
       - Claims CLI: services/claims-cli.md
       - Claim Registry API: services/claim-registry-api.md
       - Claim Status Collector: services/claim-status-collector.md
+  - Runbooks:
+      - Harvester Reinstall: install.md
   - Roadmap: roadmap.md
 
 plugins:
