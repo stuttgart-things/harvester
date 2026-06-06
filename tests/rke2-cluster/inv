@@ -1,0 +1,5 @@
+
+[initial_master_node]
+VM_IP_PLACEHOLDER
+[additional_master_nodes]
+[workers]
