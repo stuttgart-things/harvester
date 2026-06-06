@@ -80,6 +80,56 @@ in [`vars.yaml`](./vars.yaml)).
 - **Kubernetes Version**: 1.35.1
 - **Cluster Setup**: singlenode
 - **CNI**: Cilium (kube-proxy disabled)
+- **Registry mirror**: Harbor pull-through cache (`docker.harbor.platform.sthings.lab`)
+
+## Registry mirror (Harbor pull-through cache)
+
+`sthings.lab` reaches the internet through a **slow LTE router**. Pulling
+container images straight from `docker.io` on every (re)provision saturates that
+uplink and is the single biggest bottleneck when rebuilding clusters.
+
+To make provisioning **fast and repeatable**, RKE2 is pointed at the Harbor
+**pull-through-cache** that already runs on the platform cluster instead of
+pulling from Docker Hub directly:
+
+```yaml
+# tests/crossplane/vars.yaml
+registry_mirror_url: https://docker.harbor.platform.sthings.lab
+```
+
+The `sthings.rke.rke2_cluster` blueprint turns this into a containerd mirror in
+`/etc/rancher/rke2/registries.yaml` on the node, so:
+
+- the **first** pull of any docker.io image goes out over LTE once and is cached
+  in Harbor;
+- **every subsequent** pull — re-provisions, extra nodes, image churn — is served
+  from the LAN at full speed, never touching the LTE link.
+
+The cache itself is fully declared in GitOps (nothing to set up by hand), so a
+rebuilt platform cluster reproduces it automatically:
+
+| Piece | Where |
+|---|---|
+| Harbor (registry / cache only) | [`clusters/platform/apps/harbor.yaml`](../../clusters/platform/apps/harbor.yaml) |
+| `docker` proxy-cache project | [`clusters/platform/apps/harbor-project-proxy.yaml`](../../clusters/platform/apps/harbor-project-proxy.yaml) |
+| `*.harbor.<domain>` Gateway listener + wildcard cert | [`clusters/platform/infra.yaml`](../../clusters/platform/infra.yaml) |
+
+> **CA trust (one-time gotcha).** The `*.harbor.platform.sthings.lab` cert is
+> issued by the **`vault-pki` ClusterIssuer** (a self-signed homelab root), not a
+> public CA. The RKE2 node must trust that root or the mirror fails the TLS
+> handshake. Either:
+>
+> - install the vault-pki CA into the node trust store (e.g. bake it into the
+>   `u26-dev` Packer image or drop it in `/usr/local/share/ca-certificates/`), or
+> - let the blueprint emit a `configs:` entry with `tls.insecure_skip_verify: true`
+>   for the mirror host (acceptable on the LAN-only homelab).
+>
+> Verify on the node after provisioning:
+>
+> ```bash
+> cat /etc/rancher/rke2/registries.yaml        # mirror -> docker.harbor.platform.sthings.lab
+> crictl pull docker.io/library/busybox:latest # should resolve via Harbor, not LTE
+> ```
 
 ## Playbooks
 

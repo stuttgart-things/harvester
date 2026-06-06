@@ -20,4 +20,17 @@ cluster_name: rke2
 fetched_kubeconfig_path: /tmp/kubeconfig
 install_helm_diff: false
 
-registry_mirror_url: https://registry-1.docker.io
+# REGISTRY MIRROR (Harbor pull-through cache)
+# The sthings.lab homelab's only uplink is a slow LTE router, so every direct
+# docker.io pull is the provisioning bottleneck. Point RKE2's containerd mirror
+# at the Harbor pull-through-cache proxy on the platform cluster instead of
+# docker.io directly: the first pull populates Harbor's cache over LTE, every
+# subsequent pull (rebuilds, re-provisions) is served from the LAN at full
+# speed. `docker.harbor.<domain>` is the docker.io proxy-cache project exposed
+# via the *.harbor.platform.sthings.lab wildcard listener (see
+# clusters/platform/apps/harbor-project-proxy.yaml + clusters/platform/infra.yaml).
+#
+# NOTE: the wildcard cert is issued by the vault-pki ClusterIssuer (self-signed
+# root), so the RKE2 node must trust that CA for the mirror to work over HTTPS.
+# See tests/crossplane/README.md → "Registry mirror" for the CA-trust step.
+registry_mirror_url: https://docker.harbor.platform.sthings.lab
