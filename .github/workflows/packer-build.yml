@@ -6,10 +6,9 @@ on:
       packer_dir:
         description: "Directory containing Packer configuration"
         required: true
-        default: "packer/ubuntu22"
+        default: "packer/ubuntu26"
         type: choice
         options:
-          - packer/ubuntu22
           - packer/ubuntu26
           - packer/opensuse-leap
           - packer/rocky
@@ -28,7 +27,7 @@ on:
       image_name:
         description: "Name of the VM image (used as Harvester VMI name)"
         required: false
-        default: "u22-dev"
+        default: "u26-dev"
         type: string
 
       upload_to_harvester:

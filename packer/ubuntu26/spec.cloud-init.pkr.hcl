@@ -5,9 +5,10 @@ locals {
 
 source "file" "user_data" {
   content = format("#cloud-config\n%s", yamlencode({
-    ssh_pwauth     = true
-    package_update = true
-    packages       = local.packages_config.packages
+    ssh_pwauth      = true
+    package_update  = true
+    package_upgrade = true
+    packages        = local.packages_config.packages
     password       = "superpassword" # pragma: allowlist secret
     chpasswd       = { expire = false }
     users = concat(
