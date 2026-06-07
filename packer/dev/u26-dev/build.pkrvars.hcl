@@ -3,10 +3,10 @@
 # a build only installs the delta (devs' SSH keys + extra packages).
 # Build runs from packer/_build/ -> paths below are relative to that dir.
 #
-# TODO(#93): set source_url to the PUBLISHED golden sthings-u26 artifact once the
-# golden -> dev handoff is decided (artifact store vs re-export from Harvester).
-# Until then this build cannot run end-to-end.
-source_url      = "" # FIXME(#93): golden sthings-u26 qcow2 artifact URL
+# source_url is the golden sthings-u26 base published to the MinIO artifact store
+# by the golden build (see packer/_build/publish-base.sh). The golden image must be
+# built + published at least once before a dev build can run.
+source_url      = "https://artifacts.platform.sthings-vsphere.labul.sva.de/packer/golden/sthings-u26/sthings-u26-amd64.img"
 source_checksum = "none"
 
 image_name    = "u26-dev"

@@ -60,6 +60,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
+      - name: Resolve image name
+        id: meta
+        run: echo "name=$(basename '${{ inputs.image }}')" >> "$GITHUB_OUTPUT"
+
       - name: Show build parameters
         run: |
           echo "Image      : ${{ inputs.image }}"
@@ -78,6 +82,19 @@ jobs:
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
         run: packer build -var-file="../${{ inputs.image }}/build.pkrvars.hcl" .
+
+      - name: Publish golden base to MinIO
+        # Only golden images are published as a build base for dev images.
+        if: startsWith(inputs.image, 'golden/')
+        working-directory: packer/_build
+        env:
+          IMAGE_FILE: output/${{ steps.meta.outputs.name }}-amd64.img
+          IMAGE_NAME: ${{ steps.meta.outputs.name }}
+          S3_ENDPOINT: https://artifacts.platform.sthings-vsphere.labul.sva.de
+          S3_BUCKET: packer
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: bash publish-base.sh
 
   # --- Detect golden images to (re)build after a merge to main ------------
   detect-golden:
@@ -154,3 +171,15 @@ jobs:
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
         run: packer build -var-file="${{ matrix.var_file }}" .
+
+      - name: Publish golden base to MinIO
+        # Make the freshly-built golden available as a base for dev images.
+        working-directory: packer/_build
+        env:
+          IMAGE_FILE: output/${{ matrix.name }}-amd64.img
+          IMAGE_NAME: ${{ matrix.name }}
+          S3_ENDPOINT: https://artifacts.platform.sthings-vsphere.labul.sva.de
+          S3_BUCKET: packer
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: bash publish-base.sh
