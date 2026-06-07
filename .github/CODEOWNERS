@@ -1,0 +1,14 @@
+# Code owners for the harvester repository.
+#
+# The golden image tier is the trusted, review-gated base. Changes under
+# packer/golden/** and the shared build logic in packer/_build/ require review
+# from a code owner. The dev tier (packer/dev/**) is intentionally NOT listed —
+# it is self-service and auto-merges.
+#
+# NOTE: enforcement also requires branch protection on `main` with
+# "Require review from Code Owners" enabled for these paths.
+# Swap the owner below for a team handle (e.g. @stuttgart-things/platform-team)
+# once that team exists.
+
+/packer/golden/   @patrick-hermann-sva
+/packer/_build/   @patrick-hermann-sva

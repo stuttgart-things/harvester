@@ -314,14 +314,14 @@ and re-imported. Reproduce via **provenance**, not a manifest dump.
 | Storage class | `harvester-longhorn` |
 | Source type | `upload` |
 | Encryption | false |
-| Built by | Packer — [`stuttgart-things/harvester` → `packer/ubuntu26`](https://github.com/stuttgart-things/harvester/tree/main/packer/ubuntu26) |
+| Built by | Packer — [`stuttgart-things/harvester` → `packer/dev/u26-dev`](https://github.com/stuttgart-things/harvester/tree/main/packer/dev/u26-dev) |
 
-Cloud-init (`packer/ubuntu26/users.yaml`) provisions a `sthings` user with passwordless
+Cloud-init (`packer/dev/u26-dev/users.yaml`) provisions a `sthings` user with passwordless
 sudo and the workstation SSH keys baked in — so VMs from this image are SSH-ready with no
 Harvester keypair attachment required.
 
 **Reproduce:**
-1. Build the qcow2: run the Packer template in `stuttgart-things/harvester/packer/ubuntu26`.
+1. Build the qcow2: run the Packer template in `stuttgart-things/harvester/packer/dev/u26-dev`.
 2. Import into Harvester: UI → *Images → Create → Upload* (or `virtctl image-upload`),
    namespace `default`, name `u26-dev`, storage class `harvester-longhorn`.
 
