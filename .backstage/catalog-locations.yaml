@@ -5,6 +5,12 @@ metadata:
   description: Root catalog for the harvester repository
 spec:
   targets:
-    - ../packer/ubuntu/catalog-info.yaml
-    - ../claims/infra/app-pvc/catalog-info.yaml
-    - ../claims/other-resources/abrechnungen/catalog-info.yaml
+    - ../catalog-info.yaml
+    - ../packer/golden/sthings-u26/catalog-info.yaml
+    - ../packer/dev/u26-dev/catalog-info.yaml
+    - ../packer/rocky/catalog-info.yaml
+    - ../packer/opensuse-leap/catalog-info.yaml
+    - ../claims/apps/dev-vm/catalog-info.yaml
+    - ../claims/infra/demo1/catalog-info.yaml
+    - ../claims/infra/movies/catalog-info.yaml
+    - ../claims/infra/test123/catalog-info.yaml

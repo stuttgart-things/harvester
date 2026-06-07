@@ -1,37 +1,26 @@
+---
 name: Packer Build
+
+# Two entry points:
+#   * workflow_dispatch — manually build any golden/dev image (optionally upload).
+#   * push to main (golden) — review-gated golden images are uploaded AFTER merge
+#     (their PR build is validation-only). Dev images upload during their PR build.
+# Build always runs from packer/_build/ selecting an image via its build.pkrvars.hcl.
 
 on:
   workflow_dispatch:
     inputs:
-      packer_dir:
-        description: "Directory containing Packer configuration"
+      image:
+        description: "Image to build (tier/name)"
         required: true
-        default: "packer/ubuntu26"
+        default: "golden/sthings-u26"
         type: choice
         options:
-          - packer/ubuntu26
-          - packer/opensuse-leap
-          - packer/rocky
-
-      template:
-        description: "Packer template (file or directory)"
-        required: true
-        default: "."
-        type: string
-
-      var_file:
-        description: "Optional Packer var-file"
-        required: false
-        type: string
-
-      image_name:
-        description: "Name of the VM image (used as Harvester VMI name)"
-        required: false
-        default: "u26-dev"
-        type: string
+          - golden/sthings-u26
+          - dev/u26-dev
 
       upload_to_harvester:
-        description: "Upload image to Harvester after build"
+        description: "Upload the built image to Harvester"
         required: false
         default: false
         type: boolean
@@ -48,41 +37,120 @@ on:
         default: false
         type: boolean
 
+  push:
+    branches:
+      - main
+    paths:
+      - "packer/golden/**"
+      - "packer/_build/**"
+
+permissions:
+  contents: read
+
 jobs:
-  packer-build:
-    name: Build image with Packer
+  # --- Manual build of a single image -------------------------------------
+  dispatch:
+    name: "Build ${{ inputs.image }}"
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ inputs.runner }}
     environment: ${{ inputs.upload_to_harvester && 'harvester' || '' }}
     env:
       PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Show inputs
+      - name: Show build parameters
         run: |
-          echo "Packer dir            : ${{ inputs.packer_dir }}"
-          echo "Template              : ${{ inputs.template }}"
-          echo "Var file              : ${{ inputs.var_file }}"
-          echo "Image name            : ${{ inputs.image_name }}"
-          echo "Upload to Harvester   : ${{ inputs.upload_to_harvester }}"
-          echo "Packer log            : ${{ inputs.packer_log }}"
+          echo "Image      : ${{ inputs.image }}"
+          echo "Var file   : ../${{ inputs.image }}/build.pkrvars.hcl"
+          echo "Upload     : ${{ inputs.upload_to_harvester }}"
+          echo "Runner     : ${{ inputs.runner }}"
 
       - name: Packer init
-        working-directory: ${{ inputs.packer_dir }}
-        run: packer init ${{ inputs.template }}
+        working-directory: packer/_build
+        run: packer init .
 
       - name: Packer build
-        working-directory: ${{ inputs.packer_dir }}
+        working-directory: packer/_build
         env:
-          PKR_VAR_image_name: ${{ inputs.image_name }}
           PKR_VAR_upload_to_harvester: ${{ inputs.upload_to_harvester }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+        run: packer build -var-file="../${{ inputs.image }}/build.pkrvars.hcl" .
+
+  # --- Detect golden images to (re)build after a merge to main ------------
+  detect-golden:
+    name: Detect golden images to upload
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.detect.outputs.targets }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
+
+      - name: Detect changed golden images
+        id: detect
         run: |
-          if [ -n "${{ inputs.var_file }}" ]; then
-            packer build -var-file="${{ inputs.var_file }}" ${{ inputs.template }}
+          # A change under a golden dir rebuilds that golden; a shared _build
+          # change rebuilds ALL golden images.
+          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)
+          if echo "$CHANGED" | grep -q '^packer/_build/'; then
+            DIRS=$(ls -d packer/golden/*/ | sed 's:/*$::' | sort -u)
           else
-            packer build ${{ inputs.template }}
+            DIRS=$(echo "$CHANGED" | grep -oP '^packer/golden/[^/]+' | sort -u || true)
           fi
+
+          if [ -z "$DIRS" ]; then
+            echo "targets=[]" >> "$GITHUB_OUTPUT"
+            echo "No golden images to rebuild."
+            exit 0
+          fi
+
+          JSON=$(echo "$DIRS" | jq -R -s -c '
+            split("\n") | map(select(length > 0)) | map(
+              (split("/")) as $p | {
+                name:     $p[2],
+                var_file: ("../golden/" + $p[2] + "/build.pkrvars.hcl")
+              })')
+          echo "targets=$JSON" >> "$GITHUB_OUTPUT"
+          echo "Golden images to upload: $JSON"
+
+  # --- Post-merge build + upload of golden images -------------------------
+  upload-golden:
+    name: "Upload golden ${{ matrix.name }}"
+    needs: detect-golden
+    if: github.event_name == 'push' && needs.detect-golden.outputs.targets != '[]'
+    runs-on: kvm
+    environment: harvester
+    env:
+      PACKER_LOG: 0
+      UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.detect-golden.outputs.targets) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Show build parameters
+        run: |
+          echo "Golden image : ${{ matrix.name }}"
+          echo "Var file     : ${{ matrix.var_file }}"
+          echo "Upload       : ${{ env.UPLOAD_TO_HARVESTER }}"
+
+      - name: Packer init
+        working-directory: packer/_build
+        run: packer init .
+
+      - name: Packer build + upload
+        working-directory: packer/_build
+        env:
+          PKR_VAR_upload_to_harvester: ${{ env.UPLOAD_TO_HARVESTER }}
+          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
+          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+        run: packer build -var-file="${{ matrix.var_file }}" .
