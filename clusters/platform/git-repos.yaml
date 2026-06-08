@@ -1,0 +1,37 @@
+---
+# Git sources for the platform cluster. flux-infra/flux-apps were previously
+# bootstrapped by hand (see README); committing them here brings them under
+# GitOps, matching clusters/infra and clusters/xplane. argocd-catalog is the
+# source consumed by the argocd-platform catalog components (./platforms/*).
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-infra
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/stuttgart-things/flux.git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-apps
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/stuttgart-things/flux.git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: argocd-catalog
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/stuttgart-things/argocd.git
