@@ -1,0 +1,22 @@
+---
+apiVersion: clusterbook.stuttgart-things.com/v1alpha1
+kind: ClusterbookCluster
+metadata:
+  name: crossplane-mgmt
+  namespace: clusterbook-system
+spec:
+  providerConfigRef:
+    name: default            # the bundled ClusterbookProviderConfig
+  networkKey: "192.168.10"    # network to reserve IP+FQDN from in the clusterbook backend
+  clusterName: crossplane-mgmt
+  createDNS: true            # reserves the FQDN → produces the clusterbook fqdn annotation
+  useFQDNAsServer: true     # keep the ArgoCD server URL on the IP (reachable); flip later
+  argocdNamespace: argocd
+  kubeconfigSecretRef:       # register an existing kubeconfig as the ArgoCD cluster
+    name: crossplane-mgmt
+    namespace: argocd
+    key: kubeconfig
+  releaseOnDelete: true
+  labels:                    # stamped onto the resulting ArgoCD cluster secret
+    auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
+    network-platform: "true" # → master gate: enables all default-on network AppSets
