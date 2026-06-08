@@ -1,0 +1,33 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: claim-machinery-api
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/claim-machinery-api
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      CLAIM_MACHINERY_API_VERSION: "v0.21.1"
+      CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
+      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/claim-machinery-api/main/profiles/labul-vsphere.yaml"
+      CLAIM_MACHINERY_ENABLE_HOMERUN: "false"
+      FLUX_SOURCE_API_VERSION: v1
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: claims
+      DOMAIN: platform.sthings.lab
+      CLAIM_MACHINERY_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
+      CLAIM_MACHINERY_TRUST_BUNDLE_KEY: trust-bundle.pem
+      CLAIM_MACHINERY_SSL_CERT_DIR: /etc/ssl/custom
