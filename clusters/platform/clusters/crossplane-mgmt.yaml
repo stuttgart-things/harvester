@@ -20,7 +20,7 @@ spec:
   releaseOnDelete: true
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
-    network-platform: "false" # → master gate: enables all default-on network 
+    network-platform: "true" # → master gate: enables all default-on network 
     storage-platform: 'true'            # umbrella
     storage-platform/openebs: 'true'  
     storage-platform/longhorn: 'false'  # → appset-longhorn
