@@ -53,7 +53,10 @@ jobs:
     name: "Build ${{ inputs.image }}"
     if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ inputs.runner }}
-    environment: ${{ inputs.upload_to_harvester && 'harvester' || '' }}
+    # Golden always publishes its base to MinIO, so it always needs the
+    # harvester environment's MINIO_* secrets. Dev only needs the environment
+    # when it uploads the built image to Harvester.
+    environment: ${{ (startsWith(inputs.image, 'golden/') || inputs.upload_to_harvester) && 'harvester' || '' }}
     env:
       PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
     steps:
