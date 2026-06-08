@@ -60,6 +60,10 @@ spec:
         metadata:
           name: backstage-deployment
         spec:
+          # First pull of the ~248MB image from ghcr.io can take ~9m on a cold
+          # node, exceeding the default 5m Helm wait and wedging the release in
+          # a failed-upgrade retry loop. Give the pull/rollout room.
+          timeout: 15m
           values:
             backstage:
               extraVolumes:
