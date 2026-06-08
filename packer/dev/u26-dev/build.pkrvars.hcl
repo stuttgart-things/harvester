@@ -6,7 +6,7 @@
 # source_url is the golden sthings-u26 base published to the MinIO artifact store
 # by the golden build (see packer/_build/publish-base.sh). The golden image must be
 # built + published at least once before a dev build can run.
-source_url      = "https://artifacts.platform.sthings-vsphere.labul.sva.de/packer/golden/sthings-u26/sthings-u26-amd64.img"
+source_url      = "https://artifacts.platform.sthings.lab/packer/golden/sthings-u26/sthings-u26-amd64.img"
 source_checksum = "none"
 
 image_name    = "u26-dev"

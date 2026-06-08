@@ -90,7 +90,7 @@ jobs:
         env:
           IMAGE_FILE: output/${{ steps.meta.outputs.name }}-amd64.img
           IMAGE_NAME: ${{ steps.meta.outputs.name }}
-          S3_ENDPOINT: https://artifacts.platform.sthings-vsphere.labul.sva.de
+          S3_ENDPOINT: https://artifacts.platform.sthings.lab
           S3_BUCKET: packer
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
@@ -178,7 +178,7 @@ jobs:
         env:
           IMAGE_FILE: output/${{ matrix.name }}-amd64.img
           IMAGE_NAME: ${{ matrix.name }}
-          S3_ENDPOINT: https://artifacts.platform.sthings-vsphere.labul.sva.de
+          S3_ENDPOINT: https://artifacts.platform.sthings.lab
           S3_BUCKET: packer
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}

@@ -7,7 +7,7 @@ set -euo pipefail
 # Required env:
 #   IMAGE_FILE         path to the built image, e.g. output/sthings-u26-amd64.img
 #   IMAGE_NAME         image name, e.g. sthings-u26
-#   S3_ENDPOINT        MinIO endpoint, e.g. https://artifacts.platform.sthings-vsphere.labul.sva.de
+#   S3_ENDPOINT        MinIO endpoint, e.g. https://artifacts.platform.sthings.lab
 #   S3_BUCKET          target bucket (MUST be public-read so packer can GET the source_url)
 #   MINIO_ACCESS_KEY   upload credential
 #   MINIO_SECRET_KEY   upload credential
