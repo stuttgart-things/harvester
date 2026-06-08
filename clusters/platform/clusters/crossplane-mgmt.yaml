@@ -10,7 +10,8 @@ spec:
   networkKey: "192.168.10"    # network to reserve IP+FQDN from in the clusterbook backend
   clusterName: crossplane-mgmt
   createDNS: true            # reserves the FQDN → produces the clusterbook fqdn annotation
-  useFQDNAsServer: true     # keep the ArgoCD server URL on the IP (reachable); flip later
+  useFQDNAsServer: false     # keep the ArgoCD server URL on the IP (reachable); flip later
+  preserveKubeconfigServer: true   # <-- keep the kubeconfig's API server URL; don't rewrite to the reserved IP
   argocdNamespace: argocd
   kubeconfigSecretRef:       # register an existing kubeconfig as the ArgoCD cluster
     name: crossplane-mgmt
@@ -19,4 +20,6 @@ spec:
   releaseOnDelete: true
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
-    network-platform: "true" # → master gate: enables all default-on network AppSets
+    network-platform: "false" # → master gate: enables all default-on network 
+    storage-platform: 'true'            # umbrella
+    storage-platform/openebs: 'true'  
