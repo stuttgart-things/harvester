@@ -2,20 +2,22 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: rocky-packer-image
-  description: Rocky Linux 9.7 Packer Image for Harvester
+  name: sthings-rocky9-packer-image
+  description: sthings-rocky9 golden (curated, review-gated) Packer base image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
+    - golden
     - rocky
-    - users-customized
 spec:
-  type: packer-image
+  type: packer-image-golden
   lifecycle: production
   owner: platform-team
   dependsOn: []
   profile:
+    baseImage: rocky9
     addedUsers:
       - sthings
+    addedPackages: []

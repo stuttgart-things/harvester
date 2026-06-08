@@ -33,16 +33,14 @@ source "qemu" "cloud_image" {
 
   # SSH configuration so that Packer can log into the Image
   ssh_password     = "superpassword" # pragma: allowlist secret
-  ssh_username     = "ubuntu"
-  ssh_timeout      = "5m"
+  ssh_username     = var.ssh_username
+  ssh_timeout      = var.ssh_timeout
   shutdown_command = "sudo cloud-init clean --logs --machine-id && sudo shutdown -P now"
   headless         = true
 
   net_device = "virtio-net"
 
-  qemuargs = [
-    ["-cdrom", "cidata.iso"]
-  ]
+  qemuargs = var.qemuargs
 }
 
 build {

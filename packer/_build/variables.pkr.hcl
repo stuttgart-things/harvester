@@ -59,3 +59,24 @@ variable "upload_to_harvester" {
   default     = "false"
   description = "Set to 'true' to upload the image to Harvester after build"
 }
+
+# --- OS-specific knobs (defaults target the Ubuntu cloud image) -------------
+# Other images (e.g. Rocky) override these in their build.pkrvars.hcl.
+
+variable "ssh_username" {
+  type        = string
+  default     = "ubuntu"
+  description = "Default cloud-image user packer logs in as (e.g. 'ubuntu', 'rocky')"
+}
+
+variable "ssh_timeout" {
+  type        = string
+  default     = "5m"
+  description = "How long packer waits for SSH to come up"
+}
+
+variable "qemuargs" {
+  type        = list(list(string))
+  default     = [["-cdrom", "cidata.iso"]]
+  description = "Extra QEMU args. Override to add machine/cpu flags some images need."
+}

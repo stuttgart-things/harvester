@@ -8,7 +8,8 @@ spec:
     - ../catalog-info.yaml
     - ../packer/golden/sthings-u26/catalog-info.yaml
     - ../packer/dev/u26-dev/catalog-info.yaml
-    - ../packer/rocky/catalog-info.yaml
+    - ../packer/golden/sthings-rocky9/catalog-info.yaml
+    - ../packer/dev/rocky9-dev/catalog-info.yaml
     - ../packer/opensuse-leap/catalog-info.yaml
     - ../claims/apps/dev-vm/catalog-info.yaml
     - ../claims/infra/demo1/catalog-info.yaml
