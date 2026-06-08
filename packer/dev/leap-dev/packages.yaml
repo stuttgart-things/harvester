@@ -4,5 +4,3 @@ packages:
   - curl
   - git
   - jq
-  - nano
-  - nginx

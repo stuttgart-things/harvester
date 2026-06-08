@@ -34,8 +34,26 @@ packer/
   build only installs the delta (developers' keys + extra packages). Self-service
   via Backstage with auto-merge.
 
-> `opensuse-leap/` and `rocky/` still use the legacy self-contained layout and are
-> pending migration into `golden/` (see issue #93).
+> All images now use the `golden/` + `dev/` split on the shared `_build/` logic;
+> the legacy self-contained per-OS folders have been retired (see issue #93).
+
+## CI / git flow
+
+The two tiers share the same folder-driven mechanism (drop/edit a folder, CI picks
+it up) but follow deliberately different governance:
+
+- **Golden — review-gated.** The PR build is *validation-only*: it builds to prove
+  the image works, but does **no upload and no auto-merge**. A human reviews and
+  merges. After the merge to `main`, `packer-build.yml` rebuilds it, uploads it to
+  Harvester, and (re)publishes the base to S3 (MinIO).
+- **Dev — self-service.** The PR build **builds, uploads to Harvester, and
+  auto-merges** on green — as long as the PR doesn't also touch a golden dir, which
+  forces a review.
+
+> **Bootstrap rule:** a new golden must be merged + published to S3 **once** before
+> its dev image can build, because the dev's `source_url` points at the golden
+> artifact in S3. So you don't land a brand-new golden + dev green in a single PR —
+> **golden goes first**, then the dev image follows in a later PR.
 
 ## Building
 

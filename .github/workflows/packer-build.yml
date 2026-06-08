@@ -20,6 +20,8 @@ on:
           - dev/u26-dev
           - golden/sthings-rocky9
           - dev/rocky9-dev
+          - golden/sthings-leap
+          - dev/leap-dev
 
       upload_to_harvester:
         description: "Upload the built image to Harvester"
