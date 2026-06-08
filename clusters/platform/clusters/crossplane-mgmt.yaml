@@ -23,3 +23,7 @@ spec:
     network-platform: "false" # → master gate: enables all default-on network 
     storage-platform: 'true'            # umbrella
     storage-platform/openebs: 'true'  
+    storage-platform/longhorn: 'false'  # → appset-longhorn
+    storage-platform/nfs-csi-install: 'false'        # → appset-nfs-csi-install (driver + snapshot-controller)
+    storage-platform/nfs-csi-storageclasses: 'false' # → appset-nfs-csi-storageclasses (the SC).
+    storage-platform.stuttgart-things.com/nfs-config: 'false'
