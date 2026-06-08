@@ -2,21 +2,22 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: u26-dev-packer-image
-  description: u26-dev Packer Image for Harvester
+  name: sthings-u26-packer-image
+  description: sthings-u26 golden (curated, review-gated) Packer base image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
+    - golden
     - ubuntu26
-    - users-customized
-    - packages-customized
 spec:
-  type: packer-image
+  type: packer-image-golden
   lifecycle: production
   owner: platform-team
   dependsOn: []
   profile:
-    addedUsers: []
+    baseImage: ubuntu26
+    addedUsers:
+      - sthings
     addedPackages: []
