@@ -34,8 +34,8 @@ packer/
   build only installs the delta (developers' keys + extra packages). Self-service
   via Backstage with auto-merge.
 
-> `opensuse-leap/` still uses the legacy self-contained layout and is pending
-> migration into `golden/`/`dev/` (see issue #93).
+> All images now use the `golden/` + `dev/` split on the shared `_build/` logic;
+> the legacy self-contained per-OS folders have been retired (see issue #93).
 
 ## CI / git flow
 

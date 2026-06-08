@@ -2,24 +2,23 @@
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: suse15-dev-packer-image
-  description: suse15-dev Packer Image for Harvester
+  name: sthings-leap-packer-image
+  description: sthings-leap golden (curated, review-gated) Packer base image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
   tags:
     - harvester
     - packer
-    - opensuse-leap
-    - users-customized
-    - packages-customized
+    - golden
+    - opensuse
+    - leap
 spec:
-  type: packer-image
+  type: packer-image-golden
   lifecycle: production
   owner: platform-team
   dependsOn: []
   profile:
+    baseImage: leap15
     addedUsers:
-      - hans
-    addedPackages:
-      - nginx
-      - vim
+      - sthings
+    addedPackages: []

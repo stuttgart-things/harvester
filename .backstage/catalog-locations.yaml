@@ -10,7 +10,8 @@ spec:
     - ../packer/dev/u26-dev/catalog-info.yaml
     - ../packer/golden/sthings-rocky9/catalog-info.yaml
     - ../packer/dev/rocky9-dev/catalog-info.yaml
-    - ../packer/opensuse-leap/catalog-info.yaml
+    - ../packer/golden/sthings-leap/catalog-info.yaml
+    - ../packer/dev/leap-dev/catalog-info.yaml
     - ../claims/apps/dev-vm/catalog-info.yaml
     - ../claims/infra/demo1/catalog-info.yaml
     - ../claims/infra/movies/catalog-info.yaml

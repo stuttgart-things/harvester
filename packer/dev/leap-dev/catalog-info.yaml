@@ -1,0 +1,24 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: leap-dev-packer-image
+  description: leap-dev self-service dev/playground Packer image, layered on golden sthings-leap
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+  tags:
+    - harvester
+    - packer
+    - dev
+    - playground
+    - opensuse
+    - leap
+spec:
+  type: packer-image-dev
+  lifecycle: experimental
+  owner: platform-team
+  dependsOn:
+    - resource:default/sthings-leap-packer-image
+  profile:
+    baseImage: leap15
+    goldenBase: sthings-leap
