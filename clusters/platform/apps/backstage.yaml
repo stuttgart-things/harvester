@@ -33,3 +33,44 @@ spec:
     substituteFrom:
       - kind: Secret
         name: backstage-secrets-subst
+  patches:
+    # Point the claim-machinery-api proxy/plugin at this cluster's actual
+    # HTTPRoute host (claims.${DOMAIN}); the upstream app defaults to the
+    # non-routable claim-api.${DOMAIN} placeholder.
+    - target:
+        kind: HelmRelease
+        name: backstage-configuration
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: backstage-configuration
+        spec:
+          values:
+            secrets:
+              backstage-secrets:
+                secretKVs:
+                  CLAIM_MACHINERY_API_URL: https://claims.${DOMAIN}
+    - target:
+        kind: HelmRelease
+        name: backstage-deployment
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: backstage-deployment
+        spec:
+          values:
+            backstage:
+              extraVolumes:
+                - name: trust-bundle
+                  configMap:
+                    name: cluster-trust-bundle
+                    optional: true
+              extraVolumeMounts:
+                - name: trust-bundle
+                  mountPath: /etc/ssl/custom/trust-bundle.pem
+                  subPath: trust-bundle.pem
+                  readOnly: true
+              extraEnvVarsCM:
+                - backstage-ca-env

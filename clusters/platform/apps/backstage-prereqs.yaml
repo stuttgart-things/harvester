@@ -16,7 +16,18 @@ metadata:
   name: backstage-helm-overrides
   namespace: backstage
 data:
-  imageTag: "v1.4.6"
+  imageTag: "v1.5.0"
+---
+# Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
+# extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
+# claims.${DOMAIN} / claim-machinery-api). Referenced via extraEnvVarsCM.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-ca-env
+  namespace: backstage
+data:
+  NODE_EXTRA_CA_CERTS: /etc/ssl/custom/trust-bundle.pem
 ---
 # Catalog locations (sthings-harvester instance). Must contain the User
 # entities GitHub sign-in (usernameMatchingUserEntityName) resolves against.
