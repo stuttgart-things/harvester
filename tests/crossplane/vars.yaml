@@ -6,18 +6,42 @@ manage_filesystem: false
 vault_instances:
   - https://vault.infra.sthings.lab
 
-# RKE2 CLUSTER
-rke_state: present
-rke2_k8s_version: 1.35.1
+# K3S CLUSTER
+install_k3s: true
+k3s_state: present
+# NOTE: the k3s images tar below is version-specific — keep k3s_k8s_version /
+# k3s_release_kind matching the version the tar was built from.
+k3s_k8s_version: 1.36.1
+k3s_release_kind: k3s1
 cluster_setup: singlenode
-rke2_release_kind: rke2r1
-rke2_cni: none
 install_cilium: true
-rke2_airgapped_installation: true
 prepare_rancher_ha_nodes: false
-disableKubeProxy: true
-cluster_name: rke2
+cluster_name: k3s
 fetched_kubeconfig_path: /tmp/kubeconfig
 install_helm_diff: false
 
-registry_mirror_url: https://registry-1.docker.io
+# --- air-gapped k3s IMAGES from the harvester mirror (images-only) ----------
+# Pre-seeds the archive into /var/lib/rancher/k3s/agent/images/. The k3s binary
+# + install script still come from upstream unless k3s_airgapped_skip_download
+# is also set.
+k3s_airgapped_installation: true
+k3s_airgapped_image_url: "https://artifacts.platform.sthings.lab/images/k3s-airgap-images-amd64.tar.zst"
+
+# --- Cilium air-gapped IMAGES (pre-load tar + pin pull policy) ---------------
+# cilium-cli pulls from quay.io; this imports its images into containerd and
+# pins pullPolicy so the agent/operator/envoy start from the local store.
+cilium_airgapped_images: true
+cilium_airgapped_image_url: "https://artifacts.platform.sthings.lab/images/cilium-images.tar"
+cilium_image_pull_policy: Never
+
+# --- docker.io pull-through MIRROR -> harbor (with upstream fallback) --------
+k3s_registry_mirrors:
+  - name: "docker.io"
+    endpoints:
+      - "https://docker.harbor.platform.sthings.lab"
+      - "https://registry-1.docker.io"
+# harbor presents an internal/untrusted cert -> skip verification for that host.
+k3s_registry_configs:
+  "docker.harbor.platform.sthings.lab":
+    tls:
+      insecure_skip_verify: true

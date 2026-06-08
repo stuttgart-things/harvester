@@ -1,15 +1,16 @@
-# RKE2 CLUSTER ON HARVESTER (single large VM)
+# K3S CLUSTER ON HARVESTER (single large VM)
 
 Provision a single **large** Harvester VM (from the `u26-dev` image) and turn it
-into a single-node RKE2 cluster via the stuttgart-things Ansible blueprints
-(run through Dagger).
+into a single-node k3s cluster via the stuttgart-things Ansible blueprints
+(run through Dagger). Air-gapped: k3s + Cilium images are pre-loaded from the
+internal mirror and docker.io is pulled through a harbor mirror.
 
 The flow is:
 
 1. `kubectl apply` the VM manifest on Harvester.
 2. Wait for the VM to be `Running` and grab its DHCP IP.
 3. Write that IP into the Ansible inventory (`inv`).
-4. Run the Dagger Ansible provisioning to install RKE2.
+4. Run the Dagger Ansible provisioning to install k3s.
 
 ## Machine spec
 
@@ -22,7 +23,7 @@ The flow is:
 | Root disk | 60 Gi (Longhorn, image-backed) |
 | Network | `default/vms` NAD (bridged onto `mgmt-br`, DHCP from DD-WRT) |
 
-See [`vm-rke2.yaml`](./vm-rke2.yaml).
+See [`vm.yaml`](./vm.yaml).
 
 ## Prerequisites
 
@@ -39,7 +40,7 @@ See [`vm-rke2.yaml`](./vm-rke2.yaml).
 ## 1. Apply the VM
 
 ```bash
-kubectl apply -f vm-rke2.yaml
+kubectl apply -f vm.yaml
 ```
 
 ## 2. Wait for the VM and get its IP
@@ -64,7 +65,7 @@ sed -i "s/VM_IP_PLACEHOLDER/${VM_IP}/" inv
 cat inv
 ```
 
-## 4. Provision RKE2 with Dagger
+## 4. Provision k3s with Dagger
 
 ```bash
 dagger call -m github.com/stuttgart-things/blueprints/vm@v2.4.1 execute-ansible-encrypt-and-commit --src "." --playbooks ./plays.yaml --inventory ./inv --ssh-user=env:SSH_USER --ssh-password=env:SSH_PASSWORD --requirements-data requirements-data.yaml --parameters-file vars.yaml --git-repository "stuttgart-things/harvester" --git-branch main --git-commit-message "Add encrypted kubeconfig for k3s cluster infra" --git-destination-path "secrets" --git-token=env:GITHUB_TOKEN --export-paths "/tmp/crossplane.yaml" --age-public-key=env:AGE_PUB --progress plain -vv
@@ -75,11 +76,15 @@ in [`vars.yaml`](./vars.yaml)).
 
 ## Configuration
 
-- **Provisioning Type**: rke2-cluster
-- **Cluster Name**: rke2
-- **Kubernetes Version**: 1.35.1
+- **Provisioning Type**: k3s-cluster
+- **Cluster Name**: k3s
+- **Kubernetes Version**: 1.36.1+k3s1
 - **Cluster Setup**: singlenode
-- **CNI**: Cilium (kube-proxy disabled)
+- **CNI**: Cilium (kube-proxy replaced)
+- **Air-gapped images**: k3s + Cilium tars pre-loaded from
+  `artifacts.platform.sthings.lab` (`cilium_image_pull_policy: Never`)
+- **Registry mirror**: docker.io → `docker.harbor.platform.sthings.lab`
+  (fallback to upstream)
 
 ## Playbooks
 
@@ -92,5 +97,5 @@ See [vars.yaml](./vars.yaml) for all configuration variables.
 ## Teardown
 
 ```bash
-kubectl delete -f vm-rke2.yaml
+kubectl delete -f vm.yaml
 ```
