@@ -1,0 +1,23 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: u26-dev-packer-image
+  description: u26-dev self-service dev/playground Packer image, layered on golden sthings-u26
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+  tags:
+    - harvester
+    - packer
+    - dev
+    - playground
+    - ubuntu26
+spec:
+  type: packer-image-dev
+  lifecycle: experimental
+  owner: platform-team
+  dependsOn:
+    - resource:default/sthings-u26-packer-image
+  profile:
+    baseImage: ubuntu26
+    goldenBase: sthings-u26

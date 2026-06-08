@@ -17,7 +17,7 @@ cluster_setup: singlenode
 install_cilium: true
 prepare_rancher_ha_nodes: false
 cluster_name: k3s
-fetched_kubeconfig_path: /tmp/kubeconfig
+fetched_kubeconfig_path: /tmp/kubeconfig.yaml
 install_helm_diff: false
 
 # --- air-gapped k3s IMAGES from the harvester mirror (images-only) ----------

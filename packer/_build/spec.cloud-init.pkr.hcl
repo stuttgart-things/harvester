@@ -9,8 +9,8 @@ source "file" "user_data" {
     package_update  = true
     package_upgrade = true
     packages        = local.packages_config.packages
-    password       = "superpassword" # pragma: allowlist secret
-    chpasswd       = { expire = false }
+    password        = "superpassword" # pragma: allowlist secret
+    chpasswd        = { expire = false }
     users = concat(
       ["default"],
       [for u in local.users_config.users : {
