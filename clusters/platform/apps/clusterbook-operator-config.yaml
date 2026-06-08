@@ -1,0 +1,8 @@
+---
+apiVersion: clusterbook.stuttgart-things.com/v1alpha1
+kind: ClusterbookProviderConfig
+metadata:
+  name: default
+spec:
+  apiURL: https://clusterbook.infra.sthings.lab
+  insecureSkipVerify: false
