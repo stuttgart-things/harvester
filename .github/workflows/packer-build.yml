@@ -18,6 +18,8 @@ on:
         options:
           - golden/sthings-u26
           - dev/u26-dev
+          - golden/sthings-rocky9
+          - dev/rocky9-dev
 
       upload_to_harvester:
         description: "Upload the built image to Harvester"
