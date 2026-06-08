@@ -1,12 +1,14 @@
 ---
-# argocd-platform bundle (base scope): stands up Argo CD (same cicd/argo-cd
-# install as before) + clusterbook-operator + argocd-config (AppProjects +
-# cluster-generator ApplicationSet), all dependsOn-ordered. Replaces the
-# standalone clusters/platform/apps/argo-cd.yaml Kustomization.
+# argocd-platform bundle (sthings-lab overlay): stands up Argo CD (same
+# cicd/argo-cd install as before) + clusterbook-operator + argocd-config
+# (AppProjects + cluster-generator ApplicationSet), all dependsOn-ordered.
+# Replaces the standalone clusters/platform/apps/argo-cd.yaml Kustomization.
 #
-# Platforms are opt-in: point at ./cicd/argocd-platform/overlays/full (or a
-# trimmed overlay) and add the argocd-catalog GitRepository source to enable
-# catalog platform stacks. Base needs only flux-apps + argocd-secrets.
+# Platforms are opt-in: this points at the sthings-lab overlay, which enables
+# the network, cicd, security, storage and kind catalog platforms. The
+# overlay's component list is the on/off switch (in the flux repo). Requires
+# the argocd-catalog GitRepository source (see ../git-repos.yaml) plus
+# flux-apps + argocd-secrets.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -22,13 +24,14 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-apps
-  path: ./cicd/argocd-platform/base
+  path: ./cicd/argocd-platform/overlays/sthings-lab
   prune: true
   wait: true
   postBuild:
     substitute:
       BUNDLE_NAME: argocd-platform
       FLUX_SOURCE: flux-apps
+      ARGOCD_CATALOG_SOURCE: argocd-catalog
       ARGO_CD_VERSION: "9.4.15"
       ARGO_CD_NAMESPACE: argocd
       ARGO_CD_INGRESS_ENABLED: "false"
