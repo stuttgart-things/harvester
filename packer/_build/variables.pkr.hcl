@@ -111,3 +111,34 @@ variable "airgap_images_dir" {
   default     = "/var/lib/rancher/k3s/agent/images"
   description = "Where to stage the tarballs (k3s: /var/lib/rancher/k3s/agent/images, rke2: /var/lib/rancher/rke2/agent/images)."
 }
+
+# --- SSH password for the curated user (besides its keys) -------------------
+# Applies to every image. The hash is computed in CI from the STHINGS_PASSWORD
+# secret (openssl passwd -6); empty = key-only (password stays locked).
+
+variable "sthings_password" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "SHA-512 crypt hash for password_user's password (computed in CI from the STHINGS_PASSWORD secret). Empty = key-only."
+}
+
+variable "password_user" {
+  type        = string
+  default     = "sthings"
+  description = "Which user gets sthings_password applied in addition to its SSH keys."
+}
+
+# --- Private CA trust (installed into every image) --------------------------
+
+variable "ca_cert_url" {
+  type        = string
+  default     = "https://vault.infra.sthings.lab/v1/pki/ca/pem"
+  description = "PEM CA endpoint to install into the image trust store (fetched with curl -sk at build). Empty = skip."
+}
+
+variable "ca_cert_name" {
+  type        = string
+  default     = "sthings-lab-ca.crt"
+  description = "Filename for the installed CA in the system trust anchors dir."
+}

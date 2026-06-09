@@ -37,10 +37,14 @@ IFS=',' read -ra TARS <<<"${AIRGAP_IMAGE_TARS}"
 for tar in "${TARS[@]}"; do
   tar="$(echo "${tar}" | xargs)"   # trim whitespace
   [ -n "${tar}" ] || continue
+  # tar may be a versioned object path (e.g. k3s/v1.35.4+k3s1/<file>.tar.zst);
+  # fetch from that path but stage flat under the images dir by basename, since
+  # containerd imports every tarball directly in AIRGAP_IMAGES_DIR.
+  dst="$(basename "${tar}")"
   tmp="$(mktemp)"
-  echo "  -> ${tar}"
+  echo "  -> ${tar}  (=> ${dst})"
   curl -kfSL "${AIRGAP_IMAGES_BASE_URL}/${tar}" -o "${tmp}"
-  sudo install -m 0644 "${tmp}" "${AIRGAP_IMAGES_DIR}/${tar}"
+  sudo install -m 0644 "${tmp}" "${AIRGAP_IMAGES_DIR}/${dst}"
   rm -f "${tmp}"
 done
 

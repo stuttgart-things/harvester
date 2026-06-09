@@ -13,13 +13,22 @@ source "file" "user_data" {
     chpasswd        = { expire = false }
     users = concat(
       ["default"],
-      [for u in local.users_config.users : {
-        name                = u.name
-        groups              = try(u.groups, "sudo")
-        shell               = try(u.shell, "/bin/bash")
-        sudo                = try(u.sudo, "ALL=(ALL) NOPASSWD:ALL")
-        ssh_authorized_keys = u.ssh_authorized_keys
-      }]
+      [for u in local.users_config.users : merge(
+        {
+          name                = u.name
+          groups              = try(u.groups, "sudo")
+          shell               = try(u.shell, "/bin/bash")
+          sudo                = try(u.sudo, "ALL=(ALL) NOPASSWD:ALL")
+          ssh_authorized_keys = u.ssh_authorized_keys
+        },
+        # Give the designated user (default: sthings) a password in addition to
+        # its keys, so it can also log in via SSH password. The hash comes from
+        # CI (openssl passwd -6 of the STHINGS_PASSWORD secret); empty = key-only.
+        (u.name == var.password_user && var.sthings_password != "") ? {
+          lock_passwd   = false
+          hashed_passwd = var.sthings_password
+        } : {}
+      )]
     )
     runcmd = [
       ["systemctl", "enable", "--now", "qemu-guest-agent.service"]
