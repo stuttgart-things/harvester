@@ -51,7 +51,7 @@ jobs:
       # no-ops when the working tree is clean, so a no-change run creates nothing
       # and an already-open PR just gets force-updated to the latest refresh.
       - name: Open PR if changed
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: catalog-bot/refresh
           delete-branch: true
