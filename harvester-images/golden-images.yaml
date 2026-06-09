@@ -1,11 +1,17 @@
 ---
 # Golden Harvester images imported directly from the S3/MinIO artifact store.
+#
 # sourceType: download -> Harvester pulls each image from the URL itself, so this
 # needs NO packer build and NO KVM runner (unlike packer/_build/upload.sh, which
 # streams a locally-built image via sourceType: upload).
 #
-# Apply against the Harvester cluster:
-#   KUBECONFIG=<harvester-kubeconfig> kubectl apply -f harvester-golden-images.yaml
+# PREREQUISITE — private CA: the download path verifies TLS and has NO insecure
+# option. artifacts.platform.sthings.lab is served by the sthings-lab private CA,
+# so Harvester must trust that root first (Setting/additional-ca). Use the helper
+# which sets the CA *before* applying these manifests:
+#   KUBECONFIG=<harvester-kubeconfig> ./import-golden.sh
+# ...or set additional-ca yourself, then: kubectl apply -f golden-images.yaml
+#
 # Watch import progress:
 #   kubectl -n default get virtualmachineimages -w
 apiVersion: harvesterhci.io/v1beta1
