@@ -57,6 +57,17 @@ build {
     ]
   }
 
+  # Install the sthings-lab private CA into the image trust store + refresh it
+  # (update-ca-certificates / update-ca-trust), so VMs trust *.sthings.lab out of
+  # the box. No-op if ca_cert_url is empty.
+  provisioner "shell" {
+    script = "install-ca-cert.sh"
+    environment_vars = [
+      "CA_CERT_URL=${var.ca_cert_url}",
+      "CA_CERT_NAME=${var.ca_cert_name}",
+    ]
+  }
+
   # Stage airgap image tarballs (k3s/rke2/cilium) into the agent images dir when
   # airgap_image_tars is non-empty. No-op otherwise. "Stage only" — images only;
   # the node wires up the engine + binary at provision time.

@@ -128,3 +128,17 @@ variable "password_user" {
   default     = "sthings"
   description = "Which user gets sthings_password applied in addition to its SSH keys."
 }
+
+# --- Private CA trust (installed into every image) --------------------------
+
+variable "ca_cert_url" {
+  type        = string
+  default     = "https://vault.infra.sthings.lab/v1/pki/ca/pem"
+  description = "PEM CA endpoint to install into the image trust store (fetched with curl -sk at build). Empty = skip."
+}
+
+variable "ca_cert_name" {
+  type        = string
+  default     = "sthings-lab-ca.crt"
+  description = "Filename for the installed CA in the system trust anchors dir."
+}
