@@ -80,3 +80,26 @@ variable "qemuargs" {
   default     = [["-cdrom", "cidata.iso"]]
   description = "Extra QEMU args. Override to add machine/cpu flags some images need."
 }
+
+variable "disk_size" {
+  type        = string
+  default     = "10G"
+  description = "Image disk size. Bump for node images that bake airgap artifacts (k3s/rke2)."
+}
+
+# --- Airgap artifact baking (opt-in; empty = skip) --------------------------
+# When set, the build stages the engine's airgap artifacts (binary + images)
+# into the image at BUILD time, so edge nodes boot with zero network dependency
+# for the cluster core. Set these in a node image's build.pkrvars.hcl.
+
+variable "k3s_version" {
+  type        = string
+  default     = ""
+  description = "k3s release to stage (e.g. v1.31.5+k3s1). Empty = do not bake k3s."
+}
+
+variable "k3s_artifacts_base_url" {
+  type        = string
+  default     = "https://artifacts.platform.sthings.lab/k3s"
+  description = "Base URL of the k3s airgap artifacts in S3; expects <base>/<version>/{k3s,k3s-airgap-images-amd64.tar.zst,sha256sum-amd64.txt}"
+}

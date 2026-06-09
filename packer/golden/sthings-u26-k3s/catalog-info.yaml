@@ -1,0 +1,26 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: sthings-u26-k3s-packer-image
+  description: sthings-u26-k3s golden node image — Ubuntu 26.04 golden base with staged k3s airgap artifacts (review-gated)
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+  tags:
+    - harvester
+    - packer
+    - golden
+    - node
+    - k3s
+    - ubuntu26
+spec:
+  type: packer-image-golden
+  lifecycle: production
+  owner: platform-team
+  dependsOn:
+    - resource:default/sthings-u26-packer-image
+  profile:
+    baseImage: ubuntu26
+    goldenBase: sthings-u26
+    engine: k3s
+    airgap: staged

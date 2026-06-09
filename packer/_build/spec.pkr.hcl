@@ -22,7 +22,7 @@ source "qemu" "cloud_image" {
   cpus             = 2
   memory           = 4096
   accelerator      = "kvm" # use none here if not using KVM
-  disk_size        = "10G"
+  disk_size        = var.disk_size
   disk_compression = true
 
   efi_boot          = true
@@ -54,6 +54,17 @@ build {
       # with sudo and never let it fail the loop (|| true) — exit is driven solely
       # by the boot-finished marker. Keeps Ubuntu/Rocky working unchanged.
       "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sudo tail -n10 /var/log/cloud-init-output.log 2>/dev/null || true; sleep 5; done"
+    ]
+  }
+
+  # Stage k3s airgap artifacts (binary + images) when k3s_version is set.
+  # No-op otherwise. "Stage only" — no install script, no systemd unit; the node
+  # wires up k3s at provision time (e.g. INSTALL_K3S_SKIP_DOWNLOAD=true).
+  provisioner "shell" {
+    script = "stage-k3s-airgap.sh"
+    environment_vars = [
+      "K3S_VERSION=${var.k3s_version}",
+      "K3S_ARTIFACTS_BASE_URL=${var.k3s_artifacts_base_url}",
     ]
   }
 
