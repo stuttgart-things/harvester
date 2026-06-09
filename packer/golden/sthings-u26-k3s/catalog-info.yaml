@@ -23,4 +23,5 @@ spec:
     baseImage: ubuntu26
     goldenBase: sthings-u26
     engine: k3s
-    airgap: staged
+    cni: cilium
+    airgap: staged-images

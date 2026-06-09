@@ -14,10 +14,15 @@ image_name    = "sthings-u26-k3s"
 users_file    = "../golden/sthings-u26-k3s/users.yaml"
 packages_file = "../golden/sthings-u26-k3s/packages.yaml"
 
-# Bake k3s airgap artifacts (staged only: binary + images, no service/unit).
-# PIN to a version present in S3 at ${k3s_artifacts_base_url}/<version>/ —
-# confirm the artifacts are uploaded there before building.
-k3s_version = "v1.31.5+k3s1"
+# Stage airgap image tarballs (images only — no binary/unit) from the flat S3
+# 'images' bucket into the k3s agent images dir. Includes cilium so the CNI also
+# comes up airgapped. k3s/containerd imports every tarball in the dir on start.
+airgap_images_base_url = "https://artifacts.platform.sthings.lab/images"
+airgap_image_tars = [
+  "k3s-airgap-images-amd64.tar.zst",
+  "cilium-images.tar",
+]
+airgap_images_dir = "/var/lib/rancher/k3s/agent/images"
 
-# k3s airgap images need more room than the lean 10G base.
+# Airgap images need more room than the lean 10G base.
 disk_size = "20G"

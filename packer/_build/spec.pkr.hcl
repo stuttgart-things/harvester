@@ -57,14 +57,15 @@ build {
     ]
   }
 
-  # Stage k3s airgap artifacts (binary + images) when k3s_version is set.
-  # No-op otherwise. "Stage only" — no install script, no systemd unit; the node
-  # wires up k3s at provision time (e.g. INSTALL_K3S_SKIP_DOWNLOAD=true).
+  # Stage airgap image tarballs (k3s/rke2/cilium) into the agent images dir when
+  # airgap_image_tars is non-empty. No-op otherwise. "Stage only" — images only;
+  # the node wires up the engine + binary at provision time.
   provisioner "shell" {
-    script = "stage-k3s-airgap.sh"
+    script = "stage-airgap-images.sh"
     environment_vars = [
-      "K3S_VERSION=${var.k3s_version}",
-      "K3S_ARTIFACTS_BASE_URL=${var.k3s_artifacts_base_url}",
+      "AIRGAP_IMAGES_BASE_URL=${var.airgap_images_base_url}",
+      "AIRGAP_IMAGE_TARS=${join(",", var.airgap_image_tars)}",
+      "AIRGAP_IMAGES_DIR=${var.airgap_images_dir}",
     ]
   }
 
