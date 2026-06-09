@@ -25,6 +25,15 @@ spec:
     clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token # pragma: allowlist secret
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
+    cicd-platform: 'true'                # umbrella: enable the CI/CD stack
+    cicd-platform/crossplane: 'true'     # → appset-crossplane (+ configs/functions/provider-configs/providers)
+    cicd-platform/tekton: 'true'         # → appset-tekton (+ config, dashboard-httproute)
+    cicd-platform/machinery: 'true'      # → machinery-cicd (resource dashboard + gRPC ResourceService)
+    cicd-platform/kro: 'false'           # → appset-kro
+    cicd-platform/dapr: 'false'          # → appset-dapr
+    cicd-platform/kargo: 'false'         # → appset-kargo (+ httproute)
+    cicd-platform/argo-rollouts: 'false' # → appset-argo-rollouts
+    cicd-platform/openebs: 'false'       # → appset-openebs (cicd); using storage-platform/openebs instead (mutually exclusive)
     network-platform: "true" # → master gate: enables all default-on network
     network-platform/cilium-lb: 'true'  # → appset-cilium-lb            [ann: ip]
     network-platform/cilium-gateway: 'true'           # → appset-cilium-gateway          [ann: fqdn]
