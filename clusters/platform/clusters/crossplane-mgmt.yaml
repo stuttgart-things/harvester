@@ -22,10 +22,10 @@ spec:
     # cert-manager Vault-PKI ClusterIssuer (appset-cert-manager-vault-pki)
     clusterbook.stuttgart-things.com/vault-server: https://vault.infra.sthings.lab
     clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
-    clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token
+    clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token # pragma: allowlist secret
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
-    network-platform: "true" # → master gate: enables all default-on network 
+    network-platform: "true" # → master gate: enables all default-on network
     network-platform/cilium-lb: 'true'  # → appset-cilium-lb            [ann: ip]
     network-platform/cilium-gateway: 'true'           # → appset-cilium-gateway          [ann: fqdn]
     network-platform/cilium-gateway-secondary: 'false'# → appset-cilium-gateway-secondary [ann: fqdn-secondary]
@@ -34,9 +34,9 @@ spec:
     network-platform/cert-manager-cluster-ca: 'true'  # → appset-cert-manager-cluster-ca  [ann: fqdn, wildcard-issuer-name]
     network-platform/cert-manager-vault-pki: 'true'   # → appset-cert-manager-vault-pki   [ann: vault-server, vault-pki-path, vault-token-secret]
     network-platform/trust-manager-install: 'true'    # → appset-trust-manager-install
-    network-platform/trust-manager-bundle: 'true' 
+    network-platform/trust-manager-bundle: 'true'
     storage-platform: 'true'            # umbrella
-    storage-platform/openebs: 'true'  
+    storage-platform/openebs: 'true'
     storage-platform/longhorn: 'false'  # → appset-longhorn
     storage-platform/nfs-csi-install: 'false'        # → appset-nfs-csi-install (driver + snapshot-controller)
     storage-platform/nfs-csi-storageclasses: 'false' # → appset-nfs-csi-storageclasses (the SC).
