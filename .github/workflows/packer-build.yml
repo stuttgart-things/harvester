@@ -45,8 +45,10 @@ on:
     branches:
       - main
     paths:
+      # Only a changed golden dir triggers a post-merge rebuild. Shared _build
+      # changes do NOT auto-rebuild every golden (see detect-golden); rebuild
+      # affected images via workflow_dispatch or by touching their dir.
       - "packer/golden/**"
-      - "packer/_build/**"
 
 permissions:
   contents: read
@@ -119,14 +121,13 @@ jobs:
       - name: Detect changed golden images
         id: detect
         run: |
-          # A change under a golden dir rebuilds that golden; a shared _build
-          # change rebuilds ALL golden images.
+          # Rebuild ONLY the golden dirs that changed in this push. A shared
+          # _build change does NOT blanket-rebuild every golden (avoids wasteful
+          # re-uploads when the change is a no-op for most images). If a _build
+          # change must propagate to other images, touch their dir or rebuild
+          # them manually via workflow_dispatch.
           CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)
-          if echo "$CHANGED" | grep -q '^packer/_build/'; then
-            DIRS=$(ls -d packer/golden/*/ | sed 's:/*$::' | sort -u)
-          else
-            DIRS=$(echo "$CHANGED" | grep -oP '^packer/golden/[^/]+' | sort -u || true)
-          fi
+          DIRS=$(echo "$CHANGED" | grep -oP '^packer/golden/[^/]+' | sort -u || true)
 
           if [ -z "$DIRS" ]; then
             echo "targets=[]" >> "$GITHUB_OUTPUT"
