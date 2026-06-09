@@ -18,6 +18,11 @@ spec:
     namespace: argocd
     key: kubeconfig
   releaseOnDelete: true
+  annotations:               # copied onto the ArgoCD cluster Secret; AppSets read config from these
+    # cert-manager Vault-PKI ClusterIssuer (appset-cert-manager-vault-pki)
+    clusterbook.stuttgart-things.com/vault-server: https://vault.infra.sthings.lab
+    clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
+    clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
     network-platform: "true" # → master gate: enables all default-on network 
