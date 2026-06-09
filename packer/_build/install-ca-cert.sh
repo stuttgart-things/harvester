@@ -5,28 +5,39 @@ set -euo pipefail
 # time and refresh the trust store, so VMs from this image trust *.sthings.lab
 # (Vault PKI / cert-manager) without any per-VM config.
 #
-# Fetched with `curl -sk` because the Vault endpoint serving the CA is itself
-# fronted by this CA (chicken-and-egg) — build-time only. No-op if CA_CERT_URL
-# is empty.
+# Two sources, in precedence order:
+#   1. CA_CERT_PATH — a PEM file already on the VM (uploaded by Packer from the
+#      committed packer/_build/sthings-lab-ca.crt). Preferred: no network, works
+#      even when Vault is down.
+#   2. CA_CERT_URL  — fetched with `curl -sk` (fallback). Insecure because the
+#      Vault endpoint serving the CA is itself fronted by this CA (chicken-and-
+#      egg) — build-time only.
+# No-op if neither is set.
 #
 # Env:
+#   CA_CERT_PATH  local PEM file on the VM (e.g. /tmp/sthings-lab-ca.crt)
 #   CA_CERT_URL   PEM CA endpoint (e.g. https://vault.infra.sthings.lab/v1/pki/ca/pem)
 #   CA_CERT_NAME  filename in the trust anchors dir (default sthings-lab-ca.crt)
 
+CA_CERT_PATH="${CA_CERT_PATH:-}"
 CA_CERT_URL="${CA_CERT_URL:-}"
 CA_CERT_NAME="${CA_CERT_NAME:-sthings-lab-ca.crt}"
-
-if [ -z "${CA_CERT_URL}" ]; then
-  echo "CA_CERT_URL not set — skipping CA install."
-  exit 0
-fi
 
 tmp="$(mktemp)"
 trap 'rm -f "${tmp}"' EXIT
 
-echo "Fetching CA from ${CA_CERT_URL} ..."
-curl -sk "${CA_CERT_URL}" -o "${tmp}"
-grep -q "BEGIN CERTIFICATE" "${tmp}" || { echo "ERROR: no PEM certificate from ${CA_CERT_URL}" >&2; exit 1; }
+if [ -n "${CA_CERT_PATH}" ] && [ -s "${CA_CERT_PATH}" ]; then
+  echo "Using local CA file ${CA_CERT_PATH} ..."
+  cp "${CA_CERT_PATH}" "${tmp}"
+elif [ -n "${CA_CERT_URL}" ]; then
+  echo "Fetching CA from ${CA_CERT_URL} ..."
+  curl -sk "${CA_CERT_URL}" -o "${tmp}"
+else
+  echo "Neither CA_CERT_PATH nor CA_CERT_URL set — skipping CA install."
+  exit 0
+fi
+
+grep -q "BEGIN CERTIFICATE" "${tmp}" || { echo "ERROR: no PEM certificate from CA source" >&2; exit 1; }
 
 # shellcheck disable=SC1091
 . /etc/os-release 2>/dev/null || true
