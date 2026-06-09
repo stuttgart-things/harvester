@@ -1,18 +1,19 @@
+---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane-mgmt
+  name: crossplane-resources
   namespace: argocd
 spec:
   project: default
   source:
-    repoURL: https://github.com/stuttgart-things/harvester.git
+    repoURL: https://github.com/stuttgart-things/crossplane-configurations.git
     targetRevision: main
-    path: clusters/crossplane-mgmt
+    path: tests/envs/harvester/crossplane-mgmt
     directory:
       recurse: true
   destination:
-    server: https://kubernetes.default.svc
+    name: crossplane-mgmt
     namespace: crossplane-system
   syncPolicy:
     automated:
