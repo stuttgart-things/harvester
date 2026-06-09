@@ -1,0 +1,75 @@
+---
+# Golden Harvester images imported directly from the S3/MinIO artifact store.
+#
+# sourceType: download -> Harvester pulls each image from the URL itself, so this
+# needs NO packer build and NO KVM runner (unlike packer/_build/upload.sh, which
+# streams a locally-built image via sourceType: upload).
+#
+# PREREQUISITE — private CA: the download path verifies TLS and has NO insecure
+# option. artifacts.platform.sthings.lab is served by the sthings-lab private CA,
+# so Harvester must trust that root first (Setting/additional-ca). Use the helper
+# which sets the CA *before* applying these manifests:
+#   KUBECONFIG=<harvester-kubeconfig> ./import-golden.sh
+# ...or set additional-ca yourself, then: kubectl apply -f golden-images.yaml
+#
+# Watch import progress:
+#   kubectl -n default get virtualmachineimages -w
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-u26
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-u26
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-u26/sthings-u26-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '3'
+    staleReplicaTimeout: '30'
+---
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-rocky9
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-rocky9
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-rocky9/sthings-rocky9-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '3'
+    staleReplicaTimeout: '30'
+---
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-leap
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-leap
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-leap/sthings-leap-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '3'
+    staleReplicaTimeout: '30'
