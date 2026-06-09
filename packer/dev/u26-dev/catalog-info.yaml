@@ -12,6 +12,8 @@ metadata:
     - dev
     - playground
     - ubuntu26
+    - users-customized
+    - packages-customized
 spec:
   type: packer-image-dev
   lifecycle: experimental
@@ -21,3 +23,7 @@ spec:
   profile:
     baseImage: ubuntu26
     goldenBase: sthings-u26
+    addedUsers:
+      - horst
+    addedPackages:
+      - wget
