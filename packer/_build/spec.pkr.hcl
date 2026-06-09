@@ -57,12 +57,26 @@ build {
     ]
   }
 
+  # Upload the committed sthings-lab CA so the trust install needs no network
+  # (Vault may be down). Only runs when ca_cert_file is set; otherwise the
+  # script falls back to ca_cert_url (or skips).
+  dynamic "provisioner" {
+    for_each = var.ca_cert_file != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.ca_cert_file
+      destination = "/tmp/${var.ca_cert_name}"
+    }
+  }
+
   # Install the sthings-lab private CA into the image trust store + refresh it
   # (update-ca-certificates / update-ca-trust), so VMs trust *.sthings.lab out of
-  # the box. No-op if ca_cert_url is empty.
+  # the box. Prefers the uploaded file; falls back to ca_cert_url; no-op if both
+  # are empty.
   provisioner "shell" {
     script = "install-ca-cert.sh"
     environment_vars = [
+      "CA_CERT_PATH=${var.ca_cert_file != "" ? "/tmp/${var.ca_cert_name}" : ""}",
       "CA_CERT_URL=${var.ca_cert_url}",
       "CA_CERT_NAME=${var.ca_cert_name}",
     ]

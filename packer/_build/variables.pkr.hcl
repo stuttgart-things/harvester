@@ -131,14 +131,20 @@ variable "password_user" {
 
 # --- Private CA trust (installed into every image) --------------------------
 
+variable "ca_cert_file" {
+  type        = string
+  default     = "sthings-lab-ca.crt"
+  description = "Local PEM file (relative to packer/_build) uploaded into the image and installed into the trust store. Preferred over ca_cert_url — needs no network, works when Vault is down. Empty = fall back to ca_cert_url."
+}
+
 variable "ca_cert_url" {
   type        = string
-  default     = "https://vault.infra.sthings.lab/v1/pki/ca/pem"
-  description = "PEM CA endpoint to install into the image trust store (fetched with curl -sk at build). Empty = skip."
+  default     = ""
+  description = "PEM CA endpoint, fetched with curl -sk at build, used only when ca_cert_file is empty (e.g. https://vault.infra.sthings.lab/v1/pki/ca/pem). Empty = skip."
 }
 
 variable "ca_cert_name" {
   type        = string
   default     = "sthings-lab-ca.crt"
-  description = "Filename for the installed CA in the system trust anchors dir."
+  description = "Filename for the installed CA in the system trust anchors dir (also the upload destination basename)."
 }
