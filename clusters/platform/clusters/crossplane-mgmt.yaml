@@ -23,6 +23,10 @@ spec:
     clusterbook.stuttgart-things.com/vault-server: https://vault.infra.sthings.lab
     clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
     clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token # pragma: allowlist secret
+    # Gateway TLS wildcard issuer (appset-cert-manager-cluster-ca): issue the
+    # *.crossplane-mgmt.sthings.lab gateway cert from Vault PKI (trusted root)
+    # instead of the default self-signed cluster-ca.
+    clusterbook.stuttgart-things.com/wildcard-issuer-name: vault-pki
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
     cicd-platform: 'true'                # umbrella: enable the CI/CD stack
