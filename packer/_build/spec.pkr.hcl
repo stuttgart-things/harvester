@@ -22,7 +22,7 @@ source "qemu" "cloud_image" {
   cpus             = 2
   memory           = 4096
   accelerator      = "kvm" # use none here if not using KVM
-  disk_size        = "10G"
+  disk_size        = var.disk_size
   disk_compression = true
 
   efi_boot          = true
@@ -54,6 +54,18 @@ build {
       # with sudo and never let it fail the loop (|| true) — exit is driven solely
       # by the boot-finished marker. Keeps Ubuntu/Rocky working unchanged.
       "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sudo tail -n10 /var/log/cloud-init-output.log 2>/dev/null || true; sleep 5; done"
+    ]
+  }
+
+  # Stage airgap image tarballs (k3s/rke2/cilium) into the agent images dir when
+  # airgap_image_tars is non-empty. No-op otherwise. "Stage only" — images only;
+  # the node wires up the engine + binary at provision time.
+  provisioner "shell" {
+    script = "stage-airgap-images.sh"
+    environment_vars = [
+      "AIRGAP_IMAGES_BASE_URL=${var.airgap_images_base_url}",
+      "AIRGAP_IMAGE_TARS=${join(",", var.airgap_image_tars)}",
+      "AIRGAP_IMAGES_DIR=${var.airgap_images_dir}",
     ]
   }
 
