@@ -50,7 +50,10 @@ build {
   # Wait till Cloud-Init has finished setting up the image on first-boot
   provisioner "shell" {
     inline = [
-      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; tail -n10 /var/log/cloud-init-output.log; sleep 5; done"
+      # tail is a diagnostic only; on openSUSE the log is root-only, so read it
+      # with sudo and never let it fail the loop (|| true) — exit is driven solely
+      # by the boot-finished marker. Keeps Ubuntu/Rocky working unchanged.
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sudo tail -n10 /var/log/cloud-init-output.log 2>/dev/null || true; sleep 5; done"
     ]
   }
 
