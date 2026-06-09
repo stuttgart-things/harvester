@@ -6,6 +6,9 @@ metadata:
   description: rocky9-dev self-service dev/playground Packer image, layered on golden sthings-rocky9
   annotations:
     github.com/project-slug: stuttgart-things/harvester
+    sthings.lab/created-at: '2026-06-08T15:17:06+02:00'
+    sthings.lab/last-modified-by: patrick hermann
+    sthings.lab/last-modified-at: '2026-06-08T15:17:06+02:00'
   tags:
     - harvester
     - packer

@@ -41,7 +41,11 @@ jobs:
         id: detect
         run: |
           BASE="origin/${{ github.base_ref }}"
+          # catalog-info.yaml is Backstage metadata, not a build input — a
+          # provenance/catalog-only edit (e.g. the catalog-bot refresh) must not
+          # trigger an image rebuild, so exclude it before matching image dirs.
           CHANGED=$(git diff --name-only "$BASE"...HEAD \
+            | grep -vE '/catalog-info\.yaml$' \
             | grep -oP '^packer/(golden|dev)/[^/]+' | sort -u || true)
 
           if [ -z "$CHANGED" ]; then
