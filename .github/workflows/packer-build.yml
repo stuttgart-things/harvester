@@ -85,12 +85,25 @@ jobs:
         working-directory: packer/_build
         run: packer init .
 
+      - name: Compute sthings password hash
+        # Hash the plaintext STHINGS_PASSWORD (harvester env secret) so only the
+        # SHA-512 hash enters the image. Empty when the secret/env is absent.
+        env:
+          STHINGS_PASSWORD: ${{ secrets.STHINGS_PASSWORD }}
+        run: |
+          if [ -n "${STHINGS_PASSWORD}" ]; then
+            HASH=$(openssl passwd -6 "${STHINGS_PASSWORD}")
+            echo "::add-mask::${HASH}"
+            echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
+          fi
+
       - name: Packer build
         working-directory: packer/_build
         env:
           PKR_VAR_upload_to_harvester: ${{ inputs.upload_to_harvester }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+          PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="../${{ inputs.image }}/build.pkrvars.hcl" .
 
       - name: Publish golden base to MinIO
@@ -173,12 +186,23 @@ jobs:
         working-directory: packer/_build
         run: packer init .
 
+      - name: Compute sthings password hash
+        env:
+          STHINGS_PASSWORD: ${{ secrets.STHINGS_PASSWORD }}
+        run: |
+          if [ -n "${STHINGS_PASSWORD}" ]; then
+            HASH=$(openssl passwd -6 "${STHINGS_PASSWORD}")
+            echo "::add-mask::${HASH}"
+            echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
+          fi
+
       - name: Packer build + upload
         working-directory: packer/_build
         env:
           PKR_VAR_upload_to_harvester: ${{ env.UPLOAD_TO_HARVESTER }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+          PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="${{ matrix.var_file }}" .
 
       - name: Publish golden base to MinIO
