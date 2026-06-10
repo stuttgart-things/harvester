@@ -21,7 +21,7 @@ spec:
     substitute:
       CLAIM_MACHINERY_API_VERSION: "v0.21.1"
       CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
-      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/claim-machinery-api/main/profiles/labul-vsphere.yaml"
+      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/api-templates-profiles.yaml"
       CLAIM_MACHINERY_ENABLE_HOMERUN: "false"
       FLUX_SOURCE_API_VERSION: v1
       GATEWAY_NAME: platform-sthings-gateway
