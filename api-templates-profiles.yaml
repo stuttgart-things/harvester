@@ -16,6 +16,9 @@
 templates:
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-namespace/templates/namespace-minimal.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-namespace/templates/namespace-annotated.yaml
+  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-minimal.yaml
+  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-detailed.yaml
+  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-harvester.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-platform.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-developer.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-detailed.yaml
