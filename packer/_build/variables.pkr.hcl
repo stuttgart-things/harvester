@@ -80,3 +80,71 @@ variable "qemuargs" {
   default     = [["-cdrom", "cidata.iso"]]
   description = "Extra QEMU args. Override to add machine/cpu flags some images need."
 }
+
+variable "disk_size" {
+  type        = string
+  default     = "10G"
+  description = "Image disk size. Bump for node images that bake airgap artifacts (k3s/rke2)."
+}
+
+# --- Airgap image baking (opt-in; empty list = skip) ------------------------
+# When airgap_image_tars is non-empty, the build downloads those image tarballs
+# from S3 at BUILD time and stages them into the engine's agent images dir, so
+# edge nodes boot with zero network dependency for the cluster core (containerd
+# imports every tarball in that dir on start). Set these in a node image's
+# build.pkrvars.hcl.
+
+variable "airgap_images_base_url" {
+  type        = string
+  default     = "https://artifacts.platform.sthings.lab/images"
+  description = "Base URL of the flat S3 'images' bucket holding the airgap image tarballs."
+}
+
+variable "airgap_image_tars" {
+  type        = list(string)
+  default     = []
+  description = "Image tarballs to stage from airgap_images_base_url (e.g. k3s-airgap-images-amd64.tar.zst, cilium-images.tar). Empty = skip."
+}
+
+variable "airgap_images_dir" {
+  type        = string
+  default     = "/var/lib/rancher/k3s/agent/images"
+  description = "Where to stage the tarballs (k3s: /var/lib/rancher/k3s/agent/images, rke2: /var/lib/rancher/rke2/agent/images)."
+}
+
+# --- SSH password for the curated user (besides its keys) -------------------
+# Applies to every image. The hash is computed in CI from the STHINGS_PASSWORD
+# secret (openssl passwd -6); empty = key-only (password stays locked).
+
+variable "sthings_password" {
+  type        = string
+  default     = ""
+  sensitive   = true
+  description = "SHA-512 crypt hash for password_user's password (computed in CI from the STHINGS_PASSWORD secret). Empty = key-only."
+}
+
+variable "password_user" {
+  type        = string
+  default     = "sthings"
+  description = "Which user gets sthings_password applied in addition to its SSH keys."
+}
+
+# --- Private CA trust (installed into every image) --------------------------
+
+variable "ca_cert_file" {
+  type        = string
+  default     = "sthings-lab-ca.crt"
+  description = "Local PEM file (relative to packer/_build) uploaded into the image and installed into the trust store. Preferred over ca_cert_url — needs no network, works when Vault is down. Empty = fall back to ca_cert_url."
+}
+
+variable "ca_cert_url" {
+  type        = string
+  default     = ""
+  description = "PEM CA endpoint, fetched with curl -sk at build, used only when ca_cert_file is empty (e.g. https://vault.infra.sthings.lab/v1/pki/ca/pem). Empty = skip."
+}
+
+variable "ca_cert_name" {
+  type        = string
+  default     = "sthings-lab-ca.crt"
+  description = "Filename for the installed CA in the system trust anchors dir (also the upload destination basename)."
+}

@@ -6,6 +6,9 @@ metadata:
   description: sthings-rocky9 golden (curated, review-gated) Packer base image for Harvester
   annotations:
     github.com/project-slug: stuttgart-things/harvester
+    sthings.lab/created-at: '2026-06-08T15:17:06+02:00'
+    sthings.lab/last-modified-by: patrick hermann
+    sthings.lab/last-modified-at: '2026-06-09T20:29:27+02:00'
   tags:
     - harvester
     - packer

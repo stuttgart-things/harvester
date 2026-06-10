@@ -22,7 +22,7 @@ source "qemu" "cloud_image" {
   cpus             = 2
   memory           = 4096
   accelerator      = "kvm" # use none here if not using KVM
-  disk_size        = "10G"
+  disk_size        = var.disk_size
   disk_compression = true
 
   efi_boot          = true
@@ -50,7 +50,47 @@ build {
   # Wait till Cloud-Init has finished setting up the image on first-boot
   provisioner "shell" {
     inline = [
-      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; tail -n10 /var/log/cloud-init-output.log; sleep 5; done"
+      # tail is a diagnostic only; on openSUSE the log is root-only, so read it
+      # with sudo and never let it fail the loop (|| true) — exit is driven solely
+      # by the boot-finished marker. Keeps Ubuntu/Rocky working unchanged.
+      "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sudo tail -n10 /var/log/cloud-init-output.log 2>/dev/null || true; sleep 5; done"
+    ]
+  }
+
+  # Upload the committed sthings-lab CA so the trust install needs no network
+  # (Vault may be down). Only runs when ca_cert_file is set; otherwise the
+  # script falls back to ca_cert_url (or skips).
+  dynamic "provisioner" {
+    for_each = var.ca_cert_file != "" ? [1] : []
+    labels   = ["file"]
+    content {
+      source      = var.ca_cert_file
+      destination = "/tmp/${var.ca_cert_name}"
+    }
+  }
+
+  # Install the sthings-lab private CA into the image trust store + refresh it
+  # (update-ca-certificates / update-ca-trust), so VMs trust *.sthings.lab out of
+  # the box. Prefers the uploaded file; falls back to ca_cert_url; no-op if both
+  # are empty.
+  provisioner "shell" {
+    script = "install-ca-cert.sh"
+    environment_vars = [
+      "CA_CERT_PATH=${var.ca_cert_file != "" ? "/tmp/${var.ca_cert_name}" : ""}",
+      "CA_CERT_URL=${var.ca_cert_url}",
+      "CA_CERT_NAME=${var.ca_cert_name}",
+    ]
+  }
+
+  # Stage airgap image tarballs (k3s/rke2/cilium) into the agent images dir when
+  # airgap_image_tars is non-empty. No-op otherwise. "Stage only" — images only;
+  # the node wires up the engine + binary at provision time.
+  provisioner "shell" {
+    script = "stage-airgap-images.sh"
+    environment_vars = [
+      "AIRGAP_IMAGES_BASE_URL=${var.airgap_images_base_url}",
+      "AIRGAP_IMAGE_TARS=${join(",", var.airgap_image_tars)}",
+      "AIRGAP_IMAGES_DIR=${var.airgap_images_dir}",
     ]
   }
 

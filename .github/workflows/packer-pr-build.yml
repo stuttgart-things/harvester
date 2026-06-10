@@ -41,7 +41,11 @@ jobs:
         id: detect
         run: |
           BASE="origin/${{ github.base_ref }}"
+          # catalog-info.yaml is Backstage metadata, not a build input — a
+          # provenance/catalog-only edit (e.g. the catalog-bot refresh) must not
+          # trigger an image rebuild, so exclude it before matching image dirs.
           CHANGED=$(git diff --name-only "$BASE"...HEAD \
+            | grep -vE '/catalog-info\.yaml$' \
             | grep -oP '^packer/(golden|dev)/[^/]+' | sort -u || true)
 
           if [ -z "$CHANGED" ]; then
@@ -154,12 +158,25 @@ jobs:
         working-directory: packer/_build
         run: packer init .
 
+      - name: Compute sthings password hash
+        # dev builds run in the harvester environment, so the STHINGS_PASSWORD
+        # secret resolves here; golden PR builds have no env (validation only).
+        env:
+          STHINGS_PASSWORD: ${{ secrets.STHINGS_PASSWORD }}
+        run: |
+          if [ -n "${STHINGS_PASSWORD}" ]; then
+            HASH=$(openssl passwd -6 "${STHINGS_PASSWORD}")
+            echo "::add-mask::${HASH}"
+            echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
+          fi
+
       - name: Packer build
         working-directory: packer/_build
         env:
           PKR_VAR_upload_to_harvester: ${{ steps.mode.outputs.upload }}
           PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
           PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
+          PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="${{ matrix.var_file }}" .
 
       - name: Auto-merge PR (dev only)

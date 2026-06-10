@@ -3,3 +3,9 @@ version: 3
 includes:
   git:
     taskfile: https://raw.githubusercontent.com/stuttgart-things/tasks/refs/heads/main/git/git.yaml
+
+tasks:
+  catalog:index:
+    desc: Regenerate the Backstage catalog index + stamp packer provenance
+    cmds:
+      - ./.backstage/catalog-index.sh all
