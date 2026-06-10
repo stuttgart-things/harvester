@@ -41,6 +41,10 @@ spec:
     path: tests/envs/harvester/crossplane-mgmt/xrs
     directory:
       recurse: true
+      # Skip non-cluster artifacts the scaffolder emits in flux mode:
+      # catalog-info.yaml (Backstage Component) and kustomization.yaml
+      # (kustomize config) are not CRDs — applying them fails the sync.
+      exclude: '{**/catalog-info.yaml,**/kustomization.yaml}'
   destination:
     name: crossplane-mgmt
     namespace: crossplane-system
