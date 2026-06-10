@@ -7,7 +7,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane-platform
+  name: showcase-crossplane-platform
   namespace: argocd
 spec:
   project: default
@@ -31,7 +31,7 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: crossplane-xrs
+  name: showcase-crossplane-xrs
   namespace: argocd
 spec:
   project: default
