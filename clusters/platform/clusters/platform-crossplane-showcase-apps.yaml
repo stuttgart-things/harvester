@@ -1,0 +1,52 @@
+---
+# Platform layer: Crossplane Configurations, EnvironmentConfigs and namespaces.
+# prune is intentionally OFF — pruning a Configuration triggers foreground
+# deletion that cascade-deletes every XR built from it (and risks the package
+# lock freeze). Sync this app first; the xrs app below depends on the XRDs it
+# installs (Argo retries the xrs app until they exist).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: showcase-crossplane-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/stuttgart-things/crossplane-configurations.git
+    targetRevision: main
+    path: tests/envs/harvester/crossplane-mgmt/platform
+    directory:
+      recurse: true
+  destination:
+    name: crossplane-mgmt
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+---
+# Resource claims (RancherCluster, XVirtualMachine, …). Safe to auto-prune.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: showcase-crossplane-xrs
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/stuttgart-things/crossplane-configurations.git
+    targetRevision: main
+    path: tests/envs/harvester/crossplane-mgmt/xrs
+    directory:
+      recurse: true
+  destination:
+    name: crossplane-mgmt
+    namespace: crossplane-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
