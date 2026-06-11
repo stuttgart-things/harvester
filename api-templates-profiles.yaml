@@ -24,7 +24,7 @@ templates:
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-detailed.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-minimal.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-harvester.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-harvester-boostrap.yaml
+  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-harvester-bootstrap.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-platform.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-developer.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-detailed.yaml
