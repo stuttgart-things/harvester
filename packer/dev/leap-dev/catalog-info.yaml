@@ -13,6 +13,8 @@ metadata:
     - playground
     - opensuse
     - leap
+    - users-customized
+    - packages-customized
 spec:
   type: packer-image-dev
   lifecycle: experimental
@@ -22,3 +24,7 @@ spec:
   profile:
     baseImage: leap15
     goldenBase: sthings-leap
+    addedUsers:
+      - volki
+    addedPackages:
+      - nginx
