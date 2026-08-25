@@ -128,6 +128,52 @@ body {
   color: var(--ink-3);
 }
 
+/* ---------- Tabs ---------- */
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  margin-top: -12px;
+}
+.tabs button {
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.tabs button:hover { color: var(--ink-2); }
+.tabs button[aria-selected="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--static);
+}
+.tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.tab-count {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--ink-3);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 0 5px;
+}
+.tabs button[aria-selected="true"] .tab-count {
+  color: var(--static);
+  border-color: var(--static);
+}
+
 /* ---------- Cards ---------- */
 
 .card {
@@ -500,7 +546,16 @@ footer.colophon code {
     <div class="stamp" id="stamp"></div>
   </header>
 
-  <section class="card">
+  <div class="tabs" role="tablist" aria-label="Views">
+    <button type="button" role="tab" id="tab-topology" aria-controls="panel-topology"
+            aria-selected="true">Topology</button>
+    <button type="button" role="tab" id="tab-addresses" aria-controls="panel-addresses"
+            aria-selected="false" tabindex="-1">Addresses<span class="tab-count" id="count-addresses"></span></button>
+    <button type="button" role="tab" id="tab-services" aria-controls="panel-services"
+            aria-selected="false" tabindex="-1">Services<span class="tab-count" id="count-services"></span></button>
+  </div>
+
+  <section class="card" id="panel-topology" role="tabpanel" aria-labelledby="tab-topology">
     <div class="card-head">
       <h2>Topology</h2>
       <span class="note">
@@ -514,7 +569,7 @@ footer.colophon code {
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="panel-addresses" role="tabpanel" aria-labelledby="tab-addresses" hidden>
     <div class="card-head">
       <h2 id="matrix-title"></h2>
       <span class="note" id="matrix-note"></span>
@@ -527,7 +582,7 @@ footer.colophon code {
     </details>
   </section>
 
-  <section class="card">
+  <section class="card" id="panel-services" role="tabpanel" aria-labelledby="tab-services" hidden>
     <div class="card-head">
       <h2>Services</h2>
       <span class="note" id="svc-note"></span>
@@ -565,6 +620,14 @@ const byIp = new Map(hosts.map(h => [h.ip, h]));
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+function net_contains(ip) {
+  if (!net || !ip) return false;
+  const base = ipToInt(net.cidr.split("/")[0]);
+  const size = 2 ** (32 - +net.cidr.split("/")[1]);
+  const n = ipToInt(ip);
+  return n >= base && n < base + size;
+}
+
 /* ---------------------------------------------------------------- Masthead */
 
 document.getElementById("eyebrow").textContent = net ? net.cidr : "Inventory";
@@ -598,10 +661,13 @@ const hideTip = () => { tip.style.opacity = "0"; };
 
 let selected = null;
 
-function select(hostname) {
+function select(hostname, { goToTopology = false } = {}) {
   selected = (selected === hostname) ? null : hostname;
   renderDetail();
   syncHighlight();
+  // The detail panel lives in the topology tab, so a pick from the address
+  // matrix would otherwise update something the reader cannot see.
+  if (goToTopology && selected && activeTab !== "topology") showTab("topology");
 }
 
 function renderDetail() {
@@ -792,7 +858,9 @@ function ticked() {
 }
 
 function layout() {
-  W = document.getElementById("graph").clientWidth;
+  const w = document.getElementById("graph").clientWidth;
+  if (!w) return;   // panel hidden - showTab() calls this again when it opens
+  W = w;
   svg.attr("viewBox", `0 0 ${W} ${H}`);
   const netNode = nodes.find(n => n.kind === "net");
   if (netNode) { netNode.fx = W * 0.76; netNode.fy = H / 2; }
@@ -881,7 +949,7 @@ if (net) {
         if (inPool) cell.classList.add("is-pool");
         cell.dataset.hostname = host.hostname;
         state = `${host.hostname} · ${host.system}`;
-        cell.addEventListener("click", () => select(host.hostname));
+        cell.addEventListener("click", () => select(host.hostname, { goToTopology: true }));
       } else if (inPool) { cell.classList.add("is-pool"); state = "DHCP pool, free"; }
       else { state = "free"; }
 
@@ -1041,6 +1109,57 @@ if (allServices.length) {
 } else {
   document.getElementById("svc-wrap").closest(".card").hidden = true;
 }
+
+/* ---------------------------------------------------------------- Tabs ---- */
+
+const TABS = ["topology", "addresses", "services"];
+let activeTab = null;
+
+function showTab(name, { focus = false } = {}) {
+  if (!TABS.includes(name)) name = TABS[0];
+  activeTab = name;
+
+  TABS.forEach(t => {
+    const tab = document.getElementById("tab-" + t);
+    const panel = document.getElementById("panel-" + t);
+    const on = t === name;
+    tab.setAttribute("aria-selected", String(on));
+    tab.tabIndex = on ? 0 : -1;
+    panel.hidden = !on;
+  });
+
+  if (focus) document.getElementById("tab-" + name).focus();
+
+  // The graph reads clientWidth, which is 0 while its panel is hidden - so the
+  // layout has to run again every time this tab becomes visible.
+  if (name === "topology") layout();
+
+  try { localStorage.setItem("tab", name); } catch (e) { /* private mode */ }
+  if (location.hash.slice(1) !== name) history.replaceState(null, "", "#" + name);
+}
+
+document.querySelectorAll('[role="tab"]').forEach((tab, i, all) => {
+  tab.addEventListener("click", () => showTab(tab.id.replace("tab-", "")));
+  tab.addEventListener("keydown", ev => {
+    const d = ev.key === "ArrowRight" ? 1 : ev.key === "ArrowLeft" ? -1 : 0;
+    if (!d) return;
+    ev.preventDefault();
+    const next = all[(i + d + all.length) % all.length];
+    showTab(next.id.replace("tab-", ""), { focus: true });
+  });
+});
+
+document.getElementById("count-addresses").textContent =
+  net ? hosts.filter(h => net_contains(h.ip)).length : hosts.length;
+document.getElementById("count-services").textContent = allServices.length;
+
+addEventListener("hashchange", () => showTab(location.hash.slice(1)));
+
+let initial = location.hash.slice(1);
+if (!TABS.includes(initial)) {
+  try { initial = localStorage.getItem("tab") || TABS[0]; } catch (e) { initial = TABS[0]; }
+}
+showTab(initial);
 
 renderDetail();
 </script>

@@ -9,7 +9,10 @@ diagram shows up directly in GitHub.
 
 ![System overview](topology.svg)
 
-There is also an **interactive version on GitHub Pages**: nodes can be dragged
+There is also an **interactive version on GitHub Pages**, split into three
+tabs — Topology, Addresses, Services — so nothing has to be scrolled past.
+Each tab is deep-linkable (`#services`) and the last one used is remembered
+per browser. Nodes can be dragged
 and stay where you drop them, clicking one shows its description and the
 services it runs, an address matrix lays out all 256 addresses of the `/24`
 (statically assigned, DHCP pool, free), and a service index lists everything
