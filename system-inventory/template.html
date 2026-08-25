@@ -1,4 +1,4 @@
-<title>Lab-Adressbuch</title>
+<title>Lab Address Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -85,7 +85,7 @@ body {
   gap: 28px;
 }
 
-/* ---------- Kopf ---------- */
+/* ---------- Masthead ---------- */
 
 .masthead {
   display: flex;
@@ -128,7 +128,7 @@ body {
   color: var(--ink-3);
 }
 
-/* ---------- Karten ---------- */
+/* ---------- Cards ---------- */
 
 .card {
   background: var(--surface);
@@ -171,7 +171,7 @@ body {
 #reset-layout:hover { color: var(--ink); border-color: var(--ink-3); }
 #reset-layout:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-/* ---------- Topologie ---------- */
+/* ---------- Topology ---------- */
 
 .topo-layout {
   display: grid;
@@ -223,7 +223,7 @@ body {
 .node-g:focus-visible .node-box,
 .node-box.selected { stroke: var(--focus); stroke-width: 2.5px; }
 
-/* ---------- Detailfeld ---------- */
+/* ---------- Detail panel ---------- */
 
 .detail {
   border-left: 1px solid var(--rule);
@@ -254,7 +254,7 @@ body {
   font-weight: 500;
 }
 
-/* ---------- Adressmatrix ---------- */
+/* ---------- Address matrix ---------- */
 
 .matrix-wrap { padding: 20px; overflow-x: auto; }
 .matrix { border-collapse: collapse; font-variant-numeric: tabular-nums; }
@@ -314,7 +314,7 @@ body {
 .swatch.free { background: var(--free); }
 .swatch.reserved { background: transparent; border-style: dashed; }
 
-/* ---------- Tabelle ---------- */
+/* ---------- Table ---------- */
 
 details.table-view { margin-top: 0; }
 details.table-view > summary {
@@ -401,14 +401,14 @@ footer.colophon code {
 
   <section class="card">
     <div class="card-head">
-      <h2>Topologie</h2>
+      <h2>Topology</h2>
       <span class="note">
-        Knoten anklicken für Details · ziehen zum Umsortieren · Doppelklick löst wieder
-        <button type="button" id="reset-layout" hidden>Layout zurücksetzen</button>
+        Click a node for details · drag to rearrange · double-click to release
+        <button type="button" id="reset-layout" hidden>Reset layout</button>
       </span>
     </div>
     <div class="topo-layout">
-      <svg id="graph" role="img" aria-label="Netzwerk-Topologie: Systeme und Hosts am Lab-Netz"></svg>
+      <svg id="graph" role="img" aria-label="Network topology: systems and hosts on the lab network"></svg>
       <aside class="detail" id="detail" aria-live="polite"></aside>
     </div>
   </section>
@@ -421,14 +421,14 @@ footer.colophon code {
     <div class="matrix-wrap" id="matrix-wrap"></div>
     <div class="legend" id="legend"></div>
     <details class="table-view">
-      <summary>Tabellenansicht</summary>
+      <summary>Table view</summary>
       <div class="data-table-wrap" id="table-wrap"></div>
     </details>
   </section>
 
   <footer class="colophon">
-    Generiert aus <code>inventory.yaml</code> — die einzige von Hand gepflegte Datei.
-    Änderungen dort, dann <code>make html</code>.
+    Generated from <code>inventory.yaml</code> — the only hand-maintained file.
+    Edit it there, then run <code>make html</code>.
   </footer>
 
 </div>
@@ -439,7 +439,7 @@ footer.colophon code {
 <script>
 const DATA = /*__DATA__*/;
 
-/* ------------------------------------------------------------------ Helfer */
+/* ----------------------------------------------------------------- Helpers */
 
 const ipToInt = ip => ip.split(".").reduce((a, o) => (a << 8 >>> 0) + (+o), 0) >>> 0;
 const intToIp = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
@@ -450,17 +450,17 @@ const byIp = new Map(hosts.map(h => [h.ip, h]));
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/* ------------------------------------------------------------------- Kopf  */
+/* ---------------------------------------------------------------- Masthead */
 
-document.getElementById("eyebrow").textContent = net ? net.cidr : "Inventar";
-document.getElementById("site-name").textContent = DATA.site.name || "Systemübersicht";
+document.getElementById("eyebrow").textContent = net ? net.cidr : "Inventory";
+document.getElementById("site-name").textContent = DATA.site.name || "System overview";
 document.getElementById("site-sub").textContent = DATA.site.subtitle || "";
 
 const systems = [...new Set(hosts.map(h => h.system))].sort();
 document.getElementById("stamp").innerHTML =
-  `<span><b>${hosts.length}</b> Hosts</span>` +
-  `<span><b>${systems.length}</b> Systeme</span>` +
-  `<span><b>${DATA.networks.length}</b> Netz${DATA.networks.length === 1 ? "" : "e"}</span>`;
+  `<span><b>${hosts.length}</b> host${hosts.length === 1 ? "" : "s"}</span>` +
+  `<span><b>${systems.length}</b> system${systems.length === 1 ? "" : "s"}</span>` +
+  `<span><b>${DATA.networks.length}</b> network${DATA.networks.length === 1 ? "" : "s"}</span>`;
 
 /* ---------------------------------------------------------------- Tooltip  */
 
@@ -478,7 +478,7 @@ function showTip(html, ev) {
 }
 const hideTip = () => { tip.style.opacity = "0"; };
 
-/* ------------------------------------------------------------- Auswahl     */
+/* --------------------------------------------------------------- Selection */
 
 let selected = null;
 
@@ -492,16 +492,16 @@ function renderDetail() {
   const el = document.getElementById("detail");
   const h = hosts.find(x => x.hostname === selected);
   if (!h) {
-    el.innerHTML = `<div class="eyebrow">Detail</div>
-      <p class="placeholder">Einen Host im Diagramm oder in der Adressmatrix auswählen.</p>`;
+    el.innerHTML = `<div class="eyebrow">Details</div>
+      <p class="placeholder">Select a host in the diagram or the address matrix.</p>`;
     return;
   }
-  el.innerHTML = `<div class="eyebrow">Detail</div>
+  el.innerHTML = `<div class="eyebrow">Details</div>
     <dl>
       <div><dt>Hostname</dt><dd class="mono">${h.hostname}</dd></div>
       <div><dt>IP</dt><dd class="mono">${h.ip}</dd></div>
       <div><dt>System</dt><dd>${h.system}</dd></div>
-      <div><dt>Beschreibung</dt><dd>${h.description || "—"}</dd></div>
+      <div><dt>Description</dt><dd>${h.description || "—"}</dd></div>
     </dl>`;
 }
 
@@ -524,14 +524,14 @@ function syncHighlight() {
   });
 }
 
-/* ------------------------------------------------------------------ Graph  */
+/* ------------------------------------------------------------------- Graph */
 
 const nodes = [], links = [];
 if (net) nodes.push({ id: "net", kind: "net", label: net.name || net.cidr, sub: net.cidr, fx: null });
 systems.forEach(s => {
   const members = hosts.filter(h => h.system === s);
   nodes.push({ id: "sys:" + s, kind: "system", label: s, count: members.length });
-  if (net) links.push({ source: "sys:" + s, target: "net", label: members.length + (members.length === 1 ? " Host" : " Hosts") });
+  if (net) links.push({ source: "sys:" + s, target: "net", label: members.length + (members.length === 1 ? " host" : " hosts") });
   members.forEach(h => {
     nodes.push({ id: "host:" + h.hostname, kind: "host", host: h, label: h.hostname, sub: h.ip });
     links.push({ source: "host:" + h.hostname, target: "sys:" + s });
@@ -572,7 +572,7 @@ node.each(function (d) {
     g.append("text").attr("class", "node-label").attr("text-anchor", "middle").attr("dy", "-.15em").text(d.label);
     g.append("text").attr("class", "node-sub").attr("text-anchor", "middle").attr("dy", "1.15em").text(d.sub);
     g.attr("tabindex", 0).attr("role", "button")
-      .attr("aria-label", `${d.host.hostname}, ${d.host.ip}, System ${d.host.system}`)
+      .attr("aria-label", `${d.host.hostname}, ${d.host.ip}, system ${d.host.system}`)
       .style("cursor", "pointer")
       .on("click", () => select(d.host.hostname))
       .on("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(d.host.hostname); } })
@@ -594,8 +594,8 @@ node.filter(d => d.kind !== "net")
   d3.drag()
     .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(.2).restart(); d.fx = d.x; d.fy = d.y; })
     .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
-    // Losgelassene Knoten bleiben liegen - sonst federt jedes Umsortieren
-    // sofort wieder in die Ausgangsspalte zurueck. Doppelklick loest wieder.
+    // Released nodes stay put - otherwise every rearrangement springs straight
+    // back into the original column. Double-click releases them again.
     .on("end", (ev, d) => {
       if (!ev.active) sim.alphaTarget(0);
       d.pinned = true;
@@ -617,7 +617,7 @@ function unpin(d) {
 }
 
 function ticked() {
-  // Knoten im sichtbaren Rahmen halten - sonst laufen Hosts unten heraus.
+  // Keep nodes inside the visible frame - otherwise hosts run off the bottom.
   nodes.forEach(d => {
     const padX = d.kind === "net" ? 60 : 60;
     const padY = d.kind === "net" ? 60 : 26;
@@ -639,6 +639,8 @@ function layout() {
   svg.attr("viewBox", `0 0 ${W} ${H}`);
   const netNode = nodes.find(n => n.kind === "net");
   if (netNode) { netNode.fx = W * 0.76; netNode.fy = H / 2; }
+  // Force hosts and systems into fixed columns - otherwise the rectangles
+  // collide sideways, which a circular collider cannot prevent.
   sim.force("x", d3.forceX(d => d.kind === "system" ? W * 0.44 : W * 0.13)
     .strength(d => d.kind === "net" ? 0 : 0.6));
   sim.alpha(.9).restart();
@@ -654,7 +656,7 @@ layout();
 markPinned();
 addEventListener("resize", layout);
 
-/* --------------------------------------------------------- Adressmatrix    */
+/* ---------------------------------------------------------- Address matrix */
 
 if (net) {
   const base = ipToInt(net.cidr.split("/")[0]);
@@ -668,20 +670,20 @@ if (net) {
     poolFrom = a; poolTo = b;
   }
 
-  document.getElementById("matrix-title").textContent = `Adressbelegung ${net.cidr}`;
+  document.getElementById("matrix-title").textContent = `Address allocation ${net.cidr}`;
   const inNet = hosts.filter(h => ipToInt(h.ip) >= base && ipToInt(h.ip) < base + size);
   const usedCount = inNet.length;
   const poolCount = (poolFrom !== null) ? (poolTo - poolFrom + 1) : 0;
-  // .110 und .139 liegen im Pool - sonst wuerden sie doppelt gezaehlt.
+  // .110 and .139 sit inside the pool - without this they would be counted twice.
   const staticInPool = poolFrom === null ? 0
     : inNet.filter(h => ipToInt(h.ip) >= poolFrom && ipToInt(h.ip) <= poolTo).length;
   const freeCount = size - 2 - usedCount - (poolCount - staticInPool);
   document.getElementById("matrix-note").textContent =
-    `${usedCount} statisch vergeben · ${poolCount} im DHCP-Pool · ${freeCount} frei`;
+    `${usedCount} statically assigned · ${poolCount} in DHCP pool · ${freeCount} free`;
 
   const tbl = document.createElement("table");
   tbl.className = "matrix";
-  tbl.setAttribute("aria-label", `Adressbelegung ${net.cidr}`);
+  tbl.setAttribute("aria-label", `Address allocation ${net.cidr}`);
 
   const thead = tbl.createTHead().insertRow();
   thead.appendChild(document.createElement("th"));
@@ -716,15 +718,15 @@ if (net) {
       cell.dataset.ip = ip;
 
       let state;
-      if (reserved) { cell.classList.add("is-reserved"); state = off === 0 ? "Netzadresse" : "Broadcast"; }
+      if (reserved) { cell.classList.add("is-reserved"); state = off === 0 ? "network address" : "broadcast address"; }
       else if (host) {
         cell.classList.add("is-static");
         if (inPool) cell.classList.add("is-pool");
         cell.dataset.hostname = host.hostname;
         state = `${host.hostname} · ${host.system}`;
         cell.addEventListener("click", () => select(host.hostname));
-      } else if (inPool) { cell.classList.add("is-pool"); state = "DHCP-Pool, frei"; }
-      else { state = "frei"; }
+      } else if (inPool) { cell.classList.add("is-pool"); state = "DHCP pool, free"; }
+      else { state = "free"; }
 
       cell.setAttribute("aria-label", `${ip} — ${state}`);
       cell.addEventListener("mousemove", ev => showTip(
@@ -736,18 +738,18 @@ if (net) {
   document.getElementById("matrix-wrap").appendChild(tbl);
 
   document.getElementById("legend").innerHTML = `
-    <span><i class="swatch static"></i>statisch vergeben</span>
-    <span><i class="swatch pool"></i>DHCP-Pool ${net.dhcp_pool || ""}</span>
-    <span><i class="swatch free"></i>frei</span>
-    <span><i class="swatch reserved"></i>Netz-/Broadcast-Adresse</span>`;
+    <span><i class="swatch static"></i>statically assigned</span>
+    <span><i class="swatch pool"></i>DHCP pool ${net.dhcp_pool || ""}</span>
+    <span><i class="swatch free"></i>free</span>
+    <span><i class="swatch reserved"></i>network / broadcast address</span>`;
 }
 
-/* ------------------------------------------------------------- Tabelle     */
+/* ------------------------------------------------------------------- Table */
 
 const rows = [...hosts].sort((a, b) => ipToInt(a.ip) - ipToInt(b.ip));
 document.getElementById("table-wrap").innerHTML =
   `<table class="data"><thead><tr>
-     <th>IP</th><th>Hostname</th><th>System</th><th>Beschreibung</th>
+     <th>IP</th><th>Hostname</th><th>System</th><th>Description</th>
    </tr></thead><tbody>` +
   rows.map(h => `<tr>
      <td class="mono">${h.ip}</td>

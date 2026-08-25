@@ -1,80 +1,81 @@
 ---
-# Single source of truth fuer die Systemuebersicht.
-# Aendern -> `make diagram` -> docs/index.md + docs/topology.svg werden neu erzeugt.
+# Single source of truth for the system inventory.
+# Edit here, then run `make diagram` to regenerate topology.d2 + topology.svg.
 #
-# Herkunft der Eintraege: alle IPs und FQDNs stammen aus der Doku dieses Repos
-# (docs/install.md, clusters/*/README.md, clusters/*/infra.yaml). Ausnahmen sind
-# unten einzeln als "TODO" markiert.
+# Provenance: every IP and FQDN below is taken from this repo's own docs
+# (docs/install.md, clusters/*/README.md, clusters/*/infra.yaml). Exceptions
+# are marked TODO individually.
 
 site:
   name: "stuttgart-things Lab"
-  subtitle: "Systeme, Hostnames und IP-Belegung"
+  subtitle: "Systems, hostnames and IP allocation"
 
-# Optional. Dient nur zur Gruppierung im Diagramm und zur Plausipruefung
-# (liegt jede IP in einem bekannten Netz?).
-# Die cluster-internen Ranges (Pod 10.52.0.0/16, Service 10.53.0.0/16) sind
-# bewusst nicht aufgefuehrt - sie beruehren das LAN nie.
+# Optional. Used for grouping in the diagram and for a sanity check
+# (does every IP fall inside a known network?).
+# The cluster-internal ranges (pod 10.52.0.0/16, service 10.53.0.0/16) are
+# deliberately left out - they never touch the LAN.
 networks:
   - cidr: 192.168.10.0/24
     name: lab
-    # Optional. Nur die HTML-Ansicht wertet die beiden Felder aus (Adressmatrix);
-    # gen.py ignoriert sie. Werte aus docs/install.md (DD-WRT-Konfiguration).
+    # Optional. Only the HTML view reads these two (address matrix);
+    # gen.py ignores them. Values from docs/install.md (DD-WRT config).
     gateway: 192.168.10.1
     dhcp_pool: 192.168.10.100-192.168.10.149
     description: >-
-      Flaches Lab-/Management-Netz. Gateway, DNS und DHCP auf dem DD-WRT-Router
-      (.1), dynamischer DHCP-Pool .100-.149.
+      Flat lab and management network. Gateway, DNS and DHCP all live on the
+      DD-WRT router (.1); the dynamic DHCP pool is .100-.149.
 
-# Eine Zeile pro Host. `system` gruppiert - gleiche Systemnamen landen
-# im Diagramm im selben Kasten.
+# One entry per host. `system` groups them - entries sharing a system name
+# end up in the same box in the diagram.
 hosts:
   - system: network
     hostname: ddwrt
     ip: 192.168.10.1
     description: >-
-      DD-WRT-Router. Gateway, DNS (dnsmasq, *.sthings.lab) und DHCP fuer das Lab.
+      DD-WRT router. Gateway, DNS (dnsmasq, *.sthings.lab) and DHCP for the lab.
 
-  # TODO: IP bestaetigen - der Jump-Server ist (noch) in keiner Repo-Doku
-  # hinterlegt. .50 liegt unterhalb des DHCP-Pools und ist laut
-  # docs/install.md als statische Adresse frei.
+  # TODO: confirm this IP - the jump server is not recorded in any repo doc.
+  # .50 sits below the DHCP pool and docs/install.md names it as a free
+  # static address.
   - system: jump-server
     hostname: geekom
     ip: 192.168.10.50
     description: >-
-      Mini-PC, Einstiegspunkt ins Lab-Netz und Absprung fuer Ansible/Dagger.
+      Mini PC. Entry point into the lab network and launch point for
+      Ansible and Dagger runs.
 
   - system: harvester
     hostname: harvester
     ip: 192.168.10.110
     description: >-
-      Harvester-Node (enp5s0, MAC 58:47:ca:7d:34:f0), statisch adressiert.
-      Traegt die VMs aller Cluster.
+      Harvester node (enp5s0, MAC 58:47:ca:7d:34:f0), statically addressed.
+      Hosts the VMs of every cluster.
 
   - system: harvester
     hostname: harvester-vip
     ip: 192.168.10.139
     description: >-
-      Statische Cluster-VIP von Harvester - UI und Kubernetes-API.
-      Muss ausserhalb des DHCP-Pools .100-.149 liegen.
+      Static cluster VIP for Harvester - UI and Kubernetes API.
+      Must sit outside the DHCP pool .100-.149.
 
   - system: infra-sthings
     hostname: infra
     ip: 192.168.10.150
     description: >-
-      k3s-Singlenode `infra.sthings.lab` (Cilium-LB-VIP). Traegt Vault
-      (vault.infra.sthings.lab, PKI fuer sthings-lab), Clusterbook
-      (clusterbook.infra.sthings.lab) und den NFS-Server fuer die Cluster.
+      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP). Runs Vault
+      (vault.infra.sthings.lab, PKI for sthings-lab), Clusterbook
+      (clusterbook.infra.sthings.lab) and the NFS server for the clusters.
 
   - system: xplane-sthings
     hostname: xplane
     ip: 192.168.10.155
     description: >-
-      k3s-Singlenode `xplane.sthings.lab` (Cilium-LB-VIP).
-      Crossplane-Management-Cluster, reconciled die Claims aus diesem Repo.
+      Single-node k3s cluster `xplane.sthings.lab` (Cilium LB VIP).
+      Crossplane management cluster, reconciles the claims in this repo.
 
   - system: platform-sthings
     hostname: platform
     ip: 192.168.10.160
     description: >-
-      k3s-Singlenode `platform.sthings.lab` (Cilium-LB-VIP). Argo CD,
-      Clusterbook-Operator und Harbor (harbor./artifacts.platform.sthings.lab).
+      Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP). Argo CD,
+      Clusterbook operator and Harbor (harbor./artifacts.platform.sthings.lab).

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Baut aus inventory.yaml die interaktive D3-Seite fuer GitHub Pages.
+"""Build the interactive D3 page for GitHub Pages from inventory.yaml.
 
-Ergebnis ist eine einzige, eigenstaendige HTML-Datei: das d3-Bundle wird
-inline eingebettet, damit die Seite ohne CDN und ohne weiteren Build-Schritt
-laeuft - per file:// genauso wie hinter GitHub Pages.
+The result is a single self-contained HTML file: the d3 bundle is inlined so
+the page runs without a CDN and without a further build step - over file://
+exactly as it does behind GitHub Pages.
 
-Aufruf: python3 build_html.py [--in inventory.yaml] [--out site/index.html]
+Usage: python3 build_html.py [--in inventory.yaml] [--out site/index.html]
 """
 
 from __future__ import annotations
@@ -30,7 +30,7 @@ def main() -> int:
 
     d3 = Path(args.d3)
     if not d3.is_file():
-        print(f"FEHLER: {d3} fehlt - erst 'make d3-install' laufen lassen.", file=sys.stderr)
+        print(f"ERROR: {d3} is missing - run 'make d3-install' first.", file=sys.stderr)
         return 1
 
     data = yaml.safe_load(Path(args.src).read_text(encoding="utf-8")) or {}
@@ -39,17 +39,17 @@ def main() -> int:
     data.setdefault("hosts", [])
 
     body = Path(args.template).read_text(encoding="utf-8")
-    # Das Bundle enthaelt kein "</script>", sonst muesste es escaped werden.
+    # The bundle contains no "</script>", which would otherwise need escaping.
     body = body.replace("/*__D3__*/", d3.read_text(encoding="utf-8"))
     body = body.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
 
-    # template.html ist ein Fragment. Fuer die ausgelieferte Seite braucht es ein
-    # vollstaendiges Dokument - vor allem <meta charset>: ohne das raet der Browser
-    # bei einem Server, der kein charset mitschickt, und die Umlaute kippen.
-    # <head>/<body> laesst der HTML5-Parser korrekt selbst entstehen.
+    # template.html is a fragment. The served page needs a complete document -
+    # above all <meta charset>: without it the browser guesses when a server
+    # sends no charset, and non-ASCII characters break. The HTML5 parser infers
+    # <head>/<body> correctly on its own.
     html = (
         "<!doctype html>\n"
-        '<html lang="de">\n'
+        '<html lang="en">\n'
         '<meta charset="utf-8">\n'
         '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
         '<meta name="color-scheme" content="light dark">\n'
@@ -60,7 +60,7 @@ def main() -> int:
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(html, encoding="utf-8")
-    print(f"geschrieben: {out} ({out.stat().st_size // 1024} KB)")
+    print(f"wrote: {out} ({out.stat().st_size // 1024} KB)")
     return 0
 
 

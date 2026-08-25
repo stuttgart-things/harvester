@@ -55,6 +55,6 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# system-inventory: geholte Abhaengigkeiten + gebaute D3-Seite
+# system-inventory: fetched dependencies + built D3 page
 system-inventory/vendor/
 system-inventory/site/

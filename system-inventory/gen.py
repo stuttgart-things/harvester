@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Erzeugt aus inventory.yaml die D2-Quelle fuer das Topologie-Diagramm.
+"""Generate the D2 source for the topology diagram from inventory.yaml.
 
-Ausgabe:
-  topology.d2   - D2-Quelle, wird per `d2` zu topology.svg gerendert
+Output:
+  topology.d2   - D2 source, rendered to topology.svg by `d2`
 
-Aufruf: python3 gen.py [--in inventory.yaml] [--out topology.d2] [--strict]
+Usage: python3 gen.py [--in inventory.yaml] [--out topology.d2] [--strict]
 """
 
 from __future__ import annotations
@@ -18,17 +18,17 @@ from pathlib import Path
 
 import yaml
 
-# Farben je Netz - werden fuer Kanten und Legende verwendet.
+# One colour per network - used for edges and the legend.
 NET_COLORS = ["#0f766e", "#b45309", "#7c3aed", "#be123c", "#1d4ed8", "#4d7c0f"]
 
 
 def slug(value: str) -> str:
-    """D2-taugliche Node-ID."""
+    """Node ID that D2 accepts."""
     return re.sub(r"[^A-Za-z0-9_]", "_", str(value))
 
 
 def net_of(ip: str, networks: list[dict]) -> dict | None:
-    """Findet das Netz, in dem die IP liegt."""
+    """Find the network the IP belongs to."""
     try:
         addr = ipaddress.ip_address(str(ip))
     except ValueError:
@@ -45,14 +45,14 @@ def net_of(ip: str, networks: list[dict]) -> dict | None:
 def by_system(hosts: list[dict]) -> dict[str, list[dict]]:
     grouped: dict[str, list[dict]] = defaultdict(list)
     for h in hosts:
-        grouped[h.get("system", "ohne System")].append(h)
+        grouped[h.get("system", "no system")].append(h)
     for entries in grouped.values():
         entries.sort(key=lambda h: str(h.get("hostname", "")))
     return dict(sorted(grouped.items()))
 
 
 # --------------------------------------------------------------------------
-# Validierung
+# Validation
 # --------------------------------------------------------------------------
 def validate(data: dict) -> list[str]:
     problems: list[str] = []
@@ -65,35 +65,35 @@ def validate(data: dict) -> list[str]:
         where = f"{h.get('system', '?')}/{name}"
 
         if not h.get("hostname"):
-            problems.append(f"{where}: kein hostname gesetzt")
+            problems.append(f"{where}: no hostname set")
         if not h.get("description"):
-            problems.append(f"{where}: keine Beschreibung - wofuer ist die Kiste da?")
+            problems.append(f"{where}: no description - what is this box for?")
 
         raw_ip = h.get("ip")
         if not raw_ip:
-            problems.append(f"{where}: keine IP gesetzt")
+            problems.append(f"{where}: no IP set")
             continue
 
         try:
             ipaddress.ip_address(str(raw_ip))
         except ValueError:
-            problems.append(f"{where}: '{raw_ip}' ist keine gueltige IP")
+            problems.append(f"{where}: '{raw_ip}' is not a valid IP")
             continue
 
         ip = str(raw_ip)
         if ip in seen_ip:
-            problems.append(f"{where}: IP {ip} doppelt vergeben (auch {seen_ip[ip]})")
+            problems.append(f"{where}: IP {ip} assigned twice (also {seen_ip[ip]})")
         seen_ip[ip] = where
 
         host_key = str(name).lower()
         if host_key in seen_host:
             problems.append(
-                f"{where}: Hostname '{name}' doppelt vergeben (auch {seen_host[host_key]})"
+                f"{where}: hostname '{name}' used twice (also {seen_host[host_key]})"
             )
         seen_host[host_key] = where
 
         if networks and net_of(ip, networks) is None:
-            problems.append(f"{where}: IP {ip} liegt in keinem unter 'networks' definierten Netz")
+            problems.append(f"{where}: IP {ip} is not inside any network defined under 'networks'")
 
     return problems
 
@@ -102,11 +102,11 @@ def validate(data: dict) -> list[str]:
 # D2
 # --------------------------------------------------------------------------
 def render_d2(data: dict) -> str:
-    """D2-Quelle.
+    """D2 source.
 
-    Labels bewusst als \\n-Strings, NICHT als |md|-Bloecke: D2 rendert
-    md-Labels als <foreignObject>, dabei faellt die Shape weg und viele
-    PDF-/SVG-Renderer zeigen nichts an. \\n ergibt natives <text>/<tspan>.
+    Labels are deliberately \\n strings, NOT |md| blocks: D2 renders md labels
+    as <foreignObject>, which drops the shape and leaves many PDF/SVG
+    renderers showing nothing. \\n yields native <text>/<tspan>.
     """
     networks = data.get("networks", []) or []
     hosts = data.get("hosts", []) or []
@@ -115,7 +115,7 @@ def render_d2(data: dict) -> str:
     color = {n["cidr"]: NET_COLORS[i % len(NET_COLORS)] for i, n in enumerate(networks)}
 
     out = [
-        "# generiert aus inventory.yaml - nicht von Hand editieren",
+        "# generated from inventory.yaml - do not edit by hand",
         "vars: {",
         "  d2-config: {",
         "    layout-engine: elk",
@@ -125,7 +125,7 @@ def render_d2(data: dict) -> str:
         "",
     ]
 
-    # Netze als zentrale Knoten
+    # Networks as the central nodes
     for n in networks:
         nid = slug(n["cidr"])
         label = "\\n".join(x for x in [n.get("name", ""), n["cidr"]] if x)
@@ -139,7 +139,7 @@ def render_d2(data: dict) -> str:
         out.append("}")
     out.append("")
 
-    # Systeme als Container mit ihren Hosts
+    # Systems as containers holding their hosts
     for system, entries in grouped.items():
         sid = slug(system)
         out.append(f'sys_{sid}: "{system}" {{')
@@ -147,7 +147,7 @@ def render_d2(data: dict) -> str:
         out.append('  style.stroke: "#94a3b8"')
         out.append("  style.font-size: 20")
         for h in entries:
-            hid = slug(h.get("hostname", "unbekannt"))
+            hid = slug(h.get("hostname", "unknown"))
             label = "\\n".join(
                 x for x in [str(h.get("hostname", "")), str(h.get("ip", ""))] if x
             )
@@ -160,14 +160,15 @@ def render_d2(data: dict) -> str:
             out.append("  }")
         out.append("}")
 
-        # Eine Kante je System und Netz, nicht je Host - sonst wird es Spaghetti.
+        # One edge per system and network, not per host - otherwise it turns
+        # into spaghetti.
         touched: dict[str, int] = defaultdict(int)
         for h in entries:
             n = net_of(str(h.get("ip", "")), networks)
             if n:
                 touched[n["cidr"]] += 1
         for cidr, count in touched.items():
-            lbl = f"{count} Host" if count == 1 else f"{count} Hosts"
+            lbl = f"{count} host" if count == 1 else f"{count} hosts"
             out.append(f'sys_{sid} -> net_{slug(cidr)}: "{lbl}" {{')
             out.append("  style: {")
             out.append(f'    stroke: "{color[cidr]}"')
@@ -176,8 +177,8 @@ def render_d2(data: dict) -> str:
             out.append("}")
         out.append("")
 
-    # rstrip: die Schleife haengt nach jedem System-Block eine Leerzeile an.
-    # Ohne das endet die Datei auf zwei Newlines und end-of-file-fixer meckert.
+    # rstrip: the loop appends a blank line after every system block. Without
+    # this the file ends on two newlines and end-of-file-fixer complains.
     return "\n".join(out).rstrip("\n") + "\n"
 
 
@@ -185,7 +186,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="src", default="inventory.yaml")
     ap.add_argument("--out", dest="out", default="topology.d2")
-    ap.add_argument("--strict", action="store_true", help="Exit 1 bei Warnungen")
+    ap.add_argument("--strict", action="store_true", help="exit 1 on warnings")
     args = ap.parse_args()
 
     data = yaml.safe_load(Path(args.src).read_text(encoding="utf-8")) or {}
@@ -197,7 +198,7 @@ def main() -> int:
     if out.parent != Path(""):
         out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render_d2(data), encoding="utf-8")
-    print(f"geschrieben: {out}")
+    print(f"wrote: {out}")
 
     return 1 if (problems and args.strict) else 0
 
