@@ -13,6 +13,9 @@ repos:
       - id: check-symlinks
       - id: check-yaml
         args: ['--allow-multiple-documents']
+        # mkdocs-Configs nutzen !!python/name:-Tags (pymdownx superfences),
+        # die check-yaml (yaml.safe_load) nicht kennt.
+        exclude: '^system-inventory/mkdocs\.yml$'
       - id: detect-private-key
   - repo: https://github.com/jumanjihouse/pre-commit-hooks
     rev: 3.0.0  # or specific git tag

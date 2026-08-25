@@ -1,0 +1,40 @@
+@media print {
+  /* Tabellen und Diagramme nicht ueber Seitengrenzen zerreissen */
+  table, .mermaid, pre { break-inside: avoid; page-break-inside: avoid; }
+  tr, td, th { break-inside: avoid; }
+
+  /* Jeder Hauptabschnitt startet auf neuer Seite */
+  h2 { break-before: page; page-break-before: always; }
+  h1 + h2, h2:first-of-type { break-before: auto; page-break-before: auto; }
+
+  /* Lesbarkeit auf Papier */
+  body { font-size: 10pt; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { border: 1px solid #999 !important; padding: 3px 6px !important; }
+  thead { display: table-header-group; }  /* Kopfzeile auf Folgeseiten wiederholen */
+  a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #555; }
+
+  .md-sidebar, .md-header, .md-footer, .md-nav { display: none !important; }
+}
+
+@page {
+  size: A4;
+  margin: 16mm 14mm;
+}
+
+/* Topologie-SVG: am Bildschirm volle Breite, im Druck auf eine Seite passend */
+.topology, img[src$="topology.svg"] {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1.2rem auto;
+}
+
+@media print {
+  .topology, img[src$="topology.svg"] {
+    max-height: 22cm;      /* passt auf A4 hoch, inkl. Ueberschrift */
+    width: auto;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

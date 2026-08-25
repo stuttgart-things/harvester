@@ -1,0 +1,76 @@
+---
+# Single source of truth fuer die Systemuebersicht.
+# Aendern -> `make diagram` -> docs/index.md + docs/topology.svg werden neu erzeugt.
+#
+# Herkunft der Eintraege: alle IPs und FQDNs stammen aus der Doku dieses Repos
+# (docs/install.md, clusters/*/README.md, clusters/*/infra.yaml). Ausnahmen sind
+# unten einzeln als "TODO" markiert.
+
+site:
+  name: "stuttgart-things Lab"
+  subtitle: "Systeme, Hostnames und IP-Belegung"
+
+# Optional. Dient nur zur Gruppierung im Diagramm und zur Plausipruefung
+# (liegt jede IP in einem bekannten Netz?).
+# Die cluster-internen Ranges (Pod 10.52.0.0/16, Service 10.53.0.0/16) sind
+# bewusst nicht aufgefuehrt - sie beruehren das LAN nie.
+networks:
+  - cidr: 192.168.10.0/24
+    name: lab
+    description: >-
+      Flaches Lab-/Management-Netz. Gateway, DNS und DHCP auf dem DD-WRT-Router
+      (.1), dynamischer DHCP-Pool .100-.149.
+
+# Eine Zeile pro Host. `system` gruppiert - gleiche Systemnamen landen
+# im Diagramm im selben Kasten.
+hosts:
+  - system: network
+    hostname: ddwrt
+    ip: 192.168.10.1
+    description: >-
+      DD-WRT-Router. Gateway, DNS (dnsmasq, *.sthings.lab) und DHCP fuer das Lab.
+
+  # TODO: IP bestaetigen - der Jump-Server ist (noch) in keiner Repo-Doku
+  # hinterlegt. .50 liegt unterhalb des DHCP-Pools und ist laut
+  # docs/install.md als statische Adresse frei.
+  - system: jump-server
+    hostname: geekom
+    ip: 192.168.10.50
+    description: >-
+      Mini-PC, Einstiegspunkt ins Lab-Netz und Absprung fuer Ansible/Dagger.
+
+  - system: harvester
+    hostname: harvester
+    ip: 192.168.10.110
+    description: >-
+      Harvester-Node (enp5s0, MAC 58:47:ca:7d:34:f0), statisch adressiert.
+      Traegt die VMs aller Cluster.
+
+  - system: harvester
+    hostname: harvester-vip
+    ip: 192.168.10.139
+    description: >-
+      Statische Cluster-VIP von Harvester - UI und Kubernetes-API.
+      Muss ausserhalb des DHCP-Pools .100-.149 liegen.
+
+  - system: infra-sthings
+    hostname: infra
+    ip: 192.168.10.150
+    description: >-
+      k3s-Singlenode `infra.sthings.lab` (Cilium-LB-VIP). Traegt Vault
+      (vault.infra.sthings.lab, PKI fuer sthings-lab), Clusterbook
+      (clusterbook.infra.sthings.lab) und den NFS-Server fuer die Cluster.
+
+  - system: xplane-sthings
+    hostname: xplane
+    ip: 192.168.10.155
+    description: >-
+      k3s-Singlenode `xplane.sthings.lab` (Cilium-LB-VIP).
+      Crossplane-Management-Cluster, reconciled die Claims aus diesem Repo.
+
+  - system: platform-sthings
+    hostname: platform
+    ip: 192.168.10.160
+    description: >-
+      k3s-Singlenode `platform.sthings.lab` (Cilium-LB-VIP). Argo CD,
+      Clusterbook-Operator und Harbor (harbor./artifacts.platform.sthings.lab).
