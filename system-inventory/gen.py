@@ -176,7 +176,9 @@ def render_d2(data: dict) -> str:
             out.append("}")
         out.append("")
 
-    return "\n".join(out) + "\n"
+    # rstrip: die Schleife haengt nach jedem System-Block eine Leerzeile an.
+    # Ohne das endet die Datei auf zwei Newlines und end-of-file-fixer meckert.
+    return "\n".join(out).rstrip("\n") + "\n"
 
 
 def main() -> int:
