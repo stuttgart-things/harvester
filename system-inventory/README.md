@@ -59,7 +59,11 @@ hosts:
 `cluster` names the Kubernetes cluster a host and its services belong to.
 Values match the directories under `clusters/`, so the service index can be
 read against the GitOps tree. Hosts outside any cluster (router, jump server)
-leave it out, and their services sort to the bottom of the index. Setting
+leave it out, and their services sort to the bottom of the index. The service
+index is keyed on the cluster rather than the host: for the single-node
+clusters the two are the same, so a Host column would only restate the cluster.
+The host is named on a row only where it adds something — a cluster served by
+more than one host, or a service outside any cluster. Setting
 `kind: k3s-cluster` without a `cluster` name is a validation error.
 
 **Services nest under the host that serves them and inherit its IP.** That is

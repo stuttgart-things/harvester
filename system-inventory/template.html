@@ -394,6 +394,14 @@ th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--static); }
   border-radius: 2px;
   padding: 1px 6px;
 }
+.on-host {
+  display: block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-3);
+  margin-top: 1px;
+}
 .cluster-tag {
   display: inline-block;
   font-family: "IBM Plex Mono", monospace;
@@ -567,6 +575,7 @@ const systems = [...new Set(hosts.map(h => h.system))].sort();
 document.getElementById("stamp").innerHTML =
   `<span><b>${hosts.length}</b> host${hosts.length === 1 ? "" : "s"}</span>` +
   `<span><b>${systems.length}</b> system${systems.length === 1 ? "" : "s"}</span>` +
+  `<span><b>${new Set(hosts.map(h => h.cluster).filter(Boolean)).size}</b> clusters</span>` +
   `<span><b>${DATA.networks.length}</b> network${DATA.networks.length === 1 ? "" : "s"}</span>`;
 
 /* ---------------------------------------------------------------- Tooltip  */
@@ -978,9 +987,17 @@ if (allServices.length) {
     { key: "cluster", label: "Cluster" },
     { key: "name", label: "Service" },
     { key: "endpoint", label: "Endpoint" },
-    { key: "host", label: "Host" },
     { key: "description", label: "Description" },
   ];
+
+  // The host only earns a mention where it is not simply a restatement of the
+  // cluster: when a cluster is served by more than one host, or when there is
+  // no cluster at all. For the 1:1 clusters it would be pure duplication.
+  const hostsPerCluster = {};
+  allServices.forEach(s => {
+    (hostsPerCluster[s.cluster] ||= new Set()).add(s.host);
+  });
+  const showHost = s => !s.cluster || hostsPerCluster[s.cluster].size > 1;
 
   document.getElementById("svc-wrap").innerHTML =
     `<table class="data" id="svc-table"><thead><tr>` +
@@ -999,9 +1016,9 @@ if (allServices.length) {
         <td>${s.cluster
           ? `<span class="cluster-tag">${s.cluster}</span>`
           : `<span class="endpoint none">—</span>`}</td>
-        <td><b>${s.name}</b></td>
+        <td><b>${s.name}</b>${
+          showHost(s) ? `<span class="on-host">on ${s.host}</span>` : ""}</td>
         <td class="endpoint${ep ? "" : " none"}">${ep || "—"}</td>
-        <td class="mono">${s.host}</td>
         <td>${s.description || ""}</td>
       </tr>`;
     }).join("") +
