@@ -17,6 +17,10 @@ site:
 networks:
   - cidr: 192.168.10.0/24
     name: lab
+    # Optional. Nur die HTML-Ansicht wertet die beiden Felder aus (Adressmatrix);
+    # gen.py ignoriert sie. Werte aus docs/install.md (DD-WRT-Konfiguration).
+    gateway: 192.168.10.1
+    dhcp_pool: 192.168.10.100-192.168.10.149
     description: >-
       Flaches Lab-/Management-Netz. Gateway, DNS und DHCP auf dem DD-WRT-Router
       (.1), dynamischer DHCP-Pool .100-.149.

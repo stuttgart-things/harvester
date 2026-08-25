@@ -1,0 +1,761 @@
+<title>Lab-Adressbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+:root {
+  color-scheme: light;
+  --ground:      #eef1f5;
+  --surface:     #ffffff;
+  --surface-2:   #f7f9fb;
+  --rule:        #d3dbe4;
+  --rule-strong: #b3bfcc;
+  --ink:         #101a24;
+  --ink-2:       #4e6070;
+  --ink-3:       #7c8b99;
+  --static:      #2a78d6;
+  --static-soft: #d9e7f9;
+  --pool:        #eb6834;
+  --pool-soft:   #fbe3d8;
+  --free:        #e6ebf1;
+  --reserved:    #97a5b3;
+  --focus:       #101a24;
+  --shadow:      0 1px 2px rgba(16, 26, 36, .06), 0 8px 24px rgba(16, 26, 36, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:      #0e1318;
+    --surface:     #171e25;
+    --surface-2:   #1d252d;
+    --rule:        #2c3742;
+    --rule-strong: #445260;
+    --ink:         #e7eef5;
+    --ink-2:       #a3b3c1;
+    --ink-3:       #74858f;
+    --static:      #3987e5;
+    --static-soft: #1b3350;
+    --pool:        #d95926;
+    --pool-soft:   #40241a;
+    --free:        #222c35;
+    --reserved:    #5b6b78;
+    --focus:       #e7eef5;
+    --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:      #0e1318;
+  --surface:     #171e25;
+  --surface-2:   #1d252d;
+  --rule:        #2c3742;
+  --rule-strong: #445260;
+  --ink:         #e7eef5;
+  --ink-2:       #a3b3c1;
+  --ink-3:       #74858f;
+  --static:      #3987e5;
+  --static-soft: #1b3350;
+  --pool:        #d95926;
+  --pool-soft:   #40241a;
+  --free:        #222c35;
+  --reserved:    #5b6b78;
+  --focus:       #e7eef5;
+  --shadow:      0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .3);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sheet {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 40px 24px 72px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+/* ---------- Kopf ---------- */
+
+.masthead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px 32px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--ink);
+}
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 40px);
+  font-weight: 600;
+  letter-spacing: -.02em;
+  text-wrap: balance;
+}
+.masthead p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  max-width: 52ch;
+}
+.stamp {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--ink-2);
+  text-align: right;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.stamp b { color: var(--ink); font-weight: 600; }
+
+.eyebrow {
+  font-family: "IBM Plex Sans Condensed", "IBM Plex Sans", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* ---------- Karten ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 3px;
+  box-shadow: var(--shadow);
+}
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 20px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.card-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.card-head .note {
+  color: var(--ink-3);
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+#reset-layout {
+  font: inherit;
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+  padding: 3px 9px;
+  cursor: pointer;
+}
+#reset-layout:hover { color: var(--ink); border-color: var(--ink-3); }
+#reset-layout:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+/* ---------- Topologie ---------- */
+
+.topo-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+}
+@media (max-width: 860px) {
+  .topo-layout { grid-template-columns: minmax(0, 1fr); }
+  .detail { border-left: 0 !important; border-top: 1px solid var(--rule); }
+}
+
+#graph { display: block; width: 100%; height: 560px; touch-action: none; }
+#graph text { pointer-events: none; }
+
+.link { stroke: var(--rule-strong); fill: none; }
+.node-box { fill: var(--surface-2); stroke: var(--rule-strong); stroke-width: 1.5px; }
+.node-box.is-net { fill: var(--static); stroke: var(--static); }
+.node-box.is-system { fill: none; stroke: var(--rule-strong); stroke-dasharray: 3 3; }
+.node-label {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.node-sub {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  fill: var(--ink-2);
+}
+.node-sub.on-fill { font-size: 10px; }
+.node-label.on-fill, .node-sub.on-fill { fill: #ffffff; }
+.system-label {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  fill: var(--ink-3);
+}
+.link-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  fill: var(--ink-3);
+}
+.dimmed { opacity: .22; }
+.node-g.pinned .node-box { stroke-dasharray: none; stroke: var(--static); }
+.node-g { cursor: grab; }
+.node-g:active { cursor: grabbing; }
+.node-g:focus-visible { outline: none; }
+.node-g:focus-visible .node-box,
+.node-box.selected { stroke: var(--focus); stroke-width: 2.5px; }
+
+/* ---------- Detailfeld ---------- */
+
+.detail {
+  border-left: 1px solid var(--rule);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+.detail .placeholder { color: var(--ink-3); font-size: 14px; }
+.detail dl { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.detail dt {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.detail dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+}
+.detail dd.mono {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+/* ---------- Adressmatrix ---------- */
+
+.matrix-wrap { padding: 20px; overflow-x: auto; }
+.matrix { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.matrix th {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-3);
+  padding: 3px 5px;
+  text-align: center;
+}
+.matrix th.row-head { text-align: right; padding-right: 8px; }
+.matrix td { padding: 1px; }
+.cell {
+  width: 34px;
+  height: 26px;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--free);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ink-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: default;
+}
+.cell.is-static {
+  background: var(--static);
+  border-color: var(--static);
+  color: #ffffff;
+  cursor: pointer;
+}
+.cell.is-pool { background: var(--pool-soft); border-color: var(--pool); color: var(--ink-2); }
+.cell.is-pool.is-static { background: var(--pool); border-color: var(--pool); color: #ffffff; }
+.cell.is-reserved { background: transparent; border-color: var(--rule); color: var(--ink-3); border-style: dashed; }
+.cell.selected { outline: 2px solid var(--focus); outline-offset: 1px; }
+.cell:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 0 20px 20px;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.legend span { display: inline-flex; align-items: center; gap: 8px; }
+.swatch {
+  width: 14px; height: 14px; border-radius: 2px;
+  border: 1px solid var(--rule); flex: none;
+}
+.swatch.static { background: var(--static); border-color: var(--static); }
+.swatch.pool { background: var(--pool-soft); border-color: var(--pool); }
+.swatch.free { background: var(--free); }
+.swatch.reserved { background: transparent; border-style: dashed; }
+
+/* ---------- Tabelle ---------- */
+
+details.table-view { margin-top: 0; }
+details.table-view > summary {
+  padding: 14px 20px;
+  cursor: pointer;
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  border-top: 1px solid var(--rule);
+}
+details.table-view > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.data-table-wrap { overflow-x: auto; padding: 0 20px 20px; }
+table.data { border-collapse: collapse; width: 100%; font-size: 13px; }
+table.data th, table.data td {
+  text-align: left;
+  padding: 7px 12px 7px 0;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+table.data th {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+table.data td.mono {
+  font-family: "IBM Plex Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ---------- Tooltip ---------- */
+
+#tip {
+  position: fixed;
+  z-index: 20;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .1s;
+  background: var(--ink);
+  color: var(--ground);
+  border-radius: 3px;
+  padding: 7px 10px;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  max-width: 260px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.24);
+}
+#tip b { font-weight: 600; }
+
+footer.colophon {
+  color: var(--ink-3);
+  font-size: 13px;
+  border-top: 1px solid var(--rule);
+  padding-top: 16px;
+}
+footer.colophon code {
+  font-family: "IBM Plex Mono", monospace;
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<div class="sheet">
+
+  <header class="masthead">
+    <div>
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 id="site-name"></h1>
+      <p id="site-sub"></p>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Topologie</h2>
+      <span class="note">
+        Knoten anklicken für Details · ziehen zum Umsortieren · Doppelklick löst wieder
+        <button type="button" id="reset-layout" hidden>Layout zurücksetzen</button>
+      </span>
+    </div>
+    <div class="topo-layout">
+      <svg id="graph" role="img" aria-label="Netzwerk-Topologie: Systeme und Hosts am Lab-Netz"></svg>
+      <aside class="detail" id="detail" aria-live="polite"></aside>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head">
+      <h2 id="matrix-title"></h2>
+      <span class="note" id="matrix-note"></span>
+    </div>
+    <div class="matrix-wrap" id="matrix-wrap"></div>
+    <div class="legend" id="legend"></div>
+    <details class="table-view">
+      <summary>Tabellenansicht</summary>
+      <div class="data-table-wrap" id="table-wrap"></div>
+    </details>
+  </section>
+
+  <footer class="colophon">
+    Generiert aus <code>inventory.yaml</code> — die einzige von Hand gepflegte Datei.
+    Änderungen dort, dann <code>make html</code>.
+  </footer>
+
+</div>
+
+<div id="tip" role="tooltip"></div>
+
+<script>/*__D3__*/</script>
+<script>
+const DATA = /*__DATA__*/;
+
+/* ------------------------------------------------------------------ Helfer */
+
+const ipToInt = ip => ip.split(".").reduce((a, o) => (a << 8 >>> 0) + (+o), 0) >>> 0;
+const intToIp = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+
+const net = DATA.networks[0] || null;
+const hosts = DATA.hosts;
+const byIp = new Map(hosts.map(h => [h.ip, h]));
+
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ------------------------------------------------------------------- Kopf  */
+
+document.getElementById("eyebrow").textContent = net ? net.cidr : "Inventar";
+document.getElementById("site-name").textContent = DATA.site.name || "Systemübersicht";
+document.getElementById("site-sub").textContent = DATA.site.subtitle || "";
+
+const systems = [...new Set(hosts.map(h => h.system))].sort();
+document.getElementById("stamp").innerHTML =
+  `<span><b>${hosts.length}</b> Hosts</span>` +
+  `<span><b>${systems.length}</b> Systeme</span>` +
+  `<span><b>${DATA.networks.length}</b> Netz${DATA.networks.length === 1 ? "" : "e"}</span>`;
+
+/* ---------------------------------------------------------------- Tooltip  */
+
+const tip = document.getElementById("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html;
+  tip.style.opacity = "1";
+  const pad = 14;
+  const r = tip.getBoundingClientRect();
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + r.width > innerWidth - 8) x = ev.clientX - r.width - pad;
+  if (y + r.height > innerHeight - 8) y = ev.clientY - r.height - pad;
+  tip.style.left = x + "px";
+  tip.style.top = y + "px";
+}
+const hideTip = () => { tip.style.opacity = "0"; };
+
+/* ------------------------------------------------------------- Auswahl     */
+
+let selected = null;
+
+function select(hostname) {
+  selected = (selected === hostname) ? null : hostname;
+  renderDetail();
+  syncHighlight();
+}
+
+function renderDetail() {
+  const el = document.getElementById("detail");
+  const h = hosts.find(x => x.hostname === selected);
+  if (!h) {
+    el.innerHTML = `<div class="eyebrow">Detail</div>
+      <p class="placeholder">Einen Host im Diagramm oder in der Adressmatrix auswählen.</p>`;
+    return;
+  }
+  el.innerHTML = `<div class="eyebrow">Detail</div>
+    <dl>
+      <div><dt>Hostname</dt><dd class="mono">${h.hostname}</dd></div>
+      <div><dt>IP</dt><dd class="mono">${h.ip}</dd></div>
+      <div><dt>System</dt><dd>${h.system}</dd></div>
+      <div><dt>Beschreibung</dt><dd>${h.description || "—"}</dd></div>
+    </dl>`;
+}
+
+function syncHighlight() {
+  d3.selectAll(".node-box").classed("selected", d => d.kind === "host" && d.host.hostname === selected);
+  d3.select("#graph").selectAll(".node-g, .link, .link-label")
+    .classed("dimmed", d => {
+      if (!selected) return false;
+      if (d.kind === "host") return d.host.hostname !== selected;
+      if (d.kind === "system") return d.id !== "sys:" + hosts.find(h => h.hostname === selected).system;
+      if (d.kind === "net") return false;
+      if (d.source) {
+        const keep = ["host:" + selected, "sys:" + hosts.find(h => h.hostname === selected).system];
+        return !(keep.includes(d.source.id) || keep.includes(d.target.id));
+      }
+      return false;
+    });
+  document.querySelectorAll(".cell").forEach(c => {
+    c.classList.toggle("selected", c.dataset.hostname === selected && selected !== null);
+  });
+}
+
+/* ------------------------------------------------------------------ Graph  */
+
+const nodes = [], links = [];
+if (net) nodes.push({ id: "net", kind: "net", label: net.name || net.cidr, sub: net.cidr, fx: null });
+systems.forEach(s => {
+  const members = hosts.filter(h => h.system === s);
+  nodes.push({ id: "sys:" + s, kind: "system", label: s, count: members.length });
+  if (net) links.push({ source: "sys:" + s, target: "net", label: members.length + (members.length === 1 ? " Host" : " Hosts") });
+  members.forEach(h => {
+    nodes.push({ id: "host:" + h.hostname, kind: "host", host: h, label: h.hostname, sub: h.ip });
+    links.push({ source: "host:" + h.hostname, target: "sys:" + s });
+  });
+});
+
+const svg = d3.select("#graph");
+let W = 0, H = 560;
+
+const gLinks = svg.append("g");
+const gLinkLabels = svg.append("g");
+const gNodes = svg.append("g");
+
+const link = gLinks.selectAll("path").data(links).join("path")
+  .attr("class", "link")
+  .attr("stroke-width", d => d.label ? 2 : 1.25);
+
+const linkLabel = gLinkLabels.selectAll("text").data(links.filter(d => d.label)).join("text")
+  .attr("class", "link-label")
+  .attr("text-anchor", "middle")
+  .text(d => d.label);
+
+const node = gNodes.selectAll("g").data(nodes).join("g").attr("class", "node-g");
+
+node.each(function (d) {
+  const g = d3.select(this);
+  if (d.kind === "net") {
+    g.append("circle").attr("class", "node-box is-net").attr("r", 58);
+    g.append("text").attr("class", "node-label on-fill").attr("text-anchor", "middle").attr("dy", "-.15em").text(d.label);
+    g.append("text").attr("class", "node-sub on-fill").attr("text-anchor", "middle").attr("dy", "1.2em").text(d.sub);
+  } else if (d.kind === "system") {
+    g.append("rect").attr("class", "node-box is-system")
+      .attr("x", -62).attr("y", -15).attr("width", 124).attr("height", 30).attr("rx", 3);
+    g.append("text").attr("class", "system-label").attr("text-anchor", "middle").attr("dy", ".36em").text(d.label);
+  } else {
+    g.append("rect").attr("class", "node-box")
+      .attr("x", -56).attr("y", -19).attr("width", 112).attr("height", 38).attr("rx", 2);
+    g.append("text").attr("class", "node-label").attr("text-anchor", "middle").attr("dy", "-.15em").text(d.label);
+    g.append("text").attr("class", "node-sub").attr("text-anchor", "middle").attr("dy", "1.15em").text(d.sub);
+    g.attr("tabindex", 0).attr("role", "button")
+      .attr("aria-label", `${d.host.hostname}, ${d.host.ip}, System ${d.host.system}`)
+      .style("cursor", "pointer")
+      .on("click", () => select(d.host.hostname))
+      .on("keydown", ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); select(d.host.hostname); } })
+      .on("mousemove", ev => showTip(`<b>${d.host.hostname}</b> ${d.host.ip}<br>${d.host.description || ""}`, ev))
+      .on("mouseleave", hideTip);
+  }
+});
+
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.label ? 190 : 108).strength(.7))
+  .force("charge", d3.forceManyBody().strength(-600))
+  .force("collide", d3.forceCollide(d => d.kind === "net" ? 74 : 33).strength(1))
+  .force("y", d3.forceY(H / 2).strength(.03))
+  .on("tick", ticked);
+
+node.filter(d => d.kind !== "net")
+  .on("dblclick", (ev, d) => { ev.stopPropagation(); if (d.pinned) unpin(d); })
+  .call(
+  d3.drag()
+    .on("start", (ev, d) => { if (!ev.active) sim.alphaTarget(.2).restart(); d.fx = d.x; d.fy = d.y; })
+    .on("drag", (ev, d) => { d.fx = ev.x; d.fy = ev.y; })
+    // Losgelassene Knoten bleiben liegen - sonst federt jedes Umsortieren
+    // sofort wieder in die Ausgangsspalte zurueck. Doppelklick loest wieder.
+    .on("end", (ev, d) => {
+      if (!ev.active) sim.alphaTarget(0);
+      d.pinned = true;
+      markPinned();
+    })
+);
+
+function markPinned() {
+  node.classed("pinned", d => !!d.pinned);
+  document.getElementById("reset-layout").hidden = !nodes.some(d => d.pinned);
+}
+
+function unpin(d) {
+  d.pinned = false;
+  d.fx = null;
+  d.fy = null;
+  markPinned();
+  sim.alpha(.5).restart();
+}
+
+function ticked() {
+  // Knoten im sichtbaren Rahmen halten - sonst laufen Hosts unten heraus.
+  nodes.forEach(d => {
+    const padX = d.kind === "net" ? 60 : 60;
+    const padY = d.kind === "net" ? 60 : 26;
+    d.x = Math.max(padX, Math.min(W - padX, d.x));
+    d.y = Math.max(padY, Math.min(H - padY, d.y));
+  });
+  link.attr("d", d => {
+    const mx = (d.source.x + d.target.x) / 2;
+    return `M${d.source.x},${d.source.y}C${mx},${d.source.y} ${mx},${d.target.y} ${d.target.x},${d.target.y}`;
+  });
+  linkLabel
+    .attr("x", d => (d.source.x + d.target.x) / 2)
+    .attr("y", d => (d.source.y + d.target.y) / 2 - 6);
+  node.attr("transform", d => `translate(${d.x},${d.y})`);
+}
+
+function layout() {
+  W = document.getElementById("graph").clientWidth;
+  svg.attr("viewBox", `0 0 ${W} ${H}`);
+  const netNode = nodes.find(n => n.kind === "net");
+  if (netNode) { netNode.fx = W * 0.76; netNode.fy = H / 2; }
+  sim.force("x", d3.forceX(d => d.kind === "system" ? W * 0.44 : W * 0.13)
+    .strength(d => d.kind === "net" ? 0 : 0.6));
+  sim.alpha(.9).restart();
+  if (reduceMotion) { sim.stop(); for (let i = 0; i < 260; i++) sim.tick(); ticked(); }
+}
+document.getElementById("reset-layout").addEventListener("click", () => {
+  nodes.forEach(d => { if (d.kind !== "net") { d.pinned = false; d.fx = null; d.fy = null; } });
+  markPinned();
+  sim.alpha(.9).restart();
+});
+
+layout();
+markPinned();
+addEventListener("resize", layout);
+
+/* --------------------------------------------------------- Adressmatrix    */
+
+if (net) {
+  const base = ipToInt(net.cidr.split("/")[0]);
+  const bits = +net.cidr.split("/")[1];
+  const size = Math.min(2 ** (32 - bits), 256);
+  const cols = 16;
+
+  let poolFrom = null, poolTo = null;
+  if (net.dhcp_pool) {
+    const [a, b] = net.dhcp_pool.split("-").map(s => ipToInt(s.trim()));
+    poolFrom = a; poolTo = b;
+  }
+
+  document.getElementById("matrix-title").textContent = `Adressbelegung ${net.cidr}`;
+  const inNet = hosts.filter(h => ipToInt(h.ip) >= base && ipToInt(h.ip) < base + size);
+  const usedCount = inNet.length;
+  const poolCount = (poolFrom !== null) ? (poolTo - poolFrom + 1) : 0;
+  // .110 und .139 liegen im Pool - sonst wuerden sie doppelt gezaehlt.
+  const staticInPool = poolFrom === null ? 0
+    : inNet.filter(h => ipToInt(h.ip) >= poolFrom && ipToInt(h.ip) <= poolTo).length;
+  const freeCount = size - 2 - usedCount - (poolCount - staticInPool);
+  document.getElementById("matrix-note").textContent =
+    `${usedCount} statisch vergeben · ${poolCount} im DHCP-Pool · ${freeCount} frei`;
+
+  const tbl = document.createElement("table");
+  tbl.className = "matrix";
+  tbl.setAttribute("aria-label", `Adressbelegung ${net.cidr}`);
+
+  const thead = tbl.createTHead().insertRow();
+  thead.appendChild(document.createElement("th"));
+  for (let c = 0; c < cols; c++) {
+    const th = document.createElement("th");
+    th.textContent = "+" + c;
+    thead.appendChild(th);
+  }
+
+  const tbody = tbl.createTBody();
+  for (let r = 0; r < size / cols; r++) {
+    const tr = tbody.insertRow();
+    const th = document.createElement("th");
+    th.className = "row-head";
+    th.scope = "row";
+    th.textContent = "." + (r * cols);
+    tr.appendChild(th);
+
+    for (let c = 0; c < cols; c++) {
+      const off = r * cols + c;
+      const n = base + off;
+      const ip = intToIp(n);
+      const host = byIp.get(ip);
+      const inPool = poolFrom !== null && n >= poolFrom && n <= poolTo;
+      const reserved = off === 0 || off === size - 1;
+
+      const td = tr.insertCell();
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "cell";
+      cell.textContent = off;
+      cell.dataset.ip = ip;
+
+      let state;
+      if (reserved) { cell.classList.add("is-reserved"); state = off === 0 ? "Netzadresse" : "Broadcast"; }
+      else if (host) {
+        cell.classList.add("is-static");
+        if (inPool) cell.classList.add("is-pool");
+        cell.dataset.hostname = host.hostname;
+        state = `${host.hostname} · ${host.system}`;
+        cell.addEventListener("click", () => select(host.hostname));
+      } else if (inPool) { cell.classList.add("is-pool"); state = "DHCP-Pool, frei"; }
+      else { state = "frei"; }
+
+      cell.setAttribute("aria-label", `${ip} — ${state}`);
+      cell.addEventListener("mousemove", ev => showTip(
+        `<b>${ip}</b><br>${state}` + (host && host.description ? `<br>${host.description}` : ""), ev));
+      cell.addEventListener("mouseleave", hideTip);
+      td.appendChild(cell);
+    }
+  }
+  document.getElementById("matrix-wrap").appendChild(tbl);
+
+  document.getElementById("legend").innerHTML = `
+    <span><i class="swatch static"></i>statisch vergeben</span>
+    <span><i class="swatch pool"></i>DHCP-Pool ${net.dhcp_pool || ""}</span>
+    <span><i class="swatch free"></i>frei</span>
+    <span><i class="swatch reserved"></i>Netz-/Broadcast-Adresse</span>`;
+}
+
+/* ------------------------------------------------------------- Tabelle     */
+
+const rows = [...hosts].sort((a, b) => ipToInt(a.ip) - ipToInt(b.ip));
+document.getElementById("table-wrap").innerHTML =
+  `<table class="data"><thead><tr>
+     <th>IP</th><th>Hostname</th><th>System</th><th>Beschreibung</th>
+   </tr></thead><tbody>` +
+  rows.map(h => `<tr>
+     <td class="mono">${h.ip}</td>
+     <td class="mono">${h.hostname}</td>
+     <td>${h.system}</td>
+     <td>${h.description || ""}</td>
+   </tr>`).join("") +
+  `</tbody></table>`;
+
+renderDetail();
+</script>
