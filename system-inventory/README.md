@@ -1,8 +1,7 @@
 # System inventory
 
-Topology diagram and interactive address book for the stuttgart-things lab,
-generated from **`inventory.yaml`** (fields: `system`, `hostname`, `ip`,
-`description`).
+Topology diagram, service catalogue and interactive address book for the
+stuttgart-things lab, generated from **`inventory.yaml`**.
 
 `inventory.yaml` is the only file maintained by hand. `gen.py` turns it into
 `topology.d2`, `d2` renders `topology.svg`. Both artifacts are committed so the
@@ -11,10 +10,11 @@ diagram shows up directly in GitHub.
 ![System overview](topology.svg)
 
 There is also an **interactive version on GitHub Pages**: nodes can be dragged
-and stay where you drop them, clicking one shows its description, and an
-address matrix lays out all 256 addresses of the `/24` — statically assigned,
-DHCP pool, free. Diagram and matrix are linked: selecting in one highlights in
-the other.
+and stay where you drop them, clicking one shows its description and the
+services it runs, an address matrix lays out all 256 addresses of the `/24`
+(statically assigned, DHCP pool, free), and a filterable service index lists
+everything running in the lab. Diagram and matrix are linked: selecting in one
+highlights in the other.
 
 ## Adding or changing a host
 
@@ -32,15 +32,53 @@ they match `inventory.yaml`. The HTML page is **not** committed; CI builds it.
 It is 95 % embedded d3 bundle, so every inventory change would otherwise be a
 300 KB diff.
 
+## Schema
+
+A host entry is `system`, `hostname`, `ip`, `description`, plus two optional
+fields:
+
+```yaml
+hosts:
+  - system: infra-sthings
+    hostname: infra
+    ip: 192.168.10.150
+    kind: k3s-cluster              # host | k3s-cluster | hypervisor | router
+    description: >-
+      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
+    services:
+      - name: Vault
+        fqdn: vault.infra.sthings.lab
+        description: PKI for sthings-lab.
+      - name: NFS
+        port: 2049
+        description: Shared storage behind the NFS CSI driver.
+```
+
+**Services nest under the host that serves them and inherit its IP.** That is
+the point of the nesting: Vault and Clusterbook are both published on the same
+Cilium LB VIP and told apart by FQDN, not by address — as separate `hosts`
+rows they would trip the duplicate-IP check.
+
+Per service, `name` and `description` are required; `fqdn`, `port` and `ip` are
+optional. A service only needs its own `ip` when it gets a separate
+load-balancer address — it then joins the duplicate-IP check like a host. A
+service with no endpoint at all is fine and lists without a link: Crossplane
+and the Clusterbook operator are reached through the Kubernetes API, not over
+an ingress.
+
+Chart and app versions are deliberately **not** tracked here. They live in
+`clusters/**/*.yaml` and would go stale the moment they were copied.
+
 ## Validation
 
 `make gen` (and therefore `make diagram`) exits 1 on:
 
-- duplicate IPs
+- duplicate IPs, including a service IP colliding with a host
 - duplicate hostnames
-- invalid IPs
+- duplicate service FQDNs
+- invalid IPs and out-of-range ports
 - IPs outside every network defined under `networks`
-- a missing description or hostname
+- a missing description or hostname, or a service without a description
 
 `make check` additionally does what CI does: render, then diff against the
 committed artifacts. That way `topology.svg` cannot silently fall behind
@@ -62,6 +100,11 @@ topology.
 
 Edges run **per system → network** with the host count as the label, not one
 edge per host — otherwise the picture becomes unreadable at 20 hosts.
+
+For the same reason a host node shows only its **service count**, never the
+services themselves. The topology diagram answers *what is on the network*;
+*what runs where* is a different question, and the service index on the HTML
+page is where it gets answered.
 
 ## Interactive page
 

@@ -201,6 +201,14 @@ body {
   fill: var(--ink-2);
 }
 .node-sub.on-fill { font-size: 10px; }
+.node-svc {
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  fill: var(--static);
+}
 .node-label.on-fill, .node-sub.on-fill { fill: #ffffff; }
 .system-label {
   font-family: "IBM Plex Sans Condensed", sans-serif;
@@ -314,6 +322,52 @@ body {
 .swatch.free { background: var(--free); }
 .swatch.reserved { background: transparent; border-style: dashed; }
 
+/* ---------- Services ---------- */
+
+.svc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.svc-list li { display: flex; flex-direction: column; gap: 1px; }
+.svc-list .svc-name { font-weight: 600; font-size: 14px; }
+.svc-list .svc-addr {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  color: var(--static);
+  word-break: break-all;
+}
+.svc-list .svc-desc { font-size: 13px; color: var(--ink-2); }
+
+.filter-row { padding: 16px 20px 0; }
+#svc-filter {
+  font: inherit;
+  font-size: 14px;
+  width: 100%;
+  max-width: 340px;
+  padding: 7px 11px;
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: 3px;
+}
+#svc-filter::placeholder { color: var(--ink-3); }
+#svc-filter:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+tr.svc-row.hidden { display: none; }
+.endpoint { font-family: "IBM Plex Mono", monospace; font-size: 12px; white-space: nowrap; }
+.endpoint.none { color: var(--ink-3); }
+.kind-tag {
+  display: inline-block;
+  font-family: "IBM Plex Sans Condensed", sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 1px 6px;
+}
+#svc-empty { padding: 0 20px 20px; color: var(--ink-3); font-size: 14px; }
+
 /* ---------- Table ---------- */
 
 details.table-view { margin-top: 0; }
@@ -426,6 +480,20 @@ footer.colophon code {
     </details>
   </section>
 
+  <section class="card">
+    <div class="card-head">
+      <h2>Services</h2>
+      <span class="note" id="svc-note"></span>
+    </div>
+    <div class="filter-row">
+      <label for="svc-filter" class="eyebrow">Filter</label>
+      <input id="svc-filter" type="search" autocomplete="off"
+             placeholder="service, host, system or FQDN">
+    </div>
+    <div class="data-table-wrap" id="svc-wrap"></div>
+    <p id="svc-empty" hidden>Nothing matches that filter.</p>
+  </section>
+
   <footer class="colophon">
     Generated from <code>inventory.yaml</code> — the only hand-maintained file.
     Edit it there, then run <code>make html</code>.
@@ -502,7 +570,31 @@ function renderDetail() {
       <div><dt>IP</dt><dd class="mono">${h.ip}</dd></div>
       <div><dt>System</dt><dd>${h.system}</dd></div>
       <div><dt>Description</dt><dd>${h.description || "—"}</dd></div>
+      ${h.kind ? `<div><dt>Kind</dt><dd><span class="kind-tag">${h.kind}</span></dd></div>` : ""}
+      ${svcList(h)}
     </dl>`;
+}
+
+function endpoint(s) {
+  if (s.fqdn) return s.fqdn;
+  if (s.ip) return s.ip + (s.port ? ":" + s.port : "");
+  if (s.port) return "port " + s.port;
+  return "";
+}
+
+function svcList(h) {
+  const svcs = h.services || [];
+  if (!svcs.length) return "";
+  const items = svcs.map(s => {
+    const ep = endpoint(s);
+    return `<li>
+      <span class="svc-name">${s.name}</span>
+      ${ep ? `<span class="svc-addr">${ep}</span>` : ""}
+      <span class="svc-desc">${s.description || ""}</span>
+    </li>`;
+  }).join("");
+  return `<div><dt>Services (${svcs.length})</dt>
+    <dd><ul class="svc-list">${items}</ul></dd></div>`;
 }
 
 function syncHighlight() {
@@ -533,7 +625,11 @@ systems.forEach(s => {
   nodes.push({ id: "sys:" + s, kind: "system", label: s, count: members.length });
   if (net) links.push({ source: "sys:" + s, target: "net", label: members.length + (members.length === 1 ? " host" : " hosts") });
   members.forEach(h => {
-    nodes.push({ id: "host:" + h.hostname, kind: "host", host: h, label: h.hostname, sub: h.ip });
+    nodes.push({
+      id: "host:" + h.hostname, kind: "host", host: h,
+      label: h.hostname, sub: h.ip,
+      svcCount: (h.services || []).length,
+    });
     links.push({ source: "host:" + h.hostname, target: "sys:" + s });
   });
 });
@@ -567,10 +663,20 @@ node.each(function (d) {
       .attr("x", -62).attr("y", -15).attr("width", 124).attr("height", 30).attr("rx", 3);
     g.append("text").attr("class", "system-label").attr("text-anchor", "middle").attr("dy", ".36em").text(d.label);
   } else {
+    // Third line only when there are services - same rule as the D2 diagram:
+    // the count, never the services themselves.
+    const h = d.svcCount;
+    const box = h ? 52 : 38;
     g.append("rect").attr("class", "node-box")
-      .attr("x", -56).attr("y", -19).attr("width", 112).attr("height", 38).attr("rx", 2);
-    g.append("text").attr("class", "node-label").attr("text-anchor", "middle").attr("dy", "-.15em").text(d.label);
-    g.append("text").attr("class", "node-sub").attr("text-anchor", "middle").attr("dy", "1.15em").text(d.sub);
+      .attr("x", -56).attr("y", -box / 2).attr("width", 112).attr("height", box).attr("rx", 2);
+    g.append("text").attr("class", "node-label").attr("text-anchor", "middle")
+      .attr("dy", h ? "-.75em" : "-.15em").text(d.label);
+    g.append("text").attr("class", "node-sub").attr("text-anchor", "middle")
+      .attr("dy", h ? ".5em" : "1.15em").text(d.sub);
+    if (h) {
+      g.append("text").attr("class", "node-svc").attr("text-anchor", "middle")
+        .attr("dy", "1.75em").text(h === 1 ? "1 service" : h + " services");
+    }
     g.attr("tabindex", 0).attr("role", "button")
       .attr("aria-label", `${d.host.hostname}, ${d.host.ip}, system ${d.host.system}`)
       .style("cursor", "pointer")
@@ -584,7 +690,7 @@ node.each(function (d) {
 const sim = d3.forceSimulation(nodes)
   .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.label ? 190 : 108).strength(.7))
   .force("charge", d3.forceManyBody().strength(-600))
-  .force("collide", d3.forceCollide(d => d.kind === "net" ? 74 : 33).strength(1))
+  .force("collide", d3.forceCollide(d => d.kind === "net" ? 74 : 40).strength(1))
   .force("y", d3.forceY(H / 2).strength(.03))
   .on("tick", ticked);
 
@@ -620,7 +726,7 @@ function ticked() {
   // Keep nodes inside the visible frame - otherwise hosts run off the bottom.
   nodes.forEach(d => {
     const padX = d.kind === "net" ? 60 : 60;
-    const padY = d.kind === "net" ? 60 : 26;
+    const padY = d.kind === "net" ? 60 : 32;
     d.x = Math.max(padX, Math.min(W - padX, d.x));
     d.y = Math.max(padY, Math.min(H - padY, d.y));
   });
@@ -758,6 +864,56 @@ document.getElementById("table-wrap").innerHTML =
      <td>${h.description || ""}</td>
    </tr>`).join("") +
   `</tbody></table>`;
+
+/* ----------------------------------------------------------- Service index */
+
+const allServices = hosts.flatMap(h =>
+  (h.services || []).map(s => ({ ...s, host: h.hostname, system: h.system }))
+);
+
+if (allServices.length) {
+  const withEndpoint = allServices.filter(s => endpoint(s)).length;
+  document.getElementById("svc-note").textContent =
+    `${allServices.length} across ${hosts.filter(h => (h.services || []).length).length} hosts · ` +
+    `${allServices.length - withEndpoint} without an endpoint`;
+
+  const rows = [...allServices].sort(
+    (a, b) => a.system.localeCompare(b.system) || a.name.localeCompare(b.name)
+  );
+
+  document.getElementById("svc-wrap").innerHTML =
+    `<table class="data"><thead><tr>
+       <th>Service</th><th>Endpoint</th><th>Host</th><th>System</th><th>Description</th>
+     </tr></thead><tbody>` +
+    rows.map(s => {
+      const ep = endpoint(s);
+      return `<tr class="svc-row" data-host="${s.host}" data-search="${
+        [s.name, ep, s.host, s.system, s.description].join(" ").toLowerCase()
+      }">
+        <td><b>${s.name}</b></td>
+        <td class="endpoint${ep ? "" : " none"}">${ep || "—"}</td>
+        <td class="mono">${s.host}</td>
+        <td>${s.system}</td>
+        <td>${s.description || ""}</td>
+      </tr>`;
+    }).join("") +
+    `</tbody></table>`;
+
+  const filter = document.getElementById("svc-filter");
+  const empty = document.getElementById("svc-empty");
+  filter.addEventListener("input", () => {
+    const q = filter.value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll("tr.svc-row").forEach(tr => {
+      const hit = !q || tr.dataset.search.includes(q);
+      tr.classList.toggle("hidden", !hit);
+      if (hit) shown++;
+    });
+    empty.hidden = shown > 0;
+  });
+} else {
+  document.getElementById("svc-wrap").closest(".card").hidden = true;
+}
 
 renderDetail();
 </script>
