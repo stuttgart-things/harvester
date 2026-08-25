@@ -74,8 +74,10 @@ the point of the nesting: Vault and Clusterbook are both published on the same
 Cilium LB VIP and told apart by FQDN, not by address — as separate `hosts`
 rows they would trip the duplicate-IP check.
 
-Per service, `name` and `description` are required; `fqdn`, `port` and `ip` are
-optional. A service only needs its own `ip` when it gets a separate
+Per service, `name` and `description` are required; `fqdn`, `port`, `ip` and
+`url` are optional. A service with an `fqdn` is rendered as a link to
+`https://<fqdn>`; set `url` when the real entry point differs — a path, a port,
+plain http. A service only needs its own `ip` when it gets a separate
 load-balancer address — it then joins the duplicate-IP check like a host. A
 service with no endpoint at all is fine and lists without a link: Crossplane
 and the Clusterbook operator are reached through the Kubernetes API, not over

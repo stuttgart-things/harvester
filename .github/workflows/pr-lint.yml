@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - "clusters/**"
+      - "system-inventory/**"
       - ".pre-commit-config.yaml"
       - ".github/workflows/pr-lint.yml"
     types:

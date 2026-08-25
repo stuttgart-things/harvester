@@ -41,8 +41,9 @@ networks:
 # `services` is optional and nests under the host that serves them. Services
 # inherit the host's IP - that is the point: Vault and Clusterbook are both
 # published on the same Cilium LB VIP and are told apart by FQDN, not address.
-# Per service: `name` and `description` are required; `fqdn`, `port` and `ip`
-# are optional. A service only needs its own `ip` when it gets a separate LB
+# Per service: `name` and `description` are required; `fqdn`, `port`, `ip` and
+# `url` are optional. A service with an `fqdn` is linked as https://<fqdn>;
+# set `url` when the real entry point differs (a path, a port, plain http). A service only needs its own `ip` when it gets a separate LB
 # address - it then takes part in the duplicate-IP check just like a host.
 hosts:
   - system: network
