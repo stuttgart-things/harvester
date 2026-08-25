@@ -54,9 +54,3 @@ go.work.sum
 # Editor/IDE
 # .idea/
 # .vscode/
-
-# system-inventory: generiert aus system-inventory/inventory.yaml
-system-inventory/docs/index.md
-system-inventory/docs/topology.d2
-system-inventory/docs/topology.svg
-system-inventory/site/

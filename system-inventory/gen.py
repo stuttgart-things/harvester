@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""Erzeugt aus inventory.yaml die MkDocs-Seite inkl. D2-Diagramm.
+"""Erzeugt aus inventory.yaml die D2-Quelle fuer das Topologie-Diagramm.
 
 Ausgabe:
-  docs/index.md      - Doku (Tabellen je System + IP-Index)
-  docs/topology.d2   - D2-Quelle, wird per `d2` zu docs/topology.svg gerendert
+  topology.d2   - D2-Quelle, wird per `d2` zu topology.svg gerendert
 
-Aufruf: python3 tools/gen.py [--in inventory.yaml] [--out docs] [--strict]
+Aufruf: python3 gen.py [--in inventory.yaml] [--out topology.d2] [--strict]
 """
 
 from __future__ import annotations
@@ -180,128 +179,11 @@ def render_d2(data: dict) -> str:
     return "\n".join(out) + "\n"
 
 
-# --------------------------------------------------------------------------
-# Markdown
-# --------------------------------------------------------------------------
-def render_markdown(data: dict, problems: list[str], diagram: str = "d2") -> str:
-    site = data.get("site", {}) or {}
-    networks = data.get("networks", []) or []
-    hosts = data.get("hosts", []) or []
-    grouped = by_system(hosts)
-    md: list[str] = []
-
-    md.append(f"# {site.get('name', 'Systemuebersicht')}")
-    if site.get("subtitle"):
-        md.append(f"*{site['subtitle']}*")
-    md.append("")
-    md.append(
-        '!!! info "Generiert"\n'
-        "    Diese Seite entsteht aus `inventory.yaml`. "
-        "Änderungen bitte **nur dort** vornehmen."
-    )
-    md.append("")
-
-    md.append("## Überblick")
-    md.append("")
-    if diagram == "d2":
-        md.append("![Systemübersicht](topology.svg){ .topology }")
-    else:
-        md.append("``` mermaid")
-        md.append(render_mermaid(data))
-        md.append("```")
-    md.append("")
-
-    if networks:
-        md.append("## Netze")
-        md.append("")
-        md.append("| Netz | CIDR | Hosts | Beschreibung |")
-        md.append("| --- | --- | ---: | --- |")
-        for n in networks:
-            count = sum(
-                1 for h in hosts if net_of(str(h.get("ip", "")), [n]) is not None
-            )
-            md.append(
-                f"| `{n.get('name', '')}` | `{n['cidr']}` | {count} | "
-                f"{n.get('description', '')} |"
-            )
-        md.append("")
-
-    md.append("## Systeme")
-    md.append("")
-    for system, entries in grouped.items():
-        md.append(f"### {system}")
-        md.append("")
-        md.append("| Hostname | IP | Beschreibung |")
-        md.append("| --- | --- | --- |")
-        for h in entries:
-            md.append(
-                f"| `{h.get('hostname', '')}` | `{h.get('ip', '')}` | "
-                f"{h.get('description', '')} |"
-            )
-        md.append("")
-
-    md.append("## IP-Belegung")
-    md.append("")
-    md.append("| IP | Hostname | System | Beschreibung |")
-    md.append("| --- | --- | --- | --- |")
-
-    def sort_key(h: dict):
-        try:
-            return (0, int(ipaddress.ip_address(str(h.get("ip", "")))))
-        except ValueError:
-            return (1, 0)
-
-    for h in sorted(hosts, key=sort_key):
-        md.append(
-            f"| `{h.get('ip', '')}` | `{h.get('hostname', '')}` | "
-            f"{h.get('system', '')} | {h.get('description', '')} |"
-        )
-    md.append("")
-
-    if problems:
-        md.append("## Konsistenz-Warnungen")
-        md.append("")
-        for p in problems:
-            md.append(f"- :warning: {p}")
-        md.append("")
-
-    return "\n".join(md) + "\n"
-
-
-# --------------------------------------------------------------------------
-# Mermaid (Fallback ohne d2-Binary)
-# --------------------------------------------------------------------------
-def render_mermaid(data: dict) -> str:
-    networks = data.get("networks", []) or []
-    grouped = by_system(data.get("hosts", []) or [])
-    lines = ["flowchart LR"]
-    for n in networks:
-        lines.append(f'  net_{slug(n["cidr"])}(("{n.get("name", "")}<br/>{n["cidr"]}"))')
-    for system, entries in grouped.items():
-        sid = slug(system)
-        lines.append(f'  subgraph sys_{sid}["{system}"]')
-        for h in entries:
-            lines.append(
-                f'    {slug(h.get("hostname", ""))}["{h.get("hostname", "")}'
-                f'<br/>{h.get("ip", "")}"]'
-            )
-        lines.append("  end")
-        touched = {
-            n["cidr"]
-            for h in entries
-            if (n := net_of(str(h.get("ip", "")), networks)) is not None
-        }
-        for cidr in touched:
-            lines.append(f"  sys_{sid} --> net_{slug(cidr)}")
-    return "\n".join(lines)
-
-
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--in", dest="src", default="inventory.yaml")
-    ap.add_argument("--out", dest="out", default="docs")
+    ap.add_argument("--out", dest="out", default="topology.d2")
     ap.add_argument("--strict", action="store_true", help="Exit 1 bei Warnungen")
-    ap.add_argument("--diagram", choices=["d2", "mermaid"], default="d2")
     args = ap.parse_args()
 
     data = yaml.safe_load(Path(args.src).read_text(encoding="utf-8")) or {}
@@ -309,13 +191,11 @@ def main() -> int:
     for p in problems:
         print(f"WARN: {p}", file=sys.stderr)
 
-    outdir = Path(args.out)
-    outdir.mkdir(parents=True, exist_ok=True)
-    (outdir / "index.md").write_text(
-        render_markdown(data, problems, args.diagram), encoding="utf-8"
-    )
-    (outdir / "topology.d2").write_text(render_d2(data), encoding="utf-8")
-    print(f"geschrieben: {outdir/'index.md'}, {outdir/'topology.d2'}")
+    out = Path(args.out)
+    if out.parent != Path(""):
+        out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(render_d2(data), encoding="utf-8")
+    print(f"geschrieben: {out}")
 
     return 1 if (problems and args.strict) else 0
 

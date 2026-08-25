@@ -1,0 +1,138 @@
+# generiert aus inventory.yaml - nicht von Hand editieren
+vars: {
+  d2-config: {
+    layout-engine: elk
+  }
+}
+direction: right
+
+net_192_168_10_0_24: "lab\n192.168.10.0/24" {
+  shape: cloud
+  style: {
+    fill: "#0f766e"
+    font-color: "#ffffff"
+    bold: true
+  }
+}
+
+sys_harvester: "harvester" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  harvester: "harvester\n192.168.10.110" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  harvester_vip: "harvester-vip\n192.168.10.139" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_harvester -> net_192_168_10_0_24: "2 Hosts" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_infra_sthings: "infra-sthings" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  infra: "infra\n192.168.10.150" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_infra_sthings -> net_192_168_10_0_24: "1 Host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_jump_server: "jump-server" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  geekom: "geekom\n192.168.10.50" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_jump_server -> net_192_168_10_0_24: "1 Host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_network: "network" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  ddwrt: "ddwrt\n192.168.10.1" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_network -> net_192_168_10_0_24: "1 Host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_platform_sthings: "platform-sthings" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  platform: "platform\n192.168.10.160" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_platform_sthings -> net_192_168_10_0_24: "1 Host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_xplane_sthings: "xplane-sthings" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  xplane: "xplane\n192.168.10.155" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_xplane_sthings -> net_192_168_10_0_24: "1 Host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
