@@ -33,6 +33,11 @@ networks:
 #
 # `kind` is optional: host | k3s-cluster | hypervisor | router.
 #
+# `cluster` is optional and names the Kubernetes cluster a host and its
+# services belong to. Values match the directories under clusters/, so the
+# service index can be read against the GitOps tree. Hosts that are not part
+# of a cluster (router, jump server) simply leave it out.
+#
 # `services` is optional and nests under the host that serves them. Services
 # inherit the host's IP - that is the point: Vault and Clusterbook are both
 # published on the same Cilium LB VIP and are told apart by FQDN, not address.
@@ -72,6 +77,7 @@ hosts:
     hostname: harvester
     ip: 192.168.10.110
     kind: hypervisor
+    cluster: harvester
     description: >-
       Harvester node (enp5s0, MAC 58:47:ca:7d:34:f0), statically addressed.
       Hosts the VMs of every cluster.
@@ -85,6 +91,7 @@ hosts:
     hostname: harvester-vip
     ip: 192.168.10.139
     kind: host
+    cluster: harvester
     description: >-
       Static cluster VIP for Harvester - UI and Kubernetes API.
       Must sit outside the DHCP pool .100-.149.
@@ -99,6 +106,7 @@ hosts:
     hostname: infra
     ip: 192.168.10.150
     kind: k3s-cluster
+    cluster: infra
     description: >-
       Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
       Carries the lab-wide services the other clusters depend on.
@@ -129,6 +137,7 @@ hosts:
     hostname: xplane
     ip: 192.168.10.155
     kind: k3s-cluster
+    cluster: xplane
     description: >-
       Single-node k3s cluster `xplane.sthings.lab` (Cilium LB VIP).
       Crossplane management cluster, reconciles the claims in this repo.
@@ -151,6 +160,7 @@ hosts:
     hostname: platform
     ip: 192.168.10.160
     kind: k3s-cluster
+    cluster: platform
     description: >-
       Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP).
       Carries the developer-facing platform.

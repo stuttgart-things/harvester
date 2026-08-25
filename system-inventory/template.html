@@ -351,6 +351,34 @@ body {
 #svc-filter:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 
 tr.svc-row.hidden { display: none; }
+
+th.sortable { padding: 0 12px 0 0; }
+th.sortable button {
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  background: none;
+  border: 0;
+  padding: 7px 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+th.sortable button:hover { color: var(--ink); }
+th.sortable button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sort-ind {
+  font-size: 9px;
+  line-height: 1;
+  color: var(--ink-3);
+  opacity: 0;
+}
+th.sortable button:hover .sort-ind { opacity: .5; }
+th[aria-sort="ascending"] button, th[aria-sort="descending"] button { color: var(--static); }
+th[aria-sort="ascending"] .sort-ind,
+th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--static); }
 .endpoint { font-family: "IBM Plex Mono", monospace; font-size: 12px; white-space: nowrap; }
 .endpoint.none { color: var(--ink-3); }
 .kind-tag {
@@ -365,6 +393,17 @@ tr.svc-row.hidden { display: none; }
   border: 1px solid var(--rule);
   border-radius: 2px;
   padding: 1px 6px;
+}
+.cluster-tag {
+  display: inline-block;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--static);
+  background: var(--static-soft);
+  border-radius: 2px;
+  padding: 1px 7px;
+  white-space: nowrap;
 }
 #svc-empty { padding: 0 20px 20px; color: var(--ink-3); font-size: 14px; }
 
@@ -488,7 +527,7 @@ footer.colophon code {
     <div class="filter-row">
       <label for="svc-filter" class="eyebrow">Filter</label>
       <input id="svc-filter" type="search" autocomplete="off"
-             placeholder="service, host, system or FQDN">
+             placeholder="service, cluster, host or FQDN">
     </div>
     <div class="data-table-wrap" id="svc-wrap"></div>
     <p id="svc-empty" hidden>Nothing matches that filter.</p>
@@ -570,7 +609,10 @@ function renderDetail() {
       <div><dt>IP</dt><dd class="mono">${h.ip}</dd></div>
       <div><dt>System</dt><dd>${h.system}</dd></div>
       <div><dt>Description</dt><dd>${h.description || "—"}</dd></div>
-      ${h.kind ? `<div><dt>Kind</dt><dd><span class="kind-tag">${h.kind}</span></dd></div>` : ""}
+      ${h.kind || h.cluster ? `<div><dt>Kind</dt><dd>
+        ${h.kind ? `<span class="kind-tag">${h.kind}</span>` : ""}
+        ${h.cluster ? `<span class="cluster-tag">cluster ${h.cluster}</span>` : ""}
+      </dd></div>` : ""}
       ${svcList(h)}
     </dl>`;
 }
@@ -865,39 +907,107 @@ document.getElementById("table-wrap").innerHTML =
    </tr>`).join("") +
   `</tbody></table>`;
 
+/* ------------------------------------------------------------- Sortable ---- */
+
+/**
+ * Turn a rendered table into a sortable one. Rows carry their sort values in
+ * data-<key> attributes, so sorting reorders existing <tr> nodes instead of
+ * re-rendering - that keeps the filter's .hidden classes intact.
+ */
+function makeSortable(table, cols, initialKey) {
+  const tbody = table.tBodies[0];
+  const heads = [...table.tHead.rows[0].cells];
+  let key = initialKey, dir = 1;
+
+  cols.forEach((col, i) => {
+    const th = heads[i];
+    th.classList.add("sortable");
+    th.setAttribute("aria-sort", "none");
+    th.innerHTML = `<button type="button"><span>${col.label}</span><span class="sort-ind">\u25b2</span></button>`;
+    th.querySelector("button").addEventListener("click", () => {
+      dir = key === col.key ? -dir : 1;
+      key = col.key;
+      apply();
+    });
+  });
+
+  function apply() {
+    const i = cols.findIndex(c => c.key === key);
+    heads.forEach((th, j) => {
+      th.setAttribute("aria-sort", j === i ? (dir === 1 ? "ascending" : "descending") : "none");
+      const ind = th.querySelector(".sort-ind");
+      if (ind) ind.textContent = j === i && dir === -1 ? "\u25bc" : "\u25b2";
+    });
+    const rows = [...tbody.rows].sort((a, b) => {
+      const av = a.dataset[key] || "", bv = b.dataset[key] || "";
+      // numeric:true so artifacts < artifacts-console and .9 < .110 sort naturally
+      const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: "base" });
+      // Stable tie-break, otherwise equal cells shuffle between clicks.
+      return (cmp || (a.dataset.tiebreak || "").localeCompare(b.dataset.tiebreak || "")) * dir;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  apply();
+}
+
 /* ----------------------------------------------------------- Service index */
 
 const allServices = hosts.flatMap(h =>
-  (h.services || []).map(s => ({ ...s, host: h.hostname, system: h.system }))
+  (h.services || []).map(s => ({
+    ...s, host: h.hostname, system: h.system, cluster: h.cluster || "",
+  }))
 );
 
 if (allServices.length) {
   const withEndpoint = allServices.filter(s => endpoint(s)).length;
+  const clusters = new Set(allServices.map(s => s.cluster).filter(Boolean));
+  const offCluster = allServices.filter(s => !s.cluster).length;
   document.getElementById("svc-note").textContent =
-    `${allServices.length} across ${hosts.filter(h => (h.services || []).length).length} hosts · ` +
+    `${allServices.length} across ${clusters.size} clusters · ` +
+    `${offCluster} outside any cluster · ` +
     `${allServices.length - withEndpoint} without an endpoint`;
 
+  // Services outside a cluster sort last rather than first under "".
+  const clusterKey = s => s.cluster || "\uffff";
   const rows = [...allServices].sort(
-    (a, b) => a.system.localeCompare(b.system) || a.name.localeCompare(b.name)
+    (a, b) => clusterKey(a).localeCompare(clusterKey(b)) || a.name.localeCompare(b.name)
   );
 
+  const SVC_COLS = [
+    { key: "cluster", label: "Cluster" },
+    { key: "name", label: "Service" },
+    { key: "endpoint", label: "Endpoint" },
+    { key: "host", label: "Host" },
+    { key: "description", label: "Description" },
+  ];
+
   document.getElementById("svc-wrap").innerHTML =
-    `<table class="data"><thead><tr>
-       <th>Service</th><th>Endpoint</th><th>Host</th><th>System</th><th>Description</th>
-     </tr></thead><tbody>` +
+    `<table class="data" id="svc-table"><thead><tr>` +
+    SVC_COLS.map(c => `<th>${c.label}</th>`).join("") +
+    `</tr></thead><tbody>` +
     rows.map(s => {
       const ep = endpoint(s);
-      return `<tr class="svc-row" data-host="${s.host}" data-search="${
-        [s.name, ep, s.host, s.system, s.description].join(" ").toLowerCase()
-      }">
+      return `<tr class="svc-row"
+        data-host="${s.host}"
+        data-name="${s.name}"
+        data-endpoint="${ep}"
+        data-cluster="${s.cluster || "\uffff"}"
+        data-description="${(s.description || "").slice(0, 80)}"
+        data-tiebreak="${s.cluster} ${s.name}"
+        data-search="${[s.name, ep, s.host, s.cluster, s.system, s.description].join(" ").toLowerCase()}">
+        <td>${s.cluster
+          ? `<span class="cluster-tag">${s.cluster}</span>`
+          : `<span class="endpoint none">—</span>`}</td>
         <td><b>${s.name}</b></td>
         <td class="endpoint${ep ? "" : " none"}">${ep || "—"}</td>
         <td class="mono">${s.host}</td>
-        <td>${s.system}</td>
         <td>${s.description || ""}</td>
       </tr>`;
     }).join("") +
     `</tbody></table>`;
+
+  makeSortable(document.getElementById("svc-table"), SVC_COLS, "cluster");
 
   const filter = document.getElementById("svc-filter");
   const empty = document.getElementById("svc-empty");

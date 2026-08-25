@@ -12,8 +12,9 @@ diagram shows up directly in GitHub.
 There is also an **interactive version on GitHub Pages**: nodes can be dragged
 and stay where you drop them, clicking one shows its description and the
 services it runs, an address matrix lays out all 256 addresses of the `/24`
-(statically assigned, DHCP pool, free), and a filterable service index lists
-everything running in the lab. Diagram and matrix are linked: selecting in one
+(statically assigned, DHCP pool, free), and a service index lists everything
+running in the lab — grouped by cluster, sortable by any column, filterable by
+free text. Diagram and matrix are linked: selecting in one
 highlights in the other.
 
 ## Adding or changing a host
@@ -43,6 +44,7 @@ hosts:
     hostname: infra
     ip: 192.168.10.150
     kind: k3s-cluster              # host | k3s-cluster | hypervisor | router
+    cluster: infra                 # matches the directory under clusters/
     description: >-
       Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
     services:
@@ -53,6 +55,12 @@ hosts:
         port: 2049
         description: Shared storage behind the NFS CSI driver.
 ```
+
+`cluster` names the Kubernetes cluster a host and its services belong to.
+Values match the directories under `clusters/`, so the service index can be
+read against the GitOps tree. Hosts outside any cluster (router, jump server)
+leave it out, and their services sort to the bottom of the index. Setting
+`kind: k3s-cluster` without a `cluster` name is a validation error.
 
 **Services nest under the host that serves them and inherit its IP.** That is
 the point of the nesting: Vault and Clusterbook are both published on the same
@@ -79,6 +87,7 @@ Chart and app versions are deliberately **not** tracked here. They live in
 - invalid IPs and out-of-range ports
 - IPs outside every network defined under `networks`
 - a missing description or hostname, or a service without a description
+- `kind: k3s-cluster` without a `cluster` name
 
 `make check` additionally does what CI does: render, then diff against the
 committed artifacts. That way `topology.svg` cannot silently fall behind

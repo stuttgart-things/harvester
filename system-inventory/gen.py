@@ -96,6 +96,11 @@ def validate(data: dict) -> list[str]:
         if networks and net_of(ip, networks) is None:
             problems.append(f"{where}: IP {ip} is not inside any network defined under 'networks'")
 
+        # A cluster host without a cluster name leaves its services unattributed
+        # in the service index.
+        if h.get("kind") == "k3s-cluster" and not h.get("cluster"):
+            problems.append(f"{where}: kind is k3s-cluster but no 'cluster' name is set")
+
         problems.extend(
             _check_services(h, where, networks, seen_ip, seen_fqdn)
         )
