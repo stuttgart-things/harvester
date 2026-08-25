@@ -192,6 +192,7 @@ hosts:
       # TODO: confirm the FQDN - backstage.yaml sets DOMAIN but no HTTPRoute
       # hostname of its own, so the ingress host could not be read from the repo.
       - name: Backstage
+        fqdn: backstage.platform.sthings.lab
         description: >-
           Developer portal. Catalog entries come from the catalog-info.yaml
           files in this repo.
