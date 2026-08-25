@@ -2,13 +2,16 @@
 # Single source of truth for the system inventory.
 # Edit here, then run `make diagram` to regenerate topology.d2 + topology.svg.
 #
-# Provenance: every IP and FQDN below is taken from this repo's own docs
-# (docs/install.md, clusters/*/README.md, clusters/*/infra.yaml). Exceptions
-# are marked TODO individually.
+# Provenance: every IP, FQDN and service below is taken from this repo's own
+# manifests and docs (docs/install.md, clusters/*/README.md, clusters/*/apps*.yaml,
+# clusters/platform/apps/*.yaml). Exceptions are marked TODO individually.
+#
+# Deliberately NOT tracked here: chart and app versions. Those live in
+# clusters/**/*.yaml and would go stale the moment they are copied.
 
 site:
   name: "stuttgart-things Lab"
-  subtitle: "Systems, hostnames and IP allocation"
+  subtitle: "Systems, hostnames, services and IP allocation"
 
 # Optional. Used for grouping in the diagram and for a sanity check
 # (does every IP fall inside a known network?).
@@ -27,12 +30,37 @@ networks:
 
 # One entry per host. `system` groups them - entries sharing a system name
 # end up in the same box in the diagram.
+#
+# `kind` is optional: host | k3s-cluster | hypervisor | router.
+#
+# `cluster` is optional and names the Kubernetes cluster a host and its
+# services belong to. Values match the directories under clusters/, so the
+# service index can be read against the GitOps tree. Hosts that are not part
+# of a cluster (router, jump server) simply leave it out.
+#
+# `services` is optional and nests under the host that serves them. Services
+# inherit the host's IP - that is the point: Vault and Clusterbook are both
+# published on the same Cilium LB VIP and are told apart by FQDN, not address.
+# Per service: `name` and `description` are required; `fqdn`, `port` and `ip`
+# are optional. A service only needs its own `ip` when it gets a separate LB
+# address - it then takes part in the duplicate-IP check just like a host.
 hosts:
   - system: network
     hostname: ddwrt
     ip: 192.168.10.1
+    kind: router
     description: >-
       DD-WRT router. Gateway, DNS (dnsmasq, *.sthings.lab) and DHCP for the lab.
+    services:
+      - name: dnsmasq
+        port: 53
+        description: >-
+          DNS for *.sthings.lab. Clusterbook writes its host records here.
+      - name: DHCP
+        port: 67
+        description: >-
+          Dynamic pool .100-.149 plus the static reservation for the
+          Harvester node.
 
   # TODO: confirm this IP - the jump server is not recorded in any repo doc.
   # .50 sits below the DHCP pool and docs/install.md names it as a free
@@ -40,6 +68,7 @@ hosts:
   - system: jump-server
     hostname: geekom
     ip: 192.168.10.50
+    kind: host
     description: >-
       Mini PC. Entry point into the lab network and launch point for
       Ansible and Dagger runs.
@@ -47,35 +76,125 @@ hosts:
   - system: harvester
     hostname: harvester
     ip: 192.168.10.110
+    kind: hypervisor
+    cluster: harvester
     description: >-
       Harvester node (enp5s0, MAC 58:47:ca:7d:34:f0), statically addressed.
       Hosts the VMs of every cluster.
+    services:
+      - name: Harvester UI
+        fqdn: harvester.sthings.lab
+        description: >-
+          Web UI, TLS certificate issued by the Vault PKI on the infra cluster.
 
   - system: harvester
     hostname: harvester-vip
     ip: 192.168.10.139
+    kind: host
+    cluster: harvester
     description: >-
       Static cluster VIP for Harvester - UI and Kubernetes API.
       Must sit outside the DHCP pool .100-.149.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: >-
+          RKE2 API server of the Harvester cluster. Source of the kubeconfig
+          fetched during install.
 
   - system: infra-sthings
     hostname: infra
     ip: 192.168.10.150
+    kind: k3s-cluster
+    cluster: infra
     description: >-
-      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP). Runs Vault
-      (vault.infra.sthings.lab, PKI for sthings-lab), Clusterbook
-      (clusterbook.infra.sthings.lab) and the NFS server for the clusters.
+      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
+      Carries the lab-wide services the other clusters depend on.
+    services:
+      - name: Vault
+        fqdn: vault.infra.sthings.lab
+        description: >-
+          PKI for sthings-lab. Issues the wildcard certificates the other
+          clusters request through their vault-pki ClusterIssuer.
+      - name: Clusterbook
+        fqdn: clusterbook.infra.sthings.lab
+        description: >-
+          Reserves IP and FQDN for new clusters and writes the DNS records
+          to the DD-WRT router.
+      - name: Headlamp
+        fqdn: headlamp.infra.sthings.lab
+        description: Kubernetes dashboard for this cluster.
+      - name: Flux UI
+        fqdn: flux-ui.infra.sthings.lab
+        description: Web view of the Flux reconciliation state.
+      - name: NFS
+        port: 2049
+        description: >-
+          Shared storage behind the NFS CSI driver, backing the PVs of all
+          clusters.
 
   - system: xplane-sthings
     hostname: xplane
     ip: 192.168.10.155
+    kind: k3s-cluster
+    cluster: xplane
     description: >-
       Single-node k3s cluster `xplane.sthings.lab` (Cilium LB VIP).
       Crossplane management cluster, reconciles the claims in this repo.
+    services:
+      - name: Crossplane
+        description: >-
+          Reconciles the claims under claims/. No ingress - reached through
+          the Kubernetes API.
+      - name: claim-machinery-api
+        fqdn: claim-machinery-api.xplane.sthings.lab
+        description: Renders the KCL-based Crossplane claim templates.
+      - name: Komoplane
+        fqdn: komoplane.xplane.sthings.lab
+        description: Web UI for inspecting Crossplane resources and their status.
+      - name: Headlamp
+        fqdn: headlamp.xplane.sthings.lab
+        description: Kubernetes dashboard for this cluster.
 
   - system: platform-sthings
     hostname: platform
     ip: 192.168.10.160
+    kind: k3s-cluster
+    cluster: platform
     description: >-
-      Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP). Argo CD,
-      Clusterbook operator and Harbor (harbor./artifacts.platform.sthings.lab).
+      Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP).
+      Carries the developer-facing platform.
+    services:
+      - name: Argo CD
+        fqdn: argocd.platform.sthings.lab
+        description: Deploys the platform apps of this cluster.
+      - name: Harbor
+        fqdn: harbor.platform.sthings.lab
+        description: >-
+          Container registry including the project proxy for upstream images.
+      - name: MinIO (S3)
+        fqdn: artifacts.platform.sthings.lab
+        description: >-
+          S3 endpoint for the Packer golden images. Served by the sthings-lab
+          private CA, referenced by harvester-images/golden-images.yaml.
+      - name: MinIO console
+        fqdn: artifacts-console.platform.sthings.lab
+        description: Web UI for the artifact bucket.
+      - name: Rancher
+        fqdn: rancher.platform.sthings.lab
+        description: Cluster management UI.
+      - name: claim-machinery-api
+        fqdn: claims.platform.sthings.lab
+        description: >-
+          Claim rendering API that Backstage calls for self-service
+          provisioning.
+      # TODO: confirm the FQDN - backstage.yaml sets DOMAIN but no HTTPRoute
+      # hostname of its own, so the ingress host could not be read from the repo.
+      - name: Backstage
+        description: >-
+          Developer portal. Catalog entries come from the catalog-info.yaml
+          files in this repo.
+      - name: Clusterbook operator
+        description: >-
+          Reconciles ClusterbookCluster resources against the Clusterbook API
+          on the infra cluster. No ingress.

@@ -59,6 +59,7 @@ def validate(data: dict) -> list[str]:
     networks = data.get("networks", []) or []
     seen_ip: dict[str, str] = {}
     seen_host: dict[str, str] = {}
+    seen_fqdn: dict[str, str] = {}
 
     for h in data.get("hosts", []) or []:
         name = h.get("hostname", "<ohne hostname>")
@@ -94,6 +95,77 @@ def validate(data: dict) -> list[str]:
 
         if networks and net_of(ip, networks) is None:
             problems.append(f"{where}: IP {ip} is not inside any network defined under 'networks'")
+
+        # A cluster host without a cluster name leaves its services unattributed
+        # in the service index.
+        if h.get("kind") == "k3s-cluster" and not h.get("cluster"):
+            problems.append(f"{where}: kind is k3s-cluster but no 'cluster' name is set")
+
+        problems.extend(
+            _check_services(h, where, networks, seen_ip, seen_fqdn)
+        )
+
+    return problems
+
+
+def _check_services(
+    host: dict,
+    where: str,
+    networks: list[dict],
+    seen_ip: dict[str, str],
+    seen_fqdn: dict[str, str],
+) -> list[str]:
+    """Validate the services nested under one host.
+
+    Services normally share the host's IP - that is deliberate, several are
+    published on the same load-balancer VIP and told apart by FQDN. Only a
+    service with its own `ip` joins the duplicate-IP check.
+    """
+    problems: list[str] = []
+
+    for svc in host.get("services", []) or []:
+        name = svc.get("name") or "<unnamed>"
+        at = f"{where}/{name}"
+
+        if not svc.get("name"):
+            problems.append(f"{at}: service without a name")
+        if not svc.get("description"):
+            problems.append(f"{at}: no description - what does this service do?")
+
+        fqdn = svc.get("fqdn")
+        if fqdn:
+            key = str(fqdn).lower()
+            if key in seen_fqdn:
+                problems.append(
+                    f"{at}: FQDN {fqdn} used twice (also {seen_fqdn[key]})"
+                )
+            seen_fqdn[key] = at
+
+        port = svc.get("port")
+        if port is not None:
+            try:
+                if not 1 <= int(port) <= 65535:
+                    raise ValueError
+            except (TypeError, ValueError):
+                problems.append(f"{at}: '{port}' is not a valid port")
+
+        raw_ip = svc.get("ip")
+        if raw_ip:
+            try:
+                ipaddress.ip_address(str(raw_ip))
+            except ValueError:
+                problems.append(f"{at}: '{raw_ip}' is not a valid IP")
+                continue
+            sip = str(raw_ip)
+            if sip in seen_ip:
+                problems.append(
+                    f"{at}: IP {sip} assigned twice (also {seen_ip[sip]})"
+                )
+            seen_ip[sip] = at
+            if networks and net_of(sip, networks) is None:
+                problems.append(
+                    f"{at}: IP {sip} is not inside any network defined under 'networks'"
+                )
 
     return problems
 
@@ -148,9 +220,14 @@ def render_d2(data: dict) -> str:
         out.append("  style.font-size: 20")
         for h in entries:
             hid = slug(h.get("hostname", "unknown"))
-            label = "\\n".join(
-                x for x in [str(h.get("hostname", "")), str(h.get("ip", ""))] if x
-            )
+            # Third line only when there are services: the count, not the
+            # services themselves. One node per service would wreck exactly
+            # what keeps this picture readable at 20 hosts.
+            count = len(h.get("services", []) or [])
+            parts = [str(h.get("hostname", "")), str(h.get("ip", ""))]
+            if count:
+                parts.append(f"{count} service" if count == 1 else f"{count} services")
+            label = "\\n".join(x for x in parts if x)
             out.append(f'  {hid}: "{label}" {{')
             out.append("    shape: rectangle")
             out.append("    style: {")
