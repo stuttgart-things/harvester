@@ -48,10 +48,10 @@ jobs:
           sudo install -m755 "/tmp/d2-v${D2_VERSION}/bin/d2" /usr/local/bin/d2
           d2 --version
 
-      # gen.py --strict bricht bei doppelten IPs/Hostnames, ungueltigen IPs,
-      # IPs ausserhalb aller Netze und fehlenden Beschreibungen ab.
-      # `make check` rendert danach und vergleicht mit den eingecheckten
-      # Artefakten - so kann topology.svg nicht hinter inventory.yaml zurueckfallen.
+      # gen.py --strict aborts on duplicate IPs/hostnames, invalid IPs, IPs
+      # outside every defined network, and missing descriptions.
+      # `make check` then renders and diffs against the committed artifacts, so
+      # topology.svg cannot silently fall behind inventory.yaml.
       - name: Validate inventory and assert diagram is current
         run: make check
 
@@ -64,8 +64,8 @@ jobs:
         with:
           path: system-inventory/site
 
-  # Die interaktive Seite laeuft komplett im Browser - Pages muss sie nur
-  # ausliefern. Deploy nur von main.
+  # The interactive page runs entirely in the browser - Pages only has to serve
+  # it. Deploy from main only.
   deploy:
     if: github.ref == 'refs/heads/main'
     needs: diagram
