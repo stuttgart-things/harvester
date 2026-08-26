@@ -18,8 +18,12 @@ permissions:
   pages: write
   id-token: write
 
+# Scoped by ref, so a pull request run and a main run never share a slot.
+# The bare `pages` group used before was a single slot for the whole workflow:
+# any new run cancelled whatever was in it, which meant an unrelated PR could
+# cancel a main deploy and leave the published page silently stale.
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 defaults:
@@ -70,6 +74,12 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: diagram
     runs-on: ubuntu-latest
+    # GitHub Pages allows one deployment at a time. Queue them rather than
+    # cancel: a cancelled deploy leaves the previous page published, so the
+    # last commit to main would not be the one being served.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
