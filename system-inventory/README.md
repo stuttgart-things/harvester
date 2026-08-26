@@ -130,15 +130,26 @@ page is where it gets answered.
 
 ## Look
 
-The page uses the stuttgart-things brand palette, sampled straight out of
-`logo.png` (the amber cat, the violet headdress, the neon-pink script) and
-snapped to steps that clear the colour-vision validator in both light and
-dark. Violet carries the chrome and "statically assigned" in the address
-matrix, amber the DHCP pool, pink the selection state — so no two of them
-ever mean the same thing on one screen.
+The page is **dark by design**, styled to match the Clusterbook app — it is a
+console for the same lab, so it wears the same clothes. There is no light
+variant on purpose; every colour is painted explicitly so the page never
+borrows a host theme it was not built for.
 
-The logo is inlined as a data URI like the d3 bundle. It sits on a light
-plaque because its outlines are black and would disappear on the dark ground.
+Colours come from `logo.png` (the amber cat, the violet headdress, the
+neon-pink script) plus the green/orange status language Clusterbook already
+uses. The address-matrix fills are validated as a categorical pair against the
+dark surface; the brighter chrome orange sits outside that lightness band and
+is used only for text, where contrast is what matters. Violet carries the
+chrome and "statically assigned", amber the DHCP pool, pink the selection
+state — so no two of them ever mean the same thing on one screen.
+
+The logo sits straight on the background rather than on a plaque: its letters
+are white and the cat is amber, both of which read on the dark, and a soft
+violet glow ties it in. It is inlined as a data URI like the d3 bundle.
+
+The colophon carries the source file, the commit the page was built from and
+a UTC build timestamp — the page is generated, so "how fresh is this" is a
+fair question to answer on it.
 
 ## Interactive page
 
