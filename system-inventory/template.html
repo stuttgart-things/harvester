@@ -6,71 +6,86 @@
 <style>
 :root {
   color-scheme: light;
-  --ground:      #f4f6f8;
+  --ground:      #f5f4fa;
   --surface:     #ffffff;
-  --sunken:      #eef1f5;
-  --rule:        #e4e8ee;
-  --rule-strong: #c7d0db;
-  --ink:         #0d1620;
-  --ink-2:       #556373;
-  --ink-3:       #8794a3;
-  --accent:      #2a78d6;
-  --accent-deep: #1c5cab;
-  --accent-wash: #e8f0fc;
-  --static:      #2a78d6;
-  --static-soft: #e2ecfa;
-  --pool:        #eb6834;
-  --pool-soft:   #fce6dc;
-  --free:        #eaeef3;
-  --shadow-sm:   0 1px 2px rgba(13, 22, 32, .05);
-  --shadow-md:   0 1px 3px rgba(13, 22, 32, .06), 0 8px 24px -6px rgba(13, 22, 32, .10);
-  --r-card: 14px;
-  --r-ctl: 9px;
-  --r-tag: 6px;
+  --sunken:      #efedf7;
+  --rule:        #e6e3f0;
+  --rule-strong: #c9c4dd;
+  --ink:         #151122;
+  --ink-2:       #5c5675;
+  --ink-3:       #8b859f;
+  /* Brand, sampled from sthings-city.png: amber cat, violet headdress,
+     neon-pink script. Steps snapped to values that clear the CVD validator. */
+  --accent:      #5b2be0;
+  --accent-deep: #4620b3;
+  --accent-wash: #ece7fd;
+  --amber:       #c97f00;
+  --amber-wash:  #fbf0d8;
+  --pink:        #c93bc9;
+  --pink-wash:   #fbe9fb;
+  /* Address matrix: validated pair, violet = assigned, amber = DHCP pool. */
+  --static:      #5b2be0;
+  --pool:        #c97f00;
+  --pool-soft:   #fbf0d8;
+  --free:        #e9e7f2;
+  --plaque:      #ffffff;
+  --shadow-sm:   0 1px 2px rgba(21, 17, 34, .06);
+  --shadow-md:   0 1px 3px rgba(21, 17, 34, .07), 0 10px 28px -8px rgba(21, 17, 34, .14);
+  --r-card: 16px;
+  --r-ctl: 10px;
+  --r-tag: 7px;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground:      #0a0e13;
-    --surface:     #141b23;
-    --sunken:      #1b232d;
-    --rule:        #242e3a;
-    --rule-strong: #3a4755;
-    --ink:         #e9eff6;
-    --ink-2:       #9dabbb;
-    --ink-3:       #6c7b8b;
-    --accent:      #3987e5;
-    --accent-deep: #6aa6ee;
-    --accent-wash: #16273d;
-    --static:      #3987e5;
-    --static-soft: #16273d;
-    --pool:        #d95926;
-    --pool-soft:   #3a2117;
-    --free:        #1e2731;
-    --shadow-sm:   0 1px 2px rgba(0, 0, 0, .5);
-    --shadow-md:   0 1px 3px rgba(0, 0, 0, .5), 0 8px 24px -6px rgba(0, 0, 0, .5);
+    --ground:      #0c0a14;
+    --surface:     #171426;
+    --sunken:      #201b34;
+    --rule:        #2c2645;
+    --rule-strong: #473f68;
+    --ink:         #eeebf8;
+    --ink-2:       #a7a0c0;
+    --ink-3:       #766f92;
+    --accent:      #8f74ff;
+    --accent-deep: #b3a1ff;
+    --accent-wash: #241d44;
+    --amber:       #c98500;
+    --amber-wash:  #332608;
+    --pink:        #f489fb;
+    --pink-wash:   #331033;
+    --static:      #8f74ff;
+    --pool:        #c98500;
+    --pool-soft:   #332608;
+    --free:        #221d36;
+    --plaque:      #f3f1fb;
+    --shadow-sm:   0 1px 2px rgba(0, 0, 0, .6);
+    --shadow-md:   0 1px 3px rgba(0, 0, 0, .6), 0 10px 28px -8px rgba(0, 0, 0, .6);
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground:      #0a0e13;
-  --surface:     #141b23;
-  --sunken:      #1b232d;
-  --rule:        #242e3a;
-  --rule-strong: #3a4755;
-  --ink:         #e9eff6;
-  --ink-2:       #9dabbb;
-  --ink-3:       #6c7b8b;
-  --accent:      #3987e5;
-  --accent-deep: #6aa6ee;
-  --accent-wash: #16273d;
-  --static:      #3987e5;
-  --static-soft: #16273d;
-  --pool:        #d95926;
-  --pool-soft:   #3a2117;
-  --free:        #1e2731;
-  --shadow-sm:   0 1px 2px rgba(0, 0, 0, .5);
-  --shadow-md:   0 1px 3px rgba(0, 0, 0, .5), 0 8px 24px -6px rgba(0, 0, 0, .5);
+  --ground:      #0c0a14;
+  --surface:     #171426;
+  --sunken:      #201b34;
+  --rule:        #2c2645;
+  --rule-strong: #473f68;
+  --ink:         #eeebf8;
+  --ink-2:       #a7a0c0;
+  --ink-3:       #766f92;
+  --accent:      #8f74ff;
+  --accent-deep: #b3a1ff;
+  --accent-wash: #241d44;
+  --amber:       #c98500;
+  --amber-wash:  #332608;
+  --pink:        #f489fb;
+  --pink-wash:   #331033;
+  --static:      #8f74ff;
+  --pool:        #c98500;
+  --pool-soft:   #332608;
+  --free:        #221d36;
+  --plaque:      #f3f1fb;
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, .6);
+  --shadow-md:   0 1px 3px rgba(0, 0, 0, .6), 0 10px 28px -8px rgba(0, 0, 0, .6);
 }
 
 * { box-sizing: border-box; }
@@ -87,12 +102,12 @@ body {
 }
 
 .sheet {
-  max-width: 1220px;
+  max-width: 1240px;
   margin: 0 auto;
-  padding: 48px 28px 80px;
+  padding: 44px 28px 80px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
 }
 
 /* ---------- Masthead ---------- */
@@ -102,38 +117,48 @@ body {
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 28px 40px;
+  gap: 26px 40px;
 }
+.brand { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.logo-plaque {
+  background: var(--plaque);
+  border-radius: var(--r-card);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-sm);
+  flex: none;
+}
+.logo-plaque img { display: block; width: 186px; height: auto; }
 .masthead h1 {
-  margin: 6px 0 0;
+  margin: 4px 0 0;
   font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
-  font-size: clamp(34px, 5vw, 52px);
+  font-size: clamp(32px, 4.6vw, 48px);
   font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -.025em;
+  line-height: 1.03;
+  letter-spacing: -.028em;
   text-wrap: balance;
 }
 .masthead p {
-  margin: 10px 0 0;
+  margin: 9px 0 0;
   color: var(--ink-2);
   font-size: 16px;
-  max-width: 54ch;
+  max-width: 52ch;
 }
 .stamp { display: flex; gap: 10px; flex-wrap: wrap; }
 .stat {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--r-ctl);
-  padding: 9px 14px 8px;
-  min-width: 78px;
+  padding: 9px 15px 8px;
+  min-width: 80px;
   box-shadow: var(--shadow-sm);
 }
 .stat b {
   display: block;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 600;
   line-height: 1.1;
+  color: var(--accent);
   font-variant-numeric: tabular-nums;
 }
 .stat span {
@@ -151,7 +176,7 @@ body {
   font-weight: 600;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  color: var(--accent);
 }
 
 /* ---------- Tabs ---------- */
@@ -162,29 +187,28 @@ body {
   gap: 3px;
   padding: 4px;
   background: var(--sunken);
-  border-radius: calc(var(--r-ctl) + 4px);
+  border-radius: calc(var(--r-ctl) + 5px);
   align-self: flex-start;
 }
 .tabs button {
   font: inherit;
   font-size: 13px;
   font-weight: 600;
-  letter-spacing: .01em;
   color: var(--ink-2);
   background: none;
   border: 0;
   border-radius: var(--r-ctl);
-  padding: 8px 16px;
+  padding: 9px 17px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  transition: background .12s, color .12s;
+  transition: background .13s, color .13s;
 }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] {
-  color: var(--ink);
-  background: var(--surface);
+  color: #ffffff;
+  background: var(--accent);
   box-shadow: var(--shadow-sm);
 }
 .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
@@ -199,8 +223,8 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .tabs button[aria-selected="true"] .tab-count {
-  color: var(--accent);
-  background: var(--accent-wash);
+  color: #ffffff;
+  background: rgba(255, 255, 255, .22);
 }
 
 /* ---------- Cards ---------- */
@@ -224,9 +248,9 @@ body {
 .card-head h2 {
   margin: 0;
   font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -.015em;
+  letter-spacing: -.018em;
 }
 .card-head .note {
   color: var(--ink-3);
@@ -239,15 +263,15 @@ body {
   font: inherit;
   font-size: 12px;
   font-weight: 500;
-  color: var(--ink-2);
-  background: var(--sunken);
+  color: var(--accent);
+  background: var(--accent-wash);
   border: 1px solid transparent;
   border-radius: var(--r-tag);
-  padding: 4px 11px;
+  padding: 4px 12px;
   cursor: pointer;
-  transition: color .12s, background .12s;
+  transition: color .13s, background .13s;
 }
-#reset-layout:hover { color: var(--ink); background: var(--rule); }
+#reset-layout:hover { color: #ffffff; background: var(--accent); }
 #reset-layout:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- Topology ---------- */
@@ -286,13 +310,15 @@ body {
   fill: var(--ink-3);
 }
 .link-label { font-family: "IBM Plex Mono", monospace; font-size: 10px; fill: var(--ink-3); }
-.dimmed { opacity: .2; }
+.dimmed { opacity: .18; }
 .node-g.pinned .node-box { stroke-dasharray: none; stroke: var(--accent); }
 .node-g { cursor: grab; }
 .node-g:active { cursor: grabbing; }
 .node-g:focus-visible { outline: none; }
+/* Selection wears the third brand colour, so it never collides with the
+   violet/amber the data itself uses. */
 .node-g:focus-visible .node-box,
-.node-box.selected { stroke: var(--ink); stroke-width: 2.5px; }
+.node-box.selected { stroke: var(--pink); stroke-width: 3px; }
 
 /* ---------- Detail panel ---------- */
 
@@ -332,18 +358,18 @@ a.ep-link {
 }
 a.ep-link:hover { color: var(--accent-deep); border-bottom-color: currentColor; }
 a.ep-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
-.ext { font-size: .85em; margin-left: 3px; opacity: .55; }
+.ext { font-size: .85em; margin-left: 3px; opacity: .6; }
 
 .filter-row { padding: 20px 24px 0; display: flex; flex-direction: column; gap: 7px; }
 #svc-filter {
   font: inherit; font-size: 14px;
   width: 100%; max-width: 380px;
-  padding: 9px 13px;
+  padding: 10px 14px;
   color: var(--ink);
   background: var(--sunken);
   border: 1px solid transparent;
   border-radius: var(--r-ctl);
-  transition: border-color .12s, background .12s;
+  transition: border-color .13s, background .13s;
 }
 #svc-filter::placeholder { color: var(--ink-3); }
 #svc-filter:hover { border-color: var(--rule-strong); }
@@ -364,14 +390,13 @@ tr.svc-row.hidden { display: none; }
   font-size: 11px; font-weight: 600;
   letter-spacing: .06em;
   border-radius: var(--r-tag);
-  padding: 2px 8px;
+  padding: 2px 9px;
   white-space: nowrap;
 }
 .kind-tag {
   text-transform: uppercase;
-  color: var(--ink-2);
-  background: var(--surface);
-  border: 1px solid var(--rule);
+  color: var(--amber);
+  background: var(--amber-wash);
 }
 .cluster-tag {
   font-family: "IBM Plex Mono", monospace;
@@ -409,11 +434,11 @@ tr.svc-row.hidden { display: none; }
   background: var(--static); border-color: var(--static);
   color: #ffffff; cursor: pointer;
 }
-.cell.is-static:hover { transform: scale(1.14); }
+.cell.is-static:hover { transform: scale(1.16); }
 .cell.is-pool { background: var(--pool-soft); border-color: var(--pool); color: var(--ink-2); }
 .cell.is-pool.is-static { background: var(--pool); border-color: var(--pool); color: #ffffff; }
 .cell.is-reserved { background: transparent; border-color: var(--rule-strong); border-style: dashed; color: var(--ink-3); }
-.cell.selected { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cell.selected { outline: 2px solid var(--pink); outline-offset: 2px; }
 .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .legend {
@@ -423,7 +448,7 @@ tr.svc-row.hidden { display: none; }
 }
 .legend span { display: inline-flex; align-items: center; gap: 9px; }
 .swatch {
-  width: 15px; height: 15px; border-radius: 4px;
+  width: 15px; height: 15px; border-radius: 5px;
   border: 1px solid var(--rule-strong); flex: none;
 }
 .swatch.static { background: var(--static); border-color: var(--static); }
@@ -438,10 +463,10 @@ details.table-view > summary {
   cursor: pointer;
   font-size: 11px; font-weight: 600;
   letter-spacing: .12em; text-transform: uppercase;
-  color: var(--ink-2);
+  color: var(--accent);
   border-top: 1px solid var(--rule);
 }
-details.table-view > summary:hover { color: var(--ink); }
+details.table-view > summary:hover { color: var(--accent-deep); }
 details.table-view > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .data-table-wrap { overflow-x: auto; padding: 16px 24px 24px; }
 table.data { border-collapse: collapse; width: 100%; font-size: 13.5px; }
@@ -453,7 +478,7 @@ table.data th, table.data td {
 }
 table.data thead th { border-bottom-color: var(--rule-strong); }
 table.data tbody tr { transition: background .1s; }
-table.data tbody tr:hover { background: var(--sunken); }
+table.data tbody tr:hover { background: var(--accent-wash); }
 table.data th {
   font-size: 10px; font-weight: 600;
   letter-spacing: .11em; text-transform: uppercase;
@@ -496,9 +521,9 @@ th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--accent); }
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px; line-height: 1.5;
   max-width: 280px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, .28);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .32);
 }
-#tip b { font-weight: 600; }
+#tip b { font-weight: 600; color: var(--pink); }
 
 footer.colophon {
   color: var(--ink-3);
@@ -516,10 +541,15 @@ footer.colophon code { font-family: "IBM Plex Mono", monospace; color: var(--ink
 <div class="sheet">
 
   <header class="masthead">
-    <div>
-      <div class="eyebrow" id="eyebrow"></div>
-      <h1 id="site-name"></h1>
-      <p id="site-sub"></p>
+    <div class="brand">
+      <span class="logo-plaque">
+        <img src="__LOGO__" alt="stuttgart-things" width="480" height="291">
+      </span>
+      <div>
+        <div class="eyebrow" id="eyebrow"></div>
+        <h1 id="site-name"></h1>
+        <p id="site-sub"></p>
+      </div>
     </div>
     <div class="stamp" id="stamp"></div>
   </header>
@@ -836,11 +866,15 @@ function unpin(d) {
 }
 
 function ticked() {
-  // Keep nodes inside the visible frame - otherwise hosts run off the bottom.
   nodes.forEach(d => {
-    const padX = d.kind === "net" ? 60 : 60;
-    const padY = d.kind === "net" ? 60 : 32;
-    d.x = Math.max(padX, Math.min(W - padX, d.x));
+    // Hold the columns. A circular collider cannot express "112 wide, 52 tall",
+    // so it resolves an overlap sideways - cheaper for a circle - and hosts
+    // drift out of their column. Fixing x leaves the simulation only y to
+    // solve. Dragged nodes keep whatever position the reader gave them.
+    if (!d.pinned && d.kind !== "net") d.x = columnX(d);
+    // Keep nodes inside the visible frame - otherwise hosts run off the bottom.
+    const padY = d.kind === "net" ? 62 : 32;
+    d.x = Math.max(60, Math.min(W - 60, d.x));
     d.y = Math.max(padY, Math.min(H - padY, d.y));
   });
   link.attr("d", d => {
@@ -966,18 +1000,39 @@ if (net) {
 
 /* ------------------------------------------------------------------- Table */
 
+const HOST_COLS = [
+  { key: "ip", label: "IP" },
+  { key: "hostname", label: "Hostname" },
+  { key: "cluster", label: "Cluster" },
+  { key: "system", label: "System" },
+  { key: "description", label: "Description" },
+];
+
 const rows = [...hosts].sort((a, b) => ipToInt(a.ip) - ipToInt(b.ip));
 document.getElementById("table-wrap").innerHTML =
-  `<table class="data"><thead><tr>
-     <th>IP</th><th>Hostname</th><th>System</th><th>Description</th>
-   </tr></thead><tbody>` +
-  rows.map(h => `<tr>
+  `<table class="data" id="host-table"><thead><tr>` +
+  HOST_COLS.map(c => `<th>${c.label}</th>`).join("") +
+  `</tr></thead><tbody>` +
+  rows.map(h => `<tr
+     data-ip="${String(ipToInt(h.ip)).padStart(10, "0")}"
+     data-hostname="${h.hostname}"
+     data-cluster="${h.cluster || "\uffff"}"
+     data-system="${h.system}"
+     data-description="${(h.description || "").slice(0, 80)}"
+     data-tiebreak="${String(ipToInt(h.ip)).padStart(10, "0")}">
      <td class="mono">${h.ip}</td>
      <td class="mono">${h.hostname}</td>
+     <td>${h.cluster
+       ? `<span class="cluster-tag">${h.cluster}</span>`
+       : `<span class="endpoint none">—</span>`}</td>
      <td>${h.system}</td>
      <td>${h.description || ""}</td>
    </tr>`).join("") +
   `</tbody></table>`;
+
+// Same helper as the service index - the IP column sorts on a zero-padded
+// integer so .9 lands before .110.
+makeSortable(document.getElementById("host-table"), HOST_COLS, "ip");
 
 /* ------------------------------------------------------------- Sortable ---- */
 

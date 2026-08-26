@@ -10,7 +10,7 @@
 # clusters/**/*.yaml and would go stale the moment they are copied.
 
 site:
-  name: "stuttgart-things Lab"
+  name: "stuttgart-things Harvester Demo Lab"
   subtitle: "Systems, hostnames, services and IP allocation"
 
 # Optional. Used for grouping in the diagram and for a sanity check
