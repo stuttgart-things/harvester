@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import argparse
 import base64
+import datetime
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -54,6 +56,18 @@ def main() -> int:
         print(f"WARN: {logo} missing - page renders without the logo", file=sys.stderr)
         uri = ""
     body = body.replace("__LOGO__", uri)
+
+    # Build stamp for the colophon, mirroring the Clusterbook footer. The page
+    # is generated, so "how fresh is this" is a fair question to answer on it.
+    try:
+        commit = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=HERE, capture_output=True, text=True, timeout=5, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        commit = "unknown"
+    built = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    body = body.replace("__COMMIT__", commit).replace("__BUILT__", built)
 
     # template.html is a fragment. The served page needs a complete document -
     # above all <meta charset>: without it the browser guesses when a server

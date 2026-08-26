@@ -1,91 +1,44 @@
 <title>Lab Address Book</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Silkscreen:wght@400;700&display=swap">
 
 <style>
+/* Dark by design, matching the Clusterbook app - this page is a console for
+   the same lab, so it wears the same clothes. No light variant on purpose:
+   every colour below is painted explicitly so the page never borrows a host
+   theme it was not built for. */
 :root {
-  color-scheme: light;
-  --ground:      #f5f4fa;
-  --surface:     #ffffff;
-  --sunken:      #efedf7;
-  --rule:        #e6e3f0;
-  --rule-strong: #c9c4dd;
-  --ink:         #151122;
-  --ink-2:       #5c5675;
-  --ink-3:       #8b859f;
-  /* Brand, sampled from sthings-city.png: amber cat, violet headdress,
-     neon-pink script. Steps snapped to values that clear the CVD validator. */
-  --accent:      #5b2be0;
-  --accent-deep: #4620b3;
-  --accent-wash: #ece7fd;
-  --amber:       #c97f00;
-  --amber-wash:  #fbf0d8;
-  --pink:        #c93bc9;
-  --pink-wash:   #fbe9fb;
-  /* Address matrix: validated pair, violet = assigned, amber = DHCP pool. */
-  --static:      #5b2be0;
-  --pool:        #c97f00;
-  --pool-soft:   #fbf0d8;
-  --free:        #e9e7f2;
-  --plaque:      #ffffff;
-  --shadow-sm:   0 1px 2px rgba(21, 17, 34, .06);
-  --shadow-md:   0 1px 3px rgba(21, 17, 34, .07), 0 10px 28px -8px rgba(21, 17, 34, .14);
-  --r-card: 16px;
-  --r-ctl: 10px;
-  --r-tag: 7px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --ground:      #0c0a14;
-    --surface:     #171426;
-    --sunken:      #201b34;
-    --rule:        #2c2645;
-    --rule-strong: #473f68;
-    --ink:         #eeebf8;
-    --ink-2:       #a7a0c0;
-    --ink-3:       #766f92;
-    --accent:      #8f74ff;
-    --accent-deep: #b3a1ff;
-    --accent-wash: #241d44;
-    --amber:       #c98500;
-    --amber-wash:  #332608;
-    --pink:        #f489fb;
-    --pink-wash:   #331033;
-    --static:      #8f74ff;
-    --pool:        #c98500;
-    --pool-soft:   #332608;
-    --free:        #221d36;
-    --plaque:      #f3f1fb;
-    --shadow-sm:   0 1px 2px rgba(0, 0, 0, .6);
-    --shadow-md:   0 1px 3px rgba(0, 0, 0, .6), 0 10px 28px -8px rgba(0, 0, 0, .6);
-  }
-}
-:root[data-theme="dark"] {
   color-scheme: dark;
-  --ground:      #0c0a14;
-  --surface:     #171426;
-  --sunken:      #201b34;
-  --rule:        #2c2645;
-  --rule-strong: #473f68;
-  --ink:         #eeebf8;
-  --ink-2:       #a7a0c0;
-  --ink-3:       #766f92;
-  --accent:      #8f74ff;
-  --accent-deep: #b3a1ff;
-  --accent-wash: #241d44;
-  --amber:       #c98500;
-  --amber-wash:  #332608;
+  --ground:      #131a26;
+  --surface:     #1b2432;
+  --sunken:      #212c3c;
+  --rule:        #2b3646;
+  --rule-strong: #3d4a5d;
+  --ink:         #e8edf5;
+  --ink-2:       #95a3b8;
+  --ink-3:       #6b7a90;
+  /* Brand: violet from the logo headdress, amber from the cat, pink from the
+     script. Green and orange follow the Clusterbook status language. */
+  --accent:      #8b7cf0;
+  --accent-deep: #a99bf6;
+  --accent-wash: #262a4d;
+  --violet-btn:  #5b4ae8;
+  --green:       #4ade80;
+  --orange:      #fb923c;
+  --yellow:      #facc15;
   --pink:        #f489fb;
-  --pink-wash:   #331033;
+  /* Address matrix fills. Validated as a categorical pair on the dark
+     surface - the brighter chrome orange sits outside the lightness band. */
   --static:      #8f74ff;
   --pool:        #c98500;
-  --pool-soft:   #332608;
-  --free:        #221d36;
-  --plaque:      #f3f1fb;
-  --shadow-sm:   0 1px 2px rgba(0, 0, 0, .6);
-  --shadow-md:   0 1px 3px rgba(0, 0, 0, .6), 0 10px 28px -8px rgba(0, 0, 0, .6);
+  --pool-soft:   #33260a;
+  --free:        #222c3b;
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, .5);
+  --shadow-md:   0 1px 3px rgba(0, 0, 0, .5), 0 12px 32px -10px rgba(0, 0, 0, .7);
+  --r-card: 14px;
+  --r-ctl: 10px;
+  --r-tag: 7px;
 }
 
 * { box-sizing: border-box; }
@@ -104,7 +57,7 @@ body {
 .sheet {
   max-width: 1240px;
   margin: 0 auto;
-  padding: 44px 28px 80px;
+  padding: 40px 28px 64px;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -114,61 +67,92 @@ body {
 
 .masthead {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 26px 40px;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  padding: 8px 0 4px;
 }
-.brand { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
-.logo-plaque {
-  background: var(--plaque);
-  border-radius: var(--r-card);
-  padding: 12px 16px;
-  box-shadow: var(--shadow-sm);
-  flex: none;
+/* The logo sits straight on the ground rather than on a plaque: its letters
+   are white and the cat is amber, both of which read on the dark. The glow
+   ties it into the background instead of boxing it out of it. */
+.logo-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
 }
-.logo-plaque img { display: block; width: 186px; height: auto; }
+.logo-wrap::before {
+  content: "";
+  position: absolute;
+  inset: -18% -6%;
+  background: radial-gradient(ellipse at center,
+    rgba(139, 124, 240, .30) 0%,
+    rgba(139, 124, 240, .10) 45%,
+    transparent 72%);
+  filter: blur(6px);
+  pointer-events: none;
+}
+.logo-wrap img {
+  position: relative;
+  display: block;
+  width: 232px;
+  height: auto;
+}
 .masthead h1 {
-  margin: 4px 0 0;
-  font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
-  font-size: clamp(32px, 4.6vw, 48px);
+  margin: 0;
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
   font-weight: 700;
-  line-height: 1.03;
-  letter-spacing: -.028em;
+  font-size: clamp(20px, 3.1vw, 34px);
+  line-height: 1.25;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  text-shadow: 0 0 18px rgba(139, 124, 240, .55), 0 0 42px rgba(139, 124, 240, .25);
   text-wrap: balance;
 }
-.masthead p {
-  margin: 9px 0 0;
-  color: var(--ink-2);
-  font-size: 16px;
-  max-width: 52ch;
+.masthead .tagline {
+  margin: 0;
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
+  font-size: clamp(10px, 1.15vw, 12px);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--orange);
 }
-.stamp { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.stamp {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 4px;
+}
 .stat {
   background: var(--surface);
   border: 1px solid var(--rule);
   border-radius: var(--r-ctl);
-  padding: 9px 15px 8px;
-  min-width: 80px;
-  box-shadow: var(--shadow-sm);
+  padding: 10px 18px 9px;
+  min-width: 92px;
 }
 .stat b {
   display: block;
   font-family: "IBM Plex Mono", monospace;
-  font-size: 21px;
+  font-size: 22px;
   font-weight: 600;
   line-height: 1.1;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-variant-numeric: tabular-nums;
 }
+.stat.is-free b { color: var(--green); }
 .stat span {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  letter-spacing: .09em;
+  letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--ink-3);
-  margin-top: 3px;
+  margin-top: 4px;
 }
 
 .eyebrow {
@@ -186,9 +170,10 @@ body {
   flex-wrap: wrap;
   gap: 3px;
   padding: 4px;
-  background: var(--sunken);
+  background: var(--surface);
+  border: 1px solid var(--rule);
   border-radius: calc(var(--r-ctl) + 5px);
-  align-self: flex-start;
+  align-self: center;
 }
 .tabs button {
   font: inherit;
@@ -198,7 +183,7 @@ body {
   background: none;
   border: 0;
   border-radius: var(--r-ctl);
-  padding: 9px 17px;
+  padding: 9px 18px;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -208,8 +193,7 @@ body {
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] {
   color: #ffffff;
-  background: var(--accent);
-  box-shadow: var(--shadow-sm);
+  background: var(--violet-btn);
 }
 .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .tab-count {
@@ -219,12 +203,12 @@ body {
   color: var(--ink-3);
   background: var(--ground);
   border-radius: var(--r-tag);
-  padding: 1px 6px;
+  padding: 1px 7px;
   font-variant-numeric: tabular-nums;
 }
 .tabs button[aria-selected="true"] .tab-count {
   color: #ffffff;
-  background: rgba(255, 255, 255, .22);
+  background: rgba(255, 255, 255, .2);
 }
 
 /* ---------- Cards ---------- */
@@ -247,10 +231,12 @@ body {
 }
 .card-head h2 {
   margin: 0;
-  font-family: "Bricolage Grotesque", "IBM Plex Sans", sans-serif;
-  font-size: 22px;
-  font-weight: 600;
-  letter-spacing: -.018em;
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
 }
 .card-head .note {
   color: var(--ink-3);
@@ -263,15 +249,15 @@ body {
   font: inherit;
   font-size: 12px;
   font-weight: 500;
-  color: var(--accent);
-  background: var(--accent-wash);
-  border: 1px solid transparent;
+  color: #ffffff;
+  background: var(--violet-btn);
+  border: 0;
   border-radius: var(--r-tag);
-  padding: 4px 12px;
+  padding: 5px 13px;
   cursor: pointer;
-  transition: color .13s, background .13s;
+  transition: filter .13s;
 }
-#reset-layout:hover { color: #ffffff; background: var(--accent); }
+#reset-layout:hover { filter: brightness(1.15); }
 #reset-layout:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* ---------- Topology ---------- */
@@ -287,7 +273,7 @@ body {
 
 .link { stroke: var(--rule-strong); fill: none; }
 .node-box { fill: var(--sunken); stroke: var(--rule-strong); stroke-width: 1.5px; }
-.node-box.is-net { fill: var(--accent); stroke: var(--accent); }
+.node-box.is-net { fill: var(--violet-btn); stroke: var(--accent); }
 .node-box.is-system { fill: none; stroke: var(--rule-strong); stroke-dasharray: 3 4; }
 .node-label {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
@@ -302,7 +288,7 @@ body {
 .node-svc {
   font-size: 10px; font-weight: 600;
   letter-spacing: .06em; text-transform: uppercase;
-  fill: var(--accent);
+  fill: var(--green);
 }
 .system-label {
   font-size: 11px; font-weight: 600;
@@ -315,8 +301,8 @@ body {
 .node-g { cursor: grab; }
 .node-g:active { cursor: grabbing; }
 .node-g:focus-visible { outline: none; }
-/* Selection wears the third brand colour, so it never collides with the
-   violet/amber the data itself uses. */
+/* Selection wears the logo's pink, so it never collides with the violet and
+   amber the data itself uses. */
 .node-g:focus-visible .node-box,
 .node-box.selected { stroke: var(--pink); stroke-width: 3px; }
 
@@ -352,11 +338,11 @@ body {
 .svc-list .svc-desc { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 
 a.ep-link {
-  color: var(--accent);
+  color: var(--accent-deep);
   text-decoration: none;
   border-bottom: 1px solid transparent;
 }
-a.ep-link:hover { color: var(--accent-deep); border-bottom-color: currentColor; }
+a.ep-link:hover { color: var(--pink); border-bottom-color: currentColor; }
 a.ep-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
 .ext { font-size: .85em; margin-left: 3px; opacity: .6; }
 
@@ -366,14 +352,14 @@ a.ep-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px;
   width: 100%; max-width: 380px;
   padding: 10px 14px;
   color: var(--ink);
-  background: var(--sunken);
-  border: 1px solid transparent;
+  background: var(--ground);
+  border: 1px solid var(--rule);
   border-radius: var(--r-ctl);
-  transition: border-color .13s, background .13s;
+  transition: border-color .13s;
 }
 #svc-filter::placeholder { color: var(--ink-3); }
 #svc-filter:hover { border-color: var(--rule-strong); }
-#svc-filter:focus { background: var(--surface); border-color: var(--accent); outline: none; }
+#svc-filter:focus { border-color: var(--accent); outline: none; }
 
 tr.svc-row.hidden { display: none; }
 .endpoint { font-family: "IBM Plex Mono", monospace; font-size: 12.5px; white-space: nowrap; }
@@ -395,13 +381,13 @@ tr.svc-row.hidden { display: none; }
 }
 .kind-tag {
   text-transform: uppercase;
-  color: var(--amber);
-  background: var(--amber-wash);
+  color: var(--orange);
+  background: rgba(251, 146, 60, .13);
 }
 .cluster-tag {
   font-family: "IBM Plex Mono", monospace;
   font-weight: 500; letter-spacing: 0;
-  color: var(--accent);
+  color: var(--accent-deep);
   background: var(--accent-wash);
 }
 #svc-empty { padding: 0 24px 24px; color: var(--ink-3); font-size: 14px; }
@@ -463,10 +449,10 @@ details.table-view > summary {
   cursor: pointer;
   font-size: 11px; font-weight: 600;
   letter-spacing: .12em; text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accent-deep);
   border-top: 1px solid var(--rule);
 }
-details.table-view > summary:hover { color: var(--accent-deep); }
+details.table-view > summary:hover { color: var(--pink); }
 details.table-view > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .data-table-wrap { overflow-x: auto; padding: 16px 24px 24px; }
 table.data { border-collapse: collapse; width: 100%; font-size: 13.5px; }
@@ -478,7 +464,7 @@ table.data th, table.data td {
 }
 table.data thead th { border-bottom-color: var(--rule-strong); }
 table.data tbody tr { transition: background .1s; }
-table.data tbody tr:hover { background: var(--accent-wash); }
+table.data tbody tr:hover { background: var(--sunken); }
 table.data th {
   font-size: 10px; font-weight: 600;
   letter-spacing: .11em; text-transform: uppercase;
@@ -504,9 +490,9 @@ th.sortable button:hover { color: var(--ink); }
 th.sortable button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .sort-ind { font-size: 9px; line-height: 1; color: var(--ink-3); opacity: 0; }
 th.sortable button:hover .sort-ind { opacity: .5; }
-th[aria-sort="ascending"] button, th[aria-sort="descending"] button { color: var(--accent); }
+th[aria-sort="ascending"] button, th[aria-sort="descending"] button { color: var(--accent-deep); }
 th[aria-sort="ascending"] .sort-ind,
-th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--accent); }
+th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--accent-deep); }
 
 /* ---------- Tooltip ---------- */
 
@@ -514,23 +500,49 @@ th[aria-sort="descending"] .sort-ind { opacity: 1; color: var(--accent); }
   position: fixed; z-index: 20;
   pointer-events: none; opacity: 0;
   transition: opacity .1s;
-  background: var(--ink);
-  color: var(--ground);
+  background: #0a0f18;
+  color: var(--ink);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--r-ctl);
   padding: 10px 13px;
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px; line-height: 1.5;
   max-width: 280px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, .32);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .7);
 }
-#tip b { font-weight: 600; color: var(--pink); }
+#tip b { font-weight: 600; color: var(--accent-deep); }
+
+/* ---------- Colophon ---------- */
 
 footer.colophon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 28px;
+  border-top: 1px solid var(--rule);
+  padding-top: 18px;
+  margin-top: 4px;
+  font-size: 12px;
   color: var(--ink-3);
-  font-size: 13px;
-  padding-top: 6px;
 }
-footer.colophon code { font-family: "IBM Plex Mono", monospace; color: var(--ink-2); }
+.build-meta { display: flex; flex-wrap: wrap; gap: 22px; }
+.build-meta span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.build-meta code {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-2);
+  margin-left: 8px;
+}
+.colophon .made-by { color: var(--ink-3); }
+.colophon .made-by b { color: var(--accent-deep); font-weight: 600; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
@@ -541,16 +553,11 @@ footer.colophon code { font-family: "IBM Plex Mono", monospace; color: var(--ink
 <div class="sheet">
 
   <header class="masthead">
-    <div class="brand">
-      <span class="logo-plaque">
-        <img src="__LOGO__" alt="stuttgart-things" width="480" height="291">
-      </span>
-      <div>
-        <div class="eyebrow" id="eyebrow"></div>
-        <h1 id="site-name"></h1>
-        <p id="site-sub"></p>
-      </div>
-    </div>
+    <span class="logo-wrap">
+      <img src="__LOGO__" alt="stuttgart-things" width="480" height="291">
+    </span>
+    <h1 id="site-name"></h1>
+    <p class="tagline" id="site-sub"></p>
     <div class="stamp" id="stamp"></div>
   </header>
 
@@ -605,8 +612,12 @@ footer.colophon code { font-family: "IBM Plex Mono", monospace; color: var(--ink
   </section>
 
   <footer class="colophon">
-    Generated from <code>inventory.yaml</code> — the only hand-maintained file.
-    Edit it there, then run <code>make html</code>.
+    <div class="build-meta">
+      <span>source<code>inventory.yaml</code></span>
+      <span>commit<code>__COMMIT__</code></span>
+      <span>built<code>__BUILT__</code></span>
+    </div>
+    <div class="made-by">a <b>stuttgart-things</b> project</div>
   </footer>
 
 </div>
@@ -628,6 +639,24 @@ const byIp = new Map(hosts.map(h => [h.ip, h]));
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/** Free addresses in the first network - same arithmetic as the matrix note. */
+function freeAddresses() {
+  if (!net) return 0;
+  const bits = +net.cidr.split("/")[1];
+  const size = Math.min(2 ** (32 - bits), 256);
+  const used = hosts.filter(h => net_contains(h.ip)).length;
+  let pool = 0, staticInPool = 0;
+  if (net.dhcp_pool) {
+    const [a, b] = net.dhcp_pool.split("-").map(x => ipToInt(x.trim()));
+    pool = b - a + 1;
+    staticInPool = hosts.filter(h => {
+      const n = ipToInt(h.ip);
+      return n >= a && n <= b;
+    }).length;
+  }
+  return size - 2 - used - (pool - staticInPool);
+}
+
 function net_contains(ip) {
   if (!net || !ip) return false;
   const base = ipToInt(net.cidr.split("/")[0]);
@@ -638,18 +667,18 @@ function net_contains(ip) {
 
 /* ---------------------------------------------------------------- Masthead */
 
-document.getElementById("eyebrow").textContent = net ? net.cidr : "Inventory";
 document.getElementById("site-name").textContent = DATA.site.name || "System overview";
 document.getElementById("site-sub").textContent = DATA.site.subtitle || "";
 
 const systems = [...new Set(hosts.map(h => h.system))].sort();
 document.getElementById("stamp").innerHTML =
   [
-    [hosts.length, "hosts"],
-    [systems.length, "systems"],
-    [new Set(hosts.map(h => h.cluster).filter(Boolean)).size, "clusters"],
-    [DATA.networks.length, DATA.networks.length === 1 ? "network" : "networks"],
-  ].map(([n, label]) => `<div class="stat"><b>${n}</b><span>${label}</span></div>`).join("");
+    [hosts.length, "hosts", ""],
+    [new Set(hosts.map(h => h.cluster).filter(Boolean)).size, "clusters", ""],
+    [hosts.reduce((n, h) => n + (h.services || []).length, 0), "services", ""],
+    [freeAddresses(), "free ips", " is-free"],
+  ].map(([n, label, cls]) =>
+    `<div class="stat${cls}"><b>${n}</b><span>${label}</span></div>`).join("");
 
 /* ---------------------------------------------------------------- Tooltip  */
 
