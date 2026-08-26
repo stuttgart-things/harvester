@@ -11,6 +11,7 @@ Usage: python3 build_html.py [--in inventory.yaml] [--out site/index.html]
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import sys
 from pathlib import Path
@@ -26,6 +27,7 @@ def main() -> int:
     ap.add_argument("--out", dest="out", default=str(HERE / "site/index.html"))
     ap.add_argument("--template", default=str(HERE / "template.html"))
     ap.add_argument("--d3", default=str(HERE / "vendor/d3.min.js"))
+    ap.add_argument("--logo", default=str(HERE / "logo.png"))
     args = ap.parse_args()
 
     d3 = Path(args.d3)
@@ -42,6 +44,16 @@ def main() -> int:
     # The bundle contains no "</script>", which would otherwise need escaping.
     body = body.replace("/*__D3__*/", d3.read_text(encoding="utf-8"))
     body = body.replace("/*__DATA__*/", json.dumps(data, ensure_ascii=False))
+
+    # The logo goes in as a data URI for the same reason the d3 bundle does:
+    # one self-contained file, nothing fetched at runtime.
+    logo = Path(args.logo)
+    if logo.is_file():
+        uri = "data:image/png;base64," + base64.b64encode(logo.read_bytes()).decode("ascii")
+    else:
+        print(f"WARN: {logo} missing - page renders without the logo", file=sys.stderr)
+        uri = ""
+    body = body.replace("__LOGO__", uri)
 
     # template.html is a fragment. The served page needs a complete document -
     # above all <meta charset>: without it the browser guesses when a server

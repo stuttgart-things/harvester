@@ -59,6 +59,10 @@ hosts:
         description: Shared storage behind the NFS CSI driver.
 ```
 
+Both the service index and the host table under **Addresses** are sortable by
+any column; the IP column sorts on a zero-padded integer so `.9` lands before
+`.110`.
+
 `cluster` names the Kubernetes cluster a host and its services belong to.
 Values match the directories under `clusters/`, so the service index can be
 read against the GitOps tree. Hosts outside any cluster (router, jump server)
@@ -123,6 +127,18 @@ For the same reason a host node shows only its **service count**, never the
 services themselves. The topology diagram answers *what is on the network*;
 *what runs where* is a different question, and the service index on the HTML
 page is where it gets answered.
+
+## Look
+
+The page uses the stuttgart-things brand palette, sampled straight out of
+`logo.png` (the amber cat, the violet headdress, the neon-pink script) and
+snapped to steps that clear the colour-vision validator in both light and
+dark. Violet carries the chrome and "statically assigned" in the address
+matrix, amber the DHCP pool, pink the selection state — so no two of them
+ever mean the same thing on one screen.
+
+The logo is inlined as a data URI like the d3 bundle. It sits on a light
+plaque because its outlines are black and would disappear on the dark ground.
 
 ## Interactive page
 
