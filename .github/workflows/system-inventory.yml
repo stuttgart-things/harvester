@@ -60,7 +60,7 @@ jobs:
           make d3-install
           make html
 
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: system-inventory/site
 
