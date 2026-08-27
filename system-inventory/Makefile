@@ -26,7 +26,7 @@ pdf: html       ## render site/inventory.pdf with headless Chrome
 	  --run-all-compositor-stages-before-draw \
 	  --no-pdf-header-footer \
 	  --print-to-pdf="$(CURDIR)/site/inventory.pdf" \
-	  "file://$(CURDIR)/site/index.html"
+	  "file://$(CURDIR)/site/index.html?print=1"
 	@test -s site/inventory.pdf || { echo "ERROR: no PDF produced"; exit 1; }
 	@echo "wrote: site/inventory.pdf ($$(du -k site/inventory.pdf | cut -f1) KB)"
 

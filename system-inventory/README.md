@@ -208,6 +208,18 @@ The diagram is not re-laid-out for print. `beforeprint` fires before the print
 styles apply, so it would still measure the on-screen box; the print height is
 sized to the viewBox aspect instead, which is deterministic.
 
+The host table lives in a `<details>`. Opening it for print is not a CSS job —
+the browser hides the content with `content-visibility`, which `display: block`
+on the child does not beat. The `open` attribute is set in script instead:
+`make pdf` renders `index.html?print=1` so the CI path never depends on event
+timing, and `beforeprint` covers the browser dialog.
+
+Everything in the print block is sized for the A4 text column (~696 CSS px),
+not for the screen. Verify changes against a real PDF, not a full-page
+screenshot: a screenshot does not paginate, and the first version of this
+stylesheet looked correct in one while printing with the diagram orphaned onto
+page 2 and every page three-quarters empty.
+
 ## Deployment
 
 `.github/workflows/system-inventory.yml` validates the inventory, checks the
