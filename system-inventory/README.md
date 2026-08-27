@@ -170,6 +170,24 @@ Two things only surface when the page is served over HTTP, so they are built in:
 
 Fonts come from Google Fonts; without network the fallback stack takes over.
 
+## Printing
+
+The page prints in colour without anyone having to tick "Background graphics"
+in the print dialog. Browsers drop backgrounds by default, which would print
+the address matrix blank; `print-color-adjust: exact` on the elements whose
+fill carries meaning forces them through.
+
+The print stylesheet flips the surfaces to white and the ink to black — a dark
+UI on paper wastes toner and reads badly — while keeping the colours that mean
+something: violet for assigned, amber for the pool, the cluster tags. The
+wordmark keeps a dark ground of its own, since it is white with a black
+outline and would otherwise vanish into the page.
+
+All three tabs print, one per page, and the host table under Addresses is
+forced open: on paper there is nothing to click, so hiding two thirds of the
+inventory behind tabs makes no sense. Tabs, the filter box and the reset
+button are left out entirely.
+
 ## Deployment
 
 `.github/workflows/system-inventory.yml` validates the inventory, checks the
