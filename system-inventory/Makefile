@@ -1,7 +1,10 @@
 D2_VERSION ?= 0.7.1
 D3_VERSION ?= 7.9.0
+# GitHub-hosted runners ship Chrome at this name. Locally, point CHROME at
+# whatever headless Chromium you have.
+CHROME ?= google-chrome
 
-.PHONY: gen diagram html check serve clean d2-install d3-install
+.PHONY: gen diagram html pdf check serve clean d2-install d3-install
 
 gen:            ## generate the D2 source from inventory.yaml + validate
 	python3 gen.py --strict
@@ -13,6 +16,19 @@ diagram: gen    ## render the SVG from the D2 source
 
 html: gen       ## build the interactive D3 page into site/index.html
 	python3 build_html.py
+
+pdf: html       ## render site/inventory.pdf with headless Chrome
+	@command -v $(CHROME) >/dev/null 2>&1 || { \
+	  echo "ERROR: '$(CHROME)' not found. Set CHROME to a headless Chromium," ; \
+	  echo "       e.g. CHROME=chromium make pdf"; exit 1; }
+	$(CHROME) --headless=new --disable-gpu --no-sandbox \
+	  --virtual-time-budget=20000 \
+	  --run-all-compositor-stages-before-draw \
+	  --no-pdf-header-footer \
+	  --print-to-pdf="$(CURDIR)/site/inventory.pdf" \
+	  "file://$(CURDIR)/site/index.html?print=1"
+	@test -s site/inventory.pdf || { echo "ERROR: no PDF produced"; exit 1; }
+	@echo "wrote: site/inventory.pdf ($$(du -k site/inventory.pdf | cut -f1) KB)"
 
 check: diagram  ## like CI: verify the committed artifacts are up to date
 	git diff --exit-code -- topology.d2 topology.svg \

@@ -541,6 +541,14 @@ footer.colophon {
   color: var(--ink-2);
   margin-left: 8px;
 }
+.pdf-link a {
+  color: var(--accent-deep);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  letter-spacing: .12em;
+}
+.pdf-link a:hover { color: var(--pink); border-bottom-color: currentColor; }
+.pdf-link a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .colophon .made-by { color: var(--ink-3); }
 .colophon .made-by b { color: var(--accent-deep); font-weight: 600; }
 
@@ -558,20 +566,22 @@ footer.colophon {
    reader ticking "Background graphics" in the print dialog; browsers drop
    backgrounds by default and would otherwise print the matrix blank.
 
-   All three tabs print, one per page: on paper there is nothing to click,
-   so hiding two thirds of the inventory behind tabs makes no sense. */
+   Everything here is sized for the A4 text column (~696 CSS px), not for the
+   screen. The first version of this stylesheet was written against a scrolling
+   screenshot, which does not paginate - it looked fine and printed with the
+   diagram orphaned onto page 2 and every page three-quarters empty. */
 @media print {
-  @page { size: A4; margin: 13mm; }
+  @page { size: A4; margin: 12mm; }
 
   :root {
     --ground:      #ffffff;
     --surface:     #ffffff;
     --sunken:      #f4f5f8;
-    --rule:        #c9cfd9;
+    --rule:        #ccd2db;
     --rule-strong: #8b95a4;
     --ink:         #101720;
-    --ink-2:       #404a58;
-    --ink-3:       #66707e;
+    --ink-2:       #3b4553;
+    --ink-3:       #626c7a;
     --accent:      #4b32c4;
     --accent-deep: #4b32c4;
     --accent-wash: #ece8fb;
@@ -586,61 +596,114 @@ footer.colophon {
     --shadow-md:   none;
   }
 
-  body { background: #ffffff; }
-  .sheet { max-width: none; padding: 0; gap: 16px; }
+  body { background: #ffffff; font-size: 9pt; line-height: 1.45; }
+  .sheet { max-width: none; padding: 0; gap: 10px; }
 
-  /* Every panel prints, not just the open tab. */
+  /* Every panel prints, not just the open tab. No forced page break: the
+     content flows, and only the pieces that must not split say so. */
   [role="tabpanel"][hidden] { display: block !important; }
-  #panel-addresses, #panel-services { break-before: page; }
 
   /* Controls have no meaning on paper. */
-  .tabs, #reset-layout, .filter-row, .card-head .note { display: none !important; }
+  .tabs, #reset-layout, .filter-row, .card-head .note, .pdf-link { display: none !important; }
 
-  /* The table view is a <details>; force it open so the hosts are printed. */
+  /* A click target with nothing selected, printing an instruction the reader
+     cannot follow. Gone, and the diagram takes the full width. */
+  .detail { display: none; }
+  .topo-layout { grid-template-columns: minmax(0, 1fr); }
+
+  /* The table view is a <details>. Its summary goes, but opening it is not a
+     CSS job: the browser hides the content with content-visibility, which
+     display:block on the child does not beat. The `open` attribute is set in
+     script instead - see openTablesForPrint(). */
   details.table-view > summary { display: none; }
-  details.table-view > .data-table-wrap { display: block !important; }
 
   .card {
     border: 1px solid var(--rule);
+    border-radius: 6px;
     box-shadow: none;
-    break-inside: auto;
   }
-  .card-head { border-bottom: 1px solid var(--rule-strong); }
+  .card-head { padding: 9px 14px; }
+  .card-head h2 { font-size: 11pt; }
 
-  /* The glow is a screen effect and prints as a grey smudge. */
-  .masthead h1 { text-shadow: none; color: var(--accent); }
+  /* The SVG cannot be split across pages, so keep the whole card together -
+     otherwise the header stays behind and the diagram lands on the next page
+     with a hole where it was. */
+  #panel-topology { break-inside: avoid; }
+
+  /* Compact masthead: at full screen size it eats half of page one. */
+  .masthead { gap: 8px; padding: 0 0 2px; }
+  .logo-wrap { padding: 0; }
+  .logo-wrap img { width: 132px; }
   .logo-wrap::before { display: none; }
-  /* The wordmark is white with a black outline - on paper it would vanish
-     into the page, so it keeps a dark ground of its own. */
   .logo-wrap {
     background: #131a26;
-    border-radius: 10px;
-    padding: 10px 14px;
+    border-radius: 7px;
+    padding: 7px 10px;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
+  .masthead h1 { font-size: 15pt; text-shadow: none; color: var(--accent); }
+  .masthead .tagline { font-size: 6.5pt; }
+  .stamp { gap: 6px; margin-top: 0; }
+  .stat { padding: 5px 11px 4px; min-width: 0; border-radius: 6px; }
+  .stat b { font-size: 13pt; }
+  .stat span { font-size: 6pt; margin-top: 1px; }
 
   /* Anything whose fill carries meaning has to be forced through. */
-  .cell, .swatch, .cluster-tag, .kind-tag, .stat, .node-box, .tab-count {
+  .cell, .swatch, .cluster-tag, .kind-tag, .stat, .node-box, #graph, svg {
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
   }
-  #graph, svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
-  .cell { width: 30px; height: 24px; }
-  #graph { height: 480px; }
-  .topo-layout { grid-template-columns: minmax(0, 1fr) 250px; }
+  #graph { height: 430px; }
+  .cell { width: 27px; height: 21px; font-size: 7pt; border-radius: 4px; }
+  .matrix { border-spacing: 1.5px; }
+  .matrix th { font-size: 6.5pt; padding: 2px 4px; }
+  .matrix-wrap { padding: 12px 14px; }
+  .legend { padding: 0 14px 12px; font-size: 7.5pt; gap: 6px 16px; }
+  .swatch { width: 11px; height: 11px; }
 
-  table.data { font-size: 10.5pt; }
+  /* The A4 text column is ~696px, half the screen width the table was laid
+     out for. Without this the description wraps to four lines and six
+     services fill a page. */
+  .data-table-wrap { padding: 8px 14px 12px; }
+  table.data { font-size: 7.5pt; }
+  table.data th, table.data td { padding: 4px 8px 4px 0; vertical-align: top; }
+  table.data th { font-size: 6pt; letter-spacing: .08em; }
   table.data tbody tr:hover { background: none; }
   table.data thead { display: table-header-group; }
   table.data tr { break-inside: avoid; }
+  /* Fixed column widths: left to itself the description column takes the room
+     and the FQDNs break mid-word. */
+  #svc-table { table-layout: fixed; width: 100%; }
+  #svc-table th:nth-child(1) { width: 10%; }
+  #svc-table th:nth-child(2) { width: 17%; }
+  #svc-table th:nth-child(3) { width: 27%; }
+  #host-table { table-layout: fixed; width: 100%; }
+  #host-table th:nth-child(1) { width: 15%; }
+  #host-table th:nth-child(2) { width: 15%; }
+  #host-table th:nth-child(3) { width: 13%; }
+  #host-table th:nth-child(4) { width: 15%; }
+  .endpoint { font-size: 7pt; white-space: normal; overflow-wrap: anywhere; }
+  .on-host { font-size: 6.5pt; }
+  .cluster-tag, .kind-tag { font-size: 6.5pt; padding: 1px 5px; }
 
   a.ep-link { color: var(--accent); border-bottom: 0; }
   .ext { display: none; }
 
-  footer.colophon { break-before: avoid; }
+  footer.colophon {
+    break-before: avoid;
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: 8px;
+    gap: 3px;
+    font-size: 7pt;
+  }
+  .build-meta { gap: 12px; }
+  .build-meta span { font-size: 6pt; }
+  .build-meta code { font-size: 7pt; margin-left: 5px; }
 }
+
 </style>
 
 <div class="sheet">
@@ -709,6 +772,7 @@ footer.colophon {
       <span>source<code>inventory.yaml</code></span>
       <span>commit<code>__COMMIT__</code></span>
       <span>built<code>__BUILT__</code></span>
+      <span class="pdf-link"><a href="inventory.pdf">download PDF</a></span>
     </div>
     <div class="made-by">a <b>stuttgart-things</b> project</div>
   </footer>
@@ -1031,6 +1095,15 @@ document.getElementById("reset-layout").addEventListener("click", () => {
 layout();
 markPinned();
 addEventListener("resize", layout);
+
+/** Paper has no disclosure widgets. */
+function openTablesForPrint() {
+  document.querySelectorAll("details.table-view").forEach(d => { d.open = true; });
+}
+// The CI renderer passes ?print=1 so this never depends on event timing.
+if (new URLSearchParams(location.search).has("print")) openTablesForPrint();
+addEventListener("beforeprint", openTablesForPrint);
+
 
 /* ---------------------------------------------------------- Address matrix */
 
