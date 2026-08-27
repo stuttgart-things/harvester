@@ -64,6 +64,21 @@ jobs:
           make d3-install
           make html
 
+      # Headless Chrome, not the browser print dialog: no page chrome, fixed
+      # margins, deterministic output. The PDF lands inside site/, so Pages
+      # serves it next to the page and the colophon can link to it.
+      # ubuntu-latest ships Google Chrome preinstalled.
+      - name: Render PDF
+        run: make pdf
+
+      - name: Upload PDF as a build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-inventory-pdf
+          path: system-inventory/site/inventory.pdf
+          if-no-files-found: error
+          retention-days: 30
+
       - uses: actions/upload-pages-artifact@v5
         with:
           path: system-inventory/site

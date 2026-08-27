@@ -170,10 +170,25 @@ Two things only surface when the page is served over HTTP, so they are built in:
 
 Fonts come from Google Fonts; without network the fallback stack takes over.
 
-## Printing
+## PDF
 
-The page prints in colour without anyone having to tick "Background graphics"
-in the print dialog. Browsers drop backgrounds by default, which would print
+CI renders `site/inventory.pdf` with headless Chrome and uploads it as a build
+artifact on every run. Because it is written into `site/`, Pages serves it
+alongside the page — the colophon links to it as **download PDF**.
+
+Building it in CI rather than leaving it to the browser print dialog is the
+point: no page chrome, fixed margins, no scaling surprises, and the same
+output every time. Locally:
+
+```bash
+make pdf                       # uses `google-chrome` by default
+CHROME=chromium make pdf       # or point it at whatever you have
+```
+
+## Printing from the browser
+
+The page also prints straight from the browser, in colour, without anyone
+having to tick "Background graphics" in the print dialog. Browsers drop backgrounds by default, which would print
 the address matrix blank; `print-color-adjust: exact` on the elements whose
 fill carries meaning forces them through.
 
@@ -185,8 +200,13 @@ outline and would otherwise vanish into the page.
 
 All three tabs print, one per page, and the host table under Addresses is
 forced open: on paper there is nothing to click, so hiding two thirds of the
-inventory behind tabs makes no sense. Tabs, the filter box and the reset
-button are left out entirely.
+inventory behind tabs makes no sense. Tabs, the filter box, the reset button
+and the detail panel are left out entirely — the last of those would otherwise
+print an instruction ("select a host…") that cannot be followed on paper.
+
+The diagram is not re-laid-out for print. `beforeprint` fires before the print
+styles apply, so it would still measure the on-screen box; the print height is
+sized to the viewBox aspect instead, which is deterministic.
 
 ## Deployment
 

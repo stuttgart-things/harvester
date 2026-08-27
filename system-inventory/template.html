@@ -541,6 +541,14 @@ footer.colophon {
   color: var(--ink-2);
   margin-left: 8px;
 }
+.pdf-link a {
+  color: var(--accent-deep);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  letter-spacing: .12em;
+}
+.pdf-link a:hover { color: var(--pink); border-bottom-color: currentColor; }
+.pdf-link a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .colophon .made-by { color: var(--ink-3); }
 .colophon .made-by b { color: var(--accent-deep); font-weight: 600; }
 
@@ -628,8 +636,18 @@ footer.colophon {
   #graph, svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 
   .cell { width: 30px; height: 24px; }
-  #graph { height: 480px; }
-  .topo-layout { grid-template-columns: minmax(0, 1fr) 250px; }
+  /* The detail panel is a click target with nothing selected - on paper it
+     prints an instruction the reader cannot follow. Drop it and give the
+     diagram the full width instead of a third of the page in whitespace. */
+  .detail { display: none; }
+  .topo-layout { grid-template-columns: minmax(0, 1fr); }
+  /* The layout is computed for the on-screen width and the SVG then scales to
+     fit. Relaying out on beforeprint is not reliable - the event fires before
+     the print styles apply, so it would still measure the screen box. Sizing
+     the box to the viewBox aspect (872:600) is deterministic instead: at full
+     page width the diagram needs ~620px of height to fill it rather than sit
+     letterboxed in the middle. */
+  #graph { height: 620px; }
 
   table.data { font-size: 10.5pt; }
   table.data tbody tr:hover { background: none; }
@@ -640,6 +658,7 @@ footer.colophon {
   .ext { display: none; }
 
   footer.colophon { break-before: avoid; }
+  .pdf-link { display: none; }
 }
 </style>
 
@@ -709,6 +728,7 @@ footer.colophon {
       <span>source<code>inventory.yaml</code></span>
       <span>commit<code>__COMMIT__</code></span>
       <span>built<code>__BUILT__</code></span>
+      <span class="pdf-link"><a href="inventory.pdf">download PDF</a></span>
     </div>
     <div class="made-by">a <b>stuttgart-things</b> project</div>
   </footer>
@@ -1031,6 +1051,7 @@ document.getElementById("reset-layout").addEventListener("click", () => {
 layout();
 markPinned();
 addEventListener("resize", layout);
+
 
 /* ---------------------------------------------------------- Address matrix */
 
