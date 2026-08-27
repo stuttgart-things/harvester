@@ -548,6 +548,99 @@ footer.colophon {
   * { transition: none !important; animation: none !important; }
   .cell.is-static:hover { transform: none; }
 }
+
+/* ---------- Print ----------
+   The screen design is dark; paper is not. This flips the surfaces to white
+   and the ink to black while keeping every colour that carries meaning -
+   violet for assigned, amber for the pool, the cluster tags.
+
+   print-color-adjust: exact is what makes those fills survive without the
+   reader ticking "Background graphics" in the print dialog; browsers drop
+   backgrounds by default and would otherwise print the matrix blank.
+
+   All three tabs print, one per page: on paper there is nothing to click,
+   so hiding two thirds of the inventory behind tabs makes no sense. */
+@media print {
+  @page { size: A4; margin: 13mm; }
+
+  :root {
+    --ground:      #ffffff;
+    --surface:     #ffffff;
+    --sunken:      #f4f5f8;
+    --rule:        #c9cfd9;
+    --rule-strong: #8b95a4;
+    --ink:         #101720;
+    --ink-2:       #404a58;
+    --ink-3:       #66707e;
+    --accent:      #4b32c4;
+    --accent-deep: #4b32c4;
+    --accent-wash: #ece8fb;
+    --green:       #1a7f43;
+    --orange:      #a85c12;
+    --pink:        #a3239e;
+    --static:      #5b2be0;
+    --pool:        #b87400;
+    --pool-soft:   #fbf0d8;
+    --free:        #f1f3f6;
+    --shadow-sm:   none;
+    --shadow-md:   none;
+  }
+
+  body { background: #ffffff; }
+  .sheet { max-width: none; padding: 0; gap: 16px; }
+
+  /* Every panel prints, not just the open tab. */
+  [role="tabpanel"][hidden] { display: block !important; }
+  #panel-addresses, #panel-services { break-before: page; }
+
+  /* Controls have no meaning on paper. */
+  .tabs, #reset-layout, .filter-row, .card-head .note { display: none !important; }
+
+  /* The table view is a <details>; force it open so the hosts are printed. */
+  details.table-view > summary { display: none; }
+  details.table-view > .data-table-wrap { display: block !important; }
+
+  .card {
+    border: 1px solid var(--rule);
+    box-shadow: none;
+    break-inside: auto;
+  }
+  .card-head { border-bottom: 1px solid var(--rule-strong); }
+
+  /* The glow is a screen effect and prints as a grey smudge. */
+  .masthead h1 { text-shadow: none; color: var(--accent); }
+  .logo-wrap::before { display: none; }
+  /* The wordmark is white with a black outline - on paper it would vanish
+     into the page, so it keeps a dark ground of its own. */
+  .logo-wrap {
+    background: #131a26;
+    border-radius: 10px;
+    padding: 10px 14px;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  /* Anything whose fill carries meaning has to be forced through. */
+  .cell, .swatch, .cluster-tag, .kind-tag, .stat, .node-box, .tab-count {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  #graph, svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+  .cell { width: 30px; height: 24px; }
+  #graph { height: 480px; }
+  .topo-layout { grid-template-columns: minmax(0, 1fr) 250px; }
+
+  table.data { font-size: 10.5pt; }
+  table.data tbody tr:hover { background: none; }
+  table.data thead { display: table-header-group; }
+  table.data tr { break-inside: avoid; }
+
+  a.ep-link { color: var(--accent); border-bottom: 0; }
+  .ext { display: none; }
+
+  footer.colophon { break-before: avoid; }
+}
 </style>
 
 <div class="sheet">
