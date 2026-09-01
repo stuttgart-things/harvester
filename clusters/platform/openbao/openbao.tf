@@ -78,6 +78,22 @@ module "openbao-base-setup" {
   // the cert-manager namespace. Those three names have to match the
   // VAULT_ISSUER_* substitutions on the Flux side exactly — see README.md.
   //
+  // The token reviewer is a SEPARATE ServiceAccount (vault-auth-reviewer in
+  // kube-system) and not the one that logs in — system:auth-delegator is the
+  // right to review any token in the cluster, which cert-manager has no
+  // business holding. Requires vault-base-setup#54.
+  //
+  // CHECK BEFORE THE FIRST APPLY, or it fails with
+  // `serviceaccounts "vault-auth-reviewer" already exists`:
+  //
+  //   kubectl -n kube-system get sa vault-auth-reviewer
+  //
+  // If it is there — the VM pipeline's CreateVaultKubernetesAuth creates one
+  // under exactly these names — add `k8s_auth_reviewer_create = false` and the
+  // module will read it instead of fighting the pipeline for it. This cluster
+  // is built by Ansible rather than that pipeline, so it should not be, but
+  // that is worth a look rather than an assumption.
+  //
   // token_ttl is the login token cert-manager gets per request. Short is
   // correct: it is re-minted for every signing request.
   k8s_auths = [

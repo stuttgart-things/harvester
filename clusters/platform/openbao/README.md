@@ -106,16 +106,29 @@ Creates the PKI mount and **its own root CA** (`CN=sthings.lab`, RSA-4096, 10
 years), the `sthings-lab` signing role, the `pki-issue` policy, and the
 Kubernetes auth backend at `/v1/auth/platform-sthings-certmanager`.
 
-**Before running this on `platform`, fix `k8s.tf` in `vault-base-setup`.** It
-binds `system:auth-delegator` to the *same* ServiceAccount that logs in. The
-pipeline's `CreateVaultKubernetesAuth` deliberately uses a separate reviewer
-(`vault-auth-reviewer` in `kube-system`) instead, and its own comment says why:
+**Requires vault-base-setup#54.** Without it `k8s.tf` binds
+`system:auth-delegator` — the right to review any token in the cluster — to the
+*same* ServiceAccount that logs in. Trading a long-lived token for an
+over-broad permission is not the improvement this migration is for.
 
-> `system:auth-delegator` is the right to review any token in the cluster, and a
-> certificate controller has no business holding it.
+**Check this before the first apply:**
 
-Trading a long-lived token for an over-broad permission is not the improvement
-this migration is for.
+```bash
+kubectl -n kube-system get sa vault-auth-reviewer
+```
+
+If it exists, add `k8s_auth_reviewer_create = false` to `openbao.tf`. The VM
+pipeline's `CreateVaultKubernetesAuth` creates the ServiceAccount, its SA-token
+Secret and the ClusterRoleBinding under exactly the names the module wants, and
+two owners for one identity is not a conflict Terraform resolves — it stops with
+`serviceaccounts "vault-auth-reviewer" already exists`. This is how the
+rehearsal on `cicd-test3` failed. This cluster is built by Ansible rather than
+that pipeline, so it should not be there, but check rather than assume.
+
+Two things that were suspect and turned out fine, verified on OpenBao **2.6.2**
+during the rehearsal: `disable_iss_validation = true` is accepted, and the
+`hashicorp/vault` provider drives OpenBao's PKI and Kubernetes auth with no
+OpenBao-specific handling at all.
 
 Export the CA — it is the input to all the trust-store work:
 
