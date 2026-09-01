@@ -99,8 +99,16 @@ kubectl -n openbao exec openbao-0 -- bao status   # Initialized true, Sealed fal
 export VAULT_ADDR=https://openbao.platform.sthings.lab
 export VAULT_TOKEN=<root token from step 2>
 
-terraform init && terraform apply
+./preflight.sh && terraform init && terraform apply
 ```
+
+**Run `preflight.sh`, do not skip to `apply`.** It compares this directory
+against the *live* cluster — the reviewer question below, whether OpenBao is
+initialised and unsealed, and whether the token still works. A note in a runbook
+is read once and a value answered once lands in `terraform.tfvars` and is wrong
+the next time the cluster is rebuilt; this fails on the mismatch itself, every
+time. It is also how the `cicd-test3` rehearsal would have avoided its one
+failed apply.
 
 Creates the PKI mount and **its own root CA** (`CN=sthings.lab`, RSA-4096, 10
 years), the `sthings-lab` signing role, the `pki-issue` policy, and the
@@ -111,7 +119,9 @@ Kubernetes auth backend at `/v1/auth/platform-sthings-certmanager`.
 *same* ServiceAccount that logs in. Trading a long-lived token for an
 over-broad permission is not the improvement this migration is for.
 
-**Check this before the first apply:**
+`preflight.sh` checks this for you and refuses to continue on a mismatch — in
+either direction, including a stale `k8s_auth_reviewer_create = false` left in
+the file for a cluster that no longer has the reviewer. By hand it is:
 
 ```bash
 kubectl -n kube-system get sa vault-auth-reviewer
