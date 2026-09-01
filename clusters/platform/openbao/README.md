@@ -156,38 +156,36 @@ bao token revoke <root token>
 Skipping this recreates on OpenBao exactly the problem being left behind on
 `infra`. From here nothing in the cluster holds a long-lived credential.
 
-## 5. Point cert-manager at it
+## 5. Point cert-manager at it — nothing to do
 
-A `cert-manager-vault-issuer` Kustomization in `../infra.yaml`. Keep the
-existing `vault-pki` issuer alive alongside it until every Certificate has
-moved — the two are independent and can coexist.
+Already in Git: the `cert-manager-openbao-issuer` Kustomization in
+`../infra.yaml`. It sits **not-Ready until step 3 has run**, because the auth
+mount and the PKI it names come from Terraform — which is correct, and loud.
+Once they exist it goes green on the next reconcile.
 
-```yaml
-VAULT_ISSUER_NAME: openbao-pki
-VAULT_ISSUER_SERVER: http://openbao.openbao.svc.cluster.local:8200
-VAULT_ISSUER_PKI_PATH: pki/sign/sthings-lab
-VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/platform-sthings-certmanager
-VAULT_ISSUER_AUTH_ROLE: certmanager
-VAULT_ISSUER_SERVICE_ACCOUNT: certmanager
-```
+The existing `vault-pki` issuer stays alive beside it. The two are independent
+and coexist deliberately: every Certificate keeps its current issuer until it is
+moved by hand, so nothing reissues onto a CA that nothing trusts yet.
 
-Those last three must match `k8s_auths` in `openbao.tf` exactly — the module
-derives the mount from `<cluster_name>-<name>`, and binds the role to a
-ServiceAccount of that same `name`.
+`VAULT_ISSUER_AUTH_MOUNT_PATH`, `_AUTH_ROLE` and `_SERVICE_ACCOUNT` there must
+match `k8s_auths` in `openbao.tf` exactly — the module derives the mount from
+`<cluster_name>-<name>` and binds the role to a ServiceAccount of that same
+`name`. Change one and all three move.
 
 > **The in-cluster HTTP address is deliberate.** Going through the Gateway
 > (`https://openbao.platform.sthings.lab`) is circular: that hostname's
 > certificate is issued by this very issuer. In-cluster there is no certificate
-> to verify and no chicken-and-egg.
->
-> This is the one change the Flux component needs — it renders
-> `caBundleSecretRef` **unconditionally**, and there is no CA to point it at
-> here. Small PR against `stuttgart-things/flux` to make it optional.
+> to verify and no chicken-and-egg. That is what `components: [./components/ca-none]`
+> is for — stuttgart-things/flux#356, in `v1.51.0`; this cluster tracks `main`,
+> so it is already there.
 
 The component also ships the `cert-manager-tokenrequest` Role, which the
 cert-manager chart stopped rendering in v1.21. Without it cert-manager cannot
 mint the ServiceAccount token — and the ClusterIssuer still reports `Ready`,
-so certificates simply never appear. Do not drop it.
+so certificates simply never appear. **Do not drop it.** That failure was
+reproduced deliberately on `cicd-test3`: issuer `Ready=True/VaultVerified`,
+Certificate `Ready=False` forever, and the only signal anywhere is the
+cert-manager log.
 
 ## 6. Verify — all four, none assumed
 

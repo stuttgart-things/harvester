@@ -197,3 +197,54 @@ spec:
       TRUST_BUNDLE_SECRET_NAME: tls-ca # pragma: allowlist secret
       TRUST_BUNDLE_SECRET_TARGET_KEY: cacerts.pem # pragma: allowlist secret
       TRUST_BUNDLE_SECRET_NAMESPACE: cattle-system # pragma: allowlist secret
+---
+# The ClusterIssuer for the OpenBao on this cluster — the tokenless half of the
+# migration off the infra Vault.
+#
+# NOT a replacement for `vault-pki` beside it. The two are independent and
+# coexist deliberately: every Certificate keeps its current issuer until it is
+# moved by hand, so nothing reissues on a CA nothing trusts yet.
+#
+# IT WILL SIT NOT-READY UNTIL ./openbao/ HAS BEEN APPLIED. The auth mount, its
+# role and the PKI come from Terraform (openbao/README.md step 3), and Flux has
+# no OpenBao credentials to create them. A not-Ready issuer here means that step
+# has not run — which is correct, and loud.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-openbao-issuer
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cert-manager
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cert-manager/components/vault-issuer
+  # No caBundleSecretRef: OpenBao is reached in-cluster over plain HTTP, so # pragma: allowlist secret
+  # there is no certificate to verify. Going through the Gateway instead would
+  # be circular — that hostname's cert is issued by this very issuer.
+  components:
+    - ./components/ca-none
+  prune: true
+  # wait on Ready, but do not mistake it for proof. cert-manager sets it on a
+  # successful Vault LOGIN and never re-checks the ability to SIGN: pull the
+  # cert-manager-tokenrequest RBAC and this stays green while no Certificate is
+  # ever issued. Verified by doing exactly that on cicd-test3. Only an issued
+  # Certificate is evidence.
+  wait: true
+  postBuild:
+    substitute:
+      CERT_MANAGER_NAMESPACE: cert-manager
+      VAULT_ISSUER_NAME: openbao-pki
+      VAULT_ISSUER_SERVER: http://openbao.openbao.svc.cluster.local:8200
+      VAULT_ISSUER_PKI_PATH: pki/sign/sthings-lab
+      # The mount is <cluster_name>-<k8s_auths[].name> from ./openbao/openbao.tf,
+      # the role and the ServiceAccount are that same name. All three move
+      # together or not at all.
+      VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/platform-sthings-certmanager
+      VAULT_ISSUER_AUTH_ROLE: certmanager
+      VAULT_ISSUER_SERVICE_ACCOUNT: certmanager
