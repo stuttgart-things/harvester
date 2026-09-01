@@ -13,4 +13,22 @@ gitCollections:
 artifactCollections:
   - https://github.com/stuttgart-things/ansible/releases/download/sthings-rke-26.1.561.tar.gz/sthings-rke-26.1.561.tar.gz
   - https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.3.948.tar.gz/sthings-container-26.3.948.tar.gz
-  - https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.3.1037.tar.gz/sthings-baseos-26.3.1037.tar.gz
+  # 26.901.1279 carries install-configure-vault 2026.09.01, which derives the CA
+  # FILENAME from the Vault instance instead of `999 | random`.
+  #
+  # WITHOUT THIS BUMP THE vault_instances CHANGE IN vars.yaml IS COSMETIC: the
+  # AnsibleRun would keep pulling this pinned collection, hence the old role,
+  # hence a random filename per run -- so the old CA could never be removed
+  # again, which is the last step of the migration.
+  #
+  # sthings-container is deliberately NOT bumped in the same breath. It pins the
+  # same role, but nothing in this play calls install-ca-auth through it, and
+  # moving it forward six months would drag unrelated changes into a working
+  # air-gapped k3s build. Separate decision, separate change.
+  #
+  # NOTE THE PATH SHAPE. The tag no longer carries the .tar.gz the older ones
+  # did, so the URL is NOT the old one with the version swapped:
+  #   old  .../download/sthings-baseos-26.3.1037.tar.gz/sthings-baseos-26.3.1037.tar.gz
+  #   new  .../download/sthings-baseos-26.901.1279/sthings-baseos-26.901.1279.tar.gz
+  # A blind version substitution yields a 404. Both forms verified with curl.
+  - https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.901.1279/sthings-baseos-26.901.1279.tar.gz
