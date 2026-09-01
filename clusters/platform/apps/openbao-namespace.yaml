@@ -1,0 +1,17 @@
+---
+# The openbao namespace, ahead of the HelmRelease that lands in it.
+#
+# Separate from the bundle's own Namespace (flux: apps/openbao/requirements.yaml)
+# because the static seal Secret beside this file has to exist BEFORE the
+# HelmRelease starts: a pod that comes up without OPENBAO_SEAL_STATIC_KEY does
+# not retry the seal, it fails to start.
+#
+# ssa: merge so this does not fight the bundle for ownership of the same object.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openbao
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: merge
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team

@@ -1,5 +1,29 @@
 # PLATFORM.STHINGS.LAB
 
+## OpenBao — the PKI this environment is moving to
+
+The `sthings.lab` PKI is moving off the Vault on the `infra` cluster (which is
+being switched off to free the hardware) onto an **OpenBao** on this cluster,
+with cert-manager ordering certificates through **Kubernetes auth** instead of a
+long-lived token.
+
+**The steps that a human has to run — `bao operator init`, Terraform, revoking
+the root token — are in [`openbao/README.md`](openbao/README.md).** Flux does
+not and cannot do them.
+
+| | |
+|---|---|
+| Deployment | `apps-platform.yaml` — the `apps/platform` bundle, component `../components/openbao` |
+| Seal | `static`, key in `apps/openbao-static-seal.enc.yaml` |
+| PKI / auth config | `openbao/` — Terraform via `vault-base-setup` |
+| Runbook | [`openbao/README.md`](openbao/README.md) |
+| Rehearsed on | `cicd-test3` — `stuttgart-things/clusters/labda/vsphere/cicd-test3/OPENBAO.md` |
+
+> The new root CA is trusted by **nothing** until it is distributed — Ansible for
+> VMs, Flux/Argo for clusters, across the whole harvester environment. Until
+> that lands, certificates signed by it are valid and rejected everywhere. Only
+> then does the `infra` Vault come down.
+
 <details open>
 <summary>OS-PREREQUISITES FOR ANSIBLE</summary>
 

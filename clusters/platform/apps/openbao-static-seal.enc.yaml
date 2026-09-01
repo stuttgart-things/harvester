@@ -1,0 +1,30 @@
+# seal "static" -- the 32-byte key OpenBao reads as OPENBAO_SEAL_STATIC_KEY.
+#
+# Generated with: openssl rand -base64 32
+#
+# OPENBAO_SEAL_KEY_ID in ../apps-platform.yaml is an OPAQUE LABEL for this key.
+# It MUST change whenever the key does, or OpenBao cannot tell the two apart and
+# whatever was sealed with the old one becomes unreadable.
+apiVersion: v1
+kind: Secret
+metadata:
+    name: openbao-static-seal
+    namespace: openbao
+type: Opaque
+stringData:
+    key: ENC[AES256_GCM,data:oMp3xJ3C06/8U9cu131NqVsbs3AnUBWIpNIYoSGMMQb5nRZq9XoibTnW6DA=,iv:sx1P+m5xJflvRJ+PFv9g+p4gIWzMiypviE/it5634AM=,tag:Y8wnVmYwRHK/npoFdTfWbg==,type:str]
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBTRnRiL2JORWY5T0t3eXNa
+            WC92cmhJTmQ0U2EwMUJpZzM1VTRuYlByM2djCmQ5RmpWYVVPdXBtV291QUc4U2po
+            NVJMNFpnT0ZKNEhIZGxObDZiY005TXcKLS0tIE9xbEthS3FneWNEcEFaTTVvNkIv
+            Sm1oUGNldnF0ZmZyTzlEQTlnT2FuUEUKlXv5CbxGIEHa75Qv187q5IjympL5GLZ4
+            kOjUQudSh+iF76HYpR/LjQDQBkztDIO0bKu7ksbtxKyZes9QG9SYhw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-09-01T09:48:10Z"
+    mac: ENC[AES256_GCM,data:OydJjLpLn4OZxNV4SbF9hwz2KScwoeviHYxBHuFz055U23nWg2idxMSNM+WWeUyNRe4CDUPg7z9QlW8QhqB8a1OA5Oq7FYCdlPRX31hd3M28qBxXiz0HHDWSbAA0663A04VNk4kZSUb0cMfURfp2O3q/WjUBpaoZh7v6TLDAu/w=,iv:78ELs5JmDV0RbWfkBmeDuAyK1LW7bUNYmVJ/zhHxbDo=,tag:kmNxQu5T4GiLgG/J7Imo3Q==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.1

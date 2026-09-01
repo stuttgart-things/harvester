@@ -1,0 +1,79 @@
+---
+# The apps BUNDLE for this cluster — stuttgart-things/flux → ./apps/platform.
+#
+# Every other app on this cluster is a hand-written Flux Kustomization under
+# ./apps/. This one is not, and the difference is deliberate rather than
+# inconsistent: OpenBao already exists as a bundle component upstream
+# (apps/platform/components/openbao), carrying the seal choice, the storage
+# guard and the HTTPRoute wiring. Copying that into ./apps/openbao.yaml would
+# fork it, and the copy would drift the first time the component changed.
+#
+# The bundle owns ONLY what `components:` selects. The per-app files beside it
+# are untouched, and nothing here prunes them.
+#
+# `components:` must never be empty. An empty list renders as YAML null, which
+# the CRD rejects outright — and it fails THIS Kustomization, so nothing in the
+# bundle deploys while it reads like a slow reconcile. Delete the whole file
+# rather than emptying the list.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: apps-platform
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 15m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./apps/platform/root
+  components:
+    - ../components/openbao
+  postBuild:
+    substitute:
+      APPS_SOURCE: flux-infra
+
+      # Shared with infra.yaml — keep them identical.
+      INFRA_DOMAIN: platform.sthings.lab
+      INFRA_GATEWAY_NAME: platform-sthings-gateway
+      INFRA_GATEWAY_NAMESPACE: default
+
+      # ---- openbao -------------------------------------------------------
+      # This instance REPLACES the Vault on the infra cluster, which is being
+      # switched off to free the hardware. `static` and not `transit` for
+      # exactly that reason: chaining the seal to the instance being retired
+      # would make the replacement depend on what it replaces.
+      #
+      # The trade-off is real and accepted — the key that can unseal this lives
+      # in this cluster, in ./apps/openbao-static-seal.enc.yaml. It is at least
+      # rotatable, via current_key/previous_key.
+      OPENBAO_SEAL_MODE: static
+      # An OPAQUE LABEL for that key, not a version. It MUST change whenever
+      # the key does, or OpenBao cannot tell the two apart and everything
+      # sealed with the old key becomes unreadable.
+      OPENBAO_SEAL_KEY_ID: platform-sthings-20260901
+      OPENBAO_SEAL_SECRET: openbao-static-seal # pragma: allowlist secret
+      OPENBAO_SEAL_SECRET_KEY: key # pragma: allowlist secret
+      # Must exist on THIS cluster — the same class the other apps here use.
+      # A PVC that never binds leaves the pod Pending while the HelmRelease
+      # reports installed.
+      OPENBAO_STORAGE_CLASS: local-path
+      OPENBAO_STORAGE_SIZE: 8Gi
+      OPENBAO_HOSTNAME: openbao
+
+      # THE FIRST RECONCILE OF THIS KUSTOMIZATION WILL TIME OUT, and that is
+      # expected. The static seal unseals on every RESTART; it does not
+      # INITIALISE. A fresh instance is Initialized=false, the chart's
+      # readiness probe is `bao status` (exit 0 only when unsealed), so the pod
+      # is never Ready and a waiting Kustomization cannot succeed.
+      #
+      # Run `bao operator init` once — ./openbao/README.md, step 3 — and the
+      # next reconcile goes green on its own.
