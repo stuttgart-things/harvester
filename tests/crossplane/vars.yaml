@@ -3,8 +3,23 @@
 execute_baseos: true
 manage_filesystem: false
 
+# sthings.baseos.setup PROBES each of these for /v1/pki/ca/pem and installs the
+# CA from every one that answers 200. An entry that is down, sealed or not built
+# yet is reported and skipped, not fatal -- which is why both can sit here
+# during the migration.
+#
+# THE ORDER OF OPERATIONS IS: both, then neither.
+#   1. add openbao (this change)      -> hosts trust BOTH CAs
+#   2. move issuance onto openbao-pki -> new certs chain to the new root
+#   3. remove the vault.infra entry   -> hosts stop trusting the old CA
+#
+# Step 3 only works because install-configure-vault 2026.09.01 derives the
+# filename from the instance (vault-ca-vault-infra-sthings-lab.crt). The
+# versions before it used `999 | random`, so a removed instance kept its CA
+# trusted forever under a name nobody could identify. See harvester#152.
 vault_instances:
   - https://vault.infra.sthings.lab
+  - https://openbao.platform.sthings.lab
 
 # K3S CLUSTER
 install_k3s: true
