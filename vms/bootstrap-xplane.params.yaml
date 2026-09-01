@@ -1,0 +1,46 @@
+---
+# KCL parameters for the harvester-vm module, rendered and applied by
+# blueprints' bake-harvester. See vms/README.md for the call.
+#
+# Mounted into the render container as a file rather than passed as
+# --kcl-parameters, because inline parameter values become operation
+# arguments and are echoed verbatim by `dagger --progress plain`.
+#
+# Values match vms/xplane.yaml, the VM this replaces the hand-rolled
+# render for. The storage class the PVC ends up with is composed by the
+# module as "<storageClass>-<imageId>", i.e. longhorn-upstream.
+
+vmName: bootstrap-xplane
+namespace: default
+
+# Root disk
+imageId: upstream
+imageNamespace: default
+storage: 50Gi
+storageClass: longhorn
+
+# Machine
+cpuCores: 12
+memory: 12Gi
+description: crossplane management cluster bootstrap vm
+
+# Network. networkName is joined with networkNamespace by the module,
+# giving the multus network default/vms.
+networkName: vms
+networkNamespace: default
+
+# NOTE ON CREDENTIALS -- read before the first run.
+#
+# cloudInitUsername, cloudInitPassword and cloudInitSshKey are deliberately
+# absent here. The KCL module falls back to a hardcoded password and a
+# placeholder SSH key ("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC..."), so
+# leaving them unset does NOT leave the VM without a login -- it gives every
+# VM the same well-known one, and a key nobody holds.
+#
+# Supply them from the SOPS-encrypted variant instead:
+#
+#   --encrypted-file ./vms/bootstrap-xplane.params.enc.yaml \
+#   --sops-key env:SOPS_AGE_KEY
+#
+# which carries these same keys plus cloudInitPassword and cloudInitSshKey.
+# Pass either that or this file, never both -- the module rejects it.
