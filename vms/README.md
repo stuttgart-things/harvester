@@ -8,6 +8,24 @@ provision against. `bake-harvester` renders the three manifests, applies them
 through the Kubernetes API, waits for the guest agent to report an IP and runs
 Ansible against it -- no OpenTofu and no Crossplane involved.
 
+The reproducible form is `vms/bake-bootstrap-xplane.sh` -- it is the call
+below with the arguments filled in from the files in this directory, so a run
+cannot drift from what is committed:
+
+```bash
+export SOPS_AGE_KEY=...                  # the repo's age key
+./vms/bake-bootstrap-xplane.sh           # render only, touches no cluster
+./vms/bake-bootstrap-xplane.sh apply     # the real run
+```
+
+It derives `ANSIBLE_USER`/`ANSIBLE_PASSWORD` from the encrypted parameters
+rather than the environment, so the account Ansible authenticates as is by
+construction the one cloud-init created, and builds `--ansible-parameters` from
+`bootstrap-xplane.ansible-vars.yaml` so the string and the file cannot disagree.
+`HARVESTER_KUBECONFIG` overrides the kubeconfig path.
+
+What it runs, spelled out:
+
 ```bash
 export KUBECONFIG=~/.kube/harvester
 
@@ -85,6 +103,27 @@ creates neither.
    `kcl mod pull oci://ghcr.io/stuttgart-things/harvester-vm:0.2.0` reports
    `pulled harvester-vm 0.3.0`. That is a mutable tag, not a guarantee, and it
    means a `v3.2.0` pin no longer reproduces what it did this morning.
+
+### Last verified run
+
+`2026-09-02`, against the Harvester cluster in the lab, via
+`./vms/bake-bootstrap-xplane.sh apply`:
+
+```
+Vm.bakeHarvester DONE [1m2s]
+192.168.10.124 : ok=23  changed=4  unreachable=0  failed=0  skipped=27
+```
+
+PVC `Bound` to `lh-68e4c918-...` straight from `storageClassName`, VMI
+`Running` with a guest-agent address after ~45s, Ansible authenticating as
+`sthings` over password auth.
+
+Worth knowing when you reproduce it: Dagger caches the Ansible step on the
+contents of the generated inventory, i.e. the VM's IP. Rebuild the VM onto the
+same address and the playbook is served from cache as `CACHED [0.0s]` with no
+PLAY RECAP, while the run still reports success. `--cache-buster` does not help
+-- it only reaches the requirements render (blueprints#199). To genuinely
+re-run the playbook, use the module's `execute-ansible` against the host.
 
 ### The encrypted parameters
 
