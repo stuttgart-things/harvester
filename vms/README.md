@@ -8,26 +8,23 @@ provision against. `bake-harvester` renders the three manifests, applies them
 through the Kubernetes API, waits for the guest agent to report an IP and runs
 Ansible against it -- no OpenTofu and no Crossplane involved.
 
-The reproducible form is `vms/bake-bootstrap-xplane.sh` -- it is the call
-below with the arguments filled in from the files in this directory, so a run
-cannot drift from what is committed:
+Everything the run needs is in this directory as YAML; the call below is the
+whole procedure.
 
-```bash
-export SOPS_AGE_KEY=...                  # the repo's age key
-./vms/bake-bootstrap-xplane.sh           # render only, touches no cluster
-./vms/bake-bootstrap-xplane.sh apply     # the real run
-```
-
-It derives `ANSIBLE_USER`/`ANSIBLE_PASSWORD` from the encrypted parameters
-rather than the environment, so the account Ansible authenticates as is by
-construction the one cloud-init created, and builds `--ansible-parameters` from
-`bootstrap-xplane.ansible-vars.yaml` so the string and the file cannot disagree.
-`HARVESTER_KUBECONFIG` overrides the kubeconfig path.
-
-What it runs, spelled out:
+| File | |
+|---|---|
+| `bootstrap-xplane.params.yaml` | VM shape -- image, disk, CPU/memory, network. No credentials. |
+| `bootstrap-xplane.params.enc.yaml` | the same keys **plus** `cloudInitUsername`, `cloudInitPassword`, `cloudInitSshKey`, SOPS/AGE encrypted. Pass this **or** the plaintext file, never both. |
+| `bootstrap-xplane.ansible-vars.yaml` | extra vars for the playbook, for the `execute-ansible` entrypoint which takes a file rather than a string. |
 
 ```bash
 export KUBECONFIG=~/.kube/harvester
+export SOPS_AGE_KEY=...                  # the repo's age key
+
+# The Ansible credentials come OUT OF the encrypted parameters -- see below for
+# why picking them by hand is how a run fails at the last step.
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/bootstrap-xplane.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/bootstrap-xplane.params.enc.yaml)
 
 # DRY RUN FIRST -- renders the same manifests, touches no cluster
 dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
@@ -50,6 +47,17 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
   --progress plain -vv \
   export --path /tmp/bootstrap
 ```
+
+`ANSIBLE_USER`/`ANSIBLE_PASSWORD` have to be the credentials in the encrypted
+file, which is why they are read from it above rather than typed. cloud-init's
+`chpasswd` overwrites whatever the golden image baked in, so those are the only
+credentials the VM will accept -- set them to anything else and the VM boots
+correctly and rejects the playbook at watch-item 4.
+
+Two values are written twice and nothing keeps them in step, so check both when
+you change either: `manage_filesystem` (here as `--ansible-parameters`, and in
+`bootstrap-xplane.ansible-vars.yaml`), and the module pin `vm@v3.2.1` (in both
+calls above).
 
 `manage_filesystem=false` is not optional. Without it `sthings.baseos.setup`
 fails on this VM with `Error while resolving value for 'lvm_device_auto':
@@ -106,8 +114,8 @@ creates neither.
 
 ### Last verified run
 
-`2026-09-02`, against the Harvester cluster in the lab, via
-`./vms/bake-bootstrap-xplane.sh apply`:
+`2026-09-02`, against the Harvester cluster in the lab, with the call above
+(`blueprints/vm@v3.2.1`):
 
 ```
 Vm.bakeHarvester DONE [1m2s]
