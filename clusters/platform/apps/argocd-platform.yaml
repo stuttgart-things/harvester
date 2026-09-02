@@ -37,6 +37,11 @@ spec:
       ARGO_CD_INGRESS_ENABLED: "false"
       INGRESS_HOSTNAME: argocd
       INGRESS_DOMAIN: platform.sthings.lab
+      # The bundle derives the Argo CD Gateway HTTPRoute host from INFRA_DOMAIN
+      # (ARGO_CD_DOMAIN: ${INFRA_DOMAIN:-set-INFRA_DOMAIN.invalid} in ks-argo-cd).
+      # Without it the HTTPRoute renders argocd.set-INFRA_DOMAIN.invalid and is
+      # rejected by the Gateway API validation, failing the whole Kustomization.
+      INFRA_DOMAIN: platform.sthings.lab
       INGRESS_SECRET_NAME: argocd-server-tls # pragma: allowlist secret
       ISSUER_NAME: vault-pki
       ISSUER_KIND: ClusterIssuer
