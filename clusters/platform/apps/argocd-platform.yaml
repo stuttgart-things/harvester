@@ -43,7 +43,7 @@ spec:
       # rejected by the Gateway API validation, failing the whole Kustomization.
       INFRA_DOMAIN: platform.sthings.lab
       INGRESS_SECRET_NAME: argocd-server-tls # pragma: allowlist secret
-      ISSUER_NAME: vault-pki
+      ISSUER_NAME: openbao-pki
       ISSUER_KIND: ClusterIssuer
       ARGO_CD_PASSWORD_MTIME: "2026-03-23T02:00:00UTC" # pragma: allowlist secret
       AVP_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle

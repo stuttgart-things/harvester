@@ -19,7 +19,7 @@ spec:
       HARBOR_DOMAIN: platform.sthings.lab
       EXPOSURE_TYPE: none
       INGRESS_CLASS_NAME: nginx
-      ISSUER_NAME: vault-pki
+      ISSUER_NAME: openbao-pki
       ISSUER_KIND: ClusterIssuer
       STORAGE_CLASS: local-path
       HARBOR_PV_SIZE_REGISTRY: 12Gi
