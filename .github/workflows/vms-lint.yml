@@ -75,11 +75,17 @@ jobs:
 
           readme = pathlib.Path("vms/README.md").read_text()
 
-          # manage_filesystem lives in the vars file AND in the README's
-          # --ansible-parameters string. Nothing keeps them in step but this.
+          # The vars file and the README's --ansible-parameters string carry the
+          # same values, and nothing keeps them in step but this.
+          #
+          # SPACE-separated, not comma. The module passes the string through
+          # verbatim into `ansible-playbook --extra-vars`, and ansible splits
+          # k=v pairs on whitespace. Joined with commas, "a=1,b=2" binds a to
+          # the string "1,b=2" and never defines b -- silently, with the play
+          # running on a default the author thought they had overridden.
           for f in sorted(glob.glob("vms/*.ansible-vars.yaml")):
               d = yaml.safe_load(open(f)) or {}
-              s = ",".join(f"{k}={str(v).lower() if isinstance(v, bool) else v}"
+              s = " ".join(f"{k}={str(v).lower() if isinstance(v, bool) else v}"
                            for k, v in d.items())
               if f'--ansible-parameters "{s}"' not in readme:
                   fail.append(f'{f}: README does not carry '
