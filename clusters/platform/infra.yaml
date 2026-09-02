@@ -63,7 +63,9 @@ spec:
       CERT_MANAGER_SELFSIGNED_SECRET_NAME: wildcard-platform-sthings-tls # pragma: allowlist secret
       CERT_MANAGER_SELFSIGNED_CERT_NAME: wildcard-platform-sthings-tls
       CERT_MANAGER_SELFSIGNED_CERT_NAMESPACE: default
-      CERT_MANAGER_SELFSIGNED_ISSUER: vault-pki
+      # Moved off the retired infra Vault (vault-pki) onto the platform OpenBao
+      # root now that openbao-pki is Ready. See stuttgart-things/harvester#152.
+      CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -139,7 +141,8 @@ spec:
       EXTRA_CERT_NAMESPACE: default
       EXTRA_CERT_SECRET_NAME: wildcard-harbor-platform-sthings-tls # pragma: allowlist secret
       EXTRA_CERT_DOMAIN: harbor.platform.sthings.lab
-      EXTRA_CERT_ISSUER: vault-pki
+      # Moved off the retired infra Vault (vault-pki) onto openbao-pki — #152.
+      EXTRA_CERT_ISSUER: openbao-pki
       EXTRA_CERT_ISSUER_KIND: ClusterIssuer
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
