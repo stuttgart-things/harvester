@@ -12,13 +12,13 @@ Ansible against it -- no OpenTofu and no Crossplane involved.
 export KUBECONFIG=~/.kube/harvester
 
 # DRY RUN FIRST -- renders the same manifests, touches no cluster
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.0 \
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
   render-harvester-vm \
   --kcl-parameters-file ./vms/bootstrap-xplane.params.yaml \
   contents
 
 # THE REAL RUN
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.0 \
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
   bake-harvester \
   --kube-config file://$HOME/.kube/harvester \
   --vm-name bootstrap-xplane \
@@ -52,32 +52,39 @@ like.
 
 ### Before the first run
 
-Two things have to exist on the cluster, and neither is created by the run:
+Both values below name things that already exist on the cluster; the run
+creates neither.
 
 1. **The image.** `imageId` must name a real `VirtualMachineImage` in
-   `imageNamespace` -- `kubectl get virtualmachineimages -n default`. The
-   golden `sthings-*` images are the ones that accept the password auth
-   `ANSIBLE_USER`/`ANSIBLE_PASSWORD` expect; a `*-dev` image trusts only the
-   cloud-init key and Ansible fails with `Permission denied (publickey)`.
+   `imageNamespace`. The golden `sthings-*` images are the ones that accept the
+   password auth `ANSIBLE_USER`/`ANSIBLE_PASSWORD` expect; a `*-dev` image
+   trusts only the cloud-init key and Ansible fails with
+   `Permission denied (publickey)`.
 
-2. **The storage class the module composes.** `harvester-vm` 0.2.0 builds it as
-   `<storageClass>-<imageId>` and offers no override, while Harvester names its
-   own per-image classes `lh-<uuid>`. The two do not meet, and nothing rewrites
-   the name -- the PVC is created against a class that does not exist, stays
-   Pending, and the run trips `--vmi-appear-timeout` with the VirtualMachine
-   applied but never instantiated. `vms/storageclass-longhorn-sthings-u26.yaml`
-   is the alias that bridges it:
+2. **The storage class.** `storageClassName` must name the class Harvester
+   generated for that image. Both come from one lookup:
 
    ```bash
-   kubectl apply -f vms/storageclass-longhorn-sthings-u26.yaml
+   kubectl get virtualmachineimages -n default \
+     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
    ```
 
-   For a different image, copy `parameters.backingImage` from that image's
-   generated class:
+   The UUID is per-image and per-cluster, so it cannot be carried between
+   clusters or assumed stable across a re-import of the image.
 
-   ```bash
-   kubectl get virtualmachineimage -n default <image> -o jsonpath='{.status.storageClassName}'
-   ```
+   Leave `storageClassName` unset and harvester-vm falls back to composing
+   `<storageClass>-<imageId>`, which is what 0.2.0 did unconditionally and what
+   no current Harvester can satisfy (blueprints#197). That failure is silent:
+   the PVC is created against a class that does not exist and stays Pending
+   while the VirtualMachine looks applied, so the run trips
+   `--vmi-appear-timeout` rather than reporting a bad class.
+
+   `storageClassName` needs harvester-vm 0.3.0, which `vm@v3.2.1` pins. Use
+   that tag. `v3.2.0` happens to honour the key too right now, but only because
+   the `harvester-vm:0.2.0` OCI tag was overwritten with the 0.3.0 module --
+   `kcl mod pull oci://ghcr.io/stuttgart-things/harvester-vm:0.2.0` reports
+   `pulled harvester-vm 0.3.0`. That is a mutable tag, not a guarantee, and it
+   means a `v3.2.0` pin no longer reproduces what it did this morning.
 
 ### The encrypted parameters
 

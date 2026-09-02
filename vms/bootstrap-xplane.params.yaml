@@ -20,17 +20,23 @@ namespace: default
 # auth ANSIBLE_USER/ANSIBLE_PASSWORD expect. The *-dev images trust only the
 # cloud-init key, and Ansible gets "Permission denied (publickey)".
 #
-# The storage class is NOT a free choice. harvester-vm 0.2.0 composes it as
-# "<storageClass>-<imageId>" (main.k:110) with no override, so these two keys
-# together must name a class that exists. This Harvester names its per-image
-# classes lh-<uuid> -- sthings-u26 is backed by lh-68e4c918-0059-48bf-acaf-
-# 0de0ebe1eb65 -- so "longhorn-sthings-u26" is an alias StorageClass created
-# alongside it, mirroring the same provisioner and backingImage parameter.
-# Drop the alias only once the module can take a storage class verbatim.
+# storageClassName is taken verbatim by harvester-vm 0.3.0 (blueprints/vm
+# v3.2.1). It is the class Harvester generated for this image -- look it up
+# rather than guessing, the UUID is per-image and per-cluster:
+#
+#   kubectl get virtualmachineimages -n default \
+#     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
+#
+# The predecessor composed the class as "<storageClass>-<imageId>" with no
+# override, which no current Harvester can satisfy -- see blueprints#197. Do
+# not reintroduce a bare `storageClass:` here: on 0.3.0 an unset
+# storageClassName falls back to that composition, which resolves to a class
+# that does not exist, and the PVC then sits Pending while the VirtualMachine
+# looks applied. It fails as a timeout, not as an error.
 imageId: sthings-u26
 imageNamespace: default
 storage: 50Gi
-storageClass: longhorn
+storageClassName: lh-68e4c918-0059-48bf-acaf-0de0ebe1eb65
 
 # Machine
 cpuCores: 12
