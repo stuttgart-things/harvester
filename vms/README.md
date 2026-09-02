@@ -153,6 +153,134 @@ cannot log into.
 
 
 <details open>
+<summary>INSTALL AN RKE2 CLUSTER ON THE VM</summary>
+
+Turns `bootstrap-xplane` into a singlenode RKE2 cluster -- the control plane the
+Crossplane management layer runs on. Same `bake-harvester` call as above with
+three additions: the RKE2 playbook, the parameter set, and an inventory type.
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+export SOPS_AGE_KEY=...
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/bootstrap-xplane.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/bootstrap-xplane.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
+  bake-harvester \
+  --kube-config file://$HOME/.kube/harvester \
+  --vm-name bootstrap-xplane \
+  --namespace default \
+  --encrypted-file ./vms/bootstrap-xplane.params.enc.yaml \
+  --sops-key env:SOPS_AGE_KEY \
+  --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=xplane rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --inventory-type cluster \
+  --ansible-user env:ANSIBLE_USER \
+  --ansible-password env:ANSIBLE_PASSWORD \
+  --progress plain -vv \
+  export --path /tmp/rke2-xplane
+```
+
+### `--inventory-type cluster` is required, and it is not cosmetic
+
+`sthings.rke.rke2_cluster` declares `hosts: all`, but the role underneath it
+branches on group membership -- `groups['initial_master_node']` for the install,
+the token read and the kubeconfig rewrite, `groups['additional_master_nodes']`
+for the join. The default inventory type produces
+
+```ini
+[all]
+192.168.10.124
+```
+
+and the play fails on an undefined group before it does any work. `cluster`
+produces what the role expects, empty groups included, because the role tests
+membership *in* them:
+
+```ini
+# SINGLENODE-CLUSTER
+[initial_master_node]
+192.168.10.124 ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+
+[additional_master_nodes]
+
+[workers]
+```
+
+The same trap in the Crossplane path is written up in the stuttgart-things
+repo as `crossplane/knowledge/k3s-inventory-groups.md`.
+
+### Note the two different separators
+
+`--ansible-playbooks` is **comma**-separated. `--ansible-parameters` is
+**space**-separated: the module passes that string through verbatim into
+`ansible-playbook --extra-vars`, and ansible splits `k=v` pairs on whitespace.
+Join the parameters with commas and the first key silently swallows the rest of
+the string as its value.
+
+### Collections
+
+Nothing to supply. The module's default requirements set already carries
+`sthings-rke`, the same release the Terraform profiles pin. `--ansible-requirements-file`
+is only needed to deviate from it.
+
+### The values, and why
+
+| | |
+|---|---|
+| `rke2_cni=none` + `install_cilium=true` | Cilium is not an RKE2 built-in CNI; the role installs it via Helm and is gated on **both**. Set one without the other and you get either no CNI or RKE2's own Canal. |
+| `rke2_airgapped_installation=true` | Matches the other RKE2 clusters in the lab. The role has a working default source, so no mirror URL is set. The archive download takes several minutes. |
+| `manage_filesystem=false` | One 50Gi root disk, no data disk -- the role's LVM path has nothing to manage. |
+| `fetched_kubeconfig_path=/tmp/kubeconfig` | Where the kubeconfig is fetched to inside the run; `export --path` brings it out. |
+
+`vms/bootstrap-xplane.rke2.ansible-vars.yaml` holds the same values for the
+`execute-ansible` entrypoint, which takes a file rather than a string. CI checks
+that the two agree.
+
+### Getting the kubeconfig out
+
+`fetched_kubeconfig_path` fetches it *inside* the run. `export --path` does not
+bring it out -- the exported directory holds `harvester-vm.yaml`,
+`inventory.ini` and `outputs.json`, and nothing else. Take it off the node:
+
+```bash
+ssh sthings@<vm-ip> \
+  'sudo cat /etc/rancher/rke2/rke2.yaml' \
+  | sed "s/127.0.0.1/<vm-ip>/" > ~/.kube/xplane
+```
+
+The cloud-init key from the encrypted parameters is already trusted on the VM,
+so this needs no password. The `sed` matters: the file RKE2 writes points at
+`127.0.0.1`, which only works on the node itself.
+
+### Last verified run
+
+`2026-09-02`, `bake-harvester` with the call above, 14m40s end to end:
+
+```
+sthings.baseos.setup    : ok=23   changed=1   failed=0
+sthings.rke.rke2_cluster: ok=124  changed=40  failed=0  unreachable=0
+```
+
+Checked on the node rather than taken from the recap, because a green recap
+does not prove a working cluster:
+
+```
+NAME               STATUS   ROLES                VERSION
+bootstrap-xplane   Ready    control-plane,etcd   v1.35.3+rke2r1
+```
+
+`cilium`, `cilium-envoy` and `cilium-operator` Running, no `kube-proxy`
+DaemonSet, no Canal. Those two facts are what confirm `rke2_cni=none` +
+`install_cilium=true` and `disableKubeProxy=true` actually took -- both fail
+silently, into a working-looking cluster with the wrong CNI.
+
+The air-gapped image archive was the slow step at roughly seven minutes of the
+fourteen.
+
+</details>
+
+<details open>
 <summary>CREATE HARVESTER VM CONFIG + APPLY/CREATE</summary>
 
 ```bash
