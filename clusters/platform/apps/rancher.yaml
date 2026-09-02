@@ -13,7 +13,7 @@ spec:
   path: './apps/rancher'
   postBuild:
     substitute:
-      CLUSTER_ISSUER: vault-pki
+      CLUSTER_ISSUER: openbao-pki
       GATEWAY_NAME: platform-sthings-gateway
       GATEWAY_NAMESPACE: default
       INGRESS_DOMAIN: platform.sthings.lab

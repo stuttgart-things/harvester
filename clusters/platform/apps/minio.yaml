@@ -16,7 +16,7 @@ spec:
       MINIO_NAMESPACE: minio
       MINIO_VERSION: '16.0.10'
       MINIO_INGRESS_ENABLED: 'false'
-      CLUSTER_ISSUER: vault-pki
+      CLUSTER_ISSUER: openbao-pki
       INGRESS_HOSTNAME_CONSOLE: artifacts-console
       INGRESS_HOSTNAME_API: artifacts
       INGRESS_DOMAIN: platform.sthings.lab
