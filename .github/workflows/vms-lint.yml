@@ -1,0 +1,135 @@
+---
+# Validates the VM parameter files in vms/ without touching a cluster.
+#
+# Every check here exists because the corresponding mistake was made once and
+# cost a debugging session (harvester#155). They are cheap; the expensive part
+# is that most of these failures are SILENT at runtime -- a bad storage class
+# does not error, it leaves the PVC Pending and the run trips a timeout with
+# the VirtualMachine looking applied.
+#
+# Provisioning is deliberately NOT here. bake-harvester creates VMs, needs the
+# lab network for both the Harvester API and the VM's IP, and would have to run
+# on the self-hosted `kvm` runner under the `harvester` environment. Separate
+# workflow, manual trigger.
+name: Lint VM Params
+
+on:
+  pull_request:
+    paths:
+      - "vms/**"
+      - ".github/workflows/vms-lint.yml"
+  workflow_dispatch:
+
+env:
+  DAGGER_VERSION: "0.21.8"
+
+jobs:
+  yamllint:
+    name: Lint YAML
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: Run yamllint
+        run: yamllint -c .yamllint.yml vms/
+
+  consistency:
+    name: Params and README agree
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Check params, and the values written in two places
+        run: |
+          python3 - <<'PY'
+          import glob, re, sys, yaml, pathlib
+
+          fail = []
+          REQUIRED = ["vmName", "namespace", "imageId", "imageNamespace", "storage",
+                      "storageClassName", "cpuCores", "memory", "networkName",
+                      "networkNamespace"]
+
+          params = sorted(glob.glob("vms/*.params.yaml"))
+          if not params:
+              sys.exit("no vms/*.params.yaml found -- did the naming change?")
+
+          for f in params:
+              d = yaml.safe_load(open(f)) or {}
+              for k in REQUIRED:
+                  if not d.get(k):
+                      fail.append(f"{f}: '{k}' is missing or empty")
+              # storageClassName must be given verbatim. Leave it out and
+              # harvester-vm composes "<storageClass>-<imageId>", which no
+              # current Harvester can satisfy -- it names per-image classes
+              # lh-<uuid>. The PVC is then created against a class that does
+              # not exist and sits Pending. See blueprints#197.
+              if "storageClass" in d:
+                  fail.append(f"{f}: 'storageClass' is set -- revives the "
+                              f"<storageClass>-<imageId> composition; use "
+                              f"'storageClassName' instead")
+
+          readme = pathlib.Path("vms/README.md").read_text()
+
+          # manage_filesystem lives in the vars file AND in the README's
+          # --ansible-parameters string. Nothing keeps them in step but this.
+          for f in sorted(glob.glob("vms/*.ansible-vars.yaml")):
+              d = yaml.safe_load(open(f)) or {}
+              s = ",".join(f"{k}={str(v).lower() if isinstance(v, bool) else v}"
+                           for k, v in d.items())
+              if f'--ansible-parameters "{s}"' not in readme:
+                  fail.append(f'{f}: README does not carry '
+                              f'--ansible-parameters "{s}"')
+
+          # The module pin appears in both documented calls.
+          pins = set(re.findall(r'blueprints/vm@(v[\d.]+)', readme))
+          if len(pins) != 1:
+              fail.append(f"vms/README.md: module pin is not consistent: {sorted(pins)}")
+
+          for m in fail:
+              print(f"FAIL: {m}")
+          print(f"checked {len(params)} params file(s)")
+          sys.exit(1 if fail else 0)
+          PY
+
+  render:
+    name: Renders against the pinned module
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install dagger
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | BIN_DIR=/usr/local/bin DAGGER_VERSION="${DAGGER_VERSION}" sh
+          dagger version
+
+      - name: Render each params file and check the storage class survives
+        run: |
+          set -euo pipefail
+          pin=$(grep -oP 'blueprints/vm@\Kv[\d.]+' vms/README.md | head -1)
+          echo "module pin from README: ${pin}"
+
+          for f in vms/*.params.yaml; do
+            echo "::group::render ${f}"
+            dagger call -m "github.com/stuttgart-things/blueprints/vm@${pin}" \
+              render-harvester-vm --kcl-parameters-file "./${f}" contents \
+              > rendered.yaml
+            cat rendered.yaml
+            echo "::endgroup::"
+
+            want=$(python3 -c "import yaml,sys; print(yaml.safe_load(open(sys.argv[1]))['storageClassName'])" "$f")
+            got=$(grep -oP '^\s*storageClassName:\s*\K\S+' rendered.yaml | head -1)
+            if [[ "$got" != "$want" ]]; then
+              echo "FAIL: ${f} asks for storageClassName '${want}' but the render produced '${got}'"
+              echo "      A composed '<storageClass>-<imageId>' value here means the module ignored"
+              echo "      storageClassName -- check the pin is v3.2.1 or newer (blueprints#197)."
+              exit 1
+            fi
+            echo "OK: ${f} renders storageClassName '${got}'"
+          done
