@@ -194,7 +194,10 @@ spec:
       TRUST_BUNDLE_NAME: cluster-trust-bundle
       TRUST_BUNDLE_CA_SECRET: cluster-ca-secret # pragma: allowlist secret
       TRUST_BUNDLE_CA_KEY: ca.crt
-      TRUST_BUNDLE_VAULT_CA_SECRET: vault-pki-ca # pragma: allowlist secret
+      # openbao-pki-ca (clusters/platform/openbao-pki-ca.yaml) is a bundle of the
+      # new OpenBao root AND the legacy infra-Vault root, so in-cluster trust
+      # covers both during the migration off vault-pki. See #152.
+      TRUST_BUNDLE_VAULT_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
       TRUST_BUNDLE_VAULT_CA_KEY: ca.crt
       TRUST_BUNDLE_TARGET_KEY: trust-bundle.pem
       TRUST_BUNDLE_SECRET_NAME: tls-ca # pragma: allowlist secret
