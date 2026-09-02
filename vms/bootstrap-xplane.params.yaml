@@ -7,14 +7,27 @@
 # arguments and are echoed verbatim by `dagger --progress plain`.
 #
 # Values match vms/xplane.yaml, the VM this replaces the hand-rolled
-# render for. The storage class the PVC ends up with is composed by the
-# module as "<storageClass>-<imageId>", i.e. longhorn-upstream.
+# render for, except for imageId: xplane.yaml names "upstream", which does
+# not exist on the cluster (nor does its storage class). See the note on the
+# root disk below.
 
 vmName: bootstrap-xplane
 namespace: default
 
-# Root disk
-imageId: upstream
+# Root disk.
+#
+# imageId picks a golden sthings-* image on purpose: those carry the password
+# auth ANSIBLE_USER/ANSIBLE_PASSWORD expect. The *-dev images trust only the
+# cloud-init key, and Ansible gets "Permission denied (publickey)".
+#
+# The storage class is NOT a free choice. harvester-vm 0.2.0 composes it as
+# "<storageClass>-<imageId>" (main.k:110) with no override, so these two keys
+# together must name a class that exists. This Harvester names its per-image
+# classes lh-<uuid> -- sthings-u26 is backed by lh-68e4c918-0059-48bf-acaf-
+# 0de0ebe1eb65 -- so "longhorn-sthings-u26" is an alias StorageClass created
+# alongside it, mirroring the same provisioner and backingImage parameter.
+# Drop the alias only once the module can take a storage class verbatim.
+imageId: sthings-u26
 imageNamespace: default
 storage: 50Gi
 storageClass: longhorn
