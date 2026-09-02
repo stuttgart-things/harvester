@@ -1,5 +1,10 @@
 # SECRETS
 
+`xplane.yaml` is the singlenode RKE2 cluster on the `bootstrap-xplane` VM
+(`192.168.10.124:6443`, v1.35.3+rke2r1) -- see `vms/README.md` for how it is
+built. It replaced a kubeconfig for a predecessor at `192.168.10.106`, which
+stopped answering; that version is still in git history if it is ever wanted.
+
 Decrypt a SOPS/AGE-encrypted kubeconfig from this directory:
 
 ```bash

@@ -1,0 +1,36 @@
+---
+# Extra vars for the RKE2 cluster run on bootstrap-xplane, for the
+# `execute-ansible` entrypoint. The README passes the same values to
+# `bake-harvester` as a space-separated --ansible-parameters string; CI checks
+# that the two agree.
+#
+# Modelled on the singlenode RKE2 clusters in the ansible repo
+# (exec/labul/philly-rke2) rather than invented here.
+
+# Carried over from the base OS run: this VM has one 50Gi root disk and no data
+# disk, so the role's LVM path has nothing to manage. See
+# bootstrap-xplane.ansible-vars.yaml.
+manage_filesystem: false
+
+rke_state: present
+rke2_k8s_version: 1.35.3
+rke2_release_kind: rke2r1
+
+cluster_setup: singlenode
+cluster_name: xplane
+
+# Cilium is NOT an RKE2 built-in CNI. The sthings.rke role installs it via Helm,
+# gated on install_cilium=true AND rke2_cni=none -- setting only one of the two
+# gives you either no CNI or RKE2's own Canal, quietly.
+rke2_cni: none
+install_cilium: true
+disableKubeProxy: true
+
+# The role has a working default source for the image archive; no mirror URL is
+# set here. Pulling it takes several minutes on first run.
+rke2_airgapped_installation: true
+prepare_rancher_ha_nodes: true
+
+install_helm_diff: false
+registry_mirror_url: https://registry-1.docker.io
+fetched_kubeconfig_path: /tmp/kubeconfig
