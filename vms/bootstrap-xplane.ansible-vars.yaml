@@ -1,0 +1,13 @@
+---
+# Extra vars for `sthings.baseos.setup` on bootstrap-xplane.
+#
+# manage_filesystem gates the LVM path in the role. Left at its default, the
+# first run failed with:
+#
+#   Error while resolving value for 'lvm_device_auto': 'lvm_disk' is undefined
+#
+# bootstrap-xplane has a single 50Gi root disk and no data disk, so there is
+# nothing for that path to manage -- the same reason tests/crossplane/vars.yaml
+# sets it false for this playbook. Set it true and supply lvm_disk only once
+# the VM gets a second disk.
+manage_filesystem: false
