@@ -3,9 +3,10 @@
 # Lives here (not in the generic stuttgart-things/flux cert-manager definition)
 # because the hostname is specific to this cluster.
 #
-# Issued by the vault-pki ClusterIssuer. On first reconcile Flux adopts the
-# pre-existing, hand-managed harvester-tls secret via server-side-apply
-# (no re-issue, no owner conflict) as long as only this manifest manages it.
+# Migrated from clusters/infra (vault-pki) to the platform cluster's openbao-pki
+# ClusterIssuer as part of the sthings.lab PKI move off the decommissioned infra
+# Vault (issue #152). Flux adopts the pre-existing harvester-tls secret via
+# server-side-apply as long as only this manifest manages it.
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -17,7 +18,7 @@ spec:
     - harvester.sthings.lab
   secretName: harvester-tls # pragma: allowlist secret
   issuerRef:
-    name: vault-pki
+    name: openbao-pki
     kind: ClusterIssuer
   duration: 2160h # 90 days
   renewBefore: 360h # renew 15 days before expiry
