@@ -1,5 +1,10 @@
 # SECRETS
 
+`harvester.yaml` is the Harvester cluster itself. `.github/workflows/vms-bake.yml`
+decrypts it at run time, which is why it is here rather than a GitHub secret:
+`SOPS_AGE_KEY` stays the only thing stored outside the repo, so rotating that
+key rotates access to every credential the pipeline uses at once.
+
 `xplane.yaml` is the singlenode RKE2 cluster on the `bootstrap-xplane` VM
 (`192.168.10.124:6443`, v1.35.3+rke2r1) -- see `vms/README.md` for how it is
 built. It replaced a kubeconfig for a predecessor at `192.168.10.106`, which

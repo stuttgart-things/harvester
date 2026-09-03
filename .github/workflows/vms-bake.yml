@@ -1,0 +1,187 @@
+---
+# Provisions a Harvester VM and runs its Ansible profile, manually.
+#
+# NOT on push. bake-harvester creates VMs and reruns playbooks against them;
+# tying that to a merge means a config typo rebuilds a live cluster. The shape
+# follows packer-build.yml: self-hosted runner, `harvester` environment, an
+# explicit input to choose between rendering and applying.
+#
+# It has to run on `kvm`. A GitHub-hosted runner reaches neither the Harvester
+# API nor the VM's address, and Ansible needs the second one.
+#
+# SOPS_AGE_KEY is the ONLY secret this needs. Everything else is committed
+# encrypted: the cluster kubeconfig in secrets/, the VM credentials in
+# vms/*.params.enc.yaml. Nothing is duplicated into GitHub secrets, so rotating
+# the age key rotates access to all of it at once.
+name: Bake VM
+
+on:
+  workflow_dispatch:
+    inputs:
+      vm_name:
+        description: "VM to provision (must have vms/<name>.params.enc.yaml)"
+        type: string
+        default: bootstrap-xplane
+      profile:
+        description: "baseos = OS setup only; rke2 = OS setup + singlenode RKE2"
+        type: choice
+        options: [baseos, rke2]
+        default: baseos
+      mode:
+        description: "render = dry run, touches nothing; apply = provision"
+        type: choice
+        options: [render, apply]
+        default: render
+
+env:
+  DAGGER_VERSION: "0.21.8"
+  SOPS_VERSION: "3.11.0"
+
+jobs:
+  bake:
+    name: "${{ inputs.mode }} ${{ inputs.vm_name }} (${{ inputs.profile }})"
+    runs-on: kvm
+    environment: harvester
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install dagger and sops
+        run: |
+          set -euo pipefail
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | BIN_DIR=/usr/local/bin DAGGER_VERSION="${DAGGER_VERSION}" sh
+          curl -fsSL -o /tmp/sops \
+            "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
+          sudo install -m 0755 /tmp/sops /usr/local/bin/sops && rm -f /tmp/sops
+          dagger version && sops --version
+
+      - name: Resolve the profile
+        id: profile
+        run: |
+          set -euo pipefail
+          vm="${{ inputs.vm_name }}"
+
+          case "${{ inputs.profile }}" in
+            baseos)
+              vars="vms/${vm}.ansible-vars.yaml"
+              plays="sthings.baseos.setup"
+              inv="default"
+              ;;
+            rke2)
+              vars="vms/${vm}.rke2.ansible-vars.yaml"
+              # Comma-separated. The PARAMETERS below are space-separated --
+              # they go through verbatim into --extra-vars, which splits on
+              # whitespace. Two separators, one command line.
+              plays="sthings.baseos.setup,sthings.rke.rke2_cluster"
+              # Not cosmetic: sthings.rke.rke2_cluster says `hosts: all`, but
+              # the role branches on groups['initial_master_node'] and
+              # groups['additional_master_nodes']. The default type emits
+              # [all]+address and the play dies on an undefined group.
+              inv="cluster"
+              ;;
+          esac
+
+          for f in "vms/${vm}.params.enc.yaml" "$vars"; do
+            [[ -f "$f" ]] || { echo "::error::missing $f"; exit 1; }
+          done
+
+          # Derived from the vars file, never retyped, so the run cannot drift
+          # from what is committed. vms-lint.yml checks the same derivation
+          # against the README.
+          params=$(python3 -c "import sys,yaml; d=yaml.safe_load(open(sys.argv[1])) or {}; print(' '.join(f'{k}={str(v).lower() if isinstance(v,bool) else v}' for k,v in d.items()))" "$vars")
+
+          echo "vars=$vars"        >> "$GITHUB_OUTPUT"
+          echo "plays=$plays"      >> "$GITHUB_OUTPUT"
+          echo "inventory=$inv"    >> "$GITHUB_OUTPUT"
+          echo "params=$params"    >> "$GITHUB_OUTPUT"
+          echo "pin=$(grep -oP 'blueprints/vm@\Kv[\d.]+' vms/README.md | head -1)" >> "$GITHUB_OUTPUT"
+
+          echo "playbooks : $plays"
+          echo "inventory : $inv"
+          echo "parameters: $params"
+
+      - name: Render (no cluster involved)
+        run: |
+          set -euo pipefail
+          dagger call -m "github.com/stuttgart-things/blueprints/vm@${{ steps.profile.outputs.pin }}" \
+            render-harvester-vm \
+            --kcl-parameters-file "./vms/${{ inputs.vm_name }}.params.yaml" \
+            contents
+
+      - name: Decrypt the Harvester kubeconfig
+        if: inputs.mode == 'apply'
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          # The dagger sops module, as secrets/README.md documents for these
+          # files. It exports 0644 -- on a shared self-hosted runner that is a
+          # cluster-admin credential readable by every other job, so tighten it
+          # before anything else happens.
+          dagger call -m github.com/stuttgart-things/dagger/sops@v0.82.1 decrypt \
+            --age-key env:SOPS_AGE_KEY \
+            --encrypted-file ./secrets/harvester.yaml \
+            export --path="${RUNNER_TEMP}/harvester.kubeconfig"
+          chmod 600 "${RUNNER_TEMP}/harvester.kubeconfig"
+
+      - name: Provision
+        if: inputs.mode == 'apply'
+        env:
+          SOPS_AGE_KEY: ${{ secrets.SOPS_AGE_KEY }}
+        run: |
+          set -euo pipefail
+          enc="./vms/${{ inputs.vm_name }}.params.enc.yaml"
+
+          # --extract, so the credentials never exist as a file on the runner.
+          # They must be the ones cloud-init set: chpasswd overwrites whatever
+          # the golden image baked in, so no other pair can work.
+          ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' "$enc")
+          ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' "$enc")
+          export ANSIBLE_USER ANSIBLE_PASSWORD
+
+          dagger call -m "github.com/stuttgart-things/blueprints/vm@${{ steps.profile.outputs.pin }}" \
+            bake-harvester \
+            --kube-config "file://${RUNNER_TEMP}/harvester.kubeconfig" \
+            --vm-name "${{ inputs.vm_name }}" \
+            --namespace default \
+            --encrypted-file "$enc" \
+            --sops-key env:SOPS_AGE_KEY \
+            --ansible-playbooks "${{ steps.profile.outputs.plays }}" \
+            --ansible-parameters "${{ steps.profile.outputs.params }}" \
+            --inventory-type "${{ steps.profile.outputs.inventory }}" \
+            --ansible-user env:ANSIBLE_USER \
+            --ansible-password env:ANSIBLE_PASSWORD \
+            --progress plain -vv \
+            export --path "${RUNNER_TEMP}/bake" \
+            2>&1 | tee "${RUNNER_TEMP}/bake.log"
+
+      - name: Prove Ansible actually ran
+        if: inputs.mode == 'apply'
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/bake.log"
+
+          # A green run is not proof of work. Dagger caches the Ansible exec on
+          # the generated inventory, i.e. the VM's IP -- rebuild onto the same
+          # address and the playbook is served as `CACHED [0.0s]` with no PLAY
+          # RECAP, and bake-harvester still exits 0. --cache-buster does not
+          # reach that exec (blueprints#199). So require the recap, and require
+          # it to be clean: silence here means nothing was executed.
+          if ! grep -aq 'PLAY RECAP' "$log"; then
+            echo "::error::no PLAY RECAP -- the Ansible step was served from cache or never ran"
+            grep -a 'withExec ansible-playbook' -A2 "$log" | tail -5 || true
+            exit 1
+          fi
+
+          recap=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -a 'ok=' | tail -1)
+          echo "$recap"
+          if ! grep -qE 'failed=0[[:space:]]' <<<"$recap" \
+             || ! grep -qE 'unreachable=0[[:space:]]' <<<"$recap"; then
+            echo "::error::playbook reported failures"
+            exit 1
+          fi
+
+      - name: Remove the decrypted kubeconfig
+        if: always()
+        run: rm -f "${RUNNER_TEMP}/harvester.kubeconfig"
