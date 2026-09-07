@@ -14,14 +14,25 @@
 # Release them through clusterbook once it runs here, so the DNS side is
 # unwound too — not by editing this file.
 #
-# ORDERING. flux-system applies clusters/platform recursively, so this can be
-# reconciled before ../apps/clusterbook.yaml has installed the NetworkConfig
-# CRD. Flux retries, so it converges on its own; a NoKindMatch error here in the
-# first minutes after the app lands is expected and self-healing. There is
-# deliberately no separate Kustomization for this path: infra has one
-# (clusterbook-configuration -> ./clusters/infra/seeds) and it has been
-# READY=False forever, pointing at a directory that does not exist — and even if
-# it did, flux-system would already own these objects.
+# ORDERING — THIS IS WHY THE FILE LIVES OUTSIDE clusters/platform.
+#
+# flux-system applies clusters/platform RECURSIVELY, and a Kustomization fails
+# as a whole: one object that does not dry-run takes every other object with it.
+# Put this CR in there and the result is a deadlock, not a race — the CRD is
+# installed by the clusterbook Kustomization, which flux-system itself has to
+# create, and it never gets that far:
+#
+#   Ready=False ReconciliationFailed
+#   NetworkConfig/clusterbook/networks-labul dry-run failed: no matches for kind
+#   "NetworkConfig" in version "github.stuttgart-things.com/v1"
+#
+# Observed on platform 2026-09-07, blocking all of clusters/platform. It never
+# surfaced on infra because the CRD has existed there for 173 days; the ordering
+# only bites on a fresh install.
+#
+# So this directory is a SIBLING of clusters/platform, not a child, and it is
+# applied by its own Kustomization (apps/clusterbook-seed.yaml) that dependsOn
+# clusterbook.
 apiVersion: github.stuttgart-things.com/v1
 kind: NetworkConfig
 metadata:
