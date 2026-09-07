@@ -1,0 +1,45 @@
+---
+# Seeds the clusterbook IPAM state, in its own Kustomization so it can wait for
+# the CRD.
+#
+# WHY NOT JUST DROP THE CR IN clusters/platform. flux-system applies that path
+# recursively, and a Kustomization fails as a whole — one object that does not
+# dry-run takes every other object with it. The CRD comes from the clusterbook
+# Kustomization, which flux-system itself has to create, so the CR sitting in
+# there is a deadlock rather than a race:
+#
+#   Ready=False ReconciliationFailed
+#   NetworkConfig/clusterbook/networks-labul dry-run failed: no matches for kind
+#   "NetworkConfig" in version "github.stuttgart-things.com/v1"
+#
+# That is what happened on 2026-09-07 and it blocked all of clusters/platform,
+# including the Kustomization that would have installed the CRD. Hence
+# ../../platform-seeds — a SIBLING directory, outside the recursed path — plus
+# the dependsOn below.
+#
+# infra has the same two-Kustomization shape (clusterbook-configuration) and it
+# has been READY=False forever pointing at a directory that was never created.
+# The shape was right; only the path was missing.
+#
+# prune: false — the allocation state must survive this Kustomization being
+# removed or renamed. Deleting a cluster's reservation goes through clusterbook,
+# which also withdraws the DNS record; pruning the CR would drop the state and
+# leave the router entries behind.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: clusterbook-seed
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+spec:
+  dependsOn:
+    - name: clusterbook
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/platform-seeds
+  prune: false
