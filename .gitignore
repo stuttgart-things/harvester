@@ -14,6 +14,9 @@
 .terraform.lock.hcl
 *.tfstate
 *.tfstate.backup
+# Terraform state under any name — it carries tokens, not just config
+state-backup-*.json
+state-*.json
 *.tfstate.lock.info
 terraform.tfvars
 override.tf
