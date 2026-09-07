@@ -107,11 +107,17 @@ d = json.load(sys.stdin)["data"]
 cfg = json.loads(base64.b64decode(d["config"]))
 name = base64.b64decode(d["name"]).decode()
 print(json.dumps({
-    "apiVersion": "v1", "kind": "Config", "current-context": name,
+    # The context MUST be called "default". vault-base-setup passes var.context
+    # (default: "default") to the kubernetes provider as config_context, so a
+    # context named after the cluster fails the apply with
+    #   Error: Provider configuration: cannot load Kubernetes client config
+    #   context "default" does not exist
+    # ~/.kube/platform.sthings.lab is named that way too.
+    "apiVersion": "v1", "kind": "Config", "current-context": "default",
     "clusters": [{"name": name, "cluster": {
         "server": base64.b64decode(d["server"]).decode(),
         "certificate-authority-data": cfg["tlsClientConfig"]["caData"]}}],
-    "contexts": [{"name": name, "context": {"cluster": name, "user": name}}],
+    "contexts": [{"name": "default", "context": {"cluster": name, "user": name}}],
     "users": [{"name": name, "user": {"token": cfg["bearerToken"]}}]}))
 ' > ~/.kube/$CLUSTER
 chmod 600 ~/.kube/$CLUSTER
