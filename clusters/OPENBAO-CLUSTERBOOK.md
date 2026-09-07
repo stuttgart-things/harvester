@@ -1,18 +1,21 @@
 # OpenBao Kubernetes auth for the clusterbook-managed clusters
 
-`crossplane-mgmt`, `ferdinand` and `k3s-xp`. One shared document because the
-three are identical apart from a name; each `<cluster>/openbao/` directory holds
-only what differs.
+`crossplane-mgmt`, `ferdinand`, `k3s-xp` and `apps1`. One shared document
+because they are identical apart from a name; each `<cluster>/openbao/`
+directory holds only what differs.
+
+`apps1` is the first built this way from the start — it never talks to the Vault
+on `infra` at all. The other three are being migrated.
 
 Context and the wider migration: [harvester#152][152]. Read
 [`platform/openbao/README.md`](platform/openbao/README.md) first — it is the
 run that creates the PKI everything here signs against.
 
-## Why these three are not like `platform` or `xplane`
+## Why these are not like `platform` or `xplane`
 
 Same Terraform half, different issuer half.
 
-|  | `platform`, `xplane` | these three |
+|  | `platform`, `xplane` | these |
 |---|---|---|
 | Auth mount (Terraform) | `<cluster>/openbao/` | `<cluster>/openbao/` — same |
 | ClusterIssuer | a Flux `Kustomization` in `<cluster>/infra.yaml` | the **`cert-manager-vault-pki-clusterbook` ApplicationSet** |
@@ -114,7 +117,7 @@ print(json.dumps({
 chmod 600 ~/.kube/$CLUSTER
 ```
 
-`k8s_auth_reviewer_create` is left at its default. Checked on all three,
+`k8s_auth_reviewer_create` is left at its default. Checked on the three that existed on
 2026-09-07: `kube-system/vault-auth-reviewer` does not exist on any of them, so
 the module creates it. `blueprints CreateVaultKubernetesAuth` would own that
 identity on a pipeline-built cluster — these were not built that way. The
