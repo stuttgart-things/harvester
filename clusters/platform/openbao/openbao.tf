@@ -38,38 +38,13 @@ module "openbao-base-setup" {
   certmanager_enabled              = false
   certmanager_vault_issuer_enabled = false
 
-  // ---- PKI: a NEW root, not an intermediate -----------------------------
-  // The old sthings.lab root lives in the infra Vault and was created as
-  // `internal`, so its key cannot be exported and cannot be carried over. This
-  // is a genuinely new CA that happens to share the common name.
-  //
-  // Consequence, and it is the real work of this migration: NOTHING trusts
-  // this CA until it is distributed — Ansible for VMs, Flux/Argo for clusters,
-  // across the whole harvester environment. Certificates it signs are valid
-  // and rejected everywhere until that lands.
-  pki_enabled      = true
-  pki_path         = "pki"
-  pki_common_name  = var.pki_common_name
-  pki_organization = "sva"
-  pki_country      = "DE"
-  pki_key_type     = "rsa"
-  // 4096 rather than the module's 2048 default: this key signs everything in
-  // the environment for ten years, and it is generated exactly once.
-  pki_key_bits    = 4096
-  pki_root_ttl    = "87600h"
-  pki_policy_name = "pki-issue"
-
-  pki_roles = [
-    {
-      name             = "sthings-lab"
-      allowed_domains  = ["sthings.lab"]
-      allow_subdomains = true
-      // One year. The certificates themselves are issued for 90 days by
-      // cert-manager (duration: 2160h in the Certificate manifests) and renewed
-      // 15 days before expiry — this only has to be the ceiling, not the value.
-      max_ttl = "8760h"
-    }
-  ]
+  // ---- PKI: NOT created here any more ----------------------------------
+  // The module gates mount, root cert, URLs, role and policy behind this one
+  // flag, and the root cert is the one we must not have: this cluster's CA was
+  // rescued from raft storage on 2026-09-07 and imported by hand, and it must
+  // never pass through Terraform state. The four harmless resources are
+  // declared in ./pki.tf instead. Full reasoning there and in ./README.md.
+  pki_enabled = false
 
   // ---- Kubernetes auth: the whole point ---------------------------------
   // Creates the auth backend at <cluster_name>-<name>, i.e.
@@ -124,14 +99,17 @@ variable "cluster_name" {
   default     = "platform-sthings"
 }
 
-variable "pki_common_name" {
-  type        = string
-  description = "PKI root CA common name / allowed domain"
-  default     = "sthings.lab"
-}
 
-output "pki_ca_cert" {
-  description = "Root CA certificate — the one that has to reach every trust store"
-  value       = module.openbao-base-setup.pki_ca_cert
-  sensitive   = true
-}
+// The CA is no longer produced here, so there is nothing to output. It is not
+// Terraform's artefact — it was rescued from raft storage and imported by hand
+// (README, "Breaking glass"), and the module output would be empty with
+// pki_enabled = false anyway.
+//
+// To get the certificate for trust-store work, ask the running instance. It is
+// public; no token needed:
+//
+//   curl -s https://openbao.platform.sthings.lab/v1/pki/ca/pem > sthings-lab-ca.crt
+//   openssl x509 -in sthings-lab-ca.crt -noout -subject -dates -fingerprint -sha256
+//
+// The one in use since 2026-09-02 is
+//   4E:3F:AD:1D:DD:40:42:62:5F:63:A8:F1:66:9A:3F:1C:9D:65:96:DA:18:EC:BD:77:AF:5B:D5:DD:6D:3D:51:9E
