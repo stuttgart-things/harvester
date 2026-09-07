@@ -70,11 +70,40 @@ kubectl -n openbao exec -it openbao-0 -- bao operator init \
 ```
 
 With an auto-seal active this returns **recovery keys**, not unseal keys. Nobody
-needs them to reboot the pod — they exist only to regenerate a root token, or
-for an emergency where the seal key itself is gone.
+needs them to reboot the pod; they exist for an emergency where the seal key
+itself is gone.
 
-Store the output the way `sthings-infra` does: in a KV path on another instance,
-never on disk. Record here where it went, because there will be no second copy.
+> ### The recovery key does NOT replace the root token
+>
+> An earlier version of this file said the recovery keys "exist only to
+> regenerate a root token". **That is wrong on an auto-unsealed instance, and
+> acting on it cost this cluster its root token.** Verified on OpenBao 2.6.2,
+> 2026-09-07, in normal mode:
+>
+> | call | answer |
+> |---|---|
+> | `bao operator generate-root -init` | `403` — the CLI targets `sys/generate-root-token/attempt`, which does not exist |
+> | `PUT sys/generate-root/attempt` | `unsupported operation` — the route is there, the operation is not |
+> | `bao operator generate-root -init -recovery-token` | `403` — `sys/generate-recovery-token/attempt` is closed outside recovery mode |
+>
+> The ceremony exists **only in recovery mode** (`bao server … -recovery`), and
+> the token it yields authenticates against `sys/raw` alone — raw storage, not
+> an administrative API. It cannot create auth mounts, policies or tokens.
+>
+> **So the root token is the only administrative credential this instance has,
+> and it has exactly one copy.** Treat losing it as losing the instance.
+
+Store the output in a KV path on another instance, never on disk — and store it
+in **two** places, because there is no ceremony to fall back on.
+
+**Record here where it went.** This line was in the file from the start and was
+never filled in; when the token was needed on 2026-09-07 nobody knew where to
+look, and the answer turned out to be "nowhere".
+
+```
+root token:   <fill this in>
+recovery key: <fill this in>
+```
 
 > **Why this is not automated.** The obvious candidate is the `vault-autounseal`
 > operator. It does not help: with a static seal there is nothing to unseal, and
@@ -147,7 +176,7 @@ terraform output -raw pki_ca_cert > sthings-lab-ca.crt
 openssl x509 -in sthings-lab-ca.crt -noout -subject -dates
 ```
 
-## 4. Revoke the root token
+## 4. Revoke the root token — only once a replacement path exists
 
 ```bash
 bao token revoke <root token>
@@ -155,6 +184,16 @@ bao token revoke <root token>
 
 Skipping this recreates on OpenBao exactly the problem being left behind on
 `infra`. From here nothing in the cluster holds a long-lived credential.
+
+> **Do not run this until the stored copies from step 2 are verified and a
+> second administrative path exists.** Revoking is what made the cluster
+> unadministrable on 2026-09-07: the token was revoked here, the only stored
+> copy was then deleted from Git by #167 on the assumption that the recovery
+> ceremony could mint another, and it cannot (see step 2).
+>
+> A defensible sequence: revoke this token, and in the same session create a
+> narrowly-scoped admin token or auth role that can write `sys/auth/*` — so that
+> "no long-lived credential" does not also mean "no way back in".
 
 ## 5. Point cert-manager at it — nothing to do
 
@@ -232,3 +271,83 @@ lands, certificates signed here are valid and rejected everywhere. It is
 separate work and it is the larger half of the migration.
 
 Only then does the `infra` Vault come down.
+
+---
+
+## Breaking glass: recovering the CA when the root token is gone
+
+Done for real on 2026-09-07. Recovery mode cannot give you back an
+administrative token — but it can give you back the **CA private key**, which is
+the part that would otherwise cost a full re-distribution across the estate.
+
+With the key in hand, re-initialising OpenBao stops being a catastrophe: the
+PKI mount, auth backend, policy and role all come from Terraform, and the CA is
+re-imported rather than regenerated. Nothing downstream notices.
+
+**You need the `UNSEAL` recovery key from step 2.** Without it, stop here.
+
+```bash
+# 1. into recovery mode. Flux owns the StatefulSet, so suspend it first,
+#    and SAVE THE ORIGINAL ARGS — you are editing a live workload.
+kubectl -n flux-system patch kustomization openbao --type=merge -p '{"spec":{"suspend":true}}'
+kubectl -n openbao      patch helmrelease  openbao --type=merge -p '{"spec":{"suspend":true}}'
+kubectl -n openbao get sts openbao \
+  -o jsonpath='{.spec.template.spec.containers[0].args[0]}' > /tmp/args.orig
+# append ' -recovery' to the `bao server -config=...` invocation in those args,
+# patch the sts, delete the pod, then confirm:
+kubectl -n openbao logs openbao-0 | grep 'Recovery Mode'      # must say true
+
+# 2. mint a recovery token. -recovery-token on EVERY call.
+kubectl -n openbao exec -it openbao-0 -- bao operator generate-root -recovery-token -generate-otp
+kubectl -n openbao exec -it openbao-0 -- bao operator generate-root -recovery-token -init -otp=<OTP>
+kubectl -n openbao exec -i  openbao-0 -- bao operator generate-root -recovery-token -nonce=<NONCE> - < unseal.key
+# DECODE LOCALLY — `-decode` first GETs the attempt status, which 500s once the
+# ceremony has completed ("...when already unsealed"):
+python3 -c "import base64,sys; e,o=sys.argv[1:3]; \
+  print(''.join(chr(b^ord(o[i])) for i,b in enumerate(base64.urlsafe_b64decode(e+'='*(-len(e)%4)))))" <ENCODED> <OTP>
+
+# 3. read the CA. sys/raw is served in recovery mode; sys/seal-status is not.
+RT=<recovery token>
+G() { kubectl -n openbao exec openbao-0 -- sh -c "wget -qO- --header='X-Vault-Token: $RT' 'http://127.0.0.1:8200/v1/$1'"; }
+G 'sys/raw/logical/?list=true'                    # one dir per mount; pki is the one with role/
+G "sys/raw/logical/$PKI/config/issuers"           # -> default issuer id
+G "sys/raw/logical/$PKI/config/keys"              # -> default key id
+G "sys/raw/logical/$PKI/config/issuer/$ISSUER"    # .certificate
+G "sys/raw/logical/$PKI/config/key/$KEY"          # .private_key
+```
+
+Then verify before trusting it — fingerprint against the distributed root, and
+that the key actually belongs to the certificate:
+
+```bash
+openssl x509 -in ca.crt -noout -fingerprint -sha256
+diff <(openssl x509 -in ca.crt -noout -modulus) <(openssl rsa -in ca.key -noout -modulus)
+```
+
+Undo everything afterwards: restore the args from `/tmp/args.orig`, delete the
+pod, un-suspend Flux. Confirm `bao status` answers normally again.
+
+### Four things that cost an hour, so they are written down
+
+- **`raw_storage_endpoint` is not needed.** `sys/raw` is already routed in
+  recovery mode. A `404` from `sys/raw/<key>` means the KEY is absent, not the
+  route — `sys/raw` itself answers `307` (the mux redirecting to its trailing
+  slash). Enabling the option changed nothing, and it must not be left on in
+  normal mode: it bypasses every policy.
+- **The storage layout is not `config/ca_bundle`.** That is the pre-multi-issuer
+  spelling. Here it is `config/issuer/<id>` and `config/key/<id>`, with
+  `config/issuers` and `config/keys` naming the defaults — and note they sit
+  under `config/`, not at the mount root.
+- **Only one recovery token exists at a time.** Every further `-generate-otp`
+  then fails with `attempted to generate recovery operation token when already
+  unsealed`, which reads like a fault and is not one. Restarting the pod clears
+  it; recovery tokens are not persisted.
+- **`clusters/platform/secrets.yaml` does not decrypt as a whole.** Its three
+  documents were encrypted separately and concatenated, and SOPS binds each
+  value's AES-GCM tag to its path, so `sops -d` on the file fails with
+  `cipher: message authentication failed` — which looks like a broken age key
+  and is not. Split the document out first:
+  ```bash
+  awk 'BEGIN{d=1} /^---$/{d++} d==3' clusters/platform/secrets.yaml \
+    | sed '1{/^---$/d}' > /tmp/doc3.yaml && sops -d /tmp/doc3.yaml
+  ```
