@@ -131,8 +131,29 @@ preflight re-checks it rather than trusting this paragraph.
 
 ## Verifying
 
-`Ready=True` on the ClusterIssuer proves the Vault **login** works and nothing
-else. Only an issued Certificate is evidence:
+**First: nudge the issuer.** It was created before the auth mount existed, and a
+ClusterIssuer that failed once keeps that failure on its status rather than
+retrying on any useful cadence. On apps1, 2026-09-07, it still read
+
+```
+Failed to initialize Vault client: ... serviceaccounts "certmanager" not found
+```
+
+three hours after Terraform had created that ServiceAccount. Certificates queue
+behind it with `Referenced issuer does not have a Ready status condition`, which
+points at the issuer and explains nothing. Any write triggers a reconcile:
+
+```bash
+export KUBECONFIG=~/.kube/$CLUSTER
+kubectl annotate clusterissuer vault-pki reconcile=$(date +%s) --overwrite
+kubectl get clusterissuer vault-pki      # Ready=True within seconds
+```
+
+Compare the condition's `lastTransitionTime` against the `creationTimestamp` of
+whatever it complains about before taking the message at face value.
+
+Then: `Ready=True` proves the Vault **login** works and nothing else. Only an
+issued Certificate is evidence:
 
 ```bash
 export KUBECONFIG=~/.kube/$CLUSTER
