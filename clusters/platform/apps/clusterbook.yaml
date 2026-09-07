@@ -1,0 +1,68 @@
+---
+# clusterbook — the IPAM/DNS service, moved here from the infra cluster.
+#
+# It is the LAST service on infra, which is being switched off to free the
+# hardware (#152). Nothing about the app changes; only where it runs and which
+# hostname it answers on.
+#
+# WHY IT COULD NOT WAIT. The clusterbook-operator on this cluster reserves the
+# IP and DNS name for every new downstream cluster, and it reached the old
+# instance over https://clusterbook.infra.sthings.lab — behind the
+# *.infra.sthings.lab wildcard that expired 2026-09-01. Cluster registration has
+# been broken since. Found while building apps1 on 2026-09-07: the cluster came
+# up Ready, and the operator then failed with
+#
+#   list IPs: get IPs request failed: ... tls: certificate has expired
+#
+# so no Argo CD cluster Secret was ever written and no platform component
+# deployed. Renewing that certificate would have meant keeping infra alive for
+# the one service that is supposed to leave it.
+#
+# TLS COMES FROM THE GATEWAY, so there is no Certificate here. The platform
+# gateway's HTTPS listener serves *.platform.sthings.lab from
+# wildcard-platform-sthings-tls, which cert-manager issues from the openbao-pki
+# ClusterIssuer — the new PKI. clusterbook.platform.sthings.lab is covered by
+# that wildcard, and *.platform.sthings.lab already resolves to the gateway IP,
+# so neither a certificate nor a DNS record is needed.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  annotations:
+    managed-by: kcl-flux-kustomizations
+    template: clusterbook
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: clusterbook
+  namespace: flux-system
+spec:
+  force: false
+  interval: '5m'
+  path: './apps/clusterbook'
+  postBuild:
+    substitute:
+      CLUSTERBOOK_NAMESPACE: clusterbook
+      # renovate: datasource=docker depName=ghcr.io/stuttgart-things/clusterbook
+      CLUSTERBOOK_VERSION: v1.25.8
+      CLUSTERBOOK_HOSTNAME: clusterbook
+      # The platform gateway, not infra-sthings-gateway.
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      DOMAIN: platform.sthings.lab
+      FLUX_SOURCE_API_VERSION: v1
+      # Unchanged from infra: the same physical router serves the same zone, so
+      # the DNS side of clusterbook keeps working exactly as before.
+      DDWRT_ENABLED: "true"
+      DDWRT_HOST: 192.168.10.1
+      DDWRT_USER: root
+      DDWRT_ZONE: sthings.lab
+    substituteFrom:
+      - kind: Secret
+        name: clusterbook-ddwrt-vars
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  timeout: '5m'
+  wait: true

@@ -1,8 +1,23 @@
 ---
+# Where the clusterbook-operator reserves IPs and DNS names for new clusters.
+#
+# Moved off infra with the service itself (see apps/clusterbook.yaml). The old
+# URL sat behind the *.infra.sthings.lab wildcard that expired 2026-09-01, so
+# every reservation had been failing with
+#
+#   list IPs: get IPs request failed: ... tls: certificate has expired
+#
+# and no new cluster could finish registering in Argo CD.
+#
+# insecureSkipVerify stays false, and now it costs nothing: the platform gateway
+# serves *.platform.sthings.lab from wildcard-platform-sthings-tls, issued by the
+# openbao-pki ClusterIssuer, and the operator's trust bundle already carries that
+# root (verified 2026-09-07 — cluster-trust-bundle holds
+# C=DE, O=sva, CN=sthings.lab notAfter=Aug 30 2036).
 apiVersion: clusterbook.stuttgart-things.com/v1alpha1
 kind: ClusterbookProviderConfig
 metadata:
   name: default
 spec:
-  apiURL: https://clusterbook.infra.sthings.lab
+  apiURL: https://clusterbook.platform.sthings.lab
   insecureSkipVerify: false
