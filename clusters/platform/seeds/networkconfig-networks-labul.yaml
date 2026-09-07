@@ -1,0 +1,40 @@
+---
+# The clusterbook IPAM state, migrated verbatim from the infra cluster on
+# 2026-09-07 (`clusterbook/networks-labul`). This CR *is* the data — clusterbook
+# runs with LOAD_CONFIG_FROM=cr and holds nothing else: no PVC, no database.
+#
+# COPIED UNCHANGED, INCLUDING THE ENTRIES THAT ARE NO LONGER TRUE. A migration
+# that also edits allocation state is two changes wearing one hat, and the
+# entries below may still have matching DNS records on the router (192.168.10.1)
+# that only clusterbook knows how to withdraw:
+#
+#   178:ASSIGNED:DNS:martinwolf   the cluster was deleted 2026-09-07
+#   173:ASSIGNED:DNS:ferdinand    scheduled for deletion, replaced by apps1
+#
+# Release them through clusterbook once it runs here, so the DNS side is
+# unwound too — not by editing this file.
+#
+# ORDERING. flux-system applies clusters/platform recursively, so this can be
+# reconciled before ../apps/clusterbook.yaml has installed the NetworkConfig
+# CRD. Flux retries, so it converges on its own; a NoKindMatch error here in the
+# first minutes after the app lands is expected and self-healing. There is
+# deliberately no separate Kustomization for this path: infra has one
+# (clusterbook-configuration -> ./clusters/infra/seeds) and it has been
+# READY=False forever, pointing at a directory that does not exist — and even if
+# it did, flux-system would already own these objects.
+apiVersion: github.stuttgart-things.com/v1
+kind: NetworkConfig
+metadata:
+  name: networks-labul
+  namespace: clusterbook
+spec:
+  networks:
+    "192.168.10":
+      - "171"
+      - "177:ASSIGNED:DNS:crossplane-mgmt"
+      - "176"
+      - "178:ASSIGNED:DNS:martinwolf"
+      - "180:ASSIGNED:DNS:k3s-xp"
+      - "173:ASSIGNED:DNS:ferdinand"
+      - "172"
+      - "179"
