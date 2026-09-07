@@ -41,39 +41,47 @@ FP=$(curl -s "$ADDR/v1/pki/ca/pem" | openssl x509 -noout -fingerprint -sha256 2>
 ok "Live-CA ist der gerettete Root"
 
 say "1. Backup des States"
-cp -f terraform.tfstate "terraform.tfstate.pre-pki-migration" 2>/dev/null || true
-terraform state pull > "state-backup-$(date +%Y%m%d-%H%M%S).json" 2>/dev/null \
-  && ok "State gesichert nach $DIR/state-backup-*.json" \
-  || info "state pull nicht moeglich — weiter, aber ohne Netz"
+# OUTSIDE the repo, deliberately. A Terraform state is not a config file: this
+# one carries the vault-auth-reviewer JWT among other things, and .gitignore
+# covers *.tfstate but would not have caught a state-backup-*.json sitting next
+# to the .tf files. Writing it here removes the chance entirely.
+BACKUP_DIR="${BACKUP_DIR:-$(mktemp -d "${TMPDIR:-/tmp}/openbao-tfstate-XXXXXX")}"
+chmod 700 "$BACKUP_DIR"
+BACKUP="$BACKUP_DIR/state-$(date +%Y%m%d-%H%M%S).json"
+if terraform state pull > "$BACKUP" 2>/dev/null && [ -s "$BACKUP" ]; then
+  chmod 600 "$BACKUP"; ok "State gesichert: $BACKUP"
+else
+  bad "state pull fehlgeschlagen — ohne Backup wird hier nichts verschoben"
+fi
 
-say "2. Aus den Modul-Adressen loesen"
-for a in \
-  'module.openbao-base-setup.vault_mount.pki[0]' \
-  'module.openbao-base-setup.vault_pki_secret_backend_config_urls.urls[0]' \
-  'module.openbao-base-setup.vault_pki_secret_backend_role.roles["sthings-lab"]' \
-  'module.openbao-base-setup.vault_policy.pki[0]'
-do
-  if terraform state list 2>/dev/null | grep -qxF "$a"; then
-    terraform state rm "$a" >/dev/null 2>&1 && ok "entfernt: $a" || bad "state rm fehlgeschlagen: $a"
-  else
-    info "nicht im State (schon migriert): $a"
+say "2. Ressourcen umhaengen"
+# `state mv`, NOT rm + import.
+#
+# terraform import runs a plan first, and this module cannot be planned from a
+# cold start: vault_approle_auth_backend_role_secret_id does for_each over a
+# RESOURCE (vault_approle_auth_backend_role.approle) rather than a variable, so
+# the keys are "known only after apply" and import aborts with
+#
+#   Error: Invalid for_each argument
+#
+# state mv is a pure state operation — no plan, no provider calls — so it walks
+# straight past that. It is also the right verb: nothing is being adopted, the
+# same object is just moving address.
+mv() {
+  if terraform state list 2>/dev/null | grep -qxF "$2"; then
+    info "schon an neuer Adresse: $2"; return 0
   fi
-done
-
-say "3. An den neuen Adressen aufnehmen"
-imp() {  # addr, id
-  if terraform state list 2>/dev/null | grep -qxF "$1"; then
-    info "schon vorhanden: $1"; return 0
+  if ! terraform state list 2>/dev/null | grep -qxF "$1"; then
+    bad "Quelle fehlt im State: $1 — Backup einspielen (siehe README)"
   fi
-  out=$(terraform import "$1" "$2" 2>&1)
-  printf '%s' "$out" | grep -qi 'Import successful' \
-    && ok "importiert: $1" \
-    || { printf '%s\n' "$out" | grep -iE 'error' | head -3 | sed 's/^/       /'; bad "Import fehlgeschlagen: $1"; }
+  terraform state mv "$1" "$2" >/dev/null 2>&1 \
+    && ok "$1 -> $2" \
+    || bad "state mv fehlgeschlagen: $1"
 }
-imp 'vault_mount.pki'                          'pki'
-imp 'vault_pki_secret_backend_config_urls.urls' 'pki/config/urls'
-imp 'vault_pki_secret_backend_role.sthings_lab' 'pki/roles/sthings-lab'
-imp 'vault_policy.pki_issue'                    'pki-issue'
+mv 'module.openbao-base-setup.vault_mount.pki[0]'                            'vault_mount.pki'
+mv 'module.openbao-base-setup.vault_pki_secret_backend_config_urls.urls[0]'  'vault_pki_secret_backend_config_urls.urls'
+mv 'module.openbao-base-setup.vault_pki_secret_backend_role.roles["sthings-lab"]' 'vault_pki_secret_backend_role.sthings_lab'
+mv 'module.openbao-base-setup.vault_policy.pki[0]'                           'vault_policy.pki_issue'
 
 say "4. Plan pruefen"
 plan=$(terraform plan -no-color 2>&1)
