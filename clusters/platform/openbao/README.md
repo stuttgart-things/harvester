@@ -200,7 +200,26 @@ Skipping this recreates on OpenBao exactly the problem being left behind on
 Already in Git: the `cert-manager-openbao-issuer` Kustomization in
 `../infra.yaml`. It sits **not-Ready until step 3 has run**, because the auth
 mount and the PKI it names come from Terraform — which is correct, and loud.
-Once they exist it goes green on the next reconcile.
+
+> **It does NOT go green on its own — nudge it.** A ClusterIssuer that failed
+> once keeps the failure on its status and does not retry on any useful cadence.
+> On apps1, 2026-09-07, the condition still read
+>
+>     Failed to initialize Vault client: ... serviceaccounts "certmanager" not found
+>
+> nearly three hours after Terraform had created that ServiceAccount — the
+> condition's lastTransitionTime was 12:37, the SA's creationTimestamp 15:28.
+> Certificates queue behind it with `Referenced issuer does not have a Ready
+> status condition`, which points at the issuer and says nothing about why.
+>
+> Any write to the object triggers a reconcile:
+>
+> ```bash
+> kubectl annotate clusterissuer <name> reconcile=$(date +%s) --overwrite
+> ```
+>
+> It went `Ready=True VaultVerified` within seconds. Check the condition's age
+> against the thing it complains about before believing it.
 
 The existing `vault-pki` issuer stays alive beside it. The two are independent
 and coexist deliberately: every Certificate keeps its current issuer until it is
