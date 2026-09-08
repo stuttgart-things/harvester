@@ -16,7 +16,7 @@ set -euo pipefail
 #
 # Env:
 #   CA_CERT_PATH  local PEM file on the VM (e.g. /tmp/sthings-lab-ca.crt)
-#   CA_CERT_URL   PEM CA endpoint (e.g. https://vault.infra.sthings.lab/v1/pki/ca/pem)
+#   CA_CERT_URL   PEM CA endpoint (e.g. https://openbao.platform.sthings.lab/v1/pki/ca/pem)
 #   CA_CERT_NAME  filename in the trust anchors dir (default sthings-lab-ca.crt)
 
 CA_CERT_PATH="${CA_CERT_PATH:-}"
