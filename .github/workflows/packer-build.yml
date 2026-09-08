@@ -68,7 +68,7 @@ jobs:
       PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Resolve image name
         id: meta
@@ -128,7 +128,7 @@ jobs:
       targets: ${{ steps.detect.outputs.targets }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
@@ -174,7 +174,7 @@ jobs:
         include: ${{ fromJson(needs.detect-golden.outputs.targets) }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Show build parameters
         run: |
