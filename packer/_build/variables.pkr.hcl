@@ -140,7 +140,7 @@ variable "ca_cert_file" {
 variable "ca_cert_url" {
   type        = string
   default     = ""
-  description = "PEM CA endpoint, fetched with curl -sk at build, used only when ca_cert_file is empty (e.g. https://vault.infra.sthings.lab/v1/pki/ca/pem). Empty = skip."
+  description = "PEM CA endpoint, fetched with curl -sk at build, used only when ca_cert_file is empty (e.g. https://openbao.platform.sthings.lab/v1/pki/ca/pem). Empty = skip."
 }
 
 variable "ca_cert_name" {
