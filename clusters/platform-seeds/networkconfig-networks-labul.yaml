@@ -15,8 +15,37 @@
 # Both are still ASSIGNED below as of 2026-09-08. That is not an oversight in
 # this file -- it is the withdrawal above that has not been done.
 #
-# Release them through clusterbook once it runs here, so the DNS side is
-# unwound too — not by editing this file.
+# Release them through clusterbook once it runs here — not by editing this file.
+#
+# 2026-09-08: releasing both freed the addresses and left the DNS records in
+# place. Verified against the router, not the pod resolver:
+#
+#   nslookup ferdinand.sthings.lab    192.168.10.1  -> 192.168.10.173
+#   nslookup x.martinwolf.sthings.lab 192.168.10.1  -> 192.168.10.178
+#
+# NOT because clusterbook cannot remove records. It calls DeleteRecord on
+# release, for DD-WRT exactly as for PowerDNS. The call FAILED and the API said
+# `{"status":"ok"}` anyway, because web.go discarded the returned error:
+#
+#   DDWRT DELETE DNS RECORD FAILED
+#     err: ddwrt write dnsmasq_options: Process exited with status 127
+#
+# Creation was equally broken -- reserving with create_dns:true returned 200 and
+# wrote no record -- so this was never a delete-only gap, and reading the source
+# rather than the UI is what showed it.
+#
+# Both are fixed in clusterbook v1.26.0 (stuttgart-things/clusterbook#187): the
+# NVRAM write and the dnsmasq reload run as separate commands so the error names
+# the failing step, three reload variants are tried because restart_dnsmasq is a
+# shell function a non-interactive SSH session may not resolve, and the DNS
+# outcome is reported in the API response instead of being dropped.
+#
+# So the two records above should be withdrawn through clusterbook on that
+# version. If any record still survives a release, check the response and the
+# log first — on v1.26.0 both now say what happened.
+#
+# Harmless until an address is reused: a later cluster taking 173 would make
+# both ferdinand.sthings.lab and its own name resolve to the same host.
 #
 # ---------------------------------------------------------------------------
 # THE ANNOTATION BELOW IS LOAD-BEARING. Without it Flux re-applies this list
