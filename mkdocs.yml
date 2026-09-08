@@ -16,6 +16,8 @@ nav:
       - Claim Status Collector: services/claim-status-collector.md
   - Runbooks:
       - Harvester Reinstall: install.md
+  - Demo:
+      - Self-Service auf Bare Metal: demo/bare-metal-self-service.md
   - Roadmap: roadmap.md
 
 plugins:
