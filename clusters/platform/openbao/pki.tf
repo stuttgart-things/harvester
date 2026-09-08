@@ -42,15 +42,38 @@ resource "vault_pki_secret_backend_config_urls" "urls" {
 // One year. The certificates themselves are issued for 90 days by cert-manager
 // (duration: 2160h in the Certificate manifests) and renewed 15 days before
 // expiry — this only has to be the ceiling, not the value.
+//
+// max_ttl IS IN SECONDS, not "8760h". The API returns seconds, so a duration
+// string here never matches what comes back and every plan shows
+// `"31536000" -> "8760h"` forever. Same year, permanent diff.
+//
+// key_bits IS 2048 AND MUST STAY 2048. This is a SIGNING role: cert-manager
+// generates the key and submits a CSR, and Vault validates that CSR against
+// key_type/key_bits. cert-manager's default is RSA 2048 and none of our
+// Certificate manifests set spec.privateKey, so every CSR in the estate is
+// 2048-bit.
+//
+// This file said 4096 from the day it was written (harvester#178) while the
+// live role has always been 2048. Nothing broke only because nobody applied
+// this directory afterwards. The first apply for any unrelated reason would
+// have raised the role to 4096 and then REJECTED EVERY SIGNING REQUEST in the
+// fleet — clusters keep running, certificates simply stop renewing, and the
+// issuer goes on reporting Ready because it verifies the login and not the
+// signing. Found on 2026-09-08 in the plan for the Crossplane AppRole, which
+// had no business touching this resource at all.
+//
+// Raising it to 4096 is possible, but it is a fleet-wide change: every
+// Certificate would need spec.privateKey.size: 4096, and they would have to
+// land BEFORE the role changes, not after.
 resource "vault_pki_secret_backend_role" "sthings_lab" {
   backend            = vault_mount.pki.path
   name               = "sthings-lab"
-  max_ttl            = "8760h"
+  max_ttl            = 31536000 // 8760h, one year — seconds, see above
   allowed_domains    = ["sthings.lab"]
   allow_subdomains   = true
   allow_bare_domains = false
   key_type           = "rsa"
-  key_bits           = 4096
+  key_bits           = 2048
   generate_lease     = true
 }
 
