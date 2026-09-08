@@ -1,0 +1,29 @@
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: AnsibleRun
+metadata:
+  name: ansible-run
+  namespace: default
+spec:
+  pipelineRunName: run-ansible
+  namespace: tekton-ci
+  storageSize: '20Mi'
+  storageAccessModes: ReadWriteOnce
+  createInventory: 'true'
+  ansibleTargetHost: all
+  ansibleVerbosity: '2'
+  validateInventory: 'true'
+  gitRepoUrl: https://github.com/stuttgart-things/stage-time.git
+  gitWorkspaceSubdirectory: /ansible/workdir/
+  ansibleCredentialsUserKey: ANSIBLE_USER
+  ansibleCredentialsPasswordKey: ANSIBLE_PASSWORD
+  installExtraRoles: 'true'
+  installExtraCollections: 'true'
+  ansiblePlaybooks:
+  - sthings.baseos.setup
+  environmentConfig: default
+  wrapInCrossplane: true
+  crossplaneObjectName: run-ansible
+  crossplaneNamespace: default
+  crossplaneProviderConfig: in-cluster
+  crossplaneTimeout: '60'
+  deriveReadiness: true
