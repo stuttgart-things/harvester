@@ -79,6 +79,41 @@ module "openbao-base-setup" {
       token_ttl      = 3600
     }
   ]
+
+  // ---- AppRole: the credential Crossplane logs in with --------------------
+  // So that a VaultK8sAuth XR can create the per-cluster Kubernetes auth mount
+  // and a new cluster stops needing a human to run terraform before its
+  // ClusterIssuer works. Full reasoning, and what the grant costs, in
+  // ./approle.tf.
+  enableApproleAuth = true
+
+  approle_roles = [
+    {
+      name           = "crossplane"
+      token_policies = [vault_policy.crossplane_auth_admin.name]
+    }
+  ]
+
+  // EVERY ONE OF THESE IS THE MODULE DEFAULT (0). They are written out because
+  // 0 means "never expires / unlimited uses", and that is a decision rather
+  // than an accident.
+  //
+  // A secret_id with a TTL is the failure mode this whole migration exists to
+  // remove: cert-manager held a Vault token at a 720h default that nothing
+  // renewed, the issuer kept reporting Ready because it only verifies the
+  // LOGIN, and certificates silently stopped being issued. An expiring
+  // secret_id would reintroduce exactly that, one layer further down, where it
+  // would surface as clusters that provision but never get a certificate.
+  //
+  // The cost of 0 is a credential that stays valid until someone rotates it.
+  // That is the trade taken here: an explicit rotation procedure (./approle.tf)
+  // beats an implicit expiry nobody is watching.
+  secret_id_ttl          = 0
+  secret_id_num_uses     = 0
+  token_max_ttl          = 0
+  token_explicit_max_ttl = 0
+  token_num_uses         = 0
+  token_period           = 0
 }
 
 variable "openbao_addr" {

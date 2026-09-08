@@ -171,6 +171,44 @@ flux reconcile kustomization apps-platform
 kubectl -n openbao exec openbao-0 -- bao status   # Initialized true, Sealed false
 ```
 
+## 2b. AppRole for Crossplane — optional, and a real trade
+
+Only needed if `VaultK8sAuth` XRs are to create the per-cluster Kubernetes auth
+mounts, instead of a human running `terraform apply` in
+`clusters/<name>/openbao` before each new cluster's ClusterIssuer can work.
+
+`./approle.tf` creates the policy; `enableApproleAuth` + `approle_roles` in
+`./openbao.tf` create the mount, the role and a secret_id. **Read the comment
+block in `approle.tf` before applying**: the policy carries `sudo` on
+`sys/auth/*`, so whoever holds this secret_id can mount and unmount any auth
+backend on this instance — including the ones cert-manager uses. That power
+currently sits in a root token a human uses occasionally; this puts it
+permanently and online in a Secret on `crossplane-mgmt`.
+
+The secret_id does not expire (`secret_id_ttl = 0`), deliberately. An expiring
+one would reintroduce exactly the silent-failure mode this migration removed:
+the login stops working, the issuer still reports Ready because it verifies the
+login and never the signing, and certificates quietly stop being issued.
+
+After the apply, feed the pair into the Secret the XR reads. `role_id` is not
+secret; `secret_id` is, and it is also in the Terraform state.
+
+```bash
+ROLE_ID=$(terraform output -raw crossplane_approle_role_id)
+SECRET_ID=$(terraform output -raw crossplane_approle_secret_id)
+
+kubectl --kubeconfig ~/.kube/crossplane-mgmt -n default create secret generic vault \
+  --from-literal=terraform.tfvars="vault_role_id = \"$ROLE_ID\"
+vault_secret_id = \"$SECRET_ID\""
+unset SECRET_ID
+```
+
+To rotate, taint the secret_id and re-apply, then rewrite that Secret:
+
+```bash
+terraform taint 'module.openbao-base-setup.vault_approle_auth_backend_role_secret_id.approle_secret["crossplane"]'
+```
+
 ## 3. PKI and Kubernetes auth — Terraform
 
 ```bash
