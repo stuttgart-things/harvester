@@ -43,7 +43,7 @@ spec:
     substitute:
       CLUSTERBOOK_NAMESPACE: clusterbook
       # renovate: datasource=docker depName=ghcr.io/stuttgart-things/clusterbook
-      CLUSTERBOOK_VERSION: v1.25.15
+      CLUSTERBOOK_VERSION: v1.26.0
       CLUSTERBOOK_HOSTNAME: clusterbook
       # The platform gateway, not infra-sthings-gateway.
       GATEWAY_NAME: platform-sthings-gateway
