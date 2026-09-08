@@ -93,7 +93,7 @@ Per cluster, from its own `openbao/` directory:
 export VAULT_ADDR=https://openbao.platform.sthings.lab
 # The root token — the only credential that may write auth mounts here.
 # Recorded in platform/openbao/README.md; stored in that same directory.
-export VAULT_TOKEN=$(sops --decrypt ../../platform/openbao/init.enc.yaml \
+export VAULT_TOKEN=$(sops --decrypt ../../../secrets/openbao-platform-init.enc.yaml \
   | python3 -c 'import yaml,sys; print(yaml.safe_load(sys.stdin)["root_token"])')
 
 KUBECONFIG_PATH=<this cluster's kubeconfig> \
