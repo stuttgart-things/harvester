@@ -18,6 +18,13 @@
 // every estate; it is taken here because the alternative is a manual terraform
 // run standing between every new cluster and a working certificate.
 //
+// THE POLICY WAS NARROWED AFTER THE FIRST APPLY. As first written it also
+// carried sys/policies/acl/*, and `auth/+/role/*` matched auth/approle/role/
+// crossplane -- its own role. That combination was a complete escalation to
+// root-equivalent. Verified against the live instance, then closed; the deny
+// block in the policy has the detail. Anything added here should be re-checked
+// with sys/capabilities-self rather than reasoned about.
+//
 // A WILDCARD POLICY IS NOT A SUBSTITUTE. `path "*" { capabilities = [...] }`
 // authenticates fine and then 403s on the mount, because a wildcard does not
 // imply sudo. It reads like a broken package rather than a missing capability.
@@ -39,8 +46,7 @@ path "sys/auth" {
   capabilities = ["read", "list"]
 }
 
-# The mount's own configuration and roles. `+` is one path segment, i.e.
-# auth/test1-sthings-certmanager/... and nothing deeper or wider.
+# The mount's own configuration and roles. `+` is one path segment.
 path "auth/+/config" {
   capabilities = ["create", "read", "update", "delete"]
 }
@@ -49,18 +55,53 @@ path "auth/+/role/*" {
   capabilities = ["create", "read", "update", "delete", "list"]
 }
 
-# The XR's `policies` field creates policies named {clusterName}-{name} and
-# appends them to tokenPolicies. Without this it can only reference policies
-# that already exist -- and a role bound to a policy that does not exist logs in
-# successfully and is granted nothing, which surfaces as a denied signing
-# request much later rather than as an error.
-path "sys/policies/acl/*" {
-  capabilities = ["create", "read", "update", "delete", "list"]
-}
-
 # Read-only, for plan-time lookups.
 path "sys/mounts" {
   capabilities = ["read", "list"]
+}
+
+# NOTE: sys/policies/acl/* is deliberately ABSENT. The VaultK8sAuth XR has a
+# `policies` field that CREATES policies named {clusterName}-{name}; without
+# this path that field cannot be used, and `tokenPolicies` may only REFERENCE
+# policies that already exist. That costs nothing here -- every cluster binds to
+# `pki-issue`, created by ./pki.tf -- and it removes the ingredient that made
+# the escalation below possible: the ability to write a policy granting
+# anything. Adding it back means re-reading the deny block.
+
+# ---- THE DENIES ARE THE POINT --------------------------------------------
+# `+` above matches ANY single segment, and "approle" is a single segment. So
+# `auth/+/role/*` matched `auth/approle/role/crossplane` -- this credential's
+# OWN role. Combined with the ability to create policies, that was a complete
+# escalation to root-equivalent, verified against the live instance on
+# 2026-09-08 with sys/capabilities-self:
+#
+#   auth/approle/role/crossplane            [create delete list read update]
+#   auth/approle/role/crossplane/secret-id  [create delete list read update]
+#
+#   1. create a policy granting everything
+#   2. rewrite own token_policies to include it
+#   3. log in again
+#
+# An explicit deny on a more specific path always wins in a Vault ACL, so these
+# close it without narrowing the paths above.
+path "auth/approle/*" {
+  capabilities = ["deny"]
+}
+
+path "sys/auth/approle" {
+  capabilities = ["deny"]
+}
+
+# It must not be able to rewrite the policy it runs under.
+path "sys/policies/acl/crossplane-auth-admin" {
+  capabilities = ["deny"]
+}
+
+# pki-issue is what every cert-manager auth role binds to. Overwriting or
+# deleting it does not fail loudly: the login still succeeds and is granted
+# nothing, so it surfaces as certificates that quietly stop being issued.
+path "sys/policies/acl/pki-issue" {
+  capabilities = ["deny"]
 }
   EOT
 }
