@@ -72,7 +72,7 @@ jobs:
         run: make pdf
 
       - name: Upload PDF as a build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: system-inventory-pdf
           path: system-inventory/site/inventory.pdf
