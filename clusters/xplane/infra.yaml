@@ -89,3 +89,56 @@ spec:
       CILIUM_GATEWAY_NAMESPACE: default
       CILIUM_GATEWAY_DOMAIN: "xplane.sthings.lab"
       CILIUM_GATEWAY_TLS_SECRET: wildcard-xplane-sthings-tls # pragma: allowlist secret
+---
+# ClusterIssuer for the OpenBao on the platform cluster.
+#
+# CROSS-CLUSTER, so unlike platform's own issuer this one speaks HTTPS and has
+# to verify a certificate — VAULT_ISSUER_CA_MODE stays at its `bundle` default
+# and the CA goes in a Secret.
+#
+# THAT SECRET IS NOT IN GIT YET, and until it exists this Kustomization fails.
+# It cannot be prepared: the CA does not exist until
+# clusters/platform/openbao has been applied. Create it from that output —
+# the CA *certificate* is not secret, so no SOPS:
+#
+#   cd clusters/platform/openbao && terraform output -raw pki_ca_cert > /tmp/ca.crt
+#   kubectl create secret generic openbao-pki-ca -n cert-manager \
+#     --from-file=ca.crt=/tmp/ca.crt --dry-run=client -o yaml \
+#     > clusters/xplane/openbao-pki-ca.yaml
+#
+# vault-pki stays alive beside this. Every Certificate keeps its current issuer
+# until moved by hand, so nothing reissues onto a CA nothing trusts yet.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-openbao-issuer
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: cert-manager
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/cert-manager/components/vault-issuer
+  prune: true
+  # Ready means the Vault LOGIN succeeded. cert-manager never re-checks the
+  # ability to SIGN, so this can be green while no Certificate is ever issued —
+  # reproduced on cicd-test3 by removing the cert-manager-tokenrequest RBAC the
+  # component ships. Only an issued Certificate is evidence.
+  wait: true
+  postBuild:
+    substitute:
+      CERT_MANAGER_NAMESPACE: cert-manager
+      VAULT_ISSUER_NAME: openbao-pki
+      VAULT_ISSUER_SERVER: https://openbao.platform.sthings.lab
+      VAULT_ISSUER_PKI_PATH: pki/sign/sthings-lab
+      # <cluster_name>-<k8s_auths[].name> from ./openbao/openbao.tf. The role
+      # and the ServiceAccount carry that same name; all three move together.
+      VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/xplane-sthings-certmanager
+      VAULT_ISSUER_AUTH_ROLE: certmanager
+      VAULT_ISSUER_SERVICE_ACCOUNT: certmanager
+      VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
+      VAULT_ISSUER_CA_KEY: ca.crt
