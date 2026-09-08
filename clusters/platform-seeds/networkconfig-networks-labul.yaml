@@ -18,6 +18,29 @@
 # Release them through clusterbook once it runs here, so the DNS side is
 # unwound too — not by editing this file.
 #
+# ---------------------------------------------------------------------------
+# THE ANNOTATION BELOW IS LOAD-BEARING. Without it Flux re-applies this list
+# every hour and DELETES every reservation clusterbook has made since.
+#
+# Measured on 2026-09-08:
+#
+#   POST /api/v1/networks/192.168.10/reserve  -> 192.168.10.172 assigned
+#   flux reconcile kustomization clusterbook-seed
+#   -> 172 free again, resourceVersion 4236946 -> 4236956
+#
+# That is not a theoretical race. It is why apps1 runs on 192.168.10.172 while
+# this file lists 172 as free: the reservation was made when the cluster was
+# built and erased within the hour. It is also why 173 and 178 above cannot be
+# released -- clusterbook removes them, the next reconcile puts them back.
+#
+# The consequence is an IP handed out twice. Reserving from the pool in that
+# state returned 172 -- the address apps1 is already using.
+#
+# `ssa: Ignore` makes Flux CREATE this resource when it is missing and never
+# touch it again, which is what a seed means. The live CR is the database
+# (clusterbook runs LOAD_CONFIG_FROM=cr, no PVC), so git can define its initial
+# contents and must not define its ongoing contents.
+#
 # ORDERING — THIS IS WHY THE FILE LIVES OUTSIDE clusters/platform.
 #
 # flux-system applies clusters/platform RECURSIVELY, and a Kustomization fails
@@ -41,6 +64,9 @@ apiVersion: github.stuttgart-things.com/v1
 kind: NetworkConfig
 metadata:
   name: networks-labul
+  annotations:
+    # Create once, never update. See the block above.
+    kustomize.toolkit.fluxcd.io/ssa: Ignore
   namespace: clusterbook
 spec:
   networks:
