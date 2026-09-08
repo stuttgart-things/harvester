@@ -19,9 +19,31 @@ spec:
     key: kubeconfig
   releaseOnDelete: true
   annotations:               # copied onto the ArgoCD cluster Secret; AppSets read config from these
-    # cert-manager Vault-PKI ClusterIssuer (appset-cert-manager-vault-pki)
-    clusterbook.stuttgart-things.com/vault-server: https://vault.infra.sthings.lab
+    # cert-manager Vault-PKI ClusterIssuer (appset-cert-manager-vault-pki).
+    #
+    # OpenBao on `platform`, not the Vault on `infra`: that instance is being
+    # switched off to free the hardware, and its certificate expired on
+    # 2026-09-01 — which is why this issuer reported `certificate has expired`
+    # rather than anything resembling a migration. See harvester#152 and
+    # ../../OPENBAO-CLUSTERBOOK.md.
+    clusterbook.stuttgart-things.com/vault-server: https://openbao.platform.sthings.lab
     clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
+    # Tokenless. cert-manager mints a ServiceAccount token per signing request
+    # through the TokenRequest API instead of holding a Vault token that nothing
+    # renews — the 720h token on the old path was the actual defect, and it
+    # failed silently because the issuer reports Ready on a successful LOGIN and
+    # never checks that it can sign.
+    clusterbook.stuttgart-things.com/vault-auth-method: kubernetes
+    # Created by `terraform apply` in ../../crossplane-mgmt/openbao.
+    # vault-base-setup derives the mount from <cluster_name>-<name>, so
+    # cluster_name "crossplane-mgmt-sthings" plus the k8s_auth named
+    # "certmanager" gives exactly this path. All three names move together.
+    clusterbook.stuttgart-things.com/vault-k8s-auth-mount: /v1/auth/crossplane-mgmt-sthings-certmanager
+    clusterbook.stuttgart-things.com/vault-k8s-auth-role: certmanager
+    clusterbook.stuttgart-things.com/vault-k8s-auth-sa: certmanager
+    # Inert under kubernetes auth — the chart renders only the block matching
+    # `method`. Kept so the Secret name stays the one the rest of the fleet
+    # uses; it goes when the token path is removed everywhere.
     clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token # pragma: allowlist secret
     # Gateway TLS wildcard issuer (appset-cert-manager-cluster-ca): issue the
     # *.crossplane-mgmt.sthings.lab gateway cert from Vault PKI (trusted root)
