@@ -101,19 +101,39 @@ filled in; when the token was needed on 2026-09-07 nobody knew where to look,
 and the answer turned out to be "nowhere". It now reads:
 
 ```
-root token:   clusters/platform/openbao/init.enc.yaml   key: root_token
-recovery key: clusters/platform/openbao/init.enc.yaml   key: recovery_keys_b64
+root token:   secrets/openbao-platform-init.enc.yaml   key: root_token
+recovery key: secrets/openbao-platform-init.enc.yaml   key: recovery_keys_b64
 ```
 
-SOPS/age, same recipient as every other `*.enc.yaml` here. Read it with
+SOPS/age, same recipient as every other `*.enc.yaml` in this repo. Read it with
 
 ```bash
-sops --decrypt clusters/platform/openbao/init.enc.yaml
+sops --decrypt secrets/openbao-platform-init.enc.yaml
 ```
 
-It is **not** a Kubernetes manifest and nothing applies it. It lives in this
-Terraform directory precisely because no Flux Kustomization recurses here — a
-Secret-shaped file under `../apps/` would have been picked up and rolled out.
+**It is at the repository root, not beside this README, and that is not a
+matter of taste.** It first landed in this Terraform directory on the claim that
+"no Flux Kustomization recurses here". That was wrong: the `flux-system`
+Kustomization on the platform cluster has `path: clusters/platform` and walks
+everything underneath it. The file is not a Kubernetes manifest, so
+kustomize-controller could not decode it and the ENTIRE Kustomization stopped
+applying — for about two hours on 2026-09-08, silently, because a Kustomization
+that fails to build simply keeps serving its last applied revision.
+
+```
+failed to decode Kubernetes YAML from .../clusters/platform/openbao/init.enc.yaml:
+missing Resource metadata
+```
+
+`clusters/platform/secrets.yaml` sits in that tree quite happily, which is what
+made the original claim look reasonable — but it is a real Secret manifest with
+its values encrypted, so Flux decrypts and applies it. This file has no
+`apiVersion` at all, and must not gain one: it holds a root token, and a
+Secret-shaped version of it would be rolled out to the cluster.
+
+So it lives outside every Flux path. `secrets/` is under neither
+`clusters/platform` nor `clusters/platform-seeds`, the only two paths this
+repository's GitRepository serves.
 
 **This is a compromise, and worth naming as such.** The paragraph above used to
 say "a KV path on another instance, never on disk", which is the better answer;
@@ -155,7 +175,7 @@ kubectl -n openbao exec openbao-0 -- bao status   # Initialized true, Sealed fal
 
 ```bash
 export VAULT_ADDR=https://openbao.platform.sthings.lab
-export VAULT_TOKEN=$(sops --decrypt init.enc.yaml \
+export VAULT_TOKEN=$(sops --decrypt ../../../secrets/openbao-platform-init.enc.yaml \
   | python3 -c 'import yaml,sys; print(yaml.safe_load(sys.stdin)["root_token"])')
 
 ./preflight.sh && terraform init && terraform apply
