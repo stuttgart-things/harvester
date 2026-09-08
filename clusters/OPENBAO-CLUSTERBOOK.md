@@ -1,11 +1,15 @@
 # OpenBao Kubernetes auth for the clusterbook-managed clusters
 
-`crossplane-mgmt`, `ferdinand`, `k3s-xp` and `apps1`. One shared document
-because they are identical apart from a name; each `<cluster>/openbao/`
-directory holds only what differs.
+`crossplane-mgmt`, `k3s-xp` and `apps1`. One shared document because they are
+identical apart from a name; each `<cluster>/openbao/` directory holds only what
+differs.
 
 `apps1` is the first built this way from the start — it never talks to the Vault
-on `infra` at all. The other three are being migrated.
+on `infra` at all. `k3s-xp` and `crossplane-mgmt` were migrated on 2026-09-08.
+
+`ferdinand` was a fourth. It was deleted on 2026-09-07 and replaced by `apps1`,
+and its `ferdinand/openbao/` directory is gone with it — but it is where the CA
+finding below was made, so it still appears in this document as evidence.
 
 Context and the wider migration: [harvester#152][152]. Read
 [`platform/openbao/README.md`](platform/openbao/README.md) first — it is the
@@ -56,13 +60,19 @@ Which is why the mount name below is not free: it has to match the
 
 The OpenBao PKI is a **new root**. The old `sthings.lab` root in the infra Vault
 was created as `internal`, so its key cannot be exported and could not be
-carried over; the two share a common name and nothing else. Verified on
-`ferdinand`, 2026-09-07:
+carried over; the two share a common name and nothing else. Measured on
+`ferdinand` on 2026-09-07, the day before that cluster was deleted:
 
 ```
 vault-pki-ca on ferdinand   notBefore Mar  4 2026   sha256 23:3A:6A:BB:…
 OpenBao serves              notBefore Sep  2 2026   sha256 4E:3F:AD:1D:…
 ```
+
+`crossplane-mgmt` still carried that same March root a day later, for a reason
+worth knowing: step (5b) below pushes the CA onto **downstream** clusters, and
+`crossplane-mgmt` is not downstream of itself. Its `vault-pki-ca` is therefore
+declared in git, in `crossplane-configurations`
+`tests/envs/harvester/crossplane-mgmt/platform/vault-pki/`.
 
 The ApplicationSet passes `caBundleSecretRef: {name: vault-pki-ca, key: ca.crt}`,
 so **that** Secret on each target cluster has to carry the new root before the
@@ -101,7 +111,7 @@ disconnected for days after a CA rotation, and an auth mount that can only be
 configured while Rancher is healthy is a dependency worth not having.
 
 ```bash
-CLUSTER=ferdinand   # or k3s-xp, crossplane-mgmt
+CLUSTER=k3s-xp   # or crossplane-mgmt
 kubectl --kubeconfig ~/.kube/platform.sthings.lab -n argocd \
   get secret cluster-$CLUSTER -o json \
 | python3 -c '

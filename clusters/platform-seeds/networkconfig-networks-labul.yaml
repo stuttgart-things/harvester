@@ -9,7 +9,11 @@
 # that only clusterbook knows how to withdraw:
 #
 #   178:ASSIGNED:DNS:martinwolf   the cluster was deleted 2026-09-07
-#   173:ASSIGNED:DNS:ferdinand    scheduled for deletion, replaced by apps1
+#   173:ASSIGNED:DNS:ferdinand    the cluster was deleted 2026-09-07,
+#                                 replaced by apps1 (which holds 172)
+#
+# Both are still ASSIGNED below as of 2026-09-08. That is not an oversight in
+# this file -- it is the withdrawal above that has not been done.
 #
 # Release them through clusterbook once it runs here, so the DNS side is
 # unwound too — not by editing this file.
