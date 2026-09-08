@@ -93,17 +93,46 @@ itself is gone.
 > **So the root token is the only administrative credential this instance has,
 > and it has exactly one copy.** Treat losing it as losing the instance.
 
-Store the output in a KV path on another instance, never on disk — and store it
-in **two** places, because there is no ceremony to fall back on.
+Store the output somewhere that survives this machine, and in **two** places,
+because there is no ceremony to fall back on.
 
-**Record here where it went.** This line was in the file from the start and was
-never filled in; when the token was needed on 2026-09-07 nobody knew where to
-look, and the answer turned out to be "nowhere".
+**Recorded, 2026-09-08.** This line was in the file from the start and was never
+filled in; when the token was needed on 2026-09-07 nobody knew where to look,
+and the answer turned out to be "nowhere". It now reads:
 
 ```
-root token:   <fill this in>
-recovery key: <fill this in>
+root token:   clusters/platform/openbao/init.enc.yaml   key: root_token
+recovery key: clusters/platform/openbao/init.enc.yaml   key: recovery_keys_b64
 ```
+
+SOPS/age, same recipient as every other `*.enc.yaml` here. Read it with
+
+```bash
+sops --decrypt clusters/platform/openbao/init.enc.yaml
+```
+
+It is **not** a Kubernetes manifest and nothing applies it. It lives in this
+Terraform directory precisely because no Flux Kustomization recurses here — a
+Secret-shaped file under `../apps/` would have been picked up and rolled out.
+
+**This is a compromise, and worth naming as such.** The paragraph above used to
+say "a KV path on another instance, never on disk", which is the better answer;
+it was not taken because there is no second instance to hold it — the Vault on
+`infra` is being switched off, which is why this OpenBao exists at all. So:
+
+- The token is on disk, encrypted. Whoever holds the age key holds the token.
+  That key is currently in the environment as `SOPS_AGE_KEY`, so the blast
+  radius is "anyone with this shell", not "anyone with the repo".
+- It is in git, so it is backed up and versioned — which is the half of "two
+  places" this buys. **The second place is still missing.**
+- When a second OpenBao exists, move it to a KV path there and cut this file
+  back to a pointer.
+
+> There is also still a **plaintext** copy in `~/openbao-ca-bundle/init.json`
+> (root token *and* recovery keys, mode 0600), left from the 2026-09-07 rescue,
+> alongside `ca.key` — the rescued CA private key, also plaintext. Deliberately
+> not deleted yet. Both should be `shred -u`'d once the CA is confirmed to need
+> no further hand-work; until then this note is the record that they exist.
 
 > **Why this is not automated.** The obvious candidate is the `vault-autounseal`
 > operator. It does not help: with a static seal there is nothing to unseal, and
@@ -126,7 +155,8 @@ kubectl -n openbao exec openbao-0 -- bao status   # Initialized true, Sealed fal
 
 ```bash
 export VAULT_ADDR=https://openbao.platform.sthings.lab
-export VAULT_TOKEN=<root token from step 2>
+export VAULT_TOKEN=$(sops --decrypt init.enc.yaml \
+  | python3 -c 'import yaml,sys; print(yaml.safe_load(sys.stdin)["root_token"])')
 
 ./preflight.sh && terraform init && terraform apply
 ```

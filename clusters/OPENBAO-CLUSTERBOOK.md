@@ -81,7 +81,10 @@ Per cluster, from its own `openbao/` directory:
 
 ```bash
 export VAULT_ADDR=https://openbao.platform.sthings.lab
-export VAULT_TOKEN=<a token that may write auth mounts on that OpenBao>
+# The root token — the only credential that may write auth mounts here.
+# Recorded in platform/openbao/README.md; stored in that same directory.
+export VAULT_TOKEN=$(sops --decrypt ../../platform/openbao/init.enc.yaml \
+  | python3 -c 'import yaml,sys; print(yaml.safe_load(sys.stdin)["root_token"])')
 
 KUBECONFIG_PATH=<this cluster's kubeconfig> \
   ../../platform/openbao/preflight.sh && terraform init && terraform apply
