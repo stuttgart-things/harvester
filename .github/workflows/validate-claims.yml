@@ -1,0 +1,66 @@
+---
+name: Validate Claims (kyverno)
+
+# The XR claims under clusters/crossplane-mgmt/xrs came over from
+# stuttgart-things/crossplane-configurations (tests/envs/harvester/) on
+# 2026-09-12, where its validate-claims.yaml was gating them. The gate travels
+# with the claims — otherwise the move would have quietly dropped a check.
+#
+# The POLICIES stay in that repo and are checked out here, so there is still
+# exactly one source for them and no copy to drift. Everything else mirrors the
+# original: same dagger kyverno module, same commit pin, same engine version.
+# pr-lint.yml (pre-commit) does not replace this — it lints YAML, it does not
+# know what an XR is.
+
+on:
+  pull_request:
+    paths:
+      - 'clusters/crossplane-mgmt/xrs/**'
+      - '.github/workflows/validate-claims.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'clusters/crossplane-mgmt/xrs/**'
+      - '.github/workflows/validate-claims.yml'
+
+jobs:
+  kyverno:
+    name: Kyverno validate XR claims
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Match the kyverno module's engineVersion (kyverno/dagger.json).
+      DAGGER_VERSION: 0.20.8
+      # Pinned to a dagger-repo commit for reproducible CI; bump deliberately.
+      KYVERNO_MODULE: github.com/stuttgart-things/dagger/kyverno@acf61ed2c80c7ca70746944edb60785d4ab01431
+    steps:
+      - uses: actions/checkout@v7
+
+      # Public repo, so no token is needed. Pinned to main deliberately: a
+      # policy tightened there should start failing here on the next run.
+      - name: Check out the Kyverno policies
+        uses: actions/checkout@v7
+        with:
+          repository: stuttgart-things/crossplane-configurations
+          ref: main
+          path: .policies
+          persist-credentials: false
+
+      - name: Install dagger
+        run: |
+          curl -fsSL https://dl.dagger.io/dagger/install.sh \
+            | BIN_DIR=/usr/local/bin DAGGER_VERSION="${DAGGER_VERSION}" sh
+          dagger version
+
+      # `kubectl-kyverno apply /policy --resource /resource`, non-zero on any
+      # policy failure. The resource dir is the whole xrs/ tree; non-XR files
+      # (catalog-info.yaml, kustomization.yaml) are skipped by the policies'
+      # apiGroup precondition.
+      - name: Validate claims against policies
+        run: |
+          dagger call -m "${KYVERNO_MODULE}" \
+            validate \
+            --policy .policies/tests/kyverno/policies \
+            --resource clusters/crossplane-mgmt/xrs

@@ -15,9 +15,15 @@ directory onto it.
 
 Both trees lived in `stuttgart-things/crossplane-configurations` under
 `tests/envs/harvester/` until 2026-09-12. They are the target environment's own
-state, not fixtures of that repo — and under `tests/` they sat inside its
-`verify.yaml` `paths-ignore`, so nothing ever validated them. Here they are
-covered by `pr-lint.yml` (pre-commit over `clusters/**`).
+state, not fixtures of that repo. What CI they had there was uneven: `xrs/` was
+gated by that repo's `validate-claims.yaml` (Kyverno policies over the claims),
+while `platform/` — the Configurations, EnvironmentConfigs and RBAC that Argo
+syncs with `selfHeal` — sat in `verify.yaml`'s `paths-ignore` and was checked by
+nothing at all. Here `clusters/**` goes through `pr-lint.yml` (pre-commit), and
+the Kyverno gate came along as
+[`.github/workflows/validate-claims.yml`](../../.github/workflows/validate-claims.yml),
+which still reads its policies out of the other repo so there is one source for
+them.
 
 > [!WARNING]
 > **`env-config-harvester.yaml` collides with `platform/virtual-machine/env-config-harvestervm.yaml`.**

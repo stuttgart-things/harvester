@@ -14,9 +14,11 @@ spec:
   source:
     # Moved out of crossplane-configurations (it lived under
     # tests/envs/harvester/) on 2026-09-12: this is the target environment's own
-    # state, so it belongs in the repo that already carries the rest of it — and
-    # under tests/ it sat in that repo's verify.yaml paths-ignore, i.e. no CI
-    # ever looked at it. Here, clusters/** is gated by pr-lint.
+    # state, so it belongs in the repo that already carries the rest of it. It
+    # also gains a check it did not have: this half sat in that repo's
+    # verify.yaml paths-ignore, so nothing validated it. Here clusters/** goes
+    # through pr-lint (pre-commit). The xrs/ half below was Kyverno-gated there
+    # and still is — the workflow moved with it.
     repoURL: https://github.com/stuttgart-things/harvester.git
     targetRevision: main
     path: clusters/crossplane-mgmt/platform
