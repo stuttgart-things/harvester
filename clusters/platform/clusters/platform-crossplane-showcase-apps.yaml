@@ -12,9 +12,16 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/stuttgart-things/crossplane-configurations.git
+    # Moved out of crossplane-configurations (it lived under
+    # tests/envs/harvester/) on 2026-09-12: this is the target environment's own
+    # state, so it belongs in the repo that already carries the rest of it. It
+    # also gains a check it did not have: this half sat in that repo's
+    # verify.yaml paths-ignore, so nothing validated it. Here clusters/** goes
+    # through pr-lint (pre-commit). The xrs/ half below was Kyverno-gated there
+    # and still is — the workflow moved with it.
+    repoURL: https://github.com/stuttgart-things/harvester.git
     targetRevision: main
-    path: tests/envs/harvester/crossplane-mgmt/platform
+    path: clusters/crossplane-mgmt/platform
     directory:
       recurse: true
   destination:
@@ -36,9 +43,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/stuttgart-things/crossplane-configurations.git
+    repoURL: https://github.com/stuttgart-things/harvester.git
     targetRevision: main
-    path: tests/envs/harvester/crossplane-mgmt/xrs
+    path: clusters/crossplane-mgmt/xrs
     directory:
       recurse: true
       # Skip non-cluster artifacts the scaffolder emits in flux mode:

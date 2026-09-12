@@ -1,4 +1,14 @@
 ---
+# SUPERSEDED — hand-applied predecessor of
+# platform/virtual-machine/env-config-harvestervm.yaml, which Argo CD now owns.
+#
+# Same selector label (harvester-vm.resources.stuttgart-things.com/environment:
+# default) and byte-identical data under a different name
+# (harvester-vm-remote-defaults vs harvestervm-defaults). The harvester-vm
+# Composition selects with function-environment-configs in its default
+# mode: Single — exactly one match — so having both on the cluster is a
+# collision, not a fallback. Kept as part of the bootstrap runbook in
+# README.md; do not apply it to a cluster that already syncs platform/.
 apiVersion: apiextensions.crossplane.io/v1beta1
 kind: EnvironmentConfig
 metadata:
