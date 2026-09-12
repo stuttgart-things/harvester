@@ -9,6 +9,11 @@ ignore:
   # Linting them would block every credential rotation for nothing.
   # .pre-commit-config.yaml excludes them for the same reason.
   - "**/*.enc.yaml"
+  # A base64 CA bundle is one line by construction — there is nothing to wrap,
+  # and folding it would change the value. Both files carry
+  # `# pragma: allowlist secret`; they hold CA certificates, no private keys.
+  - clusters/crossplane-mgmt/platform/rancher-cluster/secret-openbao-pki-ca.yaml
+  - clusters/crossplane-mgmt/platform/vault-pki/secret-vault-pki-ca.yaml
 
 rules:
   indentation: disable

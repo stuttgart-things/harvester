@@ -10,8 +10,8 @@ Its ClusterIssuer does not come from this repo either — it comes from the Argo
 `RancherCluster` XR in `stuttgart-things/crossplane-configurations`.
 
 **This cluster does not exist yet.** It is provisioned by the `apps1`
-RancherCluster XR in `stuttgart-things/crossplane-configurations`
-(`tests/envs/harvester/crossplane-mgmt/xrs/infra/apps1`), and this apply can only
+RancherCluster XR in this repo
+(`clusters/crossplane-mgmt/xrs/infra/apps1`), and this apply can only
 run once its API is reachable — the auth mount is configured with the cluster's
 own address, CA and reviewer JWT. Until then its `vault-pki` ClusterIssuer sits
 not-Ready, which is the intended signal.

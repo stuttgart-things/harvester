@@ -71,8 +71,8 @@ OpenBao serves              notBefore Sep  2 2026   sha256 4E:3F:AD:1D:…
 `crossplane-mgmt` still carried that same March root a day later, for a reason
 worth knowing: step (5b) below pushes the CA onto **downstream** clusters, and
 `crossplane-mgmt` is not downstream of itself. Its `vault-pki-ca` is therefore
-declared in git, in `crossplane-configurations`
-`tests/envs/harvester/crossplane-mgmt/platform/vault-pki/`.
+declared in git, in this repo under
+`clusters/crossplane-mgmt/platform/vault-pki/`.
 
 The ApplicationSet passes `caBundleSecretRef: {name: vault-pki-ca, key: ca.crt}`,
 so **that** Secret on each target cluster has to carry the new root before the

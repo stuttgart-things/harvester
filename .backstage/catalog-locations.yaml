@@ -12,6 +12,14 @@ spec:
     - ../claims/infra/martin/catalog-info.yaml
     - ../claims/infra/movies/catalog-info.yaml
     - ../claims/infra/test123/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/apps1/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/demo-ns/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/k3s-test/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/martin-demo-ns/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/silvio/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/virtual-machine/vm-ansible-test/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/virtual-machine/vm-demo-morgen/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/virtual-machine/workshop/catalog-info.yaml
     - ../packer/dev/leap-dev/catalog-info.yaml
     - ../packer/dev/rocky9-dev/catalog-info.yaml
     - ../packer/dev/u26-dev/catalog-info.yaml
