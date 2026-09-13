@@ -16,7 +16,10 @@ metadata:
   name: backstage-helm-overrides
   namespace: backstage
 data:
-  imageTag: "v1.5.0"
+  # v1.6.0 replaces allow-all with the template audience policy
+  # (stuttgart-things/sthings-backstage#119): templates are platform-team only
+  # unless annotated backstage.stuttgart-things.com/audience: developers.
+  imageTag: "v1.6.0"
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
