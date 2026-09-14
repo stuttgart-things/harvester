@@ -1,7 +1,16 @@
 # Skip SOPS-encrypted files: hooks must never rewrite them (whitespace/EOF
 # edits invalidate the SOPS MAC), and detect-secrets only sees ciphertext —
 # the encrypted values and age recipients are false positives.
-exclude: '(^\.task/|^secrets/|\.enc\.ya?ml$|secrets?\.ya?ml$)'
+#
+# TWO naming conventions are in use and both have to be here. `*.enc.yaml` is the
+# older one; `*.sops.json` is what the openbao roots document for their
+# terraform variables (see clusters/platform/openbao/app-secrets/README.md).
+# The second was written down long before a file of that shape existed, so this
+# pattern never caught up — the first one landed in #211 and detect-secrets
+# flagged its ciphertext as a "Base64 High Entropy String", correctly and
+# uselessly. JSON has no comments, so `pragma: allowlist secret` is not an
+# option there; the exclude is.
+exclude: '(^\.task/|^secrets/|\.enc\.ya?ml$|\.sops\.(ya?ml|json)$|secrets?\.ya?ml$)'
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
