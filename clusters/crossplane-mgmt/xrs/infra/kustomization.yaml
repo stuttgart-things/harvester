@@ -3,11 +3,6 @@ kind: Kustomization
 resources:
   - demo-ns
   - martin-demo-ns
-  - abex
   - k3s-test
-  - cocacola
-  - martinwolf
   - silvio
-  - jonathan
   - apps1
-  - tabletennis
