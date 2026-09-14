@@ -1,0 +1,31 @@
+{
+  "_comment": "SHAPE ONLY -- no real values. Decrypt terraform.tfvars.sops.json instead of copying this file. Generate: session-key/password = openssl rand -hex 24; redisPassword = openssl rand -hex 24; authToken = openssl rand -hex 32. omni-pitcher-token MUST equal homerun2's authToken, byte for byte. See README.md for who reads each property.",
+
+  "secret_engines": [
+    {
+      "name": "homerun2",
+      "path": "tabletennis",
+      "description": "tabletennis cluster application secrets",
+      "data_json": "{\"authToken\":\"REPLACE_WITH_openssl_rand_hex_32\",\"redisPassword\":\"REPLACE_WITH_openssl_rand_hex_24\"}"
+    },
+    {
+      "name": "schmetterpause",
+      "path": "tabletennis",
+      "description": "tabletennis cluster application secrets",
+      "data_json": "{\"session-key\":\"REPLACE_WITH_openssl_rand_hex_24\",\"username\":\"admin\",\"password\":\"REPLACE_WITH_openssl_rand_hex_24\"}"
+    },
+    {
+      "name": "zaehlwerk",
+      "path": "tabletennis",
+      "description": "tabletennis cluster application secrets",
+      "data_json": "{\"omni-pitcher-token\":\"REPLACE_WITH_THE_SAME_VALUE_AS_homerun2_authToken\",\"redis-password\":\"REPLACE_WITH_THE_SAME_VALUE_AS_homerun2_redisPassword\"}"
+    }
+  ],
+
+  "kv_policies": [
+    {
+      "name": "read-tabletennis",
+      "capabilities": "path \"tabletennis/data/homerun2\" { capabilities = [\"read\"] }\npath \"tabletennis/data/schmetterpause\" { capabilities = [\"read\"] }\npath \"tabletennis/data/zaehlwerk\" { capabilities = [\"read\"] }"
+    }
+  ]
+}

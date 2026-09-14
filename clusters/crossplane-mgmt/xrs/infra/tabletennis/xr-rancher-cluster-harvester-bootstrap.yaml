@@ -121,7 +121,8 @@ spec:
       # The gates are matched on the VALUE, so 'false' here really is off.
       #
       # Flip BOTH to 'true' after:
-      #   1. terraform in clusters/tabletennis/openbao   (the mount)
+      #   1. terraform in clusters/tabletennis/openbao   (the KV mount, the
+      #      three entries, the read policy and the ESO auth mount)
       #   2. the ClusterSecretStore `vault-tabletennis` on the cluster
       #   3. three entries under it:
       #        homerun2:       authToken, redisPassword
@@ -169,8 +170,18 @@ spec:
       # above are what keeps them from firing before it exists.
       homerun2-platform.stuttgart-things.com/secret-store: vault-tabletennis
       tabletennis-platform.stuttgart-things.com/secret-store: vault-tabletennis
+      # NOT a default, and it has to be set: without it homerun2 reads the entry
+      # named after the CLUSTER (`tabletennis`), while schmetterpause and
+      # zaehlwerk read entries named after themselves -- their bases hard-code
+      # those names and the charts patch only the store, not the key. One
+      # app-named entry per application is what clusters/tabletennis/openbao
+      # creates, and this annotation is what makes homerun2 agree.
+      #
+      # It is read twice: by homerun2-platform for its own seven ExternalSecrets,
+      # and by tabletennis-platform for the light-catcher, which reads the same
+      # Redis password because it is the same Redis. Keep them in step.
+      homerun2-platform.stuttgart-things.com/secret-key: homerun2
       # Everything else is left at its bundle default on purpose:
-      #   homerun2 secret-key      -> the cluster name, `tabletennis`
       #   homerun2 storage-class   -> openebs-hostpath, which this cluster has
       #   homerun2 redis-storage   -> 8Gi
       #   tabletennis storage-class-> empty, i.e. the cluster's default SC
