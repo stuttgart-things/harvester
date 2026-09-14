@@ -46,6 +46,11 @@ spec:
       # The default StorageClass. Both PVCs above land on it.
       storage-platform/openebs: 'true'
       storage-platform/longhorn: 'false'
+      # REQUIRED BY tabletennis-platform: schmetterpause's database is a
+      # CloudNativePG `Cluster`, and without the CRD that Application's dry-run
+      # rejects the whole apply. Opt-in and a singleton per cluster, which is why
+      # it sits in the storage bundle rather than in platforms/tabletennis.
+      storage-platform/cloudnative-pg: 'true'
       storage-platform/nfs-csi-install: 'false'
       storage-platform/nfs-csi-storageclasses: 'false'
       security-platform: 'true'
@@ -70,7 +75,49 @@ spec:
       network-platform/trust-manager-install: 'true'
       network-platform/trust-manager-bundle: 'true'
       cicd-platform: 'false'
+      # The schmetterpause PodMonitors and alert rules need the Prometheus
+      # Operator CRDs from this bundle. Off for now -- turn it on together with
+      # the monitoring variant on the flux side.
       observability-platform: 'false'
+
+      # ---- the two app platforms this cluster exists for ----
+      #
+      # homerun2: redis-stack + omni-pitcher + core-catcher + scout +
+      # led-catcher, with the `tabletennis` stream in omni-pitcher's routing
+      # file. The component set is fixed by the bundle.
+      homerun2-platform: 'true'
+      homerun2-platform/stack: 'true'
+      # tabletennis: schmetterpause + its database, zaehlwerk, and the LED strip
+      # at the table. A platform of its own, beside homerun2.
+      tabletennis-platform: 'true'
+      tabletennis-platform/tabletennis: 'true'
+      # The strip is physical hardware. Flip this to 'true' and set the
+      # wled-endpoint annotation below once one is wired up at the table;
+      # without it the catcher would drive homerun2's wled-mock.
+      tabletennis-platform/light-catcher: 'false'
+
+      # THE TWO GATES, AND THEY STAY 'false' UNTIL THE STORE EXISTS.
+      #
+      # Both bundles read every credential they have from a ClusterSecretStore,
+      # and ExternalSecrets fail closed: labelled early, the Pods sit in
+      # CreateContainerConfigError waiting for Secrets that never appear, and
+      # schmetterpause's database never bootstraps at all, because it initialises
+      # from the Secret its own ExternalSecret produces.
+      #
+      # The gates are matched on the VALUE, so 'false' here really is off.
+      #
+      # Flip BOTH to 'true' after:
+      #   1. terraform in clusters/tabletennis/openbao   (the mount)
+      #   2. the ClusterSecretStore `vault-tabletennis` on the cluster
+      #   3. three entries under it:
+      #        homerun2:       authToken, redisPassword
+      #        schmetterpause: session-key, username, password
+      #        zaehlwerk:      omni-pitcher-token, redis-password
+      #      where omni-pitcher-token holds the SAME value as homerun2's
+      #      authToken -- otherwise /pitch answers 401 and the only symptom is a
+      #      `panel pitch failed, point not shown` line in zaehlwerk's log.
+      homerun2-platform.stuttgart-things.com/secrets-config: 'false'
+      tabletennis-platform.stuttgart-things.com/secrets-config: 'false'
     # PKI against the OpenBao on `platform` -- this cluster never touches the
     # Vault on `infra` that is being switched off (stuttgart-things/harvester#152).
     annotations:
@@ -100,3 +147,20 @@ spec:
       # The issuer keeps the name every Certificate in the fleet references. The
       # name says Vault; the endpoint above is OpenBao.
       clusterbook.stuttgart-things.com/wildcard-issuer-name: vault-pki
+
+      # ---- the two app platforms ----
+      #
+      # One store for both bundles, named per cluster the way every other
+      # ClusterSecretStore in the fleet is. Required by both -- the gate labels
+      # above are what keeps them from firing before it exists.
+      homerun2-platform.stuttgart-things.com/secret-store: vault-tabletennis
+      tabletennis-platform.stuttgart-things.com/secret-store: vault-tabletennis
+      # Everything else is left at its bundle default on purpose:
+      #   homerun2 secret-key      -> the cluster name, `tabletennis`
+      #   homerun2 storage-class   -> openebs-hostpath, which this cluster has
+      #   homerun2 redis-storage   -> 8Gi
+      #   tabletennis storage-class-> empty, i.e. the cluster's default SC
+      #   tabletennis db-storage   -> 8Gi
+      #   tabletennis homerun2-ns  -> homerun2
+      # Add tabletennis-platform.stuttgart-things.com/wled-endpoint together with
+      # the light-catcher label when a real strip is wired up.
