@@ -61,3 +61,9 @@ go.work.sum
 # system-inventory: fetched dependencies + built D3 page
 system-inventory/vendor/
 system-inventory/site/
+
+# Plaintext terraform variables. The openbao roots document generating this file
+# on disk from its SOPS-encrypted counterpart at apply time and deleting it
+# after -- but nothing stopped a `git add -A` in between, and these hold real
+# application secrets. The .example.json and .sops.json forms stay tracked.
+**/terraform.tfvars.json
