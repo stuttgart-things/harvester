@@ -1,19 +1,62 @@
-# OpenBao Kubernetes auth for `tabletennis`
+# The ESO OpenBao auth mount for `tabletennis`
 
-Two auth mounts on the OpenBao that runs on `platform`, and nothing else. Each is
-configured with **this** cluster's API address, CA and reviewer JWT, which is why
-they cannot be created from `clusters/platform/openbao` and why they die with the
-cluster.
+One Kubernetes auth mount on the OpenBao that runs on `platform`, and that is all
+this directory does.
 
-| Mount | Role / ServiceAccount | For |
-|---|---|---|
-| `/v1/auth/tabletennis-sthings-certmanager` | `certmanager` in `cert-manager` | signing certificates against the PKI on platform |
-| `/v1/auth/tabletennis-sthings-eso` | `eso` in `external-secrets` | External Secrets reading the application secrets |
+| Mount | Role | Admits | Policy |
+|---|---|---|---|
+| `/v1/auth/tabletennis-sthings-eso` | `eso` | `external-secrets` in `external-secrets` | `read-tabletennis` |
 
-Mount paths come out as `<cluster_name>-<name>`. Both names are load-bearing
-elsewhere: `certmanager` must match the XR annotations `vault-k8s-auth-mount` /
-`-role` / `-sa` exactly, and `eso` must match the ClusterSecretStore's
-`auth.kubernetes.mountPath`, whose convention is `<cluster-name>-eso`.
+## The cert-manager mount used to be here
+
+It now comes from `spec.vaultAuth.composeMount` on the `RancherCluster` XR, which
+also **derives** the four `vault-k8s-auth-*` annotations from the same values —
+so the mount path can no longer drift from the annotation naming it. Proven end
+to end on 2026-09-14
+([crossplane-configurations#411](https://github.com/stuttgart-things/crossplane-configurations/issues/411)):
+mount created with the real API address, ClusterIssuer `Ready` without a manual
+step, a probe certificate verified against the OpenBao root and rejected against
+an unrelated CA, and the teardown removing child, Workspace and mount.
+
+Two caveats recorded there, neither in the Composition: one Argo CD sync had to be
+triggered by hand after a nil-pointer in the cert-manager chart, and the teardown
+wedges reproducibly on two `vpki` finalizers that have to be patched off.
+
+### Why ESO did not move with it
+
+1. **`composeMount` emits exactly one `k8sAuths` entry** — `roleName`, bound to
+   the cert-manager ServiceAccount. There is no parameter for a second mount.
+2. **A separately applied `VaultK8sAuth` would need `kubernetesHost`.** Its
+   default, `https://kubernetes.default.svc:443`, is only meaningful in-cluster;
+   the OpenBao on `platform` has to reach *this* cluster's API server by its real
+   address. The composed child gets that for free from `apiserverIp` in the
+   reviewer Secret. A static YAML file in git cannot — the address is not known
+   until the cluster is provisioned, so it would have to be filled in by hand
+   afterwards.
+
+   Terraform gets it for free as well: `vault-base-setup` reads
+   `kubeconfig.clusters[0].cluster.server`. **That is the whole reason this
+   directory survives** — this apply needs no edited file at any point.
+
+When `rancher-cluster` grows a list of `k8sAuths` — the right long-term fix, and
+an upstream change — this directory goes away entirely.
+
+### It binds ESO's own ServiceAccount
+
+Not a new one. `vault-base-setup` would otherwise create a ServiceAccount named
+after the mount and admit that, but nothing else would ever use it and the
+ClusterSecretStore would have to name it.
+
+`external-secrets` in `external-secrets` is what the controller already runs as:
+the chart is installed with `releaseName: external-secrets` and no
+`fullnameOverride` or `serviceAccount.name`
+(`argocd infra/external-secrets/install`). **Not** the `-webhook` or
+`-cert-controller` ServiceAccount, which the same chart also creates.
+
+> [!IMPORTANT]
+> **Verify it on the first build, before applying:**
+> `kubectl -n external-secrets get sa`. A bound ServiceAccount name that does not
+> exist fails the way everything else here fails — silently.
 
 ## What is deliberately not here
 
@@ -34,48 +77,22 @@ apply.
 and how to verify are in [`../../OPENBAO-CLUSTERBOOK.md`](../../OPENBAO-CLUSTERBOOK.md).**
 Read it first; several of the steps fail silently out of order.
 
-## This directory is a candidate to disappear
+## Order, and the failure is silent
 
-[crossplane-configurations#411](https://github.com/stuttgart-things/crossplane-configurations/issues/411)
-is the work that would replace it. The `rancher-cluster` Composition grew
-`spec.vaultAuth.composeMount`, which composes a `VaultK8sAuth` creating the
-cert-manager mount and **deriving** the four `vault-k8s-auth-*` annotations, so
-they can no longer drift from the mount. Strictly better than doing it here.
-
-Not used yet, for two reasons:
-
-1. **It is not on the control plane.** ghcr and `crossplane-mgmt` both carry
-   `rancher-cluster` **v0.7.1**; the repo is at v0.7.2. v0.7.1 predates #392
-   Phase 1 and Phase 2, so `vaultAuth` does not exist there at all — not even
-   `enabled`. That is blocker 1 of #411, and the composed chain has never been
-   run against a real cluster.
-2. **It would only cover half of this file.** The composed block emits exactly
-   one `k8sAuths` entry — `roleName`, default `certmanager`, bound to the
-   cert-manager ServiceAccount. **ESO needs a second mount**, and `composeMount`
-   has no way to add one. A standalone `VaultK8sAuth` XR could, since its
-   `k8sAuths[]` is a list and `vault-auth` v0.3.2 is installed — but it reads the
-   reviewer Secret and `kubernetesHost` that only `vaultAuth.enabled` produces,
-   so it waits on the same upgrade.
-
-The KV half is unaffected either way: no XR creates secret engines, which is why
-[`../../platform/openbao/app-secrets`](../../platform/openbao/app-secrets/) stays
-Terraform regardless.
-
-## Order, and both failures are silent
-
-Two applies must have run before this one:
+One apply must have run before this one:
 
 ```
-clusters/platform/openbao               creates the policy `pki-issue`
 clusters/platform/openbao/app-secrets   creates the policy `read-tabletennis`
 ```
 
-Each of the two roles here is bound to one of those. **A role bound to a policy
-that does not exist logs in successfully and is granted nothing** — so running
-these out of order produces no error at all. The symptom is a denied signing
-request, or an ExternalSecret that never syncs, noticed much later.
+The role here is bound to it. **A role bound to a policy that does not exist logs
+in successfully and is granted nothing** — so running these out of order produces
+no error at all. The symptom is an ExternalSecret that never syncs, noticed much
+later.
 
-Neither of those two applies needs this cluster, so run both first.
+That apply needs no cluster, so run it first. (`clusters/platform/openbao` and
+its `pki-issue` policy are still a prerequisite for the cert-manager side, but
+that side is composed by the XR now and no longer passes through here.)
 
 ## Apply
 
@@ -119,17 +136,25 @@ auth:
     mountPath: tabletennis-sthings-eso
     role: eso
     serviceAccountRef:
-      name: eso
+      # ESO's own controller ServiceAccount, which the auth mount admits.
+      # `namespace` is required here, not optional.
+      name: external-secrets
       namespace: external-secrets
 ```
 
 `caProvider` stays at its default — the `vault-pki-ca` Secret in `cert-manager`,
 which the network platform already puts on every Vault-aware cluster.
 
-The ServiceAccount `eso` in `external-secrets` is created by this Terraform, as
-the identity the auth mount admits. External Secrets mints a token for it, so its
-controller needs `create` on `serviceaccounts/token` for that name — the default
-ESO install has it.
+External Secrets mints a token for the ServiceAccount in `serviceAccountRef`, so
+its controller needs `create` on `serviceaccounts/token` for that name. The chart
+normally ships that — without it `serviceAccountRef` would be unusable in general
+— but this is the exact spot where a gap already hid once, so check it on the
+first cluster rather than assuming:
+
+```bash
+kubectl auth can-i --as=system:serviceaccount:external-secrets:external-secrets \
+  create serviceaccounts/token -n external-secrets
+```
 
 ## Last: the tabletennis gate
 

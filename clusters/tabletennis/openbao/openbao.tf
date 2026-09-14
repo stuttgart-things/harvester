@@ -1,68 +1,47 @@
-// Kubernetes auth mounts for the `tabletennis` cluster, on the OpenBao that
-// runs on `platform`.
+// The ESO Kubernetes auth mount for the `tabletennis` cluster, on the OpenBao
+// that runs on `platform`. One mount, and that is all this directory does.
 //
-// ONLY THE PART THAT BELONGS TO THIS CLUSTER. Each mount is configured with
-// THIS cluster's API address, CA and reviewer JWT, so it cannot be created
-// before the cluster exists and cannot outlive it. Two of them:
+// THE CERT-MANAGER MOUNT USED TO BE HERE AND IS NOT ANY MORE. It comes from
+// `spec.vaultAuth.composeMount` on the RancherCluster XR, which also DERIVES the
+// four vault-k8s-auth-* annotations from the same values -- so the mount path
+// can no longer drift from the annotation naming it. That is strictly better
+// than writing it twice, and it was proven end to end on 2026-09-14
+// (crossplane-configurations#411).
 //
-//   certmanager -- the clusterbook half that cannot be created from
-//                  clusters/platform/openbao. Same shape as every other
-//                  clusterbook cluster here.
-//   eso         -- External Secrets, logging in to read the application
-//                  secrets.
+// WHY ESO DID NOT MOVE WITH IT, AND IT IS NOT AN OVERSIGHT:
 //
-// THE SECRETS THEMSELVES ARE NOT HERE. The KV mount, its entries and the read
-// policy live in ../../platform/openbao/app-secrets, because they are objects
-// on the OpenBao rather than on this cluster -- so they survive a teardown and
-// rebuild of tabletennis, and a rebuild costs only this apply.
+//   1. composeMount emits exactly ONE k8sAuths entry -- `roleName`, bound to the
+//      cert-manager ServiceAccount in `cert-manager`. There is no parameter for
+//      a second mount.
 //
-// The PKI is not here either: it lives on platform and is created exactly once,
-// by clusters/platform/openbao. Recreating it would fork the CA. Nor is the
-// ClusterIssuer -- that comes from the Argo CD ApplicationSet
-// cert-manager-vault-pki-clusterbook, driven by annotations on the
-// RancherCluster XR. See ../../OPENBAO-CLUSTERBOOK.md.
+//   2. A separately applied VaultK8sAuth XR could carry both, since its
+//      k8sAuths[] is a list. But it needs `kubernetesHost`, and the default
+//      (https://kubernetes.default.svc:443) is only meaningful in-cluster --
+//      the OpenBao on platform has to reach THIS cluster's API server by its
+//      real address. The composed child gets that for free from `apiserverIp`
+//      in the reviewer Secret; a static YAML file in git cannot, because the
+//      address is not known until the cluster is provisioned. It would have to
+//      be filled in by hand afterwards.
 //
-// THIS DIRECTORY IS A CANDIDATE TO DISAPPEAR -- see
-// stuttgart-things/crossplane-configurations#411. The rancher-cluster
-// Composition grew `spec.vaultAuth.composeMount`, which composes a VaultK8sAuth
-// that creates the cert-manager mount and DERIVES the four vault-k8s-auth-*
-// annotations, so they can no longer drift from the mount. That is strictly
-// better than doing it here. Two reasons it is not used yet:
+//      Terraform gets it for free too -- vault-base-setup reads
+//      kubeconfig.clusters[0].cluster.server -- so this apply needs no edited
+//      file at any point. That is the whole reason this directory survives.
 //
-//   1. IT IS NOT ON THE CONTROL PLANE. ghcr and crossplane-mgmt both carry
-//      rancher-cluster v0.7.1; the repo is at v0.7.2. v0.7.1 predates #392
-//      Phase 1 and Phase 2, so `vaultAuth` does not exist there at all -- not
-//      even `enabled`. Publishing and upgrading it is blocker 1 of #411, and
-//      the composed chain has never been executed against a real cluster.
-//      #411 is the ticket that finds out whether it converges on its own.
+// When rancher-cluster grows a list of k8sAuths (the right long-term fix, and
+// an upstream change), this directory goes away entirely.
 //
-//   2. IT WOULD ONLY COVER HALF OF THIS FILE. The composed block emits exactly
-//      ONE k8sAuths entry -- `roleName`, default `certmanager`, bound to the
-//      cert-manager ServiceAccount. ESO needs a second mount, and composeMount
-//      has no way to add one. A standalone VaultK8sAuth XR could: its
-//      k8sAuths[] is a list, and vault-auth v0.3.2 is installed. But it reads
-//      the reviewer Secret and kubernetesHost that only `vaultAuth.enabled`
-//      produces, so it waits on the same upgrade.
+// THE SECRETS THEMSELVES ARE NOT HERE. The KV mount, its entries and the
+// read-tabletennis policy live in ../../platform/openbao/app-secrets, because
+// they are objects on the OpenBao rather than on this cluster -- so they survive
+// a teardown and rebuild of tabletennis.
 //
-// When #411 lands, the replacement for this file is one VaultK8sAuth XR with
-// both entries, or composeMount for cert-manager plus a small XR for eso. The
-// KV half is unaffected either way -- no XR creates secret engines.
+// ORDER, AND THE FAILURE IS SILENT: clusters/platform/openbao/app-secrets must
+// have run first. The role below is bound to the policy it creates, and a role
+// bound to a policy that does not exist LOGS IN SUCCESSFULLY and is granted
+// nothing -- the symptom is an ExternalSecret that never syncs, hours later.
 //
-// ORDER MATTERS AND BOTH FAILURES ARE SILENT. Two applies must have run first:
-//
-//   clusters/platform/openbao             creates `pki-issue`
-//   clusters/platform/openbao/app-secrets creates `read-tabletennis`
-//
-// A role bound to a policy that does not exist LOGS IN SUCCESSFULLY and is
-// granted nothing. Run these out of order and nothing errors here -- the
-// symptom is a denied signing request, or an ExternalSecret that never syncs,
-// hours later.
-//
-// NO `provider "kubernetes"` BLOCK IN THIS ROOT MODULE, deliberately: the
-// module declares and configures its own kubernetes/kubectl/helm/vault
-// providers from `kubeconfig_path` (see its provider.tf). A root block would be
-// a second, unused configuration -- ../../apps1/openbao and every sibling here
-// leave it out for the same reason.
+// No `provider "kubernetes"` block: the module declares and configures its own
+// from `kubeconfig_path`. Same as every sibling openbao root here.
 module "openbao-base-setup" {
   // PINNED TO THE COMMIT, NOT TO v1.2.0, AND THE DIFFERENCE IS A PRIVILEGE:
   //
@@ -92,44 +71,45 @@ module "openbao-base-setup" {
   certmanager_vault_issuer_enabled = false
   pki_enabled                      = false
 
-  // Mount paths come out as <cluster_name>-<name>, so these two produce
-  // /v1/auth/tabletennis-sthings-certmanager and
-  // /v1/auth/tabletennis-sthings-eso.
-  //
-  // BOTH NAMES ARE LOAD-BEARING ELSEWHERE:
-  //   certmanager -> the XR annotations vault-k8s-auth-mount / -role / -sa,
-  //                  which must match all three exactly;
-  //   eso         -> the ClusterSecretStore's auth.kubernetes.mountPath, whose
-  //                  convention is <cluster-name>-eso.
-  //
-  // The module creates the ServiceAccount each mount admits (<name> in
-  // <namespace>) unless bound_service_account_names is overridden. The token
-  // REVIEWER is a separate ServiceAccount (vault-auth-reviewer in kube-system):
-  // system:auth-delegator is the right to review any token in the cluster,
-  // which neither cert-manager nor ESO has any business holding.
-  //
   // k8s_auth_reviewer_create is left at its default, so the module creates the
-  // reviewer. RUN ../../platform/openbao/preflight.sh first -- if blueprints
-  // CreateVaultKubernetesAuth has already run against this cluster the apply
-  // stops with `serviceaccounts "vault-auth-reviewer" already exists` and needs
-  // k8s_auth_reviewer_create = false.
+  // token reviewer. RUN ../../platform/openbao/preflight.sh first -- if
+  // blueprints CreateVaultKubernetesAuth has already run against this cluster
+  // the apply stops with `serviceaccounts "vault-auth-reviewer" already exists`
+  // and needs k8s_auth_reviewer_create = false.
+  //
+  // Mount path comes out as <cluster_name>-<name>, i.e.
+  // /v1/auth/tabletennis-sthings-eso. The name is load-bearing: the
+  // ClusterSecretStore's auth.kubernetes.mountPath must match it, and its
+  // convention is <cluster-name>-eso.
+  //
+  // BOUND TO ESO'S OWN ServiceAccount, NOT TO A NEW ONE. vault-base-setup would
+  // create a ServiceAccount named after the mount and admit that -- but nothing
+  // else would ever use it, and the ClusterSecretStore would have to name it.
+  // `external-secrets` in `external-secrets` is the identity the controller
+  // already runs as: the chart is installed with releaseName `external-secrets`
+  // and no fullnameOverride or serviceAccount.name
+  // (argocd infra/external-secrets/install), so that is the controller's SA --
+  // not the -webhook or -cert-controller one, which the same chart also creates.
+  //
+  // Binding to it removes a ServiceAccount nobody owned and a name that could
+  // drift. VERIFY IT ON THE FIRST BUILD before applying --
+  // `kubectl -n external-secrets get sa` -- because a bound name that does not
+  // exist fails exactly the way everything else here fails: silently.
+  //
+  // The token reviewer stays a separate ServiceAccount (vault-auth-reviewer in
+  // kube-system): system:auth-delegator is the right to review any token in the
+  // cluster, which ESO has no business holding.
   k8s_auths = [
     {
-      name           = "certmanager"
-      namespace      = "cert-manager"
-      token_policies = ["pki-issue"]
-      token_ttl      = 3600
-    },
-    {
-      // External Secrets logs in here and reads the three entries below.
-      // token_policies names a policy created in
-      // ../../platform/openbao/app-secrets, NOT here -- a role bound to a
-      // policy that does not exist logs in fine and is granted nothing, and
-      // the symptom is an ExternalSecret that never syncs.
       name           = "eso"
       namespace      = "external-secrets"
       token_policies = ["read-tabletennis"]
       token_ttl      = 3600
+
+      // Admit the controller's existing ServiceAccount instead of the one the
+      // module would otherwise create and admit.
+      bound_service_account_names      = ["external-secrets"]
+      bound_service_account_namespaces = ["external-secrets"]
     }
   ]
 }

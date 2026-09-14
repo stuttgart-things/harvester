@@ -141,9 +141,10 @@ spec:
       #      mount, the three entries and the read policy. Lives beside OpenBao
       #      rather than beside this cluster, so it survives a rebuild of
       #      tabletennis. Needs no cluster, so it can run before any of this.
-      #   2. terraform in clusters/tabletennis/openbao -- the two Kubernetes
-      #      auth mounts, which ARE configured with this cluster and therefore
-      #      cannot run until it is up
+      #   2. terraform in clusters/tabletennis/openbao -- the ESO auth mount,
+      #      which IS configured with this cluster and therefore cannot run
+      #      until it is up. The cert-manager mount is not in it: that one is
+      #      composed from spec.vaultAuth above and needs no apply at all.
       #   3. the ClusterSecretStore `vault-tabletennis` on the cluster, and
       #      `kubectl get clustersecretstore vault-tabletennis` reporting Valid
       #
@@ -158,23 +159,20 @@ spec:
     annotations:
       clusterbook.stuttgart-things.com/vault-server: https://openbao.platform.sthings.lab
       clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
-      # Tokenless: cert-manager mints a ServiceAccount token per signing request
-      # through the TokenRequest API rather than holding a Vault token that
-      # nothing renews.
-      clusterbook.stuttgart-things.com/vault-auth-method: kubernetes
-      # THE MOUNT DOES NOT EXIST UNTIL A HUMAN RUNS TERRAFORM, from
-      # clusters/tabletennis/openbao in this repo -- which needs this cluster's
-      # own API address, CA and reviewer JWT and therefore cannot run until the
-      # cluster is up. The vault-pki ClusterIssuer sits not-Ready between
-      # provisioning and that apply. That is the intended signal, not a fault;
-      # see clusters/OPENBAO-CLUSTERBOOK.md.
+      # FOUR ANNOTATIONS ARE MISSING HERE ON PURPOSE, AND THEIR ABSENCE IS THE
+      # POINT: vault-auth-method, vault-k8s-auth-mount, -role and -sa are
+      # DERIVED by the Composition from spec.vaultAuth below, because
+      # composeMount is on. Writing them here would not merely duplicate them --
+      # the Composition merges the caller's annotations OVER the derived ones,
+      # so a value set here WINS and silently reinstates the drift #392 removed.
       #
-      # vault-base-setup derives the mount from <cluster_name>-<name> and binds
-      # a role of that same <name> to a ServiceAccount of that <name>. All three
-      # move together, and the cluster_name here is `tabletennis-sthings`.
-      clusterbook.stuttgart-things.com/vault-k8s-auth-mount: /v1/auth/tabletennis-sthings-certmanager
-      clusterbook.stuttgart-things.com/vault-k8s-auth-role: certmanager
-      clusterbook.stuttgart-things.com/vault-k8s-auth-sa: certmanager
+      # The failure that drift produces is the quiet kind: the mount path lives
+      # in two places, and a mismatch does not fail loudly. The ClusterIssuer
+      # reports Ready on a successful LOGIN, and only the signing request is
+      # denied, much later.
+      #
+      # vault-server below is NOT optional with composeMount: the Composition
+      # fails the render without it rather than producing no child XR silently.
       # Inert under kubernetes auth -- the chart renders only the block matching
       # the method. Kept so the Composition writes the Secret name every other
       # cluster uses rather than a second, differently-named unused one.
@@ -209,3 +207,28 @@ spec:
       #   tabletennis homerun2-ns  -> homerun2
       # Add tabletennis-platform.stuttgart-things.com/wled-endpoint together with
       # the light-catcher label when a real strip is wired up.
+
+  # THE CERT-MANAGER AUTH MOUNT, COMPOSED RATHER THAN APPLIED BY HAND.
+  #
+  # composeMount makes the Composition create the VaultK8sAuth child XR that
+  # creates /v1/auth/tabletennis-sthings-certmanager, and derive the four
+  # vault-k8s-auth-* annotations from the same values -- so the mount path
+  # cannot drift from the annotation that names it. It implies `enabled`, which
+  # is what puts the token-reviewer ServiceAccount on this cluster and mirrors
+  # its credentials back to a Secret beside this XR.
+  #
+  # Verified end to end on the throwaway cluster `vaulttest` (2026-09-14,
+  # crossplane-configurations#411): mount created with the real API address,
+  # ClusterIssuer Ready without a manual step, a probe certificate verified
+  # against the OpenBao root and rejected against an unrelated CA, and the
+  # teardown removing child, Workspace and mount. Two caveats recorded there:
+  # one Argo CD sync had to be triggered by hand after a nil-pointer in the
+  # cert-manager chart (not the Composition), and the teardown wedges on two
+  # vpki finalizers that have to be removed by hand.
+  #
+  # THE ESO MOUNT IS NOT HERE. composeMount emits exactly ONE k8sAuths entry,
+  # bound to the cert-manager ServiceAccount, and has no parameter for a second.
+  # That one stays in clusters/tabletennis/openbao -- see its README for why
+  # Terraform rather than a second, statically applied VaultK8sAuth.
+  vaultAuth:
+    composeMount: true
