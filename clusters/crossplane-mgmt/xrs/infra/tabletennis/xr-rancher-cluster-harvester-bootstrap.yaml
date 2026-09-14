@@ -110,28 +110,43 @@ spec:
       # without it the catcher would drive homerun2's wled-mock.
       tabletennis-platform/light-catcher: 'false'
 
-      # THE TWO GATES, AND THEY STAY 'false' UNTIL THE STORE EXISTS.
+      # TWO GATES, AND THEY ARE DELIBERATELY NOT THE SAME.
       #
-      # Both bundles read every credential they have from a ClusterSecretStore,
-      # and ExternalSecrets fail closed: labelled early, the Pods sit in
-      # CreateContainerConfigError waiting for Secrets that never appear, and
-      # schmetterpause's database never bootstraps at all, because it initialises
-      # from the Secret its own ExternalSecret produces.
+      # Both bundles read every credential they have from the ClusterSecretStore
+      # `vault-tabletennis`, which cannot exist before this cluster does: its
+      # OpenBao auth mount is configured with the cluster's own API address, CA
+      # and reviewer JWT. So there is always a window between provisioning and a
+      # readable store. The question is only what each bundle does in it.
       #
-      # The gates are matched on the VALUE, so 'false' here really is off.
+      # The gates are matched on the VALUE (`In ["true"]`), so an ABSENT label is
+      # off just like 'false'. Both lines have to stay, whatever they say.
       #
-      # Flip BOTH to 'true' after:
+      # homerun2: OPEN. Everything it can get wrong in that window retries by
+      # itself -- the Pods sit in CreateContainerConfigError and the kubelet
+      # keeps trying, the ExternalSecrets report SecretSyncedError and ESO keeps
+      # trying. Nothing in it initialises once. It comes up on its own the
+      # moment the store can be read, so holding it back would only mean
+      # touching this file a second time for no gain.
+      homerun2-platform.stuttgart-things.com/secrets-config: 'true'
+      #
+      # tabletennis: CLOSED until the store is readable, and this one is not
+      # symmetric with the line above. schmetterpause's database BOOTSTRAPS from
+      # the Secret its own ExternalSecret produces -- `bootstrap.initdb.secret`
+      # on the CNPG Cluster. That is a once-only step, not a retry loop, and
+      # whether CNPG waits for a missing Secret or gives up is not something
+      # this repo can promise. A database is the wrong place to find out.
+      #
+      # Flip it to 'true' after:
       #   1. terraform in clusters/tabletennis/openbao   (the KV mount, the
       #      three entries, the read policy and the ESO auth mount)
-      #   2. the ClusterSecretStore `vault-tabletennis` on the cluster
-      #   3. three entries under it:
-      #        homerun2:       authToken, redisPassword
-      #        schmetterpause: session-key, username, password
-      #        zaehlwerk:      omni-pitcher-token, redis-password
-      #      where omni-pitcher-token holds the SAME value as homerun2's
-      #      authToken -- otherwise /pitch answers 401 and the only symptom is a
-      #      `panel pitch failed, point not shown` line in zaehlwerk's log.
-      homerun2-platform.stuttgart-things.com/secrets-config: 'false'
+      #   2. the ClusterSecretStore `vault-tabletennis` on the cluster, and
+      #      `kubectl get clustersecretstore vault-tabletennis` reporting Valid
+      #
+      # If it ever does get switched on early: the database has no data to lose
+      # at that point, so `kubectl delete cluster schmetterpause-db -n
+      # schmetterpause` lets the operator bootstrap it again against a store
+      # that now answers. `protect: true` blocks Argo from pruning it, not you
+      # from deleting it.
       tabletennis-platform.stuttgart-things.com/secrets-config: 'false'
     # PKI against the OpenBao on `platform` -- this cluster never touches the
     # Vault on `infra` that is being switched off (stuttgart-things/harvester#152).
