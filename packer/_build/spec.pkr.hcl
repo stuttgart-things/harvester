@@ -57,6 +57,19 @@ build {
     ]
   }
 
+  # Prefer IPv4 for dual-stack destinations before anything reaches the network.
+  # The lab RA hands out several simultaneous global IPv6 prefixes; a source
+  # address from a stale one resets large transfers mid-copy while small requests
+  # on the same path succeed -- container image pulls failed exactly this way on
+  # 2026-09-14. Runs first so the CA fetch and the airgap staging below both
+  # benefit. Set PREFER_IPV4=false to skip.
+  provisioner "shell" {
+    script = "prefer-ipv4.sh"
+    environment_vars = [
+      "PREFER_IPV4=${var.prefer_ipv4}",
+    ]
+  }
+
   # Upload the committed sthings-lab CA so the trust install needs no network
   # (Vault may be down). Only runs when ca_cert_file is set; otherwise the
   # script falls back to ca_cert_url (or skips).

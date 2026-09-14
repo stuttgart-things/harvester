@@ -148,3 +148,12 @@ variable "ca_cert_name" {
   default     = "sthings-lab-ca.crt"
   description = "Filename for the installed CA in the system trust anchors dir (also the upload destination basename)."
 }
+
+# Prefer IPv4 over IPv6 for dual-stack destinations in the built image
+# (/etc/gai.conf). A workaround for the lab RA handing out several rotating
+# global IPv6 prefixes, which resets large transfers from a stale source address.
+# Set to "false" once the RA hands out one stable prefix.
+variable "prefer_ipv4" {
+  type    = string
+  default = "true"
+}
