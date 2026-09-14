@@ -137,9 +137,14 @@ spec:
       # this repo can promise. A database is the wrong place to find out.
       #
       # Flip it to 'true' after:
-      #   1. terraform in clusters/tabletennis/openbao   (the KV mount, the
-      #      three entries, the read policy and the ESO auth mount)
-      #   2. the ClusterSecretStore `vault-tabletennis` on the cluster, and
+      #   1. terraform in clusters/platform/openbao/app-secrets -- the KV
+      #      mount, the three entries and the read policy. Lives beside OpenBao
+      #      rather than beside this cluster, so it survives a rebuild of
+      #      tabletennis. Needs no cluster, so it can run before any of this.
+      #   2. terraform in clusters/tabletennis/openbao -- the two Kubernetes
+      #      auth mounts, which ARE configured with this cluster and therefore
+      #      cannot run until it is up
+      #   3. the ClusterSecretStore `vault-tabletennis` on the cluster, and
       #      `kubectl get clustersecretstore vault-tabletennis` reporting Valid
       #
       # If it ever does get switched on early: the database has no data to lose

@@ -1,108 +1,98 @@
-# OpenBao setup for `tabletennis`
+# OpenBao Kubernetes auth for `tabletennis`
 
-Two jobs in one apply, because they share a `cluster_name` and a kubeconfig:
+Two auth mounts on the OpenBao that runs on `platform`, and nothing else. Each is
+configured with **this** cluster's API address, CA and reviewer JWT, which is why
+they cannot be created from `clusters/platform/openbao` and why they die with the
+cluster.
 
-1. **Kubernetes auth for cert-manager** — the clusterbook half that cannot be
-   created from `clusters/platform/openbao`, because it is configured with *this*
-   cluster's API address, CA and reviewer JWT.
-2. **The application secrets** — the KV mount, its three entries, the read policy,
-   and the ESO auth mount that lets External Secrets reach them.
+| Mount | Role / ServiceAccount | For |
+|---|---|---|
+| `/v1/auth/tabletennis-sthings-certmanager` | `certmanager` in `cert-manager` | signing certificates against the PKI on platform |
+| `/v1/auth/tabletennis-sthings-eso` | `eso` in `external-secrets` | External Secrets reading the application secrets |
 
-The PKI is **not** here: it lives on `platform` and is created exactly once, by
-`clusters/platform/openbao`. Recreating it here would fork the CA. The
-`vault-pki` ClusterIssuer is not here either — it comes from the Argo CD
-`cert-manager-vault-pki-clusterbook` ApplicationSet, driven by annotations on the
+Mount paths come out as `<cluster_name>-<name>`. Both names are load-bearing
+elsewhere: `certmanager` must match the XR annotations `vault-k8s-auth-mount` /
+`-role` / `-sa` exactly, and `eso` must match the ClusterSecretStore's
+`auth.kubernetes.mountPath`, whose convention is `<cluster-name>-eso`.
+
+## What is deliberately not here
+
+**The secrets.** The KV mount, its entries and the `read-tabletennis` policy live
+in [`../../platform/openbao/app-secrets`](../../platform/openbao/app-secrets/),
+because they are objects on the OpenBao rather than on this cluster — so they
+survive a teardown and rebuild of tabletennis, and a rebuild costs only this
+apply.
+
+**The PKI.** It lives on `platform` and is created exactly once, by
+`clusters/platform/openbao`. Recreating it here would fork the CA.
+
+**The ClusterIssuer.** It comes from the Argo CD ApplicationSet
+`cert-manager-vault-pki-clusterbook`, driven by annotations on the
 `RancherCluster` XR.
 
 **Order, prerequisites, the CA question, how to get a kubeconfig for this cluster,
 and how to verify are in [`../../OPENBAO-CLUSTERBOOK.md`](../../OPENBAO-CLUSTERBOOK.md).**
-Read it first; two of the steps fail silently out of order.
+Read it first; several of the steps fail silently out of order.
 
-| | |
-|---|---|
-| Auth mount, cert-manager | `/v1/auth/tabletennis-sthings-certmanager` |
-| Auth mount, External Secrets | `/v1/auth/tabletennis-sthings-eso` |
-| KV v2 mount | `tabletennis` |
-| Policy | `read-tabletennis` |
-| Terraform state | `kubernetes` backend, Secret suffix `openbao-tabletennis-sthings`, ns `cert-manager`, in this cluster |
+## This directory is a candidate to disappear
 
-## The three entries, and who reads each property
+[crossplane-configurations#411](https://github.com/stuttgart-things/crossplane-configurations/issues/411)
+is the work that would replace it. The `rancher-cluster` Composition grew
+`spec.vaultAuth.composeMount`, which composes a `VaultK8sAuth` creating the
+cert-manager mount and **deriving** the four `vault-k8s-auth-*` annotations, so
+they can no longer drift from the mount. Strictly better than doing it here.
 
-One entry per application. All three sit in the `tabletennis` mount, and every
-name below is fixed by something outside this directory — none of them is a free
-choice.
+Not used yet, for two reasons:
 
-| Entry | Property | Read by | Fixed by |
-|---|---|---|---|
-| `homerun2` | `authToken` | omni-pitcher (`/pitch` bearer), scout | the XR annotation `homerun2-platform…/secret-key` |
-| | `redisPassword` | redis-stack, omni-pitcher, core-catcher, scout, led-catcher | |
-| `schmetterpause` | `session-key`, `username`, `password` | the app and its CloudNativePG database | hard-coded in `schmetterpause-kustomize` |
-| `zaehlwerk` | `omni-pitcher-token` | zaehlwerk's scoreboard panel | hard-coded in `zaehlwerk-kustomize` |
-| | `redis-password` | zaehlwerk | |
+1. **It is not on the control plane.** ghcr and `crossplane-mgmt` both carry
+   `rancher-cluster` **v0.7.1**; the repo is at v0.7.2. v0.7.1 predates #392
+   Phase 1 and Phase 2, so `vaultAuth` does not exist there at all — not even
+   `enabled`. That is blocker 1 of #411, and the composed chain has never been
+   run against a real cluster.
+2. **It would only cover half of this file.** The composed block emits exactly
+   one `k8sAuths` entry — `roleName`, default `certmanager`, bound to the
+   cert-manager ServiceAccount. **ESO needs a second mount**, and `composeMount`
+   has no way to add one. A standalone `VaultK8sAuth` XR could, since its
+   `k8sAuths[]` is a list and `vault-auth` v0.3.2 is installed — but it reads the
+   reviewer Secret and `kubernetesHost` that only `vaultAuth.enabled` produces,
+   so it waits on the same upgrade.
 
-> [!IMPORTANT]
-> **`zaehlwerk:omni-pitcher-token` must equal `homerun2:authToken`, byte for byte.**
-> They are the two ends of one bearer token. Get it wrong and `/pitch` answers
-> 401 — the Pods stay Healthy, the scoreboard just never updates, and the only
-> trace is a `panel pitch failed, point not shown` line in zaehlwerk's log.
-> `zaehlwerk:redis-password` must likewise equal `homerun2:redisPassword`: it is
-> the same Redis.
+The KV half is unaffected either way: no XR creates secret engines, which is why
+[`../../platform/openbao/app-secrets`](../../platform/openbao/app-secrets/) stays
+Terraform regardless.
 
-**Why `homerun2` and not `tabletennis`.** The homerun2 bundle names its entry
-after the cluster by default. schmetterpause and zaehlwerk cannot — their entry
-names are baked into their published kustomize bases, and the catalog charts patch
-only the store, not the key. So the XR sets
-`homerun2-platform.stuttgart-things.com/secret-key: homerun2` and all three end up
-app-named. Remove that annotation and homerun2 silently starts reading
-`tabletennis/data/tabletennis`, which this Terraform does not create.
+## Order, and both failures are silent
 
-## tfvars
+Two applies must have run before this one:
 
-`terraform.tfvars.sops.json` holds the real values, encrypted. Decrypt it — never
-copy `terraform.tfvars.example.json` into place, it contains only placeholders.
-
-```bash
-# generate
-openssl rand -hex 32     # homerun2 authToken  (= zaehlwerk omni-pitcher-token)
-openssl rand -hex 24     # homerun2 redisPassword (= zaehlwerk redis-password)
-openssl rand -hex 24     # schmetterpause session-key
-openssl rand -hex 24     # schmetterpause password
-
-# encrypt
-export AGE_PUBLIC_KEY="age1..."
-dagger call -m github.com/stuttgart-things/dagger/sops encrypt \
-  --age-key="env:AGE_PUBLIC_KEY" \
-  --plaintext-file="./terraform.tfvars.json" \
-  --file-extension="json" \
-  export --path="./terraform.tfvars.sops.json"
-rm terraform.tfvars.json          # the plaintext does not stay on disk
-
-# decrypt, at apply time
-export SOPS_AGE_KEY="AGE-SECRET-KEY-1..."
-dagger call -m github.com/stuttgart-things/dagger/sops decrypt \
-  --age-key="env:SOPS_AGE_KEY" \
-  --encrypted-file="./terraform.tfvars.sops.json" contents > terraform.tfvars.json
+```
+clusters/platform/openbao               creates the policy `pki-issue`
+clusters/platform/openbao/app-secrets   creates the policy `read-tabletennis`
 ```
 
-`secret_engines` is declared `sensitive = true`, so the values do not appear in
-plan or apply output. They **are** in the state — which is why the backend is a
-Secret in the cluster rather than a file.
+Each of the two roles here is bound to one of those. **A role bound to a policy
+that does not exist logs in successfully and is granted nothing** — so running
+these out of order produces no error at all. The symptom is a denied signing
+request, or an ExternalSecret that never syncs, noticed much later.
+
+Neither of those two applies needs this cluster, so run both first.
 
 ## Apply
 
 ```bash
 export VAULT_ADDR=https://openbao.platform.sthings.lab
-export VAULT_TOKEN=<a token that may write auth mounts and KV on that OpenBao>
+export VAULT_TOKEN=<a token that may write auth mounts on that OpenBao>
 
 KUBECONFIG_PATH=/home/sthings/.kube/tabletennis \
   ../../platform/openbao/preflight.sh \
   && terraform init \
-  && terraform apply -var-file=terraform.tfvars.json
+  && terraform apply
 ```
 
-The cluster has to be up first: the auth mounts are configured with its API
-address, CA and reviewer JWT. Until this runs, its `vault-pki` ClusterIssuer sits
-not-Ready — that is the intended signal, not a fault.
+No tfvars: this root takes no secrets.
+
+The cluster has to be up first. Until this runs, its `vault-pki` ClusterIssuer
+sits not-Ready — that is the intended signal, not a fault.
 
 If `preflight.sh` reports `vault-auth-reviewer` already exists (blueprints
 `CreateVaultKubernetesAuth` ran against this cluster), add
@@ -110,9 +100,13 @@ If `preflight.sh` reports `vault-auth-reviewer` already exists (blueprints
 on the pinned commit, not in v1.2.0 — see the note on the `source` line for why
 this is pinned to a commit rather than to that tag.
 
+| | |
+|---|---|
+| Terraform state | `kubernetes` backend, Secret suffix `openbao-tabletennis-sthings`, ns `cert-manager`, in this cluster |
+
 ## Then: the ClusterSecretStore
 
-Terraform makes the secrets reachable; this is what reaches for them. From
+This makes the secrets *reachable*; the store is what reaches. From
 `infra/external-secrets/cluster-secret-store-vault` in `stuttgart-things/argocd`:
 
 ```yaml
@@ -137,36 +131,25 @@ the identity the auth mount admits. External Secrets mints a token for it, so it
 controller needs `create` on `serviceaccounts/token` for that name — the default
 ESO install has it.
 
-## Last: the gates
+## Last: the tabletennis gate
 
-Only once a `kubectl get clustersecretstore vault-tabletennis` reports `Valid`,
-flip both labels in the XR from `'false'` to `'true'`:
+Only once `kubectl get clustersecretstore vault-tabletennis` reports **Valid**,
+flip one label in the XR from `'false'` to `'true'`:
 
 ```
-homerun2-platform.stuttgart-things.com/secrets-config
 tabletennis-platform.stuttgart-things.com/secrets-config
 ```
 
-Before that they hold the two app platforms back on purpose. ExternalSecrets fail
-closed: labelled early, the Pods sit in `CreateContainerConfigError` waiting for
-Secrets that never appear, and schmetterpause's database never bootstraps at all —
-it initialises from the Secret its own ExternalSecret produces.
+The homerun2 gate is already `'true'` and needs nothing: everything that bundle
+can get wrong before the store answers retries by itself. tabletennis is held
+back because schmetterpause's database *bootstraps* from the Secret its own
+ExternalSecret produces, which is a once-only step rather than a retry loop. The
+XR explains both in place.
 
 ## Verify
 
 ```bash
-# the two auth mounts
 bao auth list | grep tabletennis-sthings
-
-# the entries (values redacted by -field=keys)
-bao kv get -format=json tabletennis/homerun2       | jq '.data.data | keys'
-bao kv get -format=json tabletennis/schmetterpause | jq '.data.data | keys'
-bao kv get -format=json tabletennis/zaehlwerk      | jq '.data.data | keys'
-
-# the two ends of the bearer token agree
-diff <(bao kv get -field=authToken tabletennis/homerun2) \
-     <(bao kv get -field=omni-pitcher-token tabletennis/zaehlwerk) && echo "token matches"
-
-# after the gates: every ExternalSecret synced
-kubectl get externalsecret -A
+kubectl get clustersecretstore vault-tabletennis
+kubectl get externalsecret -A          # after the gate
 ```

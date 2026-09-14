@@ -1,26 +1,62 @@
-// OpenBao setup for the `tabletennis` cluster, against the OpenBao on `platform`.
+// Kubernetes auth mounts for the `tabletennis` cluster, on the OpenBao that
+// runs on `platform`.
 //
-// TWO JOBS IN ONE APPLY, because they share a cluster_name and a kubeconfig:
+// ONLY THE PART THAT BELONGS TO THIS CLUSTER. Each mount is configured with
+// THIS cluster's API address, CA and reviewer JWT, so it cannot be created
+// before the cluster exists and cannot outlive it. Two of them:
 //
-//   1. Kubernetes auth for cert-manager -- the clusterbook half that cannot be
-//      created from clusters/platform/openbao, because it is configured with
-//      THIS cluster's API address, CA and reviewer JWT. Same shape as
-//      ../../apps1/openbao (now removed) and the other clusterbook clusters.
+//   certmanager -- the clusterbook half that cannot be created from
+//                  clusters/platform/openbao. Same shape as every other
+//                  clusterbook cluster here.
+//   eso         -- External Secrets, logging in to read the application
+//                  secrets.
 //
-//   2. The KV mount and the three application entries the homerun2 and
-//      tabletennis platforms read through External Secrets, plus the ESO auth
-//      mount and the read policy that let it get at them.
+// THE SECRETS THEMSELVES ARE NOT HERE. The KV mount, its entries and the read
+// policy live in ../../platform/openbao/app-secrets, because they are objects
+// on the OpenBao rather than on this cluster -- so they survive a teardown and
+// rebuild of tabletennis, and a rebuild costs only this apply.
 //
-// WHAT IS NOT HERE: the PKI. It lives on platform and is created exactly once,
-// by clusters/platform/openbao. Recreating it here would fork the CA.
-// The ClusterIssuer is not here either -- it comes from the Argo CD
-// ApplicationSet cert-manager-vault-pki-clusterbook, driven by annotations on
-// the RancherCluster XR. See ../../OPENBAO-CLUSTERBOOK.md.
+// The PKI is not here either: it lives on platform and is created exactly once,
+// by clusters/platform/openbao. Recreating it would fork the CA. Nor is the
+// ClusterIssuer -- that comes from the Argo CD ApplicationSet
+// cert-manager-vault-pki-clusterbook, driven by annotations on the
+// RancherCluster XR. See ../../OPENBAO-CLUSTERBOOK.md.
 //
-// ORDER MATTERS AND ONE FAILURE IS SILENT: clusters/platform/openbao must have
-// run first. `pki-issue` is created there, and a role bound to a policy that
-// does not exist LOGS IN SUCCESSFULLY and is granted nothing -- so the mistake
-// surfaces as a denied signing request much later, not as an error here.
+// THIS DIRECTORY IS A CANDIDATE TO DISAPPEAR -- see
+// stuttgart-things/crossplane-configurations#411. The rancher-cluster
+// Composition grew `spec.vaultAuth.composeMount`, which composes a VaultK8sAuth
+// that creates the cert-manager mount and DERIVES the four vault-k8s-auth-*
+// annotations, so they can no longer drift from the mount. That is strictly
+// better than doing it here. Two reasons it is not used yet:
+//
+//   1. IT IS NOT ON THE CONTROL PLANE. ghcr and crossplane-mgmt both carry
+//      rancher-cluster v0.7.1; the repo is at v0.7.2. v0.7.1 predates #392
+//      Phase 1 and Phase 2, so `vaultAuth` does not exist there at all -- not
+//      even `enabled`. Publishing and upgrading it is blocker 1 of #411, and
+//      the composed chain has never been executed against a real cluster.
+//      #411 is the ticket that finds out whether it converges on its own.
+//
+//   2. IT WOULD ONLY COVER HALF OF THIS FILE. The composed block emits exactly
+//      ONE k8sAuths entry -- `roleName`, default `certmanager`, bound to the
+//      cert-manager ServiceAccount. ESO needs a second mount, and composeMount
+//      has no way to add one. A standalone VaultK8sAuth XR could: its
+//      k8sAuths[] is a list, and vault-auth v0.3.2 is installed. But it reads
+//      the reviewer Secret and kubernetesHost that only `vaultAuth.enabled`
+//      produces, so it waits on the same upgrade.
+//
+// When #411 lands, the replacement for this file is one VaultK8sAuth XR with
+// both entries, or composeMount for cert-manager plus a small XR for eso. The
+// KV half is unaffected either way -- no XR creates secret engines.
+//
+// ORDER MATTERS AND BOTH FAILURES ARE SILENT. Two applies must have run first:
+//
+//   clusters/platform/openbao             creates `pki-issue`
+//   clusters/platform/openbao/app-secrets creates `read-tabletennis`
+//
+// A role bound to a policy that does not exist LOGS IN SUCCESSFULLY and is
+// granted nothing. Run these out of order and nothing errors here -- the
+// symptom is a denied signing request, or an ExternalSecret that never syncs,
+// hours later.
 //
 // NO `provider "kubernetes"` BLOCK IN THIS ROOT MODULE, deliberately: the
 // module declares and configures its own kubernetes/kubectl/helm/vault
@@ -86,21 +122,16 @@ module "openbao-base-setup" {
     },
     {
       // External Secrets logs in here and reads the three entries below.
-      // token_policies must name the policy from var.kv_policies -- a role
-      // bound to a policy that does not exist logs in fine and is granted
-      // nothing, and the symptom is an ExternalSecret that never syncs.
+      // token_policies names a policy created in
+      // ../../platform/openbao/app-secrets, NOT here -- a role bound to a
+      // policy that does not exist logs in fine and is granted nothing, and
+      // the symptom is an ExternalSecret that never syncs.
       name           = "eso"
       namespace      = "external-secrets"
       token_policies = ["read-tabletennis"]
       token_ttl      = 3600
     }
   ]
-
-  // Both from terraform.tfvars.sops.json -- decrypt it, never hand-edit a
-  // plaintext copy into place. See terraform.tfvars.example.json for the shape
-  // and README.md for what each property is and who reads it.
-  secret_engines = var.secret_engines
-  kv_policies    = var.kv_policies
 }
 
 variable "openbao_addr" {
@@ -119,23 +150,4 @@ variable "cluster_name" {
   type        = string
   description = "Cluster name. Prefixes both Kubernetes auth mount paths."
   default     = "tabletennis-sthings"
-}
-
-variable "secret_engines" {
-  type = list(object({
-    name        = string
-    path        = string
-    description = string
-    data_json   = string
-  }))
-  description = "KV v2 mounts and the entries in them. One mount per distinct `path`; one entry per path+name."
-  sensitive   = true
-}
-
-variable "kv_policies" {
-  type = list(object({
-    name         = string
-    capabilities = string
-  }))
-  description = "Vault policies. `capabilities` is a whole policy document, not a verb list."
 }
