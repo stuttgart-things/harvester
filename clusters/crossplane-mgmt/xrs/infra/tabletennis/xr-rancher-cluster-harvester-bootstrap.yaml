@@ -1,0 +1,102 @@
+---
+# tabletennis -- a Harvester k3s cluster for the homerun2 + tabletennis stack:
+# homerun2 (redis-stack, omni-pitcher, core-catcher, scout, led-catcher and the
+# light-catcher at the table), schmetterpause (league, with a CloudNativePG
+# database) and zaehlwerk (live scorekeeping).
+#
+# THE CLUSTER NAME IS LOAD-BEARING IN THREE PLACES, so renaming it is not a
+# one-line change: it becomes the DNS name the reservation creates (and with it
+# every application hostname, `<app>.tabletennis.sthings.lab`), the OpenBao
+# mount path in the annotations below, and the directory
+# clusters/tabletennis/openbao that terraform runs from.
+#
+# Modelled on ../apps1, which is the same shape of cluster. The differences are
+# sizing and one extra label -- see below.
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: RancherCluster
+metadata:
+  name: tabletennis
+  namespace: default
+spec:
+  name: tabletennis
+  environmentConfig: default
+  infrastructure: harvester
+  # Bigger than apps1's 6/6/40. This cluster carries two stateful workloads on
+  # top of the platform -- a CloudNativePG instance for schmetterpause and
+  # redis-stack with persistence for homerun2 -- plus roughly ten small Go
+  # services. The disk is the reason for 60: the two PVCs default to 8Gi each
+  # on openebs-hostpath, which is local storage on this root disk.
+  harvester:
+    cpuCount: 8
+    memorySize: 12
+    diskSize: 60
+    quantity: 1
+  argocd:
+    register: true
+    # Produces the clusterbook allocation-ip label and the ip/fqdn annotations.
+    # NOT optional here: every network-platform ApplicationSet gates on that
+    # anchor, so without a reservation the cluster joins Argo CD and none of
+    # cilium-lb, the Gateway or the wildcard certificate is installed -- and
+    # then nothing this cluster exists for is reachable.
+    reservation:
+      enabled: true
+      createDNS: true
+    labels:
+      storage-platform: 'true'
+      # The default StorageClass. Both PVCs above land on it.
+      storage-platform/openebs: 'true'
+      storage-platform/longhorn: 'false'
+      storage-platform/nfs-csi-install: 'false'
+      storage-platform/nfs-csi-storageclasses: 'false'
+      security-platform: 'true'
+      # REQUIRED by all three applications: homerun2's component Secrets,
+      # schmetterpause's app + database credentials and zaehlwerk's panel token
+      # all come from a ClusterSecretStore. They fail closed, so a missing store
+      # shows up as a Secret that never appears rather than as an error anyone
+      # reads.
+      security-platform/external-secrets: 'true'  # pragma: allowlist secret
+      security-platform/kyverno: 'true'
+      network-platform: 'true'
+      network-platform/cilium-lb: 'true'
+      # The Gateway all six public hostnames attach to. zaehlwerk has NO
+      # authentication of its own -- its route is the access control -- so this
+      # Gateway must stay on the internal network.
+      network-platform/cilium-gateway: 'true'
+      network-platform/cilium-gateway-secondary: 'false'
+      network-platform/cert-manager-install: 'true'
+      network-platform/cert-manager-selfsigned: 'true'
+      network-platform/cert-manager-cluster-ca: 'true'
+      network-platform/cert-manager-vault-pki: 'true'
+      network-platform/trust-manager-install: 'true'
+      network-platform/trust-manager-bundle: 'true'
+      cicd-platform: 'false'
+      observability-platform: 'false'
+    # PKI against the OpenBao on `platform` -- this cluster never touches the
+    # Vault on `infra` that is being switched off (stuttgart-things/harvester#152).
+    annotations:
+      clusterbook.stuttgart-things.com/vault-server: https://openbao.platform.sthings.lab
+      clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
+      # Tokenless: cert-manager mints a ServiceAccount token per signing request
+      # through the TokenRequest API rather than holding a Vault token that
+      # nothing renews.
+      clusterbook.stuttgart-things.com/vault-auth-method: kubernetes
+      # THE MOUNT DOES NOT EXIST UNTIL A HUMAN RUNS TERRAFORM, from
+      # clusters/tabletennis/openbao in this repo -- which needs this cluster's
+      # own API address, CA and reviewer JWT and therefore cannot run until the
+      # cluster is up. The vault-pki ClusterIssuer sits not-Ready between
+      # provisioning and that apply. That is the intended signal, not a fault;
+      # see clusters/OPENBAO-CLUSTERBOOK.md.
+      #
+      # vault-base-setup derives the mount from <cluster_name>-<name> and binds
+      # a role of that same <name> to a ServiceAccount of that <name>. All three
+      # move together, and the cluster_name here is `tabletennis-sthings`.
+      clusterbook.stuttgart-things.com/vault-k8s-auth-mount: /v1/auth/tabletennis-sthings-certmanager
+      clusterbook.stuttgart-things.com/vault-k8s-auth-role: certmanager
+      clusterbook.stuttgart-things.com/vault-k8s-auth-sa: certmanager
+      # Inert under kubernetes auth -- the chart renders only the block matching
+      # the method. Kept so the Composition writes the Secret name every other
+      # cluster uses rather than a second, differently-named unused one.
+      clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token  # pragma: allowlist secret
+      # The issuer keeps the name every Certificate in the fleet references. The
+      # name says Vault; the endpoint above is OpenBao.
+      clusterbook.stuttgart-things.com/wildcard-issuer-name: vault-pki
