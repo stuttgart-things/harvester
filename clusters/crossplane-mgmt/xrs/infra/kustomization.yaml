@@ -3,6 +3,5 @@ kind: Kustomization
 resources:
   - demo-ns
   - martin-demo-ns
-  - k3s-test
   - silvio
   - apps1
