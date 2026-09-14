@@ -1,17 +1,44 @@
 ---
 # rancher-cluster Configuration package — provisions a Rancher cluster (generic
 # or Harvester) and wires its kubeconfig into Crossplane, optionally registering
-# it in Argo CD. v0.7.1: Usage resources ordering the teardown of the vpki
-# Secrets before the ClusterProviderConfig and the kubeconfig bridge — without
-# them a delete wedges forever (martinwolf, 6+ days), see #372. v0.5.0: EnvironmentConfig defaultLabels/defaultAnnotations as
-# the base for the ClusterbookCluster, overridden per key by spec.argocd.* on
-# the XR (auto-project defaults on; profile toggles default 'false'). v0.4.0:
-# adds spec.argocd.annotations (platform component params copied onto the
+# it in Argo CD.
+#
+# CAUTION: the tag below does not tell you what is in it. meta.crossplane.io/version
+# has carried v0.7.2 since 7ef61a7 (2026-09-08) while #400, #406 and #416 all
+# landed under that same label — `task push` bumps it, but several pushes can
+# share one. To know whether a feature is live, look at the Composition on the
+# cluster, not at the number:
+#
+#   kubectl get composition rancher-cluster -o yaml | grep -c <marker>
+#
+# And note this pin is the authority: `kubectl patch` of spec.package on
+# crossplane-mgmt is reverted by showcase-crossplane-platform's selfHeal within
+# about a second.
+#
+# v0.7.3: aligns with the Argo CD platform contract — the vault-pki gate flipped
+# from opt-in to opt-out, so a cluster carrying only the umbrella no longer gets
+# an issuer with neither token nor CA (#416).
+# v0.7.2: spec.vaultAuth — the cluster grows a token-reviewer ServiceAccount and
+# publishes it (#392 Phase 1, #400), and with composeMount: true also composes
+# the VaultK8sAuth that CREATES the OpenBao auth mount, deriving the four
+# vault-k8s-auth-* annotations from the same value as the mount path so they
+# cannot drift (#392 Phase 2, #406). Also releaseOnDelete, default true: the
+# clusterbook IP reservation and its DNS record are freed when the XR goes
+# (#390). Verified end to end on a disposable cluster, see #411.
+# v0.7.1: Usage resources ordering the teardown of the vpki Secrets before the
+# ClusterProviderConfig and the kubeconfig bridge — without them a delete wedges
+# forever (martinwolf, 6+ days), see #372. Note this does NOT cover Objects
+# writing to the downstream cluster itself; those still strand, see
+# stuttgart-things/crossplane-configurations#418.
+# v0.5.0: EnvironmentConfig defaultLabels/defaultAnnotations as the base for the
+# ClusterbookCluster, overridden per key by spec.argocd.* on the XR (auto-project
+# defaults on; profile toggles default 'false').
+# v0.4.0: adds spec.argocd.annotations (platform component params copied onto the
 # ClusterbookCluster / Argo CD cluster Secret) alongside the existing
-# spec.argocd.labels (platform profile toggles). v0.3.0: Harvester
-# provision path, Argo CD registration (direct endpoint + self-minted SA token,
-# target cluster = argocd.providerConfigRef), EnvironmentConfig defaults +
-# auto-discovered API server endpoint.
+# spec.argocd.labels (platform profile toggles).
+# v0.3.0: Harvester provision path, Argo CD registration (direct endpoint +
+# self-minted SA token, target cluster = argocd.providerConfigRef),
+# EnvironmentConfig defaults + auto-discovered API server endpoint.
 apiVersion: pkg.crossplane.io/v1
 kind: Configuration
 metadata:
