@@ -82,7 +82,25 @@ variable "secret_engines" {
     data_json   = string
   }))
   description = "KV v2 mounts and the entries in them. One mount per distinct `path`; one entry per path+name. One mount per workload cluster."
-  sensitive   = true
+  // NOT marked sensitive, and that is deliberate rather than an oversight.
+  //
+  // The module derives local.kv_mounts (the distinct mount paths) from this
+  // variable and uses it as a for_each key. Sensitivity is contagious, so with
+  // `sensitive = true` here terraform refuses the whole plan:
+  //
+  //   Error: Invalid for_each argument
+  //   local.kv_mounts has a sensitive value
+  //   Sensitive values ... cannot be used as for_each arguments.
+  //
+  // Nothing is lost by dropping it: the vault provider marks data_json sensitive
+  // on its own. Measured on this exact input -- the generated authToken appears
+  // zero times in `terraform plan` output, against six "(sensitive value)"
+  // maskings. The values are in the state either way, which is why the backend
+  // is a Secret in the cluster.
+  //
+  // The clean fix is upstream: vault-base-setup should wrap the for_each keys in
+  // nonsensitive(), since a mount PATH is not a secret. Once it does, this can
+  // go back to `sensitive = true`.
 }
 
 variable "kv_policies" {

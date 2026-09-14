@@ -97,9 +97,16 @@ dagger call -m github.com/stuttgart-things/dagger/sops decrypt \
   --encrypted-file="./terraform.tfvars.sops.json" contents > terraform.tfvars.json
 ```
 
-`secret_engines` is declared `sensitive = true`, so the values stay out of plan
-and apply output. They **are** in the state — which is why the backend is a
-Secret in the cluster rather than a file.
+The values stay out of plan and apply output — but NOT because `secret_engines`
+is marked sensitive. It is not, and cannot be: the module keys its `for_each` on
+mount paths derived from this variable, and terraform refuses a sensitive value
+there (`Invalid for_each argument`). The vault provider marks `data_json`
+sensitive by itself, which is what actually masks them; measured on real input,
+the generated token appears zero times in plan output against six
+`(sensitive value)` maskings. See the comment on the variable.
+
+They **are** in the state either way — which is why the backend is a Secret in
+the cluster rather than a file.
 
 ## Apply
 
