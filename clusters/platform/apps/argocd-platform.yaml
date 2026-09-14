@@ -49,6 +49,11 @@ spec:
       AVP_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
       AVP_TRUST_BUNDLE_KEY: trust-bundle.pem
       AVP_SSL_CERT_DIR: /etc/ssl/custom
+      # Teams channel for Argo CD notifications. Must match a key under
+      # recipientUrls, which the flux repo renders from this same variable, and
+      # the URL behind it comes from argocd-notifications-secret.enc.yaml next
+      # to this file. Unset would mean channel `none` and no delivery.
+      ARGO_CD_TEAMS_CHANNEL: "platform"
       CLUSTERBOOK_OPERATOR_NAMESPACE: clusterbook-system
       CLUSTERBOOK_OPERATOR_VERSION: v0.20.0
       # clusterbook backend for the bundled ClusterbookProviderConfig/default
