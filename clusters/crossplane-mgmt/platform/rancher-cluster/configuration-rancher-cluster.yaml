@@ -15,6 +15,12 @@
 # crossplane-mgmt is reverted by showcase-crossplane-platform's selfHeal within
 # about a second.
 #
+# v0.7.4: documentation only — the description of `spec.vaultAuth.enabled` now
+# says that composeMount overrides it. XRD defaulting writes `enabled: false`
+# into the spec of an XR that only set composeMount, which reads like a bug and
+# is not one; the text names status.vaultReviewerSecret and
+# status.vaultKubernetesHost as what to check instead. Seen on tabletennis,
+# stuttgart-things/crossplane-configurations#411.
 # v0.7.3: aligns with the Argo CD platform contract — the vault-pki gate flipped
 # from opt-in to opt-out, so a cluster carrying only the umbrella no longer gets
 # an issuer with neither token nor CA (#416).
@@ -44,4 +50,4 @@ kind: Configuration
 metadata:
   name: rancher-cluster
 spec:
-  package: ghcr.io/stuttgart-things/crossplane-configurations/rancher-cluster:v0.7.3
+  package: ghcr.io/stuttgart-things/crossplane-configurations/rancher-cluster:v0.7.4
