@@ -1,24 +1,24 @@
 {
-  "_comment": "SHAPE ONLY -- no real values. Decrypt terraform.tfvars.sops.json instead of copying this file. Generate: session-key/password = openssl rand -hex 24; redisPassword = openssl rand -hex 24; authToken = openssl rand -hex 32. omni-pitcher-token MUST equal homerun2's authToken, byte for byte. See README.md for who reads each property.",
+  "_comment": "SHAPE ONLY -- no real values. Decrypt terraform.tfvars.sops.json instead of copying this file. The angle brackets below are placeholders, not syntax. Generate: authToken = openssl rand -hex 32; everything else = openssl rand -hex 24. The two 'same value as' entries are not a suggestion -- they are the other end of one credential. See README.md for who reads each property.",
 
   "secret_engines": [
     {
       "name": "homerun2",
       "path": "tabletennis",
       "description": "tabletennis cluster application secrets",
-      "data_json": "{\"authToken\":\"REPLACE_WITH_openssl_rand_hex_32\",\"redisPassword\":\"REPLACE_WITH_openssl_rand_hex_24\"}"
+      "data_json": "{\"authToken\":\"<openssl rand -hex 32>\",\"redisPassword\":\"<openssl rand -hex 24>\"}"
     },
     {
       "name": "schmetterpause",
       "path": "tabletennis",
       "description": "tabletennis cluster application secrets",
-      "data_json": "{\"session-key\":\"REPLACE_WITH_openssl_rand_hex_24\",\"username\":\"admin\",\"password\":\"REPLACE_WITH_openssl_rand_hex_24\"}"
+      "data_json": "{\"session-key\":\"<openssl rand -hex 24>\",\"username\":\"admin\",\"password\":\"<openssl rand -hex 24>\"}"
     },
     {
       "name": "zaehlwerk",
       "path": "tabletennis",
       "description": "tabletennis cluster application secrets",
-      "data_json": "{\"omni-pitcher-token\":\"REPLACE_WITH_THE_SAME_VALUE_AS_homerun2_authToken\",\"redis-password\":\"REPLACE_WITH_THE_SAME_VALUE_AS_homerun2_redisPassword\"}"
+      "data_json": "{\"omni-pitcher-token\":\"<same value as homerun2 authToken>\",\"redis-password\":\"<same value as homerun2 redisPassword>\"}"
     }
   ],
 
