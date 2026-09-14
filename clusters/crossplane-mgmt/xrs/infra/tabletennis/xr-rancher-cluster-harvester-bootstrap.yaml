@@ -218,13 +218,19 @@ spec:
   # its credentials back to a Secret beside this XR.
   #
   # Verified end to end on the throwaway cluster `vaulttest` (2026-09-14,
-  # crossplane-configurations#411): mount created with the real API address,
-  # ClusterIssuer Ready without a manual step, a probe certificate verified
+  # crossplane-configurations#411): the mount created with the real API address,
+  # the ClusterIssuer Ready without a manual step, a probe certificate verified
   # against the OpenBao root and rejected against an unrelated CA, and the
-  # teardown removing child, Workspace and mount. Two caveats recorded there:
-  # one Argo CD sync had to be triggered by hand after a nil-pointer in the
-  # cert-manager chart (not the Composition), and the teardown wedges on two
-  # vpki finalizers that have to be removed by hand.
+  # teardown removing child, Workspace and mount. Two caveats recorded there,
+  # neither in the Composition: one Argo CD sync had to be triggered by hand
+  # after a nil-pointer in the cert-manager chart, and the teardown wedges
+  # reproducibly on two vpki finalizers that have to be patched off.
+  #
+  # THAT RUN WAS ON v0.7.2; this fleet now serves v0.7.3 (harvester#207), which
+  # publishes what #416 left behind -- the same feature, one version on from the
+  # run. Worth writing down rather than assuming the two are the same bytes:
+  # this package's version label has covered several distinct pushes before,
+  # which is exactly how both sides of that exchange misread it.
   #
   # THE ESO MOUNT IS NOT HERE. composeMount emits exactly ONE k8sAuths entry,
   # bound to the cert-manager ServiceAccount, and has no parameter for a second.
