@@ -15,6 +15,7 @@ spec:
     - ../clusters/crossplane-mgmt/xrs/infra/demo-ns/catalog-info.yaml
     - ../clusters/crossplane-mgmt/xrs/infra/martin-demo-ns/catalog-info.yaml
     - ../clusters/crossplane-mgmt/xrs/infra/silvio/catalog-info.yaml
+    - ../clusters/crossplane-mgmt/xrs/infra/tabletennis/catalog-info.yaml
     - ../packer/dev/leap-dev/catalog-info.yaml
     - ../packer/dev/rocky9-dev/catalog-info.yaml
     - ../packer/dev/u26-dev/catalog-info.yaml
