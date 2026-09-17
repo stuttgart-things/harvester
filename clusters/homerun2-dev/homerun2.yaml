@@ -59,6 +59,20 @@ spec:
       HOMERUN2_REDIS_STORAGE_CLASS: openebs-hostpath
       HOMERUN2_REDIS_STORAGE_SIZE: 8Gi
 
+      # notification-catcher posts for real from here on. It ships
+      # DRY_RUN=true, which makes Dispatch log `would have sent` at INFO and
+      # skip Notifier.Send entirely (internal/notify/dispatcher.go); the value
+      # arrives as `${HOMERUN2_NOTIFICATION_CATCHER_DRYRUN:=true}` and
+      # main.go reads it with boolEnv.
+      #
+      # Quoted because postBuild.substitute is map[string]string -- an unquoted
+      # false renders as a YAML bool and the API server rejects the whole CR.
+      #
+      # Flipping it back is the way to debug routing: set "true", watch
+      # `kubectl -n homerun2 logs -l app.kubernetes.io/name=homerun2-notification-catcher`,
+      # confirm the right outputs match, flip again.
+      HOMERUN2_NOTIFICATION_CATCHER_DRYRUN: "false"
+
       # NOT redundant with substituteFrom. Both carry a `:-changeme` default
       # upstream, so a missing value does not fail -- it installs the literal
       # string `changeme` as the bearer token and the scout token. They come
