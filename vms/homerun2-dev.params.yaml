@@ -6,9 +6,10 @@
 # --kcl-parameters, because inline parameter values become operation
 # arguments and are echoed verbatim by `dagger --progress plain`.
 #
-# Modelled on bootstrap-xplane.params.yaml, the VM this one replaces as the
-# lab's singlenode RKE2 target. Same image and machine shape; only the name,
-# the description and the cluster it carries differ.
+# The shape is inherited from the retired bootstrap-xplane VM, which this one
+# replaces as the lab's singlenode RKE2 target: same golden image, same 50Gi
+# root disk, same 12 vCPU / 12Gi. Only the name, the description and the
+# cluster it carries are different.
 
 vmName: homerun2-dev
 namespace: default

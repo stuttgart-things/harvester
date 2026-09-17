@@ -4,9 +4,11 @@
 # `bake-harvester` as a space-separated --ansible-parameters string; CI checks
 # that the two agree (vms-lint.yml).
 #
-# Same set as bootstrap-xplane.rke2.ansible-vars.yaml apart from cluster_name.
-# That file's values came from the singlenode RKE2 clusters in the ansible repo
-# (exec/labul/philly-rke2) and ran green end to end on 2026-09-02.
+# The values are not invented here: they come from the singlenode RKE2 clusters
+# in the ansible repo (exec/labul/philly-rke2), by way of the retired
+# bootstrap-xplane VM, which ran this same set green end to end on 2026-09-02.
+# homerun2-dev ran it again on 2026-09-17 with the same recap, ok=124
+# changed=40.
 
 # This VM has one 50Gi root disk and no data disk, so the role's LVM path has
 # nothing to manage. Without it sthings.baseos.setup fails with

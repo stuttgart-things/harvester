@@ -427,21 +427,16 @@ its one address.
 
 ---
 
-## Retiring bootstrap-xplane
+## The predecessor, and why it is gone
 
-Once this cluster is up, `bootstrap-xplane` goes. It is already only a shell --
-the VM runs but RKE2 does not answer, and its committed kubeconfig
-(`secrets/xplane.yaml`) still points at `192.168.10.124`, an address the VM lost
-when it was rebuilt onto `.125`.
+`bootstrap-xplane` was the singlenode RKE2 VM this one replaces. It was retired
+the same day `homerun2-dev` came up: `VirtualMachine`, `PersistentVolumeClaim`
+and cloud-init `Secret` deleted on Harvester, the 50Gi Longhorn volume confirmed
+released, and its files dropped from this repo.
 
-```bash
-export KUBECONFIG=~/.kube/harvester
-kubectl delete virtualmachine bootstrap-xplane -n default
-kubectl delete pvc bootstrap-xplane-disk-0 -n default
-kubectl delete secret bootstrap-xplane-cloud-init -n default
-```
-
-Then drop from the repo: `secrets/xplane.yaml`, `clusters/bootstrap-xplane/`,
-`vms/bootstrap-xplane.*`, and the `bootstrap-xplane` sections of
-`vms/README.md`. Note `vms-bake.yml` defaults its `vm_name` input to
-`bootstrap-xplane` -- repoint it at `homerun2-dev` in the same change.
+It was already only a shell by then -- the VM ran, RKE2 did not answer -- and
+the reason is worth keeping, because it is a trap this cluster shares. It was
+built on `192.168.10.124`, came back from a rebuild on `.125`, and its committed
+kubeconfig kept naming `.124`. The cluster read as gone (`no route to host`)
+when only its address had moved. See step 3 above: the same DHCP lease applies
+here.
