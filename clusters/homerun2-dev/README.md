@@ -426,10 +426,12 @@ values arrive through `substituteFrom`. The credentials then live in this repo,
 encrypted, and the cluster needs no ESO at all. `HOMERUN2_SECRET_STORE` and
 `HOMERUN2_SECRET_PATH` do not appear anywhere in the rendered output.
 
-The cost is a different component set. `base` ships **notification-catcher**,
-which the platform profile does not, and has **no led-catcher**, which the
-platform profile does. Adding led-catcher means composing a profile of our own
-instead of consuming an upstream one.
+The cost was a different component set. `base` ships **notification-catcher**,
+which the platform profile does not, and originally had **no led-catcher**,
+**light-catcher** or **demo-pitcher**, all of which the platform profile does.
+That gap is closed, and closed upstream: the three `base-*` profile pairs were
+added there (flux#479, #481, #482) rather than composed here, so this cluster
+still consumes upstream profiles only. See *The four add-on components* below.
 
 ### The four values
 
@@ -471,6 +473,45 @@ needs `global.security.allowInsecureImages` for the stuttgart-things
 redis-stack-server and sentinel images, moves the password to
 `REDIS_PASSWORD_FILE` and hardens the pod security context, none of it tested
 against these start scripts. Migrating is its own change.
+
+### The four add-on components
+
+`profiles/base` is the core: redis-stack, omni-pitcher, core-catcher, scout and
+notification-catcher. Four more run here, each as its own pair of Kustomizations
+in [`homerun2.yaml`](./homerun2.yaml) -- the component, then its routes:
+
+| Component | Profile | Upstream change | Added by |
+|---|---|---|---|
+| led-catcher | `profiles/base-led-catcher` | flux#479 | #227 |
+| light-catcher + wled-mock | `profiles/base-light-catcher` | flux#481 | #228 |
+| demo-pitcher | `profiles/base-demo-pitcher` | flux#482 | #229 |
+| config-viewer | `profiles/platform-config-viewer` | **none needed** | #233 |
+
+The first three each needed an upstream profile pair, for one reason: every
+profile that carried them selected the component's `eso/` variant, so consuming
+them here meant a `sops/` counterpart had to exist first.
+`components/config-viewer` has **neither an `eso/` nor a `sops/` directory** --
+it holds no credentials at all -- so `profiles/platform-config-viewer` is
+credential-agnostic despite its name, and it is the one add-on with no
+`substituteFrom`. Adding one would imply a secret that does not exist.
+
+Two things to expect when reading the cluster back:
+
+- **Each add-on appears TWICE in `flux get kustomizations -A`.** These profiles
+  are kustomize Components that render their own `OCIRepository` plus a child
+  Kustomization of the same name in namespace `homerun2`. The one in
+  `flux-system` with source `flux-apps` is ours; the one in `homerun2` with the
+  OCI source is the child. Same name, different namespace -- not a conflict, and
+  the reason the Kustomization count rises by three per add-on pair, not two.
+- **The routes profiles use `DOMAIN`, `GATEWAY_NAME` and `GATEWAY_NAMESPACE`,**
+  exactly like `base-routes` -- not the `INFRA_*` names. Same values, different
+  spelling; see the trap above.
+
+One operational note on config-viewer: it reads Deployments and ConfigMaps in
+its own namespace through the Kubernetes API (`get` and `list`, nothing more --
+the RBAC ships with its base) and selects them with
+`app.kubernetes.io/part-of=homerun2`. A component without that label is simply
+absent from the view, which reads as an empty panel rather than an error.
 
 ---
 
