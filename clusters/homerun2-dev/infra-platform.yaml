@@ -1,0 +1,98 @@
+---
+# The infra BUNDLE for this cluster -- stuttgart-things/flux → ./infra/platform.
+#
+# One Kustomization stands up the whole infra layer. Each `components:` entry is
+# a kustomize Component that renders a child Flux Kustomization pointing at a
+# base in that repo; the substitutes below are read by all of them, which is why
+# the domain and the gateway name are written once here rather than per app.
+#
+# This is the bundle form, not the one clusters/{infra,xplane,platform}/infra.yaml
+# use. Those predate the bundle and spell out one Kustomization per component
+# with the bases' own variable names (CILIUM_GATEWAY_DOMAIN,
+# CERT_MANAGER_SELFSIGNED_DOMAIN, ...). The bundle maps a single INFRA_DOMAIN
+# onto all of them. Same upstream bases either way -- see
+# clusters/platform/apps-platform.yaml for the same decision on the apps side.
+#
+# `components:` must never be empty. An empty list renders as YAML null, which
+# the CRD rejects -- and it fails THIS Kustomization, so nothing in the bundle
+# deploys while it reads like a slow reconcile. Delete the file rather than
+# emptying the list.
+#
+# Ordering is handled upstream by dependsOn, not by the order of this list:
+# cilium-gateway waits for cilium-lb, cert-manager-selfsigned for
+# cert-manager-install, headlamp and flux-web for cilium-gateway. Every
+# prerequisite has to be selected here too -- Flux has no optional dependency,
+# so a missing one parks its dependent on "dependency not ready" forever.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-platform
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/platform/root
+  components:
+    # networking
+    - ../components/cilium-lb
+    - ../components/cilium-gateway
+    # pki
+    - ../components/cert-manager-install
+    - ../components/cert-manager-selfsigned
+    # storage
+    - ../components/openebs
+    # dashboards
+    - ../components/headlamp
+    - ../components/flux-web
+  postBuild:
+    substitute:
+      FLUX_SOURCE: flux-infra
+
+      # Set once, read by the Gateway, the wildcard certificate and every
+      # HTTPRoute behind it. Keep identical to any apps bundle added later --
+      # apps/platform reads the same three INFRA_* names on purpose.
+      INFRA_DOMAIN: homerun2-dev.sthings.lab
+      INFRA_GATEWAY_NAME: homerun2-dev-sthings-gateway
+      INFRA_GATEWAY_NAMESPACE: default
+      INFRA_TLS_SECRET: wildcard-tls
+
+      # ---- cilium-lb ------------------------------------------------------
+      # Reserved in Clusterbook BEFORE this cluster was built, as a /32 -- see
+      # the runbook in ./README.md, step 1. Written out by hand on purpose:
+      # Clusterbook is IPAM here, nothing reads the reservation back. The
+      # ArgoCD-registered clusters do read it (appset-cilium-lb takes it from
+      # the `ip` annotation on the cluster Secret), which is exactly why those
+      # do not set these two values and this one must.
+      #
+      # substitute is map[string]string -- quote it, or kustomize hands Flux an
+      # int and the CR is rejected.
+      CILIUM_LB_IP_START: "192.168.10.171"
+      CILIUM_LB_IP_STOP: "192.168.10.171"
+
+      # ---- cert-manager ---------------------------------------------------
+      # Left at the component default (v1.21.2). infra and xplane pin v1.19.1
+      # and platform v1.20.2, but those are older clusters carrying older
+      # issuers; nothing here needs to match them.
+      #
+      # cert-manager-selfsigned issues the wildcard for INFRA_DOMAIN from a
+      # self-signed CA. That is deliberate for a dev cluster: the OpenBao PKI
+      # issuer (cert-manager-vault-issuer) needs a Vault auth mount that only
+      # the VM pipeline can create -- see ./README.md, "What this cluster does
+      # not have yet".
+
+      # ---- dashboards -----------------------------------------------------
+      # Reachable at https://headlamp.homerun2-dev.sthings.lab and
+      # https://flux.homerun2-dev.sthings.lab once the Gateway has an address.
+      # Both are here to prove the Gateway and the wildcard certificate work
+      # end to end; neither is load-bearing.
