@@ -131,3 +131,81 @@ spec:
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
+---
+# led-catcher, which profiles/base does not carry.
+#
+# profiles/platform has it, but only in its eso/ form -- and components are not
+# standalone-buildable, so there was no way to add it on the sops path at all.
+# stuttgart-things/flux#479 adds the missing profile pair, mirroring
+# platform-light-catcher: base-led-catcher takes led-catcher + led-catcher/sops,
+# base-led-catcher-routes takes led-catcher/route.
+#
+# It needs no new credentials. The only bare variable is
+# HOMERUN2_REDIS_PASSWORD_B64, which the Secret above already carries -- which
+# is why substituteFrom is repeated here rather than the value being duplicated.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-led-catcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    # Redis and the namespace come from the base stack; led-catcher reads the
+    # same stream and would restart against a Redis that is not up yet.
+    - name: homerun2
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-led-catcher
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+---
+# The HTTPRoute for led-catcher, applied only once it is Ready -- the same
+# split, and the same reason, as homerun2-routes above: Cilium resolves a
+# route's backendRefs once.
+#
+# Adds led-catcher.homerun2-dev.sthings.lab, the fourth route of the stack.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-led-catcher-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2-led-catcher
+    - name: cilium-gateway
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-led-catcher-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
