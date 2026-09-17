@@ -74,42 +74,50 @@ spec:
 # schmetterpause-app/SP_SESSION_KEY, schmetterpause-db/{username,password} and
 # zaehlwerk-panel/{OMNI_PITCHER_TOKEN,REDIS_PASSWORD}.
 
-# The CloudNativePG Cluster schmetterpause stores everything in.
+# The CNPG Cluster is NOT in this file, and that is not tidiness.
 #
-# Copied from apps/tabletennis/components/schmetterpause/database.yaml, and two
-# of its constraints are load-bearing:
+# flux-system applies clusters/homerun2-dev recursively, and a Kustomization
+# fails as a whole: one object that does not dry-run takes every other object
+# with it. The `postgresql.cnpg.io` CRD comes from the cnpg-operator
+# Kustomization, which infra-platform creates, which flux-system itself has to
+# apply -- so a CNPG Cluster in this directory is a deadlock, not a race:
 #
-#   instances: 1 is a LITERAL. A count through postBuild.substitute arrives as
-#   an int and the API server rejects the whole Kustomization.
+#   Ready=False ReconciliationFailed
+#   Cluster/schmetterpause/schmetterpause-db dry-run failed: no matches for kind
+#   "Cluster" in version "postgresql.cnpg.io/v1"
 #
-#   storageClass is OMITTED, not set empty. CNPG reads an absent key as "the
-#   cluster's default StorageClass"; an empty string is a class with no name,
-#   which is what an unset variable would render. openebs-hostpath is the
-#   default here.
+# That is exactly what happened on 2026-09-17: it blocked ALL of
+# clusters/homerun2-dev -- every Secret, every OCIRepository, both app
+# Kustomizations -- including the one that installs the CRD. The clusterbook
+# seed on the platform cluster carries the same scar and the same fix.
 #
-# FIXED NAMES: the DSN the base builds is
-# postgresql://<user>:<pass>@schmetterpause-db-rw.schmetterpause.svc:5432/schmetterpause,
-# so the Cluster name, database and owner are not variables.
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
+# So the object lives in the sibling directory ../homerun2-dev-seeds, outside
+# the recursed path, and the Kustomization below waits for the CRD.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
 metadata:
   name: schmetterpause-db
-  namespace: schmetterpause
-  annotations:
-    # The PVC carries an ownerReference to this object: deleting the Cluster
-    # deletes the data, with no CNPG-side retention to catch it.
-    kustomize.toolkit.fluxcd.io/prune: disabled
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
 spec:
-  instances: 1
-  imageName: ghcr.io/cloudnative-pg/postgresql:18
-  bootstrap:
-    initdb:
-      database: schmetterpause
-      owner: schmetterpause
-      secret:
-        name: schmetterpause-db
-  storage:
-    size: 2Gi
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  # prune: false -- the database must survive this Kustomization being removed
+  # or renamed. The PVC hangs off the Cluster with an ownerReference and CNPG
+  # has no retention of its own; pruning would take the data with it. Same
+  # reasoning as the clusterbook seed on the platform cluster.
+  prune: false
+  wait: true
+  dependsOn:
+    # Brings cnpg-operator, and with it the CRD the Cluster needs.
+    - name: infra-platform
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/homerun2-dev-seeds
 ---
 # schmetterpause itself, from the published base. The patches below are the
 # upstream ones minus the two ExternalSecret entries -- those objects are
