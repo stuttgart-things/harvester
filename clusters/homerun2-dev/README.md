@@ -481,19 +481,70 @@ against these start scripts. Migrating is its own change.
   switched off (#152) with no successor in this repo. Add
   `- ../components/nfs-csi` plus `NFS_SERVER_FQDN` and `NFS_SHARE_PATH` if that
   changes.
-- **No ExternalSecrets, no OpenBao-backed PKI.** `cert-manager-selfsigned`
-  issues the wildcard from a self-signed CA. The OpenBao path
-  (`cert-manager-vault-issuer`, `external-secrets-vault-store`) needs a Vault
-  Kubernetes auth mount that Flux cannot create -- it takes a Vault token and
-  this cluster's API address, so it comes from
-  `blueprints/argocd create-vault-kubernetes-auth --cluster-name homerun2-dev
-  --auth-name eso`. Until that has run, a store would sit at
-  `Ready=False / InvalidProviderConfig`.
-- **No `homerun2` app.** Despite the name. The app bundle
-  (`apps/platform/components/homerun2`) needs `external-secrets` **and** a
-  `ClusterSecretStore` **and** KV entries (`redis-password`, `scout-auth-token`,
-  the omni-pitcher token), i.e. the whole item above first. It is a second step,
-  not part of this build.
+- **No ExternalSecrets.** There is no `external-secrets` and no
+  `ClusterSecretStore` on this cluster, and the homerun2 stack does not need
+  one: it runs `profiles/base`, whose credentials come from a SOPS-encrypted
+  `substituteFrom` Secret in this repo. Adding ESO later means
+  `external-secrets` + `external-secrets-vault-store` in the bundle and a
+  second OpenBao auth mount (`eso`, policy `read-homerun2-dev`) beside the
+  cert-manager one.
+
+---
+
+## 8. The certificate chain
+
+`*.homerun2-dev.sthings.lab` is issued by the lab's OpenBao PKI, not by a
+self-signed CA. Three pieces, and they went in in this order:
+
+| | |
+|---|---|
+| [`openbao/`](./openbao/) | the Kubernetes auth mount on the OpenBao — Terraform, run by a human |
+| [`openbao-pki-ca.yaml`](./openbao-pki-ca.yaml) | the root CA cert-manager verifies OpenBao's TLS with |
+| `cert-manager-vault-issuer` in [`infra-platform.yaml`](./infra-platform.yaml) | the `ClusterIssuer`, plus `CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki` |
+
+The order is not a preference. Flux cannot create the auth mount — configuring
+one needs an OpenBao token and this cluster's API address — so an issuer shipped
+first is a `ClusterIssuer` that cannot log in. See [`openbao/README.md`](./openbao/README.md)
+for the apply.
+
+### ca-bundle here, ca-none on platform
+
+`platform` selects the `ca-none` sub-component because its OpenBao runs in the
+same cluster over plain HTTP: there is no certificate to verify, and reaching it
+through the Gateway instead would be **circular** — that hostname's certificate
+is issued by this very issuer.
+
+Neither half of that applies here. OpenBao is on another cluster and reached at
+`https://openbao.platform.sthings.lab`, so the issuer has to verify its TLS, and
+there is no loop to avoid. Hence the default `ca-bundle` and
+`VAULT_ISSUER_CA_SECRET: openbao-pki-ca`.
+
+That CA is byte-identical to `clusters/platform/openbao-pki-ca.yaml` — same
+OpenBao, same root. Verified rather than assumed: `sha256 f829dcf7835e47da53c8c2eb`
+both in that file and from `https://openbao.platform.sthings.lab/v1/pki/ca/pem`.
+A CA certificate is public, so neither copy is encrypted.
+
+### Ready is not proof
+
+cert-manager sets the issuer `Ready` on a successful Vault **login** and never
+re-checks the ability to **sign**. A role bound to a policy that grants nothing
+logs in perfectly and issues no certificate — the symptom appears at renewal,
+months later. Only an issued Certificate is evidence:
+
+```bash
+export KUBECONFIG=~/.kube/homerun2-dev
+kubectl get clusterissuer openbao-pki                      # Ready=True — necessary, not sufficient
+kubectl -n default get certificate wildcard-tls -o wide    # this is the proof
+kubectl -n default get certificate wildcard-tls -o jsonpath='{.status.conditions[*].message}'
+
+curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|issuer:'
+# issuer: CN=sthings.lab   <- OpenBao root, not CN=cluster-ca
+```
+
+- **No `homerun2-*` extras.** The stack runs `profiles/base`: redis-stack,
+  omni-pitcher, core-catcher, scout, notification-catcher. `led-catcher`,
+  `light-catcher`, `demo-pitcher` and `config-viewer` are separate components
+  that `profiles/base` does not carry -- see section 7.
 
 ---
 

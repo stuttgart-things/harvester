@@ -49,6 +49,7 @@ spec:
     - ../components/cilium-gateway
     # pki
     - ../components/cert-manager-install
+    - ../components/cert-manager-vault-issuer
     - ../components/cert-manager-selfsigned
     # storage
     - ../components/openebs
@@ -83,15 +84,46 @@ spec:
       CILIUM_LB_IP_STOP: "192.168.10.171"
 
       # ---- cert-manager ---------------------------------------------------
-      # Left at the component default (v1.21.2). infra and xplane pin v1.19.1
-      # and platform v1.20.2, but those are older clusters carrying older
-      # issuers; nothing here needs to match them.
+      # Version left at the component default (v1.21.2). infra and xplane pin
+      # v1.19.1 and platform v1.20.2, but those are older clusters carrying
+      # older issuers; nothing here needs to match them.
       #
-      # cert-manager-selfsigned issues the wildcard for INFRA_DOMAIN from a
-      # self-signed CA. That is deliberate for a dev cluster: the OpenBao PKI
-      # issuer (cert-manager-vault-issuer) needs a Vault auth mount that only
-      # the VM pipeline can create -- see ./README.md, "What this cluster does
-      # not have yet".
+      # The wildcard for INFRA_DOMAIN is issued by the lab's OpenBao PKI, not by
+      # a self-signed CA. cert-manager-selfsigned still applies the Certificate
+      # -- only the issuer it names changes, which is how platform does it too.
+      CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki
+
+      # ---- the OpenBao PKI issuer -------------------------------------------
+      # ca-bundle, NOT ca-none. platform selects ca-none because its OpenBao is
+      # in the same cluster and it talks plain HTTP, where there is no
+      # certificate to verify and going through the Gateway would be circular
+      # -- that hostname's cert is issued by this very issuer. Neither applies
+      # here: OpenBao lives on another cluster and is reached over HTTPS, so the
+      # issuer must verify it, and there is no loop to avoid.
+      VAULT_ISSUER_NAME: openbao-pki
+      VAULT_ISSUER_SERVER: https://openbao.platform.sthings.lab
+      VAULT_ISSUER_PKI_PATH: pki/sign/sthings-lab
+
+      # <cluster_name>-<k8s_auths[].name> from ./openbao/openbao.tf. The mount
+      # path, the role and the ServiceAccount move together or not at all.
+      VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/homerun2-dev-certmanager
+      VAULT_ISSUER_AUTH_ROLE: certmanager
+      # cert-manager's own ServiceAccount, which the Terraform binds. Not the
+      # -cainjector or -webhook one the same chart also creates.
+      VAULT_ISSUER_SERVICE_ACCOUNT: cert-manager
+
+      # The root CA to verify OpenBao's TLS with, from ./openbao-pki-ca.yaml.
+      # The component defaults to `vault-pki-ca`, the retired infra Vault's --
+      # unset, the issuer would try to verify against a Secret that does not
+      # exist here. CA_KEY matches the default and is spelled out for the same
+      # reason the rest of this block is.
+      VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
+      VAULT_ISSUER_CA_KEY: ca.crt
+
+      # Ready on this issuer proves the LOGIN worked and nothing more --
+      # cert-manager never re-checks the ability to SIGN. A role bound to a
+      # policy that grants nothing reports Ready and issues no certificate.
+      # Only an issued Certificate is evidence; see ./README.md.
 
       # ---- dashboards -----------------------------------------------------
       # Reachable at https://headlamp.homerun2-dev.sthings.lab and
