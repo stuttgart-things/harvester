@@ -25,7 +25,7 @@ spec:
     domain: cluster.local
   kustomize:
     patches:
-    - patch: |-
+    - patch: |- # pragma: allowlist secret
         - op: add
           path: /spec/decryption
           value:
@@ -49,6 +49,23 @@ spec:
   sync:
     kind: GitRepository
     url: https://github.com/stuttgart-things/harvester
-    ref: refs/heads/main
+    # TEMPORARY -- REVERT TO refs/heads/main WHEN #218 MERGES.
+    #
+    # flux-bootstrap rendered this as refs/heads/main, which is correct and is
+    # what every other cluster here uses. It cannot work yet: clusters/homerun2-dev
+    # exists only on this branch, so Flux fetched main, found no such path and
+    # parked at `kustomization path not found` with the GitRepository itself
+    # reporting Ready -- a failure that reads like a slow reconcile.
+    #
+    # Pointing at the branch is a bridge, not a design. A lab cluster syncing a
+    # feature branch drifts the moment the branch does, and the branch will be
+    # deleted on merge -- at which point this cluster's GitOps root stops
+    # resolving entirely.
+    #
+    # This value is ALSO live on the cluster (the FluxInstance was patched to
+    # match). Changing it here alone is not enough and changing it on the
+    # cluster alone is worse: this file is inside the synced path, so Flux
+    # reconciles the FluxInstance back to whatever is written here.
+    ref: refs/heads/feat/homerun2-dev-cluster
     path: clusters/homerun2-dev
-    pullSecret: git-token-auth
+    pullSecret: git-token-auth # pragma: allowlist secret

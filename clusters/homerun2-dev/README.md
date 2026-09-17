@@ -110,6 +110,12 @@ Four things that are not optional, each of which fails quietly:
   `hosts: all`, but the role branches on `groups['initial_master_node']` and
   `groups['additional_master_nodes']`. The default type emits `[all]` plus the
   address and the play dies on an undefined group before doing any work.
+
+  Do not check this against the `inventory.ini` in the exported directory: that
+  one reads `[all]` + the address even on a successful `cluster` run. The
+  inventory Ansible actually used is built inside the run and only visible in
+  the log, as `withNewFile inventory.ini (contents: "\n# SINGLENODE-CLUSTER\n
+  [initial_master_node]\n...")`. The exported file is not evidence of what ran.
 - **The two separators.** `--ansible-playbooks` is **comma**-separated,
   `--ansible-parameters` is **space**-separated -- that string goes through
   verbatim into `--extra-vars`, which splits `k=v` on whitespace. Join the
@@ -145,7 +151,13 @@ NODE_IP=$(kubectl get vmi homerun2-dev -n default \
   -o jsonpath='{.status.interfaces[0].ipAddress}')
 echo "$NODE_IP"          # 192.168.10.117 on the first build
 
-ssh sthings@"$NODE_IP" \
+# The lease has almost certainly been held by another machine before, so the
+# key in known_hosts is stale and ssh refuses with REMOTE HOST IDENTIFICATION
+# HAS CHANGED -- it also disables password auth in that state, so this is not
+# something --ansible-password can paper over. Drop the old entry first.
+ssh-keygen -f ~/.ssh/known_hosts -R "$NODE_IP"
+
+ssh -o StrictHostKeyChecking=accept-new sthings@"$NODE_IP" \
   'sudo cat /etc/rancher/rke2/rke2.yaml' \
   | sed "s/127.0.0.1/$NODE_IP/" > ~/.kube/homerun2-dev
 
@@ -212,6 +224,59 @@ clusters/homerun2-dev`) and `secrets.yaml` (SOPS: `git-token-auth` and
 > the same ones; `--operator-version` defaults to `0.47.0` here, where the older
 > runbooks pinned `0.42.1`.
 
+`--branch-name` is not optional here either. It defaults to `main`, and this
+cluster was built on a branch -- without it the module commits a FluxInstance
+and its SOPS secrets straight onto `main`, outside the PR that is reviewing
+them.
+
+### The committed `config.yaml` needs two hand-edits, every time
+
+The bot commits it, and as committed it **fails `pre-commit`**. `detect-secrets`
+matches two lines on the keyword alone and both need an inline pragma:
+
+```yaml
+    - patch: |- # pragma: allowlist secret      # the /spec/decryption patch
+    pullSecret: git-token-auth # pragma: allowlist secret
+```
+
+Neither is a credential: the first is a JSON-patch literal that merely *names*
+`sops-age`, the second names the pull Secret. `clusters/xplane/config.yaml`
+carries exactly these two pragmas at lines 28 and 54 -- someone hit this before
+and fixed it by hand, and the fix cannot be upstreamed into the renderer from
+here. Expect to redo it whenever `flux-bootstrap` regenerates the file.
+
+That is also why the CI turned red the moment the bot pushed: the failing check
+was `Pre-Commit (Dagger)` on the bot's own commit, not on anything written by a
+human.
+
+### OPEN: this cluster syncs a feature branch
+
+**Revert `config.yaml`'s `spec.sync.ref` to `refs/heads/main` when #218 merges,
+and re-apply it.**
+
+`flux-bootstrap` renders `refs/heads/main`, which is right for every cluster
+here. It could not work while `clusters/homerun2-dev` existed only on the
+branch: Flux fetched main, found no such path, and parked with
+
+```
+gitrepository/flux-system   refs/heads/main@sha1:92d9855f   READY=True
+kustomization/flux-system   READY=False
+  kustomization path not found: stat /tmp/.../clusters/homerun2-dev: no such file or directory
+```
+
+Note which object reports the failure. The GitRepository is **Ready** -- it
+fetched main perfectly well. Only the Kustomization fails, and its message names
+a temp directory rather than the branch, so this reads like a broken path in
+this repo rather than a cluster pointed at a revision that does not carry it.
+
+Two places hold the value and both have to change together: `spec.sync.ref` in
+`config.yaml`, and the live FluxInstance. `config.yaml` sits *inside* the synced
+path, so patching only the cluster is reverted by the next reconcile, roughly a
+minute later.
+
+The proper end state is `main` and a deleted branch. Until then this cluster
+follows a branch that will cease to exist.
+
 ---
 
 ## 5. Git sources
@@ -270,6 +335,37 @@ curl -k https://headlamp.homerun2-dev.sthings.lab   # end to end through the Gat
 No `kube-proxy` DaemonSet and no Canal are what confirm `disableKubeProxy=true`
 and `rke2_cni=none` + `install_cilium=true` actually took. Both fail into a
 working-looking cluster with the wrong CNI.
+
+### Last verified run
+
+`2026-09-17`, steps 1-3 with the calls above. `Vm.bakeHarvester DONE [21m16s]`,
+both plays with a real `PLAY RECAP` -- which is the point, since a cached
+Ansible step reports success with no recap at all:
+
+```
+sthings.baseos.setup     : ok=23   changed=6   unreachable=0  failed=0  skipped=27
+sthings.rke.rke2_cluster : ok=124  changed=40  unreachable=0  failed=0  skipped=74
+```
+
+`ok=124 changed=40` is the same recap `bootstrap-xplane` produced on
+2026-09-02, against the same playbook set.
+
+Checked on the node rather than taken from the recap:
+
+```
+NAME           STATUS   ROLES                VERSION          INTERNAL-IP
+homerun2-dev   Ready    control-plane,etcd   v1.35.3+rke2r1   192.168.10.117
+
+NAME           DESIRED   CURRENT   READY
+cilium         1         1         1
+cilium-envoy   1         1         1
+```
+
+Two DaemonSets, both Cilium's; no `kube-proxy`, no Canal. The air-gapped image
+archive was again the slow step, roughly half of the 21 minutes.
+
+The node took `192.168.10.117` from DHCP. `192.168.10.171` stays the LB VIP and
+is not reachable until `cilium-lb` and `cilium-gateway` have reconciled.
 
 ---
 

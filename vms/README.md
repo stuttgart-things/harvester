@@ -334,6 +334,19 @@ base OS profile alone. Add one if it ever is -- the lint derives the parameter
 string from whatever `*.ansible-vars.yaml` files exist and requires each to
 appear in this file verbatim.
 
+### Last verified run
+
+`2026-09-17`, the call above, `Vm.bakeHarvester DONE [21m16s]`:
+
+```
+sthings.baseos.setup     : ok=23   changed=6   unreachable=0  failed=0  skipped=27
+sthings.rke.rke2_cluster : ok=124  changed=40  unreachable=0  failed=0  skipped=74
+```
+
+`homerun2-dev Ready control-plane,etcd v1.35.3+rke2r1` on the node, two Cilium
+DaemonSets and no `kube-proxy`. The VM took `192.168.10.117` from DHCP; the
+`192.168.10.171` in `clusters/homerun2-dev/` is the LB VIP, not this address.
+
 </details>
 
 <details open>
