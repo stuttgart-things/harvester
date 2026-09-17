@@ -1,0 +1,37 @@
+---
+# The Git sources every Kustomization on this cluster pulls from.
+#
+# Both point at stuttgart-things/flux. They are two objects rather than one
+# because the bundles name their source separately -- infra reads FLUX_SOURCE,
+# apps reads APPS_SOURCE -- and keeping both lets a cluster pin them to
+# different refs later without rewriting either bundle.
+#
+# infra-platform.yaml sets APPS_SOURCE: flux-infra, so on this cluster both
+# bundles currently resolve to the same object. flux-apps is here for the
+# hand-written per-app Kustomizations that come later; the same shape as
+# clusters/xplane/git-repos.yaml.
+#
+# flux-bootstrap does NOT create these. It renders the FluxInstance and its
+# secrets only -- without this file every Kustomization sits at
+# "source not found" and nothing deploys.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-infra
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/stuttgart-things/flux.git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-apps
+  namespace: flux-system
+spec:
+  interval: 1m0s
+  ref:
+    branch: main
+  url: https://github.com/stuttgart-things/flux.git
