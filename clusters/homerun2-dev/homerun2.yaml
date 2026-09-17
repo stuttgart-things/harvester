@@ -174,6 +174,55 @@ spec:
         optional: false
     substitute:
       HOMERUN2_NAMESPACE: homerun2
+  # UI_STREAM_PRESETS -- the two buttons in the led-catcher's web simulator.
+  #
+  # zaehlwerk CAN switch this catcher onto the `tabletennis` stream for a match
+  # and back again, but only by calling the catcher directly, which needs
+  # CATCHER_URL. That is deliberately not set here -- see the note in
+  # ./tabletennis.yaml -- so on this cluster the switch is a human act instead.
+  #
+  # Unset, the control offers only the CONFIGURED stream as its single preset:
+  # `messages`, and no way to reach `tabletennis`. The scorekeeper at the table
+  # would have the button and nothing useful behind it. Two presets give
+  # `messages` and `tabletennis`, and the header's `overridden` badge plus
+  # `reset` are what keep a panel from sitting in scoreboard mode after an
+  # abandoned match.
+  #
+  # WHY A PATCH ON A KUSTOMIZATION, not on the Deployment. The profile above is
+  # a kustomize Component that renders an OCIRepository plus a child
+  # Kustomization; the Deployment itself comes from the OCI artifact and is
+  # never an object in this path. So the patch is appended to the CHILD's own
+  # patch list -- the same technique upstream uses in
+  # apps/tabletennis/components/zaehlwerk-panel-homerun2.
+  #
+  # The container name is the merge key: `homerun2-led-catcher`, checked against
+  # the running Deployment. A wrong one adds a SECOND container to the pod
+  # rather than an env var, and reads like a broken image.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: homerun2-led-catcher
+      patch: |
+        - op: add
+          path: /spec/patches/-
+          value:
+            target:
+              kind: Deployment
+              name: homerun2-led-catcher
+            patch: |
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: homerun2-led-catcher
+              spec:
+                template:
+                  spec:
+                    containers:
+                      - name: homerun2-led-catcher
+                        env:
+                          - name: UI_STREAM_PRESETS
+                            value: "messages,tabletennis"
 ---
 # The HTTPRoute for led-catcher, applied only once it is Ready -- the same
 # split, and the same reason, as homerun2-routes above: Cilium resolves a

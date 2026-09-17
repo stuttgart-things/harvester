@@ -589,6 +589,90 @@ curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|
 
 ---
 
+## 9. The table tennis stack
+
+[`tabletennis.yaml`](./tabletennis.yaml) runs **schmetterpause** (players, TTR,
+tournaments, history) and **zaehlwerk** (the scoring API and its panel).
+Credentials are in [`tabletennis-secrets.enc.yaml`](./tabletennis-secrets.enc.yaml);
+the database is not in this directory at all, for a reason worth reading below.
+
+### Assembled here rather than consumed from a profile
+
+`apps/tabletennis/profiles/base` takes every credential from ExternalSecrets
+against a `ClusterSecretStore`, and unlike `apps/homerun2` it ships no `sops/`
+variant -- those patches sit in the *shared* `release.yaml` the production
+tabletennis cluster runs. Splitting an `eso/` component out of a file in active
+use is a bigger change than one cluster should force, so this file does what the
+profile does minus ESO: the two OCIRepositories, the namespaces, upstream's
+HTTPRoute/ConfigMap/Deployment patches copied verbatim, `$patch: delete` on the
+three ExternalSecrets, and plain Secrets in their place.
+
+The cost is honest: upstream changes to those patches do not reach us, so when
+`apps/tabletennis` moves this file has to be re-read against it. **flux#483**
+tracks giving it a real sops path; this cluster is the worked example.
+
+Two `$patch: delete` entries are not tidiness. Without ESO the
+`externalsecrets.external-secrets.io` CRD does not exist here at all, so leaving
+those objects in fails the dry-run and takes the whole Kustomization with it.
+
+### The database lives in a sibling directory
+
+[`../homerun2-dev-seeds/schmetterpause-db.yaml`](../homerun2-dev-seeds/schmetterpause-db.yaml)
+holds the CloudNativePG `Cluster`. `flux-system` applies `clusters/homerun2-dev`
+recursively and a Kustomization fails as a whole, so a CNPG `Cluster` in *this*
+directory is a deadlock rather than a race -- the CRD comes from `cnpg-operator`,
+which `infra-platform` creates, which `flux-system` itself has to apply:
+
+```
+Cluster/schmetterpause/schmetterpause-db dry-run failed: no matches for kind
+"Cluster" in version "postgresql.cnpg.io/v1"
+```
+
+That blocked every object in `clusters/homerun2-dev` on 2026-09-17, including
+the one that installs the CRD. `prune: false`, because the PVC hangs off the
+`Cluster` by ownerReference and CNPG has no retention of its own.
+
+And one trap that cost a second outage: the `schmetterpause-db` Secret must also
+carry **`SP_DATABASE_URL`**. Upstream's ExternalSecret does not copy that key, it
+*synthesises* it in `target.template` -- replicate only `spec.data[]` and the app
+comes up with a username, a password and no DSN.
+
+### `tabletennis` is a stream nobody reads, and that is the decision
+
+config-viewer reports it as an unread stream. The report is correct and the
+configuration is deliberate.
+
+zaehlwerk pitches scores through omni-pitcher, which routes `system: tabletennis`
+onto a stream of that name (rule 3). zaehlwerk *can* then switch the led-catcher
+onto that stream for the match and back to `messages` afterwards -- upstream
+ADR-0003, with override tracking and a 20m idle timeout -- but only by calling
+the catcher directly, which needs `CATCHER_URL`. **On this cluster zaehlwerk
+reaches nothing but omni-pitcher**, so that variable is left unset and zaehlwerk
+logs `panel stream switching disabled, no CATCHER_URL configured`. There is no
+indirect path: omni-pitcher offers only `/pitch*` and has no catcher control, and
+the led-catcher's switch is HTTP-only -- a message in a stream cannot trigger it.
+
+So the switch is a human act. The led-catcher's web simulator carries it, and
+[`homerun2.yaml`](./homerun2.yaml) sets `UI_STREAM_PRESETS=messages,tabletennis`
+so the control actually offers both -- unset, it offers only the configured
+stream and there is no way to reach `tabletennis` from the table. The header's
+`overridden` badge and `reset` button are what stop a panel sitting on a dead
+scoreboard after an abandoned match. From a terminal:
+
+```bash
+curl -s https://led-catcher.homerun2-dev.sthings.lab/streams
+curl -s -X POST https://led-catcher.homerun2-dev.sthings.lab/streams \
+  -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
+```
+
+**That endpoint is unauthenticated.** Upstream calls it "fine while the port is
+cluster-internal" -- which is not true here, because the shipped HTTPRoute
+publishes it on the lab network. Accepted for now, knowingly: anyone who can
+reach the hostname can take the panel over. Removing the HTTPRoute would also
+remove the browser control that is currently the only way to switch.
+
+---
+
 ## The predecessor, and why it is gone
 
 `bootstrap-xplane` was the singlenode RKE2 VM this one replaces. It was retired

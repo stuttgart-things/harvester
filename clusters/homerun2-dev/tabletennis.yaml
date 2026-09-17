@@ -271,6 +271,19 @@ spec:
         - op: replace
           path: /data/OMNI_PITCHER_URL
           value: "https://omni-pitcher.homerun2-dev.sthings.lab"
+    # CATCHER_URL is deliberately NOT set. Upstream's
+    # apps/tabletennis/components/zaehlwerk-panel-homerun2 sets it, and it is
+    # what makes zaehlwerk call the led-catcher's /streams API directly to
+    # switch it onto `tabletennis` for a match and back to `messages` after --
+    # but that is a second outbound dependency, across namespaces, from an app
+    # that should only ever reach omni-pitcher. zaehlwerk logs
+    # "panel stream switching disabled, no CATCHER_URL configured" and that line
+    # is the intended state here, not a defect.
+    #
+    # The consequence is real and worth knowing: nothing subscribes a catcher to
+    # the `tabletennis` stream on its own, which is exactly what config-viewer
+    # reports as an unread stream. Switching is a deliberate act instead -- the
+    # led-catcher's own web control, or POST /streams.
     - target:
         kind: ConfigMap
         name: zaehlwerk-config
