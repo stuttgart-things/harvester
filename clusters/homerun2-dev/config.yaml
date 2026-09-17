@@ -49,23 +49,18 @@ spec:
   sync:
     kind: GitRepository
     url: https://github.com/stuttgart-things/harvester
-    # TEMPORARY -- REVERT TO refs/heads/main WHEN #218 MERGES.
+    # Back on main, where flux-bootstrap rendered it and where every other
+    # cluster here points.
     #
-    # flux-bootstrap rendered this as refs/heads/main, which is correct and is
-    # what every other cluster here uses. It cannot work yet: clusters/homerun2-dev
-    # exists only on this branch, so Flux fetched main, found no such path and
-    # parked at `kustomization path not found` with the GitRepository itself
-    # reporting Ready -- a failure that reads like a slow reconcile.
+    # It was pinned to feat/homerun2-dev-cluster between #218 being opened and
+    # merged, because clusters/homerun2-dev existed only on that branch: Flux
+    # fetched main, found no such path, and parked at `kustomization path not
+    # found` while the GitRepository itself reported Ready.
     #
-    # Pointing at the branch is a bridge, not a design. A lab cluster syncing a
-    # feature branch drifts the moment the branch does, and the branch will be
-    # deleted on merge -- at which point this cluster's GitOps root stops
-    # resolving entirely.
-    #
-    # This value is ALSO live on the cluster (the FluxInstance was patched to
-    # match). Changing it here alone is not enough and changing it on the
-    # cluster alone is worse: this file is inside the synced path, so Flux
-    # reconciles the FluxInstance back to whatever is written here.
-    ref: refs/heads/feat/homerun2-dev-cluster
+    # If this ever has to point at a branch again, remember the value lives in
+    # two places -- here and the live FluxInstance -- and they have to move
+    # together. This file is inside the synced path, so patching only the
+    # cluster is undone by the next reconcile, about a minute later.
+    ref: refs/heads/main
     path: clusters/homerun2-dev
     pullSecret: git-token-auth # pragma: allowlist secret
