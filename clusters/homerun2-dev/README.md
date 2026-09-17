@@ -367,6 +367,35 @@ archive was again the slow step, roughly half of the 21 minutes.
 The node took `192.168.10.117` from DHCP. `192.168.10.171` stays the LB VIP and
 is not reachable until `cilium-lb` and `cilium-gateway` have reconciled.
 
+Steps 4-6 followed on the same day. All nine Kustomizations Ready, four Helm
+releases installed (cert-manager v1.21.2, headlamp 0.45.0, openebs 4.6.1,
+flux-web), and the Gateway holding the reserved address:
+
+```
+gateway/homerun2-dev-sthings-gateway   cilium   192.168.10.171   PROGRAMMED=True
+certificate/cluster-ca     True
+certificate/wildcard-tls   True
+```
+
+Proven end to end rather than by resource status, which is the only version
+worth recording:
+
+```
+$ curl -sk -o /dev/null -w '%{http_code} %{remote_ip}\n' https://headlamp.homerun2-dev.sthings.lab/
+200 192.168.10.171
+*  subject: CN=*.homerun2-dev.sthings.lab
+*  issuer: CN=cluster-ca
+```
+
+That is the whole chain in one line: the Clusterbook wildcard resolves, Cilium
+announces the VIP, the Gateway terminates TLS with the wildcard its own
+`cert-manager-selfsigned` issued, and the HTTPRoute reaches the pod. Both
+listeners report `attached=2`.
+
+`ciliumloadbalancerippool/default-pool` shows `IPS AVAILABLE 0`, which is
+correct and not a warning: the pool is a `/32` and the Gateway Service holds
+its one address.
+
 ---
 
 ## What this cluster does not have yet
