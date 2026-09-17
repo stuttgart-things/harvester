@@ -179,9 +179,26 @@ spec:
               sectionName: http
           hostnames:
             - schmetterpause.homerun2-dev.sthings.lab
+    # The base's ConfigMap ships SP_PUBLIC_BASE_URL as
+    # https://schmetterpause.cluster.example.com -- a placeholder. schmetterpause
+    # builds absolute links from it (login redirects, mail), so left alone it
+    # sends users to a host that does not exist while the app itself is healthy.
+    - target:
+        kind: ConfigMap
+        name: schmetterpause-config
+      patch: |
+        - op: replace
+          path: /data/SP_PUBLIC_BASE_URL
+          value: "https://schmetterpause.homerun2-dev.sthings.lab"
     # The base ships these two for the ESO path. Left in place they would sync
     # from a ClusterSecretStore that does not exist here: NotReady forever,
     # target Secret never written -- while every Kustomization reports Ready.
+    #
+    # And worse than that on this cluster: without ESO the
+    # externalsecrets.external-secrets.io CRD does not exist at all, so applying
+    # them fails the dry-run and takes the whole Kustomization with it -- the
+    # same failure mode the CNPG Cluster caused. These deletes are what make the
+    # stack applyable, not tidiness.
     - target:
         kind: ExternalSecret
         name: schmetterpause-app
