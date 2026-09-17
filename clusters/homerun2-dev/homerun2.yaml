@@ -1,0 +1,119 @@
+---
+# The homerun2 application stack -- stuttgart-things/flux → ./apps/homerun2.
+#
+# This uses profiles/base, NOT the apps-platform bundle component. The two
+# differ in where credentials come from, and that is the whole reason for the
+# choice: the bundle's profiles/platform selects each component's `eso/`
+# variant, which needs external-secrets plus a ClusterSecretStore backed by
+# OpenBao. profiles/base selects the `sops/` variants, which read their values
+# from a substituteFrom Secret -- so the credentials live here, SOPS-encrypted,
+# and this cluster needs no ESO at all.
+#
+# What that costs: profiles/base is a different component set. It has
+# notification-catcher, which the platform profile does not, and it does NOT
+# have led-catcher, which the platform profile does. Adding led-catcher means
+# composing a profile of our own rather than using an upstream one.
+#
+# Routes are deliberately NOT here -- see homerun2-routes below.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  # Generous: the redis-stack Helm install plus four OCI-sourced child
+  # Kustomizations. A fresh redis takes ~70s before it answers.
+  timeout: 15m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    # For HOMERUN2_REDIS_STORAGE_CLASS below. Without openebs the PVC never
+    # binds and the pod sits Pending while the HelmRelease reports installed.
+    - name: openebs
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base
+  postBuild:
+    # homerun2-secrets-subst.enc.yaml, decrypted by Flux with the sops-age key
+    # the FluxInstance mounts. optional:false on purpose -- left optional, Flux
+    # substitutes empty strings and installs a Redis with no password and an
+    # omni-pitcher whose bearer token is the empty string, reporting success.
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+
+      # The only StorageClass on this cluster, and the default. The component
+      # default is `standard`, which does not exist here -- unset, the PVC
+      # would never bind.
+      HOMERUN2_REDIS_STORAGE_CLASS: openebs-hostpath
+      HOMERUN2_REDIS_STORAGE_SIZE: 8Gi
+
+      # NOT redundant with substituteFrom. Both carry a `:-changeme` default
+      # upstream, so a missing value does not fail -- it installs the literal
+      # string `changeme` as the bearer token and the scout token. They come
+      # from the Secret above; this comment is here so nobody "tidies up" by
+      # adding them as literals.
+      #
+      #   HOMERUN2_OMNI_PITCHER_AUTH_TOKEN  <- Secret
+      #   HOMERUN2_SCOUT_AUTH_TOKEN         <- Secret
+      #   HOMERUN2_REDIS_PASSWORD_B64       <- Secret (no default at all)
+      #   TEAMS_WEBHOOK_URL                 <- Secret (no default at all)
+---
+# The HTTPRoutes for the stack above, applied only once it is Ready.
+#
+# Separate on purpose, and upstream ships them as their own profile for the
+# same reason: Cilium resolves a route's backendRefs once. A route applied
+# beside the Kustomization that later creates its Service serves HTTP 500 for
+# good, while every Kustomization reports Ready.
+#
+# Three routes, not four: profiles/base has no led-catcher.
+#   omni-pitcher.homerun2-dev.sthings.lab
+#   core-catcher.homerun2-dev.sthings.lab
+#   scout.homerun2-dev.sthings.lab
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2
+    # The Gateway these routes attach to. An HTTPRoute whose parentRef does not
+    # resolve sits at Accepted=False without explaining itself.
+    - name: cilium-gateway
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+
+      # profiles/base-routes predates the INFRA_* naming the infra bundle uses
+      # and reads the ORIGINAL names. These three must match what
+      # infra-platform.yaml sets as INFRA_DOMAIN / INFRA_GATEWAY_NAME /
+      # INFRA_GATEWAY_NAMESPACE, or the routes attach to nothing.
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
