@@ -404,6 +404,76 @@ its one address.
 
 ---
 
+## 7. The homerun2 application stack
+
+[`homerun2.yaml`](./homerun2.yaml) applies `./apps/homerun2/profiles/base` and,
+once it is Ready, `./apps/homerun2/profiles/base-routes`. Credentials come from
+[`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml), which
+Flux decrypts with the same `sops-age` key it uses for everything else here.
+
+### Why `profiles/base` and not the apps-platform bundle
+
+The bundle component (`apps/platform/components/homerun2`) uses
+`profiles/platform`, which selects each component's **`eso/`** variant:
+ExternalSecrets against a `ClusterSecretStore`. That needs `external-secrets`
+and `external-secrets-vault-store` in the infra bundle, plus a Vault Kubernetes
+auth mount that Flux cannot create -- it takes a Vault token and this cluster's
+API address, so it comes from
+`blueprints/argocd create-vault-kubernetes-auth --auth-name eso`.
+
+`profiles/base` selects the **`sops/`** variants instead: ordinary Secrets whose
+values arrive through `substituteFrom`. The credentials then live in this repo,
+encrypted, and the cluster needs no ESO at all. `HOMERUN2_SECRET_STORE` and
+`HOMERUN2_SECRET_PATH` do not appear anywhere in the rendered output.
+
+The cost is a different component set. `base` ships **notification-catcher**,
+which the platform profile does not, and has **no led-catcher**, which the
+platform profile does. Adding led-catcher means composing a profile of our own
+instead of consuming an upstream one.
+
+### The four values
+
+| Variable | Used by | Generated with |
+|---|---|---|
+| `HOMERUN2_REDIS_PASSWORD` + `HOMERUN2_REDIS_PASSWORD_B64` | redis-stack and every client; the same secret in two encodings, kept in step | `openssl rand -hex 24` |
+| `HOMERUN2_OMNI_PITCHER_AUTH_TOKEN` | the `/pitch` bearer | `openssl rand -hex 32` |
+| `HOMERUN2_SCOUT_AUTH_TOKEN` | scout | `openssl rand -hex 32` |
+| `TEAMS_WEBHOOK_URL` | notification-catcher | reused from `clusters/platform/apps/argocd-notifications-secret.enc.yaml` |
+
+The two auth tokens carry a `:-changeme` default upstream. A missing value
+therefore does **not** fail the build -- it installs the literal string
+`changeme` as the bearer token. `substituteFrom` is `optional: false` for the
+same class of reason.
+
+### Two traps that are already handled
+
+- **`HOMERUN2_REDIS_STORAGE_CLASS` must be set.** Its default is `standard`,
+  which does not exist here; `openebs-hostpath` is the only class on this
+  cluster. Unset, the PVC never binds while the HelmRelease reports installed.
+- **`profiles/base-routes` uses the ORIGINAL variable names** -- `DOMAIN`,
+  `GATEWAY_NAME`, `GATEWAY_NAMESPACE`, not the `INFRA_*` names the infra bundle
+  introduced. They must carry the same values as `infra-platform.yaml`'s
+  `INFRA_*`, or the routes attach to nothing.
+
+And one that needs no handling, contrary to appearances: the redis-stack
+HelmRelease embeds start scripts full of `${REDIS_PASSWORD}`, `${CMD}`,
+`${BASEDIR}` and friends. Flux replaces every undefined `${var}` with an empty
+string, so this looks like it would shred the scripts -- but upstream escapes
+all eleven of them as `$${var}`, which Flux renders back to a literal `${var}`
+for the shell. A grep for `${VAR}` matches inside `$${VAR}` and will tell you
+otherwise; count `$${` separately before believing it.
+
+### Redis is held at chart 17.x deliberately
+
+`HOMERUN2_REDIS_VERSION` is `17.1.4` while 22.0.7 exists. That is a pin, not
+drift: upstream holds it with `allowedVersions: "<18.0.0"` (flux#454). 22.x
+needs `global.security.allowInsecureImages` for the stuttgart-things
+redis-stack-server and sentinel images, moves the password to
+`REDIS_PASSWORD_FILE` and hardens the pod security context, none of it tested
+against these start scripts. Migrating is its own change.
+
+---
+
 ## What this cluster does not have yet
 
 - **No NFS.** `nfs-csi` is deliberately not selected. The lab's only NFS server
