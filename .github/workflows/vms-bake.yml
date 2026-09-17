@@ -21,7 +21,7 @@ on:
       vm_name:
         description: "VM to provision (must have vms/<name>.params.enc.yaml)"
         type: string
-        default: bootstrap-xplane
+        default: homerun2-dev
       profile:
         description: "baseos = OS setup only; rke2 = OS setup + singlenode RKE2"
         type: choice

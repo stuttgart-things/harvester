@@ -7,24 +7,26 @@ key rotates access to every credential the pipeline uses at once.
 
 `homerun2-dev.yaml` is the singlenode RKE2 cluster on the `homerun2-dev` VM
 (`192.168.10.117:6443`, v1.35.3+rke2r1) -- see `clusters/homerun2-dev/README.md`
-for the whole build. It supersedes `xplane.yaml`.
+for the whole build.
 
 That address is a DHCP lease out of `192.168.10.100-.149`, not the cluster's
 `192.168.10.171` -- the latter is the Cilium LB VIP reserved in Clusterbook and
 answers for Services, never for the API server. Rebuild the VM onto a new lease
-and this file points at nothing, exactly as `xplane.yaml` does below. Redo the
-fetch and re-encrypt when that happens.
+and this file points at nothing. Redo the fetch and re-encrypt when that
+happens.
 
-`xplane.yaml` is the singlenode RKE2 cluster on the `bootstrap-xplane` VM
-(`192.168.10.124:6443`, v1.35.3+rke2r1) -- see `vms/README.md` for how it is
-built. It replaced a kubeconfig for a predecessor at `192.168.10.106`, which
-stopped answering; that version is still in git history if it is ever wanted.
+That is not hypothetical. It is how the predecessor ended: `xplane.yaml` held
+the kubeconfig for the `bootstrap-xplane` VM at `192.168.10.124`, the VM came
+back from a rebuild on `.125`, and the file kept naming the old address -- so
+the cluster read as gone (`no route to host`) when only its address had moved.
+That VM and that file were retired with `homerun2-dev`; both are still in git
+history if they are ever wanted.
 
 Decrypt a SOPS/AGE-encrypted kubeconfig from this directory:
 
 ```bash
-dagger call -m github.com/stuttgart-things/dagger/sops@v0.82.1 decrypt \
+dagger call -m github.com/stuttgart-things/dagger/sops@v0.85.0 decrypt \
   --age-key env:SOPS_AGE_KEY \
-  --encrypted-file ../secrets/xplane.yaml \
-  export --path=/home/sthings/.kube/xplane
+  --encrypted-file ../secrets/homerun2-dev.yaml \
+  export --path=/home/sthings/.kube/homerun2-dev
 ```
