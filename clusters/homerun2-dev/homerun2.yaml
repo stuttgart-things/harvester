@@ -355,3 +355,79 @@ spec:
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
+---
+# config-viewer: a read-only view of which homerun2 alert triggers what in which
+# catcher -- components, findings, a severity x system matrix and a dry run. It
+# reads the Deployments and ConfigMaps of its own namespace through the
+# Kubernetes API and never talks to Redis.
+#
+# NOTE THE PATH: profiles/platform-config-viewer, not a base-* one. Unlike
+# led-catcher, light-catcher and demo-pitcher, this component has no eso/ and no
+# sops/ directory at all -- it needs no credentials, so the profile that carries
+# it selects the component alone and is credential-agnostic despite its name.
+# There was nothing to add upstream.
+#
+# Its RBAC (ServiceAccount, Role, RoleBinding) comes from the published base;
+# nothing has to be supplied here.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-config-viewer
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    # For the namespace and for the workloads it introspects -- a viewer with
+    # nothing to read is not wrong, just empty.
+    - name: homerun2
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/platform-config-viewer
+  postBuild:
+    # No substituteFrom: this component reads no secret of any kind.
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+---
+# The HTTPRoute for config-viewer, applied once it is Ready -- same split and
+# same reason as every other *-routes Kustomization here.
+#
+# Brings the stack to eight homerun2 routes.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-config-viewer-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2-config-viewer
+    - name: cilium-gateway
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/platform-config-viewer-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
