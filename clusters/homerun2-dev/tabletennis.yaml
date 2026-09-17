@@ -1,0 +1,274 @@
+---
+# schmetterpause and zaehlwerk, assembled here rather than through
+# ./apps/tabletennis/profiles/base.
+#
+# WHY NOT THE UPSTREAM PROFILE. Both components there take their credentials
+# from ExternalSecrets against a ClusterSecretStore, and unlike homerun2 they
+# ship no `sops/` variant: the ExternalSecret patches live in the *shared*
+# release.yaml that the production tabletennis cluster runs. Making that path
+# sops-capable means splitting an eso/ component out of a file in active use --
+# a bigger change than this cluster should force, and one that buys nothing
+# here.
+#
+# So this file does what the profile does, minus ESO: the two OCIRepositories,
+# the namespaces, the same HTTPRoute/ConfigMap/Deployment patches copied from
+# upstream, and plain Secrets where the ExternalSecrets would have been. No
+# external-secrets controller, no ClusterSecretStore, no second OpenBao auth
+# mount -- which is the point on an edge cluster.
+#
+# The cost is honest: upstream changes to those patches do not reach us. When
+# apps/tabletennis moves, this file has to be re-read against it.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: schmetterpause
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team
+  annotations:
+    # The database's PVC hangs off the CNPG Cluster in this namespace. Pruning
+    # the namespace would take the data with it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: zaehlwerk
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: schmetterpause-kustomize
+  namespace: schmetterpause
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/schmetterpause-kustomize
+  ref:
+    # v0.11.0 is both the newest release (2026-09-16) and the newest published
+    # OCI tag -- checked, because the two can drift.
+    tag: v0.11.0
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: zaehlwerk-kustomize
+  namespace: zaehlwerk
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/zaehlwerk-kustomize
+  ref:
+    tag: v0.5.0
+---
+# THE THREE SECRETS ARE NOT IN THIS FILE. They live in
+# ./tabletennis-secrets.enc.yaml, SOPS-encrypted with their real values.
+#
+# They cannot be templated here. This file is applied by the FluxInstance's own
+# sync Kustomization, which has no postBuild at all -- so a `${VAR}` would not
+# be substituted from anywhere, and Flux replaces an undefined one with an empty
+# string: a schmetterpause with an empty session key and an empty database
+# password, installed successfully.
+#
+# Encrypting the values directly removes the substitution step rather than
+# working around it. Names and keys are fixed by the published bases:
+# schmetterpause-app/SP_SESSION_KEY, schmetterpause-db/{username,password} and
+# zaehlwerk-panel/{OMNI_PITCHER_TOKEN,REDIS_PASSWORD}.
+
+# The CloudNativePG Cluster schmetterpause stores everything in.
+#
+# Copied from apps/tabletennis/components/schmetterpause/database.yaml, and two
+# of its constraints are load-bearing:
+#
+#   instances: 1 is a LITERAL. A count through postBuild.substitute arrives as
+#   an int and the API server rejects the whole Kustomization.
+#
+#   storageClass is OMITTED, not set empty. CNPG reads an absent key as "the
+#   cluster's default StorageClass"; an empty string is a class with no name,
+#   which is what an unset variable would render. openebs-hostpath is the
+#   default here.
+#
+# FIXED NAMES: the DSN the base builds is
+# postgresql://<user>:<pass>@schmetterpause-db-rw.schmetterpause.svc:5432/schmetterpause,
+# so the Cluster name, database and owner are not variables.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: schmetterpause-db
+  namespace: schmetterpause
+  annotations:
+    # The PVC carries an ownerReference to this object: deleting the Cluster
+    # deletes the data, with no CNPG-side retention to catch it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  bootstrap:
+    initdb:
+      database: schmetterpause
+      owner: schmetterpause
+      secret:
+        name: schmetterpause-db
+  storage:
+    size: 2Gi
+---
+# schmetterpause itself, from the published base. The patches below are the
+# upstream ones minus the two ExternalSecret entries -- those objects are
+# deleted instead, since the Secrets above already exist.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: schmetterpause
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  dependsOn:
+    # The CRD, and the Gateway its HTTPRoutes attach to.
+    - name: infra-platform
+  sourceRef:
+    kind: OCIRepository
+    name: schmetterpause-kustomize
+    namespace: schmetterpause
+  targetNamespace: schmetterpause
+  patches:
+    - target:
+        kind: HTTPRoute
+        name: schmetterpause
+      patch: |
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: schmetterpause
+        spec:
+          parentRefs:
+            - group: gateway.networking.k8s.io
+              kind: Gateway
+              name: homerun2-dev-sthings-gateway
+              namespace: default
+              sectionName: https
+          hostnames:
+            - schmetterpause.homerun2-dev.sthings.lab
+    - target:
+        kind: HTTPRoute
+        name: schmetterpause-redirect
+      patch: |
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: schmetterpause-redirect
+        spec:
+          parentRefs:
+            - group: gateway.networking.k8s.io
+              kind: Gateway
+              name: homerun2-dev-sthings-gateway
+              namespace: default
+              sectionName: http
+          hostnames:
+            - schmetterpause.homerun2-dev.sthings.lab
+    # The base ships these two for the ESO path. Left in place they would sync
+    # from a ClusterSecretStore that does not exist here: NotReady forever,
+    # target Secret never written -- while every Kustomization reports Ready.
+    - target:
+        kind: ExternalSecret
+        name: schmetterpause-app
+      patch: |
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: schmetterpause-app
+        $patch: delete
+    - target:
+        kind: ExternalSecret
+        name: schmetterpause-db
+      patch: |
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: schmetterpause-db
+        $patch: delete
+---
+# zaehlwerk, same treatment. Its panel is wired to this cluster's own
+# omni-pitcher, which is why the ConfigMap keeps OMNI_PITCHER_URL rather than
+# having it removed as the panel-less upstream default does.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: zaehlwerk
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: infra-platform
+    # The panel pitches into omni-pitcher; without it the token is pointed at
+    # nothing.
+    - name: homerun2
+  sourceRef:
+    kind: OCIRepository
+    name: zaehlwerk-kustomize
+    namespace: zaehlwerk
+  targetNamespace: zaehlwerk
+  patches:
+    - target:
+        kind: HTTPRoute
+        name: zaehlwerk
+      patch: |
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: zaehlwerk
+        spec:
+          parentRefs:
+            - name: homerun2-dev-sthings-gateway
+              namespace: default
+              sectionName: https
+          hostnames:
+            - zaehlwerk.homerun2-dev.sthings.lab
+    # Point the panel at this cluster's omni-pitcher. The base ships a
+    # placeholder (https://omni-pitcher.example.com); zaehlwerk tests the value
+    # for emptiness only, so a wrong URL is dialled forever rather than skipped.
+    - target:
+        kind: ConfigMap
+        name: zaehlwerk-config
+      patch: |
+        - op: replace
+          path: /data/OMNI_PITCHER_URL
+          value: "https://omni-pitcher.homerun2-dev.sthings.lab"
+    - target:
+        kind: ConfigMap
+        name: zaehlwerk-config
+      patch: |
+        - op: add
+          path: /data/ALLOWED_ORIGINS
+          value: "https://schmetterpause.homerun2-dev.sthings.lab"
+    - target:
+        kind: Deployment
+        name: zaehlwerk
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: zaehlwerk
+          annotations:
+            reloader.stakater.com/auto: "true"
+    - target:
+        kind: ExternalSecret
+        name: zaehlwerk-panel
+      patch: |
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: zaehlwerk-panel
+        $patch: delete

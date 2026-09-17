@@ -53,6 +53,10 @@ spec:
     - ../components/cert-manager-selfsigned
     # storage
     - ../components/openebs
+    # databases -- the CRD schmetterpause's CloudNativePG Cluster needs. Only
+    # the operator: cnpg-barman-cloud is backup tooling this cluster has no S3
+    # for, and tabletennis.yaml applies the Cluster itself.
+    - ../components/cnpg-operator
     # dashboards
     - ../components/headlamp
     - ../components/flux-web
