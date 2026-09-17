@@ -1,0 +1,58 @@
+---
+# The CloudNativePG Cluster schmetterpause stores everything in.
+#
+# WHY THIS IS NOT IN clusters/homerun2-dev. flux-system applies that path
+# recursively and a Kustomization fails as a whole -- one object that does not
+# dry-run takes every other object with it. The CRD comes from the
+# cnpg-operator Kustomization, which infra-platform creates, which flux-system
+# itself has to apply. A CNPG Cluster sitting in there is therefore a deadlock
+# rather than a race, and it is not theoretical:
+#
+#   Ready=False ReconciliationFailed
+#   Cluster/schmetterpause/schmetterpause-db dry-run failed: no matches for kind
+#   "Cluster" in version "postgresql.cnpg.io/v1"
+#
+# That blocked all of clusters/homerun2-dev on 2026-09-17 -- including the
+# Kustomization that would have installed the CRD. Same shape, same fix, and the
+# same reasoning as ../platform-seeds: a SIBLING directory outside the recursed
+# path, plus a dependsOn in ../homerun2-dev/tabletennis.yaml.
+#
+# ---------------------------------------------------------------------------
+# Copied from apps/tabletennis/components/schmetterpause/database.yaml. Two of
+# its constraints are load-bearing:
+#
+#   instances: 1 is a LITERAL. A count through postBuild.substitute arrives as
+#   an int and the API server rejects the whole Kustomization.
+#
+#   storageClass is OMITTED, not set empty. CNPG reads an absent key as "the
+#   cluster's default StorageClass"; an empty string is a class with no name,
+#   which is what an unset variable would render. openebs-hostpath is the
+#   default here.
+#
+# FIXED NAMES: the DSN the published base builds is
+# postgresql://<user>:<pass>@schmetterpause-db-rw.schmetterpause.svc:5432/schmetterpause,
+# so the Cluster name, the database and the owner are not variables.
+#
+# initdb reads username and password from the `schmetterpause-db` Secret --
+# ../homerun2-dev/tabletennis-secrets.enc.yaml -- rather than generating a
+# password of its own, which is why that Secret is also the DSN source.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: schmetterpause-db
+  namespace: schmetterpause
+  annotations:
+    # The PVC carries an ownerReference to this object: deleting the Cluster
+    # deletes the data, with no CNPG-side retention to catch it.
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: 1
+  imageName: ghcr.io/cloudnative-pg/postgresql:18
+  bootstrap:
+    initdb:
+      database: schmetterpause
+      owner: schmetterpause
+      secret:
+        name: schmetterpause-db
+  storage:
+    size: 2Gi
