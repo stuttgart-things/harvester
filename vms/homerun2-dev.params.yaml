@@ -1,0 +1,60 @@
+---
+# KCL parameters for the harvester-vm module, rendered and applied by
+# blueprints' bake-harvester. See vms/README.md for the call.
+#
+# Mounted into the render container as a file rather than passed as
+# --kcl-parameters, because inline parameter values become operation
+# arguments and are echoed verbatim by `dagger --progress plain`.
+#
+# Modelled on bootstrap-xplane.params.yaml, the VM this one replaces as the
+# lab's singlenode RKE2 target. Same image and machine shape; only the name,
+# the description and the cluster it carries differ.
+
+vmName: homerun2-dev
+namespace: default
+
+# Root disk.
+#
+# imageId picks a golden sthings-* image on purpose: those carry the password
+# auth ANSIBLE_USER/ANSIBLE_PASSWORD expect. The *-dev images trust only the
+# cloud-init key, and Ansible gets "Permission denied (publickey)".
+#
+# storageClassName is taken verbatim by harvester-vm 0.3.0. It is the class
+# Harvester generated for sthings-u26 -- look it up rather than guessing, the
+# UUID is per-image and per-cluster:
+#
+#   kubectl get virtualmachineimages -n default \
+#     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
+#
+# Do not reintroduce a bare `storageClass:` here: an unset storageClassName
+# falls back to the "<storageClass>-<imageId>" composition, which no current
+# Harvester can satisfy (blueprints#197). The PVC then sits Pending while the
+# VirtualMachine looks applied -- it fails as a timeout, not as an error.
+imageId: sthings-u26
+imageNamespace: default
+storage: 50Gi
+storageClassName: lh-68e4c918-0059-48bf-acaf-0de0ebe1eb65
+
+# Machine
+cpuCores: 12
+memory: 12Gi
+description: homerun2-dev singlenode rke2 cluster
+
+# Network. networkName is joined with networkNamespace by the module,
+# giving the multus network default/vms.
+networkName: vms
+networkNamespace: default
+
+# NOTE ON CREDENTIALS -- read before the first run.
+#
+# cloudInitUsername, cloudInitPassword and cloudInitSshKey are deliberately
+# absent here. The KCL module falls back to a hardcoded password and a
+# placeholder SSH key, so leaving them unset does NOT leave the VM without a
+# login -- it gives every VM the same well-known one, and a key nobody holds.
+#
+# Supply them from the SOPS-encrypted variant instead:
+#
+#   --encrypted-file ./vms/homerun2-dev.params.enc.yaml \
+#   --sops-key env:SOPS_AGE_KEY
+#
+# Pass either that or this file, never both -- the module rejects it.

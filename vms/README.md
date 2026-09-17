@@ -27,13 +27,13 @@ export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/bootstrap-
 export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/bootstrap-xplane.params.enc.yaml)
 
 # DRY RUN FIRST -- renders the same manifests, touches no cluster
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   render-harvester-vm \
   --kcl-parameters-file ./vms/bootstrap-xplane.params.yaml \
   contents
 
 # THE REAL RUN
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   bake-harvester \
   --kube-config file://$HOME/.kube/harvester \
   --vm-name bootstrap-xplane \
@@ -56,7 +56,7 @@ correctly and rejects the playbook at watch-item 4.
 
 Two values are written twice and nothing keeps them in step, so check both when
 you change either: `manage_filesystem` (here as `--ansible-parameters`, and in
-`bootstrap-xplane.ansible-vars.yaml`), and the module pin `vm@v3.2.1` (in both
+`bootstrap-xplane.ansible-vars.yaml`), and the module pin `vm@v3.2.2` (in both
 calls above).
 
 `manage_filesystem=false` is not optional. Without it `sthings.baseos.setup`
@@ -105,17 +105,27 @@ creates neither.
    while the VirtualMachine looks applied, so the run trips
    `--vmi-appear-timeout` rather than reporting a bad class.
 
-   `storageClassName` needs harvester-vm 0.3.0, which `vm@v3.2.1` pins. Use
-   that tag. `v3.2.0` happens to honour the key too right now, but only because
-   the `harvester-vm:0.2.0` OCI tag was overwritten with the 0.3.0 module --
+   `storageClassName` needs harvester-vm 0.3.0. Use `vm@v3.2.2`, which is the
+   first tag that actually pins it: up to and including `v3.2.1` the module
+   referenced the KCL module as `ghcr.io/stuttgart-things/harvester-vm:0.3.0`,
+   an inline `:version` that kcl does not read as a pin at all. It parses the
+   source with `url.Parse` and takes the version only from a `?tag=` query
+   parameter, so the suffix stayed part of the repository path and the
+   reference resolved to the newest published tag -- silently, while the string
+   still read as pinned (blueprints#200).
+
+   That is currently harmless here, because `harvester-vm` has only `0.2.0` and
+   `0.3.0` published and 0.3.0 *is* the newest. It stops being harmless the day
+   a 0.4.0 is pushed: every `v3.2.1` run would pick it up without a diff in this
+   repo. The same mutability bit `v3.2.0` already -- the `harvester-vm:0.2.0`
+   OCI tag was overwritten with the 0.3.0 module, and
    `kcl mod pull oci://ghcr.io/stuttgart-things/harvester-vm:0.2.0` reports
-   `pulled harvester-vm 0.3.0`. That is a mutable tag, not a guarantee, and it
-   means a `v3.2.0` pin no longer reproduces what it did this morning.
+   `pulled harvester-vm 0.3.0`.
 
 ### Last verified run
 
-`2026-09-02`, against the Harvester cluster in the lab, with the call above
-(`blueprints/vm@v3.2.1`):
+`2026-09-02`, against the Harvester cluster in the lab, with the call above --
+on the `vm@v3.2.1` pin of the time, before the bump to `v3.2.2`:
 
 ```
 Vm.bakeHarvester DONE [1m2s]
@@ -165,7 +175,7 @@ export SOPS_AGE_KEY=...
 export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/bootstrap-xplane.params.enc.yaml)
 export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/bootstrap-xplane.params.enc.yaml)
 
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.1 \
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   bake-harvester \
   --kube-config file://$HOME/.kube/harvester \
   --vm-name bootstrap-xplane \
@@ -277,6 +287,52 @@ silently, into a working-looking cluster with the wrong CNI.
 
 The air-gapped image archive was the slow step at roughly seven minutes of the
 fourteen.
+
+</details>
+
+<details open>
+<summary>HOMERUN2-DEV -- THE CURRENT SINGLENODE RKE2 CLUSTER</summary>
+
+`homerun2-dev` replaces `bootstrap-xplane` as the lab's singlenode RKE2 target.
+Same image, same machine shape, same playbooks -- only the name and the cluster
+it carries differ, so everything written above about credentials, the storage
+class and the two separators applies unchanged.
+
+**The full runbook -- Clusterbook reservation, this bake, the Flux bootstrap and
+the infra components -- lives in
+[`clusters/homerun2-dev/README.md`](../clusters/homerun2-dev/README.md).** Only
+the VM half is repeated here, because that is what the files in this directory
+are.
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+export SOPS_AGE_KEY=...
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/homerun2-dev.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/homerun2-dev.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+  bake-harvester \
+  --kube-config file://$HOME/.kube/harvester \
+  --vm-name homerun2-dev \
+  --namespace default \
+  --encrypted-file ./vms/homerun2-dev.params.enc.yaml \
+  --sops-key env:SOPS_AGE_KEY \
+  --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --inventory-type cluster \
+  --ansible-user env:ANSIBLE_USER \
+  --ansible-password env:ANSIBLE_PASSWORD \
+  --progress plain -vv \
+  export --path /tmp/homerun2-dev
+```
+
+`vms/homerun2-dev.rke2.ansible-vars.yaml` holds the same values for the
+`execute-ansible` entrypoint; `vms-lint.yml` checks that the two agree.
+
+There is no `homerun2-dev.ansible-vars.yaml`: this VM is never baked with the
+base OS profile alone. Add one if it ever is -- the lint derives the parameter
+string from whatever `*.ansible-vars.yaml` files exist and requires each to
+appear in this file verbatim.
 
 </details>
 
