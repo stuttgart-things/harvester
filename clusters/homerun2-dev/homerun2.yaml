@@ -209,3 +209,78 @@ spec:
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
+---
+# light-catcher and the wled-mock it drives.
+#
+# Same story as led-catcher above: profiles/base carries neither, and the only
+# profiles that did (platform-light-catcher and its tabletennis variant) select
+# the eso/ variant. stuttgart-things/flux#481 adds base-light-catcher, mirroring
+# platform-light-catcher with sops instead.
+#
+# wled-mock comes with it and takes no credentials at all -- it has neither an
+# eso/ nor a sops/ directory. light-catcher drives it until
+# HOMERUN2_LIGHT_CATCHER_WLED_ENDPOINT names a real strip.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-light-catcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-light-catcher
+  postBuild:
+    # For HOMERUN2_REDIS_PASSWORD_B64, the one bare variable the profile adds.
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+---
+# The HTTPRoutes for light-catcher and wled-mock, applied once they are Ready.
+#
+# Brings the stack to six routes: omni-pitcher, core-catcher, scout,
+# led-catcher, light-catcher, wled-mock.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-light-catcher-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2-light-catcher
+    - name: cilium-gateway
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-light-catcher-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
