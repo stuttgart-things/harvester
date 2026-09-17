@@ -11,7 +11,7 @@ own Flux objects here. `SOPS_AGE_KEY` is the only thing that is not.
 | | |
 |---|---|
 | Cluster / VM name | `homerun2-dev` (the name is load-bearing: DNS, `cluster_name`, and the file names in `vms/`) |
-| Address | `192.168.10.171`, reserved in Clusterbook |
+| LB address | `192.168.10.171`, reserved in Clusterbook -- the Cilium VIP for Services, **not** the node's address (that is a DHCP lease, see step 3) |
 | Domain | `homerun2-dev.sthings.lab` |
 | Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy, no Canal |
 | GitOps | Flux, syncing `clusters/homerun2-dev` |
@@ -135,10 +135,19 @@ Four things that are not optional, each of which fails quietly:
 not bring it out -- the exported directory holds `harvester-vm.yaml`,
 `inventory.ini` and `outputs.json`, nothing else.
 
+**The node's address is not `192.168.10.171`.** That is the Cilium LB VIP,
+announced for Services once the infra layer is up; the node itself takes a DHCP
+lease out of `192.168.10.100-.149`. Read it, never assume it:
+
 ```bash
-ssh sthings@192.168.10.171 \
+export KUBECONFIG=~/.kube/harvester
+NODE_IP=$(kubectl get vmi homerun2-dev -n default \
+  -o jsonpath='{.status.interfaces[0].ipAddress}')
+echo "$NODE_IP"          # 192.168.10.117 on the first build
+
+ssh sthings@"$NODE_IP" \
   'sudo cat /etc/rancher/rke2/rke2.yaml' \
-  | sed "s/127.0.0.1/192.168.10.171/" > ~/.kube/homerun2-dev
+  | sed "s/127.0.0.1/$NODE_IP/" > ~/.kube/homerun2-dev
 
 kubectl --kubeconfig ~/.kube/homerun2-dev get nodes
 ```
@@ -146,6 +155,14 @@ kubectl --kubeconfig ~/.kube/homerun2-dev get nodes
 The cloud-init key from the encrypted parameters is already trusted, so this
 needs no password. The `sed` matters: RKE2 writes the file pointing at
 `127.0.0.1`, which works only on the node itself.
+
+> **That address is a lease, so the kubeconfig has a shelf life.** This is
+> exactly how `bootstrap-xplane` died: it was built on `192.168.10.124`, came
+> back from a rebuild on `.125`, and `secrets/xplane.yaml` kept pointing at the
+> old address -- the cluster looked gone (`no route to host`) when only its
+> address had moved. If this VM is ever rebuilt or reboots onto a new lease,
+> redo this step and re-encrypt. A DHCP reservation on the router for the VM's
+> MAC would remove the problem; there is none today.
 
 Then commit it encrypted, the way every other cluster's kubeconfig is stored:
 

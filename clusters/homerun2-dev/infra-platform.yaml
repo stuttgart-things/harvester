@@ -65,7 +65,9 @@ spec:
       INFRA_DOMAIN: homerun2-dev.sthings.lab
       INFRA_GATEWAY_NAME: homerun2-dev-sthings-gateway
       INFRA_GATEWAY_NAMESPACE: default
-      INFRA_TLS_SECRET: wildcard-tls
+      # The NAME of the Secret cert-manager writes the wildcard into, not a
+      # credential -- detect-secrets matches the key on "SECRET" alone.
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
 
       # ---- cilium-lb ------------------------------------------------------
       # Reserved in Clusterbook BEFORE this cluster was built, as a /32 -- see
