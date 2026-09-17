@@ -249,14 +249,12 @@ That is also why the CI turned red the moment the bot pushed: the failing check
 was `Pre-Commit (Dagger)` on the bot's own commit, not on anything written by a
 human.
 
-### OPEN: this cluster syncs a feature branch
-
-**Revert `config.yaml`'s `spec.sync.ref` to `refs/heads/main` when #218 merges,
-and re-apply it.**
+### The first reconcile cannot work until the cluster is on main
 
 `flux-bootstrap` renders `refs/heads/main`, which is right for every cluster
-here. It could not work while `clusters/homerun2-dev` existed only on the
-branch: Flux fetched main, found no such path, and parked with
+here -- and it cannot resolve while `clusters/homerun2-dev` exists only on a
+branch. Between #218 opening and merging, Flux fetched main, found no such path,
+and parked with
 
 ```
 gitrepository/flux-system   refs/heads/main@sha1:92d9855f   READY=True
@@ -269,13 +267,21 @@ fetched main perfectly well. Only the Kustomization fails, and its message names
 a temp directory rather than the branch, so this reads like a broken path in
 this repo rather than a cluster pointed at a revision that does not carry it.
 
-Two places hold the value and both have to change together: `spec.sync.ref` in
-`config.yaml`, and the live FluxInstance. `config.yaml` sits *inside* the synced
-path, so patching only the cluster is reverted by the next reconcile, roughly a
-minute later.
+The bridge was to point `spec.sync.ref` at the branch until #218 merged, then
+put it back. It is back: this cluster syncs `refs/heads/main`, and
+`config.yaml` matches `clusters/xplane/config.yaml` line for line apart from the
+path and the operator version.
 
-The proper end state is `main` and a deleted branch. Until then this cluster
-follows a branch that will cease to exist.
+If you ever need that bridge again, the rule that makes it work is this: the
+value lives in **two** places -- `spec.sync.ref` in `config.yaml` and the live
+FluxInstance -- and they have to move together. `config.yaml` sits *inside* the
+synced path, so patching only the cluster is undone by the next reconcile about
+a minute later, and editing only the file changes nothing until the cluster is
+already syncing the revision that carries it.
+
+Order matters on the way back, too: merge first, then patch the live instance to
+`main`, then delete the branch. Deleting the branch while the cluster still
+points at it takes the GitOps root away with it.
 
 ---
 
