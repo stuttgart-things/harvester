@@ -284,3 +284,74 @@ spec:
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
+---
+# demo-pitcher: a generator that pitches synthetic messages onto the stream, so
+# the catchers have something to react to without a real system producing
+# events. Useful precisely on a dev cluster.
+#
+# Third of the same shape as led-catcher and light-catcher above -- the profile
+# pair comes from stuttgart-things/flux#482. With it, every homerun2 component
+# that has a sops/ variant is reachable from profiles/base.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-demo-pitcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-demo-pitcher
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+---
+# The HTTPRoute for demo-pitcher, applied once it is Ready.
+#
+# Brings the stack to seven routes: omni-pitcher, core-catcher, scout,
+# led-catcher, light-catcher, wled-mock, demo-pitcher.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-demo-pitcher-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: homerun2-demo-pitcher
+    - name: cilium-gateway
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-demo-pitcher-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
