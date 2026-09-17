@@ -1,0 +1,65 @@
+---
+# The notification-catcher's routing config -- caller-supplied ON PURPOSE.
+#
+# The chart mounts a ConfigMap named `<name>-notify` at
+# /etc/notification-catcher/config.yaml but deliberately does not emit it any
+# more (homerun2-notification-catcher#19, a breaking change in v3.0.0). KCL's
+# flow-scalar serialisation collapsed the inline routing YAML into a single
+# quoted line and the catcher died at startup with
+# `yaml: block sequence entries are not allowed in this context`; splitting it
+# out is what lets a cluster repo commit proper multi-line YAML.
+#
+# Without this file the pod sits in ContainerCreating forever --
+# `MountVolume.SetUp failed ... configmap "homerun2-notification-catcher-notify"
+# not found` -- and because homerun2 runs with wait:true, the whole stack's
+# Kustomization stays Unknown and homerun2-routes never applies. Four healthy
+# apps and no routes, on account of one missing ConfigMap.
+#
+# ---------------------------------------------------------------------------
+# THE PLACEHOLDER IS A SINGLE ${VAR}, AND THAT IS NOT ARBITRARY.
+#
+# upstream docs/deployment.md makes the syntax depend on whether the Flux
+# Kustomization *that reconciles this file* has substituteFrom:
+#
+#   with substituteFrom    -> $${VAR}, Flux collapses $$ -> $ at apply time
+#   without substituteFrom -> ${VAR},  Flux leaves it alone
+#
+# This file lives in clusters/homerun2-dev/, which the FluxInstance's own sync
+# Kustomization applies -- and that one has no postBuild at all. So: single
+# ${VAR}. The homerun2 Kustomization in homerun2.yaml does have substituteFrom,
+# but it reconciles ./apps/homerun2/profiles/base, not this file.
+#
+# Get it backwards and the failure is quiet in both directions: $${...} here
+# would land a literal `$${TEAMS_WEBHOOK_URL}` the catcher cannot resolve.
+# ---------------------------------------------------------------------------
+#
+# The real URL never lands in this ConfigMap. The catcher interpolates
+# ${TEAMS_WEBHOOK_URL} at startup from its env, which comes from the
+# homerun2-notification-catcher-secrets Secret -- patched by the component from
+# our SOPS-encrypted homerun2-secrets-subst. A missing or empty value is a
+# fatal startup error, not a silent no-op.
+#
+# Quoted because webhook URLs routinely contain `:`, `?` and `=`; upstream says
+# quoting is always safe.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-notification-catcher-notify
+  namespace: homerun2
+data:
+  config.yaml: |
+    # Every incoming message is fanned out to each output whose filters match.
+    # Filters AND across fields; list-valued filters OR within the list. An
+    # empty filter block matches everything.
+    #
+    # Severity rank (low -> high):
+    #   debug < info < success < warning < critical = error
+    outputs:
+      - name: teams-homerun2-dev
+        type: msteams
+        webhook_url: "${TEAMS_WEBHOOK_URL}"
+        filters:
+          # warning and above, from any system. Deliberately broad: this is a
+          # dev cluster and an over-narrow filter here is indistinguishable
+          # from a broken webhook -- both produce silence.
+          severity_min: warning
