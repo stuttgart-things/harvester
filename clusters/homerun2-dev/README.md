@@ -406,32 +406,55 @@ its one address.
 
 ## 7. The homerun2 application stack
 
-[`homerun2.yaml`](./homerun2.yaml) applies `./apps/homerun2/profiles/base` and,
-once it is Ready, `./apps/homerun2/profiles/base-routes`. Credentials come from
+[`homerun2.yaml`](./homerun2.yaml) is **two** Flux Kustomizations: the stack,
+then its HTTPRoutes once the stack is Ready. Both point at
+`./apps/homerun2/root`, an empty selection target, and list the components they
+want in `spec.components` -- ten components in the stack, eight routes.
+Credentials come from
 [`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml), which
 Flux decrypts with the same `sops-age` key it uses for everything else here.
 
-### Why `profiles/base` and not the apps-platform bundle
+### Why `/sops` on every component line
 
-The bundle component (`apps/platform/components/homerun2`) uses
-`profiles/platform`, which selects each component's **`eso/`** variant:
-ExternalSecrets against a `ClusterSecretStore`. That needs `external-secrets`
-and `external-secrets-vault-store` in the infra bundle, plus a Vault Kubernetes
-auth mount that Flux cannot create -- it takes a Vault token and this cluster's
-API address, so it comes from
-`blueprints/argocd create-vault-kubernetes-auth --auth-name eso`.
+Each component that reads a credential appears twice in the list: the workload,
+then its credential mode.
 
-`profiles/base` selects the **`sops/`** variants instead: ordinary Secrets whose
-values arrive through `substituteFrom`. The credentials then live in this repo,
-encrypted, and the cluster needs no ESO at all. `HOMERUN2_SECRET_STORE` and
-`HOMERUN2_SECRET_PATH` do not appear anywhere in the rendered output.
+```yaml
+    - ../components/omni-pitcher
+    - ../components/omni-pitcher/sops
+```
 
-The cost was a different component set. `base` ships **notification-catcher**,
-which the platform profile does not, and originally had **no led-catcher**,
-**light-catcher** or **demo-pitcher**, all of which the platform profile does.
-That gap is closed, and closed upstream: the three `base-*` profile pairs were
-added there (flux#479, #481, #482) rather than composed here, so this cluster
-still consumes upstream profiles only. See *The four add-on components* below.
+`sops/` renders ordinary Secrets whose values arrive through `substituteFrom`,
+so the credentials live in this repo, encrypted, and the cluster needs no ESO
+at all. `HOMERUN2_SECRET_STORE` and `HOMERUN2_SECRET_PATH` do not appear
+anywhere in the rendered output.
+
+`eso/` is the other mode: ExternalSecrets against a `ClusterSecretStore`. It
+needs `external-secrets` and `external-secrets-vault-store` in the infra
+bundle, plus a Vault Kubernetes auth mount that Flux cannot create -- it takes
+a Vault token and this cluster's API address, so it comes from
+`blueprints/argocd create-vault-kubernetes-auth --auth-name eso`. Switching
+this cluster over later is a search-and-replace of `/sops` for `/eso` in those
+lines, plus those two infra components and the mount. Nothing else here moves.
+
+### Why not the apps-platform bundle
+
+It would work: the bundle's homerun2 components take `HOMERUN2_SECRETS: sops`
+and switch the same way (flux, `apps/platform/README.md`). Two things keep this
+cluster on its own Kustomizations.
+
+Its `homerun2` component is a fixed set -- omni-pitcher, core-catcher, scout,
+led-catcher -- and this cluster also runs **notification-catcher**, with
+`DRY_RUN` off. That second part cannot go through a bundle at all:
+`postBuild.substitute` is `map[string]string`, kustomize drops the quotes
+around `"${VAR:-true}"` because the bare form round-trips to the same string,
+and envsubst then hands the API server a YAML bool, which is rejected -- taking
+the parent apply and every sibling component with it. Written out here,
+`"false"` is a literal and lands as a string.
+
+The bundle is the better answer for a cluster that wants the standard set. This
+one wants a different one, and `spec.components` is exactly the mechanism for
+saying so.
 
 ### The four values
 
@@ -452,7 +475,7 @@ same class of reason.
 - **`HOMERUN2_REDIS_STORAGE_CLASS` must be set.** Its default is `standard`,
   which does not exist here; `openebs-hostpath` is the only class on this
   cluster. Unset, the PVC never binds while the HelmRelease reports installed.
-- **`profiles/base-routes` uses the ORIGINAL variable names** -- `DOMAIN`,
+- **The `route` components use the ORIGINAL variable names** -- `DOMAIN`,
   `GATEWAY_NAME`, `GATEWAY_NAMESPACE`, not the `INFRA_*` names the infra bundle
   introduced. They must carry the same values as `infra-platform.yaml`'s
   `INFRA_*`, or the routes attach to nothing.
@@ -474,38 +497,66 @@ redis-stack-server and sentinel images, moves the password to
 `REDIS_PASSWORD_FILE` and hardens the pod security context, none of it tested
 against these start scripts. Migrating is its own change.
 
-### The four add-on components
+### The ten components, and the eight Kustomizations that used to be two
 
-`profiles/base` is the core: redis-stack, omni-pitcher, core-catcher, scout and
-notification-catcher. Four more run here, each as its own pair of Kustomizations
-in [`homerun2.yaml`](./homerun2.yaml) -- the component, then its routes:
+The stack list is redis-stack, omni-pitcher, core-catcher, notification-catcher,
+scout, led-catcher, light-catcher, wled-mock, demo-pitcher and config-viewer.
+Four of those arrived one at a time, and each cost an upstream pull request:
 
-| Component | Profile | Upstream change | Added by |
-|---|---|---|---|
-| led-catcher | `profiles/base-led-catcher` | flux#479 | #227 |
-| light-catcher + wled-mock | `profiles/base-light-catcher` | flux#481 | #228 |
-| demo-pitcher | `profiles/base-demo-pitcher` | flux#482 | #229 |
-| config-viewer | `profiles/platform-config-viewer` | **none needed** | #233 |
+| Component | Needed upstream | Added by |
+|---|---|---|
+| led-catcher | flux#479, a `base-led-catcher` profile pair | #227 |
+| light-catcher + wled-mock | flux#481, a `base-light-catcher` profile pair | #228 |
+| demo-pitcher | flux#482, a `base-demo-pitcher` profile pair | #229 |
+| config-viewer | none | #233 |
 
-The first three each needed an upstream profile pair, for one reason: every
-profile that carried them selected the component's `eso/` variant, so consuming
-them here meant a `sops/` counterpart had to exist first.
-`components/config-viewer` has **neither an `eso/` nor a `sops/` directory** --
-it holds no credentials at all -- so `profiles/platform-config-viewer` is
-credential-agnostic despite its name, and it is the one add-on with no
-`substituteFrom`. Adding one would imply a secret that does not exist.
+The reason was structural. A Flux Kustomization's `path` has to name a
+directory kustomize can build, and a `kind: Component` directory is not one --
+so a component could only be deployed through a `profiles/` directory that
+selected it, and every profile carrying those three selected the `eso/`
+variant. A `sops/` counterpart had to be created upstream before this cluster
+could use them, and each came as its own pair of Kustomizations here: eight in
+total for one app stack, 482 lines.
+
+`apps/homerun2/root` removed the reason. It is an empty selection target, so
+the composition is the list in this file and the next component is a line in
+it. config-viewer needed nothing upstream even then, because it holds no
+credentials -- `components/config-viewer` has neither an `eso/` nor a `sops/`
+directory, which is why it is one line rather than two.
 
 Two things to expect when reading the cluster back:
 
-- **Each add-on appears TWICE in `flux get kustomizations -A`.** These profiles
-  are kustomize Components that render their own `OCIRepository` plus a child
-  Kustomization of the same name in namespace `homerun2`. The one in
-  `flux-system` with source `flux-apps` is ours; the one in `homerun2` with the
-  OCI source is the child. Same name, different namespace -- not a conflict, and
-  the reason the Kustomization count rises by three per add-on pair, not two.
-- **The routes profiles use `DOMAIN`, `GATEWAY_NAME` and `GATEWAY_NAMESPACE`,**
-  exactly like `base-routes` -- not the `INFRA_*` names. Same values, different
+- **Most components appear TWICE in `flux get kustomizations -A`.** Each is a
+  kustomize Component rendering its own `OCIRepository` plus a child
+  Kustomization of the same name in namespace `homerun2`. The two in
+  `flux-system` with source `flux-apps` are ours (`homerun2`,
+  `homerun2-routes`); the ones in `homerun2` with an OCI source are the
+  children. Same name, different namespace -- not a conflict.
+- **The routes Kustomization uses `DOMAIN`, `GATEWAY_NAME` and
+  `GATEWAY_NAMESPACE`** -- not the `INFRA_*` names. Same values, different
   spelling; see the trap above.
+
+### Migrating from the eight
+
+The objects do not change -- the two lists render exactly what the eight
+profiles did, object for object -- but their **owner** does. When
+`homerun2-led-catcher`, `homerun2-light-catcher`, `homerun2-demo-pitcher`,
+`homerun2-config-viewer` and their `-routes` twins disappear from this file,
+Flux prunes what they own while `homerun2` and `homerun2-routes` create the
+same names, and the two are not ordered against each other.
+
+Left alone that is a recreate: those five workloads and five routes go away and
+come back, a minute or two of 404 on a dev cluster. To avoid it, annotate the
+live objects first so the new owner adopts them instead:
+
+```bash
+kubectl -n homerun2 annotate kustomization,ocirepository,httproute \
+  --all kustomize.toolkit.fluxcd.io/prune=disabled
+```
+
+Flux strips that annotation itself on its next apply. This is the same dance
+`apps/homerun2/profiles/base/README.md` documents for the routes split, which
+went through platform-sthings on 2026-09-11 with no 404.
 
 One operational note on config-viewer: it reads Deployments and ConfigMaps in
 its own namespace through the Kubernetes API (`get` and `list`, nothing more --
@@ -524,8 +575,8 @@ absent from the view, which reads as an empty panel rather than an error.
   changes.
 - **No ExternalSecrets.** There is no `external-secrets` and no
   `ClusterSecretStore` on this cluster, and the homerun2 stack does not need
-  one: it runs `profiles/base`, whose credentials come from a SOPS-encrypted
-  `substituteFrom` Secret in this repo. Adding ESO later means
+  one: every component selects its `sops/` variant, whose credentials come from
+  a SOPS-encrypted `substituteFrom` Secret in this repo. Adding ESO later means
   `external-secrets` + `external-secrets-vault-store` in the bundle and a
   second OpenBao auth mount (`eso`, policy `read-homerun2-dev`) beside the
   cert-manager one.
@@ -582,10 +633,11 @@ curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|
 # issuer: CN=sthings.lab   <- OpenBao root, not CN=cluster-ca
 ```
 
-- **No `homerun2-*` extras.** The stack runs `profiles/base`: redis-stack,
-  omni-pitcher, core-catcher, scout, notification-catcher. `led-catcher`,
-  `light-catcher`, `demo-pitcher` and `config-viewer` are separate components
-  that `profiles/base` does not carry -- see section 7.
+- **The stack is ten components, listed in `homerun2.yaml`:** redis-stack,
+  omni-pitcher, core-catcher, notification-catcher, scout, led-catcher,
+  light-catcher, wled-mock, demo-pitcher, config-viewer -- see section 7. (This
+  bullet used to say the last four were not carried; they were added in #227,
+  #228, #229 and #233.)
 
 ---
 

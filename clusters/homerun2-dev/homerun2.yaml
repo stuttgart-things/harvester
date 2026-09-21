@@ -1,18 +1,32 @@
 ---
-# The homerun2 application stack -- stuttgart-things/flux → ./apps/homerun2.
+# The homerun2 application stack -- stuttgart-things/flux → ./apps/homerun2/root.
 #
-# This uses profiles/base, NOT the apps-platform bundle component. The two
-# differ in where credentials come from, and that is the whole reason for the
-# choice: the bundle's profiles/platform selects each component's `eso/`
-# variant, which needs external-secrets plus a ClusterSecretStore backed by
-# OpenBao. profiles/base selects the `sops/` variants, which read their values
-# from a substituteFrom Secret -- so the credentials live here, SOPS-encrypted,
-# and this cluster needs no ESO at all.
+# TWO KUSTOMIZATIONS, NOT EIGHT. This file used to be one Flux Kustomization
+# per upstream profile, because a Kustomization's `path` has to name a
+# directory kustomize can build and every component set needed a profile
+# directory of its own upstream. Three of those profiles existed only because
+# this cluster asked for them (stuttgart-things/flux#479, #481, #482): it runs
+# on SOPS-encrypted Secrets rather than external-secrets, and every profile
+# that carried led-catcher, light-catcher or demo-pitcher selected the eso/
+# variant.
 #
-# What that costs: profiles/base is a different component set. It has
-# notification-catcher, which the platform profile does not, and it does NOT
-# have led-catcher, which the platform profile does. Adding led-catcher means
-# composing a profile of our own rather than using an upstream one.
+# apps/homerun2/root is an empty selection target, so `components:` below is
+# the whole composition and `/sops` on each line is the credential mode. There
+# is nothing left to add upstream: another component is another line here.
+#
+# WHY NOT THE apps-platform BUNDLE. It would work now -- HOMERUN2_SECRETS: sops
+# switches it -- but the bundle's homerun2 component is a fixed set
+# (omni-pitcher, core-catcher, scout, led-catcher) and this cluster runs
+# notification-catcher as well, with DRY_RUN off. DRY_RUN cannot be threaded
+# through a bundle: postBuild.substitute is map[string]string and a reference
+# defaulting to a bool arrives as one, which the API server rejects. Written
+# out here, "false" is a literal and lands as a string.
+#
+# MIGRATING FROM THE EIGHT: the two lists render exactly what the eight
+# profiles did, object for object, but the OWNER changes. Annotate the live
+# objects with kustomize.toolkit.fluxcd.io/prune=disabled before applying so
+# these two adopt them instead of pruning and recreating them -- ./README.md,
+# section 7, "Migrating from the eight".
 #
 # Routes are deliberately NOT here -- see homerun2-routes below.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -26,8 +40,9 @@ metadata:
 spec:
   interval: 1h
   retryInterval: 1m
-  # Generous: the redis-stack Helm install plus four OCI-sourced child
-  # Kustomizations. A fresh redis takes ~70s before it answers.
+  # Generous: the redis-stack Helm install plus eight OCI-sourced child
+  # Kustomizations. A fresh redis takes ~70s before it answers, and the
+  # catchers restart against it until it does.
   timeout: 15m
   force: false
   prune: true
@@ -40,12 +55,38 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-apps
-  path: ./apps/homerun2/profiles/base
+  path: ./apps/homerun2/root
+  components:
+    # Two lines per component that reads a credential: the workload, then the
+    # credential mode. /sops renders plain Secrets filled by substituteFrom
+    # below; /eso would read a ClusterSecretStore instead, which is what this
+    # cluster deliberately does not have.
+    - ../components/redis-stack
+    - ../components/redis-stack/sops
+    - ../components/omni-pitcher
+    - ../components/omni-pitcher/sops
+    - ../components/core-catcher
+    - ../components/core-catcher/sops
+    - ../components/notification-catcher
+    - ../components/notification-catcher/sops
+    - ../components/scout
+    - ../components/scout/sops
+    - ../components/led-catcher
+    - ../components/led-catcher/sops
+    - ../components/light-catcher
+    - ../components/light-catcher/sops
+    - ../components/demo-pitcher
+    - ../components/demo-pitcher/sops
+    # No credential of any kind: wled-mock is driven over HTTP and
+    # config-viewer reads this namespace through the Kubernetes API. One line.
+    - ../components/wled-mock
+    - ../components/config-viewer
   postBuild:
     # homerun2-secrets-subst.enc.yaml, decrypted by Flux with the sops-age key
     # the FluxInstance mounts. optional:false on purpose -- left optional, Flux
-    # substitutes empty strings and installs a Redis with no password and an
-    # omni-pitcher whose bearer token is the empty string, reporting success.
+    # substitutes empty strings and installs a Redis with no password, an
+    # omni-pitcher whose bearer token is the empty string, and a
+    # notification-catcher posting to nowhere, reporting success.
     substituteFrom:
       - kind: Secret
         name: homerun2-secrets-subst
@@ -83,97 +124,7 @@ spec:
       #   HOMERUN2_SCOUT_AUTH_TOKEN         <- Secret
       #   HOMERUN2_REDIS_PASSWORD_B64       <- Secret (no default at all)
       #   TEAMS_WEBHOOK_URL                 <- Secret (no default at all)
----
-# The HTTPRoutes for the stack above, applied only once it is Ready.
-#
-# Separate on purpose, and upstream ships them as their own profile for the
-# same reason: Cilium resolves a route's backendRefs once. A route applied
-# beside the Kustomization that later creates its Service serves HTTP 500 for
-# good, while every Kustomization reports Ready.
-#
-# Three routes, not four: profiles/base has no led-catcher.
-#   omni-pitcher.homerun2-dev.sthings.lab
-#   core-catcher.homerun2-dev.sthings.lab
-#   scout.homerun2-dev.sthings.lab
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-routes
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2
-    # The Gateway these routes attach to. An HTTPRoute whose parentRef does not
-    # resolve sits at Accepted=False without explaining itself.
-    - name: cilium-gateway
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-routes
-  postBuild:
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
 
-      # profiles/base-routes predates the INFRA_* naming the infra bundle uses
-      # and reads the ORIGINAL names. These three must match what
-      # infra-platform.yaml sets as INFRA_DOMAIN / INFRA_GATEWAY_NAME /
-      # INFRA_GATEWAY_NAMESPACE, or the routes attach to nothing.
-      DOMAIN: homerun2-dev.sthings.lab
-      GATEWAY_NAME: homerun2-dev-sthings-gateway
-      GATEWAY_NAMESPACE: default
----
-# led-catcher, which profiles/base does not carry.
-#
-# profiles/platform has it, but only in its eso/ form -- and components are not
-# standalone-buildable, so there was no way to add it on the sops path at all.
-# stuttgart-things/flux#479 adds the missing profile pair, mirroring
-# platform-light-catcher: base-led-catcher takes led-catcher + led-catcher/sops,
-# base-led-catcher-routes takes led-catcher/route.
-#
-# It needs no new credentials. The only bare variable is
-# HOMERUN2_REDIS_PASSWORD_B64, which the Secret above already carries -- which
-# is why substituteFrom is repeated here rather than the value being duplicated.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-led-catcher
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 10m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    # Redis and the namespace come from the base stack; led-catcher reads the
-    # same stream and would restart against a Redis that is not up yet.
-    - name: homerun2
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-led-catcher
-  postBuild:
-    substituteFrom:
-      - kind: Secret
-        name: homerun2-secrets-subst
-        optional: false
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
   # UI_STREAM_PRESETS -- the two buttons in the led-catcher's web simulator.
   #
   # zaehlwerk CAN switch this catcher onto the `tabletennis` stream for a match
@@ -188,12 +139,11 @@ spec:
   # `reset` are what keep a panel from sitting in scoreboard mode after an
   # abandoned match.
   #
-  # WHY A PATCH ON A KUSTOMIZATION, not on the Deployment. The profile above is
-  # a kustomize Component that renders an OCIRepository plus a child
-  # Kustomization; the Deployment itself comes from the OCI artifact and is
-  # never an object in this path. So the patch is appended to the CHILD's own
-  # patch list -- the same technique upstream uses in
-  # apps/tabletennis/components/zaehlwerk-panel-homerun2.
+  # WHY A PATCH ON A KUSTOMIZATION, not on the Deployment. The component above
+  # renders an OCIRepository plus a child Kustomization; the Deployment itself
+  # comes from the OCI artifact and is never an object in this path. So the
+  # patch is appended to the CHILD's own patch list -- the same technique
+  # upstream uses in apps/tabletennis/components/zaehlwerk-panel-homerun2.
   #
   # The container name is the merge key: `homerun2-led-catcher`, checked against
   # the running Deployment. A wrong one adds a SECOND container to the pod
@@ -224,15 +174,28 @@ spec:
                           - name: UI_STREAM_PRESETS
                             value: "messages,tabletennis"
 ---
-# The HTTPRoute for led-catcher, applied only once it is Ready -- the same
-# split, and the same reason, as homerun2-routes above: Cilium resolves a
-# route's backendRefs once.
+# The HTTPRoutes for the stack above, applied only once it is Ready.
 #
-# Adds led-catcher.homerun2-dev.sthings.lab, the fourth route of the stack.
+# Separate on purpose, and upstream keeps the `route` components separate for
+# the same reason: Cilium resolves a route's backendRefs once. A route applied
+# beside the Kustomization that later creates its Service serves HTTP 500 for
+# good, while every Kustomization reports Ready.
+#
+# Eight routes, one per component that serves something:
+#   omni-pitcher.homerun2-dev.sthings.lab
+#   core-catcher.homerun2-dev.sthings.lab
+#   scout.homerun2-dev.sthings.lab
+#   led-catcher.homerun2-dev.sthings.lab
+#   light-catcher.homerun2-dev.sthings.lab
+#   wled-mock.homerun2-dev.sthings.lab
+#   demo-pitcher.homerun2-dev.sthings.lab
+#   config-viewer.homerun2-dev.sthings.lab
+#
+# notification-catcher has none: it is a consumer, not a server.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: homerun2-led-catcher-routes
+  name: homerun2-routes
   namespace: flux-system
   labels:
     app.kubernetes.io/managed-by: flux
@@ -241,242 +204,36 @@ spec:
   interval: 1h
   retryInterval: 1m
   timeout: 5m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2-led-catcher
-    - name: cilium-gateway
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-led-catcher-routes
-  postBuild:
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
-      DOMAIN: homerun2-dev.sthings.lab
-      GATEWAY_NAME: homerun2-dev-sthings-gateway
-      GATEWAY_NAMESPACE: default
----
-# light-catcher and the wled-mock it drives.
-#
-# Same story as led-catcher above: profiles/base carries neither, and the only
-# profiles that did (platform-light-catcher and its tabletennis variant) select
-# the eso/ variant. stuttgart-things/flux#481 adds base-light-catcher, mirroring
-# platform-light-catcher with sops instead.
-#
-# wled-mock comes with it and takes no credentials at all -- it has neither an
-# eso/ nor a sops/ directory. light-catcher drives it until
-# HOMERUN2_LIGHT_CATCHER_WLED_ENDPOINT names a real strip.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-light-catcher
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 10m
   force: false
   prune: true
   suspend: false
   wait: true
   dependsOn:
     - name: homerun2
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-light-catcher
-  postBuild:
-    # For HOMERUN2_REDIS_PASSWORD_B64, the one bare variable the profile adds.
-    substituteFrom:
-      - kind: Secret
-        name: homerun2-secrets-subst
-        optional: false
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
----
-# The HTTPRoutes for light-catcher and wled-mock, applied once they are Ready.
-#
-# Brings the stack to six routes: omni-pitcher, core-catcher, scout,
-# led-catcher, light-catcher, wled-mock.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-light-catcher-routes
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2-light-catcher
+    # The Gateway these routes attach to. An HTTPRoute whose parentRef does not
+    # resolve sits at Accepted=False without explaining itself.
     - name: cilium-gateway
   sourceRef:
     kind: GitRepository
     name: flux-apps
-  path: ./apps/homerun2/profiles/base-light-catcher-routes
+  path: ./apps/homerun2/root
+  components:
+    - ../components/omni-pitcher/route
+    - ../components/core-catcher/route
+    - ../components/scout/route
+    - ../components/led-catcher/route
+    - ../components/light-catcher/route
+    - ../components/wled-mock/route
+    - ../components/demo-pitcher/route
+    - ../components/config-viewer/route
   postBuild:
     substitute:
       HOMERUN2_NAMESPACE: homerun2
-      DOMAIN: homerun2-dev.sthings.lab
-      GATEWAY_NAME: homerun2-dev-sthings-gateway
-      GATEWAY_NAMESPACE: default
----
-# demo-pitcher: a generator that pitches synthetic messages onto the stream, so
-# the catchers have something to react to without a real system producing
-# events. Useful precisely on a dev cluster.
-#
-# Third of the same shape as led-catcher and light-catcher above -- the profile
-# pair comes from stuttgart-things/flux#482. With it, every homerun2 component
-# that has a sops/ variant is reachable from profiles/base.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-demo-pitcher
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 10m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-demo-pitcher
-  postBuild:
-    substituteFrom:
-      - kind: Secret
-        name: homerun2-secrets-subst
-        optional: false
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
----
-# The HTTPRoute for demo-pitcher, applied once it is Ready.
-#
-# Brings the stack to seven routes: omni-pitcher, core-catcher, scout,
-# led-catcher, light-catcher, wled-mock, demo-pitcher.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-demo-pitcher-routes
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2-demo-pitcher
-    - name: cilium-gateway
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/base-demo-pitcher-routes
-  postBuild:
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
-      DOMAIN: homerun2-dev.sthings.lab
-      GATEWAY_NAME: homerun2-dev-sthings-gateway
-      GATEWAY_NAMESPACE: default
----
-# config-viewer: a read-only view of which homerun2 alert triggers what in which
-# catcher -- components, findings, a severity x system matrix and a dry run. It
-# reads the Deployments and ConfigMaps of its own namespace through the
-# Kubernetes API and never talks to Redis.
-#
-# NOTE THE PATH: profiles/platform-config-viewer, not a base-* one. Unlike
-# led-catcher, light-catcher and demo-pitcher, this component has no eso/ and no
-# sops/ directory at all -- it needs no credentials, so the profile that carries
-# it selects the component alone and is credential-agnostic despite its name.
-# There was nothing to add upstream.
-#
-# Its RBAC (ServiceAccount, Role, RoleBinding) comes from the published base;
-# nothing has to be supplied here.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-config-viewer
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 10m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    # For the namespace and for the workloads it introspects -- a viewer with
-    # nothing to read is not wrong, just empty.
-    - name: homerun2
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/platform-config-viewer
-  postBuild:
-    # No substituteFrom: this component reads no secret of any kind.
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
----
-# The HTTPRoute for config-viewer, applied once it is Ready -- same split and
-# same reason as every other *-routes Kustomization here.
-#
-# Brings the stack to eight homerun2 routes.
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: homerun2-config-viewer-routes
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  force: false
-  prune: true
-  suspend: false
-  wait: true
-  dependsOn:
-    - name: homerun2-config-viewer
-    - name: cilium-gateway
-  sourceRef:
-    kind: GitRepository
-    name: flux-apps
-  path: ./apps/homerun2/profiles/platform-config-viewer-routes
-  postBuild:
-    substitute:
-      HOMERUN2_NAMESPACE: homerun2
+
+      # The `route` components read the ORIGINAL names, not the INFRA_* ones
+      # the infra bundle uses. These three must match what infra-platform.yaml
+      # sets as INFRA_DOMAIN / INFRA_GATEWAY_NAME / INFRA_GATEWAY_NAMESPACE, or
+      # the routes attach to nothing.
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
