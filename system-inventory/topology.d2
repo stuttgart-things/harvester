@@ -79,6 +79,25 @@ sys_jump_server -> net_192_168_10_0_24: "1 host" {
   }
 }
 
+sys_matrix: "matrix" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  matrix: "matrix\n192.168.10.120\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_matrix -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
 sys_network: "network" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
