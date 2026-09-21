@@ -15,11 +15,11 @@ Context and the wider migration: [harvester#152][152]. Read
 [`platform/openbao/README.md`](platform/openbao/README.md) first — it is the
 run that creates the PKI everything here signs against.
 
-## Why these are not like `platform` or `xplane`
+## Why these are not like `platform`
 
 Same Terraform half, different issuer half.
 
-|  | `platform`, `xplane` | these |
+|  | `platform` | these |
 |---|---|---|
 | Auth mount (Terraform) | `<cluster>/openbao/` | `<cluster>/openbao/` — same |
 | ClusterIssuer | a Flux `Kustomization` in `<cluster>/infra.yaml` | the **`cert-manager-vault-pki-clusterbook` ApplicationSet** |

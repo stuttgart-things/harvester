@@ -240,7 +240,7 @@ matches two lines on the keyword alone and both need an inline pragma:
 ```
 
 Neither is a credential: the first is a JSON-patch literal that merely *names*
-`sops-age`, the second names the pull Secret. `clusters/xplane/config.yaml`
+`sops-age`, the second names the pull Secret. `clusters/platform/config.yaml`
 carries exactly these two pragmas at lines 28 and 54 -- someone hit this before
 and fixed it by hand, and the fix cannot be upstreamed into the renderer from
 here. Expect to redo it whenever `flux-bootstrap` regenerates the file.
@@ -269,7 +269,7 @@ this repo rather than a cluster pointed at a revision that does not carry it.
 
 The bridge was to point `spec.sync.ref` at the branch until #218 merged, then
 put it back. It is back: this cluster syncs `refs/heads/main`, and
-`config.yaml` matches `clusters/xplane/config.yaml` line for line apart from the
+`config.yaml` matches `clusters/platform/config.yaml` line for line apart from the
 path and the operator version.
 
 If you ever need that bridge again, the rule that makes it work is this: the
@@ -518,7 +518,7 @@ absent from the view, which reads as an empty panel rather than an error.
 ## What this cluster does not have yet
 
 - **No NFS.** `nfs-csi` is deliberately not selected. The lab's only NFS server
-  is `infra.sthings.lab` (`/data/nfs/sthings`), and that host is slated to be
+  was `infra.sthings.lab` (`/data/nfs/sthings`), and that host has been
   switched off (#152) with no successor in this repo. Add
   `- ../components/nfs-csi` plus `NFS_SERVER_FQDN` and `NFS_SHARE_PATH` if that
   changes.
