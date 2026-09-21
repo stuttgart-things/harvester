@@ -55,6 +55,9 @@ secret/crossplane-mgmt created
 dagger call -m github.com/stuttgart-things/dagger/sops encrypt   --age-key env:AGE_PUB   --plaintext-file ~/.kube/crossplane-mgmt   --file-extension yaml   export --path=/home/sthings/harvester/secrets/crossplane-mgmt.sthings.lab
 
 
+# NOTE: historical. The Vault this points at ran on infra, which is gone, and
+# clusters/infra/vault-infra-lab.enc.yaml went with it (git history has it).
+# Issuers now come from the OpenBao on platform -- see clusters/OPENBAO-CLUSTERBOOK.md.
 # CREATE — override Secret names / namespace / TTL
 dagger call -m github.com/stuttgart-things/blueprints/argocd create-vault-issuer \
   --cluster-name homerun2-dev \

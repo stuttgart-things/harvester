@@ -8,8 +8,8 @@
 #
 # infra-platform.yaml sets APPS_SOURCE: flux-infra, so on this cluster both
 # bundles currently resolve to the same object. flux-apps is here for the
-# hand-written per-app Kustomizations that come later; the same shape as
-# clusters/xplane/git-repos.yaml.
+# hand-written per-app Kustomizations that come later; the same
+# flux-infra/flux-apps pair as in clusters/platform/git-repos.yaml.
 #
 # flux-bootstrap does NOT create these. It renders the FluxInstance and its
 # secrets only -- without this file every Kustomization sits at

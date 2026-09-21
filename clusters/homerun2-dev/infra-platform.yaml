@@ -6,8 +6,8 @@
 # base in that repo; the substitutes below are read by all of them, which is why
 # the domain and the gateway name are written once here rather than per app.
 #
-# This is the bundle form, not the one clusters/{infra,xplane,platform}/infra.yaml
-# use. Those predate the bundle and spell out one Kustomization per component
+# This is the bundle form, not the one clusters/platform/infra.yaml
+# uses. That predates the bundle and spells out one Kustomization per component
 # with the bases' own variable names (CILIUM_GATEWAY_DOMAIN,
 # CERT_MANAGER_SELFSIGNED_DOMAIN, ...). The bundle maps a single INFRA_DOMAIN
 # onto all of them. Same upstream bases either way -- see
