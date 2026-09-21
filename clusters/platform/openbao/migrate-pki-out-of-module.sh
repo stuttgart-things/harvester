@@ -74,9 +74,11 @@ mv() {
   if ! terraform state list 2>/dev/null | grep -qxF "$1"; then
     bad "Quelle fehlt im State: $1 — Backup einspielen (siehe README)"
   fi
-  terraform state mv "$1" "$2" >/dev/null 2>&1 \
-    && ok "$1 -> $2" \
-    || bad "state mv fehlgeschlagen: $1"
+  if terraform state mv "$1" "$2" >/dev/null 2>&1; then
+    ok "$1 -> $2"
+  else
+    bad "state mv fehlgeschlagen: $1"
+  fi
 }
 mv 'module.openbao-base-setup.vault_mount.pki[0]'                            'vault_mount.pki'
 mv 'module.openbao-base-setup.vault_pki_secret_backend_config_urls.urls[0]'  'vault_pki_secret_backend_config_urls.urls'
