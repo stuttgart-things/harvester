@@ -177,13 +177,27 @@ Labels: `clusternetwork: mgmt`, `type: UntaggedNetwork`, `ready: true`.
 | Router IP | `192.168.10.1/24` |
 | DHCP | enabled, DHCP Server |
 | DHCP pool | `192.168.10.100` – `192.168.10.149` (start `.100`, max 50) |
-| Lease | 1440 min |
+| Lease | 43200 min (30 days) -- was 1440 until 2026-09-21 |
 
-Static lease (keep):
+The lab is often off for days. With a 24h lease the VMs came back on new
+addresses, and a single-node RKE2/k3s cluster does not survive that: etcd keeps
+the old peer URL (`homerun2-dev`, `.117` -> `.118`, harvester#238). Every node
+that runs Kubernetes gets a static lease; the long lease time covers the rest
+(Rancher pool nodes, fresh VMs). Build-time automation: stuttgart-things/clusterbook#211.
+
+Static leases (nvram `static_leases` / `static_leasenum`, DD-WRT renders them as
+`dhcp-host=...,infinite`):
 
 | MAC | Hostname | IP |
 |---|---|---|
 | `58:47:CA:7D:34:F0` | `harvester` | `192.168.10.110` |
+| `00:E0:4C:A2:63:AA` | `platform` | `192.168.10.134` |
+| `00:E0:4C:68:1F:05` | `sthings-air12` | `192.168.10.146` |
+| `BA:B3:3E:EA:51:F3` | `homerun2-dev` | `192.168.10.117` |
+| `BA:69:A8:A3:BA:28` | `crossplane-mgmt` | `192.168.10.108` |
+
+The VM MACs are pinned in the Harvester VM spec, so they survive reboots but
+not a rebuild -- a rebuilt VM needs its entry updated.
 
 > **VIP placement rule:** the static VIP must be **outside** `192.168.10.100–149`,
 > or the router can lease the VIP address to another client. Either use an IP below the

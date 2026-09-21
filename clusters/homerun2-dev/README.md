@@ -173,8 +173,11 @@ needs no password. The `sed` matters: RKE2 writes the file pointing at
 > back from a rebuild on `.125`, and `secrets/xplane.yaml` kept pointing at the
 > old address -- the cluster looked gone (`no route to host`) when only its
 > address had moved. If this VM is ever rebuilt or reboots onto a new lease,
-> redo this step and re-encrypt. A DHCP reservation on the router for the VM's
-> MAC would remove the problem; there is none today.
+> redo this step and re-encrypt. Since 2026-09-21 the router has a static lease
+> for this VM's MAC (`BA:B3:3E:EA:51:F3` -> `.117`, see `docs/install.md`), added
+> after exactly that happened: a reboot onto `.118` left rke2 looping on a
+> stale etcd peer URL (harvester#238). A rebuilt VM gets a new MAC -- update the
+> lease then.
 
 Then commit it encrypted, the way every other cluster's kubeconfig is stored:
 

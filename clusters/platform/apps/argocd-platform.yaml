@@ -56,8 +56,12 @@ spec:
       ARGO_CD_TEAMS_CHANNEL: "platform"
       CLUSTERBOOK_OPERATOR_NAMESPACE: clusterbook-system
       CLUSTERBOOK_OPERATOR_VERSION: v0.20.0
-      # clusterbook backend for the bundled ClusterbookProviderConfig/default
-      CLUSTERBOOK_API_URL: https://clusterbook.infra.sthings.lab
+      # clusterbook backend for the bundled ClusterbookProviderConfig/default.
+      # apps/clusterbook-operator-config.yaml applies the same object from the
+      # flux-system Kustomization, so both must name the same URL -- otherwise
+      # whichever reconciles last wins. This one still said clusterbook.infra
+      # (dead since infra went, and its wildcard cert expired 2026-09-01).
+      CLUSTERBOOK_API_URL: https://clusterbook.platform.sthings.lab
       CLUSTERBOOK_INSECURE_SKIP_VERIFY: "false"
     substituteFrom:
       - kind: Secret
