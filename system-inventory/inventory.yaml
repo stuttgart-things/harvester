@@ -74,6 +74,27 @@ hosts:
       Mini PC. Entry point into the lab network and launch point for
       Ansible and Dagger runs.
 
+  - system: matrix
+    hostname: matrix
+    ip: 192.168.10.120
+    kind: host
+    description: >-
+      Raspberry Pi 3B+ driving the homerun2 64x64 LED matrix (wlan0, MAC
+      b8:27:eb:d9:33:db, static lease). No Kubernetes: homerun2-led-catcher
+      runs under systemd, deployed by the sthings.container play. See
+      hosts/matrix/README.md.
+    services:
+      - name: LED matrix demo UI and /display API
+        fqdn: matrix.sthings.lab
+        description: >-
+          Caddy on 443 in front of homerun2-led-catcher (standalone mode),
+          certificate from the OpenBao PKI on platform (role sthings-lab).
+      - name: led-catcher (plain HTTP)
+        port: 8080
+        url: http://192.168.10.120:8080
+        description: >-
+          The catcher itself, also reachable without TLS on the LAN.
+
   - system: harvester
     hostname: harvester
     ip: 192.168.10.110

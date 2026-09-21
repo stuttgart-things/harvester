@@ -195,6 +195,7 @@ Static leases (nvram `static_leases` / `static_leasenum`, DD-WRT renders them as
 | `00:E0:4C:68:1F:05` | `sthings-air12` | `192.168.10.146` |
 | `BA:B3:3E:EA:51:F3` | `homerun2-dev` | `192.168.10.117` |
 | `BA:69:A8:A3:BA:28` | `crossplane-mgmt` | `192.168.10.108` |
+| `B8:27:EB:D9:33:DB` | `matrix` | `192.168.10.120` |
 
 The VM MACs are pinned in the Harvester VM spec, so they survive reboots but
 not a rebuild -- a rebuilt VM needs its entry updated.
@@ -213,6 +214,9 @@ expand-hosts
 local=/sthings.lab/
 address=/infra.sthings.lab/192.168.10.150
 ```
+
+Also set: `host-record=matrix.sthings.lab,192.168.10.120`, the led-catcher Pi
+([`hosts/matrix/`](../hosts/matrix/README.md)).
 
 Recommended addition for the VIP (gives it a stable name + PTR; use a name that does
 **not** collide with the `harvester` node lease):
