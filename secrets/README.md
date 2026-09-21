@@ -9,11 +9,11 @@ key rotates access to every credential the pipeline uses at once.
 (`192.168.10.117:6443`, v1.35.3+rke2r1) -- see `clusters/homerun2-dev/README.md`
 for the whole build.
 
-That address is a DHCP lease out of `192.168.10.100-.149`, not the cluster's
-`192.168.10.171` -- the latter is the Cilium LB VIP reserved in Clusterbook and
-answers for Services, never for the API server. Rebuild the VM onto a new lease
-and this file points at nothing. Redo the fetch and re-encrypt when that
-happens.
+That address is a static DHCP lease on the router (keyed on the VM's MAC, see
+`docs/install.md`), not the cluster's `192.168.10.171` -- the latter is the
+Cilium LB VIP reserved in Clusterbook and answers for Services, never for the
+API server. A rebuilt VM gets a new MAC: update the lease, or this file points
+at nothing. Redo the fetch and re-encrypt when the address changes.
 
 That is not hypothetical. It is how the predecessor ended: `xplane.yaml` held
 the kubeconfig for the `bootstrap-xplane` VM at `192.168.10.124`, the VM came
