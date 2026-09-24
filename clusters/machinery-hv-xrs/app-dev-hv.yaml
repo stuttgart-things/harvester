@@ -17,7 +17,10 @@
 #                            ApplicationSet; with the profile set, monitoring
 #                            would never appear and nothing would say so
 #
-# BLOCKERS before listing this: every step in
+# BLOCKER before listing this: stuttgart-things/crossplane-configurations#503 --
+# a harvester ClusterStack's VM boots with no cloud-init users and
+# ssh_pwauth false, so the password-based ansible stages cannot log in.
+# Also before listing this: every step in
 # ../machinery-hv-fleet-state/README.md, plus the two open points in
 # ../machinery-hv/README.md (Harvester forwarding in ClusterStack, Argo CD
 # registration preconditions).
@@ -45,7 +48,10 @@ spec:
     - security
     - storage-openebs
     - homerun2
-    - tabletennis
+    # NOT tabletennis in the first order: it pulls schmetterpause, whose -backup
+    # entry reads the shared object-store-backup -- not in
+    # cluster-vault-sthings-lab and not seeded, and the render fails on it
+    # (README "Log" step 10). Add it back with that entry.
   rancher:
     environmentConfig: rancher-join-sthings-lab
     argocd:
