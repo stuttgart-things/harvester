@@ -27,14 +27,20 @@ data:
       - vault_instances+-["https://openbao.platform.sthings.lab"]
   # Harvester placement. images maps spec.os -> {imageId, storageClassName}.
   # Each image has its OWN Longhorn backing-image class — a wrong class yields a blank disk.
+  #
+  # Images are built under a versioned name (<name>-<YY.MDD.HHMM>) and are never
+  # replaced in place, because Harvester will not delete an image while a VM boots
+  # from its backing class. So a rebuild does NOT take effect until the imageId +
+  # storageClassName below are moved to it, and reverting this file is a complete
+  # rollback. The build job prints both values in its summary; see packer/README.md.
   harvester:
     images:
       ubuntu24:                                                  # alias for u26-dev
         imageId: default/u26-dev
         storageClassName: lh-7f7c570a-a326-4232-b291-3f2a946aeadf
-      sthings-u26:
-        imageId: default/sthings-u26
-        storageClassName: lh-68e4c918-0059-48bf-acaf-0de0ebe1eb65
+      sthings-u26:                                               # alias -> newest build
+        imageId: default/sthings-u26-26.924.1008
+        storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
       sthings-u26-k3s:
         imageId: default/sthings-u26-k3s
         storageClassName: lh-103a0ea1-2403-4370-9c01-f5bd45077375
