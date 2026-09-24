@@ -50,6 +50,11 @@ spec:
     # dashboards
     - ../components/headlamp
     - ../components/flux-web
+    # dns -- the lab zone to the router, everything else as before, and BOTH
+    # served stale while the uplink is down (harvester#252, flux#515). Selected
+    # on a cluster nobody depends on yet: adding it rolls CoreDNS, about a
+    # minute without cluster DNS on a single node.
+    - ../components/coredns-lab-zone
   postBuild:
     substitute:
       FLUX_SOURCE: flux-infra
@@ -68,6 +73,14 @@ spec:
       # map[string]string.
       CILIUM_LB_IP_START: "192.168.10.178"
       CILIUM_LB_IP_STOP: "192.168.10.178"
+
+      # ---- coredns-lab-zone -----------------------------------------------
+      # sthings.lab is answered by the DD-WRT router's dnsmasq -- the only
+      # resolver that knows the lab and Clusterbook's wildcards. No trailing
+      # dot; the base adds it. COREDNS_SERVE_STALE stays at the component
+      # default (24h).
+      COREDNS_ZONE: sthings.lab
+      COREDNS_ZONE_SERVER: "192.168.10.1"
 
       # ---- cert-manager / the OpenBao PKI issuer --------------------------
       CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki

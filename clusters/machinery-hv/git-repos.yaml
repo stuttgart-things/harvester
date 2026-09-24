@@ -10,6 +10,9 @@
 # here. Same reason clusters/labda/vsphere/machinery in stuttgart-things pins
 # one tag for all three bundles.
 #
+# v1.80.1 (2026-09-24) differs from v1.80.0 only in the coredns-lab-zone
+# component (serve_stale, flux#515) -- the Crossplane profile is unchanged.
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -23,7 +26,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.0
+    tag: v1.80.1
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -34,5 +37,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.0
+    tag: v1.80.1
   url: https://github.com/stuttgart-things/flux.git
