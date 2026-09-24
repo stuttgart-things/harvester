@@ -74,15 +74,20 @@ jobs:
   validate:
     name: Validate packer config (all images)
     needs: detect-targets
-    # Not ubuntu-latest: `packer validate` resolves source_checksum over the
-    # network, and the dev var-files point it at the lab artifact store, which a
-    # GitHub-hosted runner cannot resolve. Validating where the images are built
-    # is also the more honest place for it. (packer is preinstalled on kvm, so
-    # no setup-packer step — same as the build jobs below.)
-    runs-on: kvm
+    # Back on a GitHub-hosted runner. It briefly ran on kvm, because
+    # `packer validate` RESOLVES source_checksum over the network and some
+    # var-files point it at the lab artifact store, which this runner cannot
+    # reach. But putting the whole job on kvm made every PR — including
+    # docs-only ones — queue behind image builds on the single self-hosted
+    # runner, and made validation fail outright whenever the lab was down.
+    # The step below skips only the unreachable lookup instead.
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Setup Packer
+        uses: hashicorp/setup-packer@main
 
       - name: Packer init
         working-directory: packer/_build
@@ -95,7 +100,24 @@ jobs:
           for vf in ../golden/*/build.pkrvars.hcl ../dev/*/build.pkrvars.hcl; do
             [ -e "$vf" ] || continue
             echo "::group::packer validate $vf"
-            if packer validate -var-file="$vf" .; then
+
+            # A source_checksum on a lab host cannot be fetched from here, and
+            # `packer validate` fetches it. Override it to none for this check
+            # (a -var beats the -var-file) and say so, rather than either
+            # failing on DNS or pretending the checksum was verified. The real
+            # build runs on kvm and does verify it — a broken checksum URL
+            # fails there, loudly.
+            #
+            # Keyed on the URL, not on the tier: golden/sthings-u26-k3s also
+            # sources from the lab, so a golden/dev split would be wrong.
+            extra=()
+            if grep -qE '^[[:space:]]*source_checksum[^#]*sthings\.lab' "$vf"; then
+              extra=(-var 'source_checksum=none')
+              echo "NOTE: source_checksum points at the lab artifact store."
+              echo "      Not resolved here; the build on kvm verifies it."
+            fi
+
+            if packer validate "${extra[@]}" -var-file="$vf" .; then
               echo "OK: $vf"
             else
               echo "::error::packer validate failed for $vf"
