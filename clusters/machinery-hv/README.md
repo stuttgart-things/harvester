@@ -595,3 +595,19 @@ Four findings, in the order the render hit them:
    homerun2-dev and machinery-hv hit. `spec.ansible.extraVars` is appended
    AFTER it, so `manage_filesystem+-false` there is the likely override --
    unverified which one AnsibleRun lets win.
+
+### 11. Back on main (2026-09-24)
+
+#249 merged as f219d7a; `main` and `feat/machinery-hv-scaffold` were checked
+identical for every machinery-hv path first
+(`git diff --stat origin/main origin/feat/machinery-hv-scaffold -- clusters/machinery-hv* …` -> empty).
+`config.yaml`'s `sync.ref` to `refs/heads/main` in its own PR, merged, THEN the
+live instance -- the other order is undone by the next reconcile, because this
+file is inside the synced path:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n flux-system patch fluxinstance flux --type=merge \
+  -p '{"spec":{"sync":{"ref":"refs/heads/main"}}}'
+kubectl -n flux-system get gitrepository flux-system -o jsonpath='{.spec.ref}{"  "}{.status.artifact.revision}'
+```
