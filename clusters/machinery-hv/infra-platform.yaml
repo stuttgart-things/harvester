@@ -61,12 +61,13 @@ spec:
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
 
       # ---- cilium-lb ------------------------------------------------------
-      # NOT RESERVED YET. Reserve in Clusterbook first (README step 1, with an
-      # explicit `ip`), then write the address here. The placeholder is not a
-      # valid address on purpose: the pool is rejected and cilium-lb fails
-      # loudly, instead of announcing an address someone else holds.
-      CILIUM_LB_IP_START: "set-after-clusterbook-reservation"
-      CILIUM_LB_IP_STOP: "set-after-clusterbook-reservation"
+      # Reserved in Clusterbook on 2026-09-24 by auto-assignment (README step
+      # 1), which also wrote *.machinery-hv.sthings.lab. Written out here by
+      # hand because nothing reads the reservation back for a Flux-built
+      # cluster -- see homerun2-dev's file. Quoted: substitute is
+      # map[string]string.
+      CILIUM_LB_IP_START: "192.168.10.178"
+      CILIUM_LB_IP_STOP: "192.168.10.178"
 
       # ---- cert-manager / the OpenBao PKI issuer --------------------------
       CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki

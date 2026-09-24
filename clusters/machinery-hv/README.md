@@ -13,7 +13,7 @@ has open points listed at the end.
 | | |
 |---|---|
 | Cluster / VM name | `machinery-hv` |
-| LB address | **not reserved yet** -- step 1 |
+| LB address | `192.168.10.178`, reserved in Clusterbook (`178:ASSIGNED:DNS:machinery-hv`) -- the Cilium VIP, not the node address |
 | Domain | `machinery-hv.sthings.lab` |
 | Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
@@ -61,9 +61,13 @@ them (step 4).
 Steps 1-6 are the [`homerun2-dev` runbook](../homerun2-dev/README.md) with the
 name swapped; read its warnings there, they all apply.
 
-1. **Reserve the LB address** in Clusterbook, with an explicit `ip`, then write
-   it into `CILIUM_LB_IP_START` / `_STOP` in `infra-platform.yaml`. Check the
-   ledger first -- `.173` and `.178` still have stale DNS records.
+1. **Reserve the LB address** in Clusterbook -- done 2026-09-24, `.178`. By
+   auto-assignment (`/reserve` without `ip`), as Clusterbook intends: the stale
+   `ferdinand` (`.173`) and `martinwolf` (`.178`) records the homerun2-dev
+   runbook warns about were already gone -- neither name resolved, even under a
+   wildcard, and neither address had a PTR, while the three live clusters
+   resolved correctly. Verified afterwards: ledger `178:ASSIGNED:DNS:machinery-hv`,
+   `headlamp.machinery-hv.sthings.lab` -> `192.168.10.178`.
 2. **Bake** with `vms/machinery-hv.params.enc.yaml` (the params plus the
    cloud-init credentials; `ANSIBLE_USER` / `ANSIBLE_PASSWORD` extracted from
    it, as in the homerun2-dev runbook): `bake-harvester --vm-name machinery-hv
