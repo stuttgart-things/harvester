@@ -523,3 +523,75 @@ kubectl run dnsprobe2 --rm -i --restart=Never --image=busybox:1.36 -- sh -c 'nsl
 kubectl -n flux-system get kustomizations        # 20/20 Ready once the new tag had rippled through
 kubectl get pkg                                  # 51/51 Healthy -- the profile did not change
 ```
+
+### 10. `homerun2/_git-pat`, and `crossplane render` of app-dev-hv (2026-09-24)
+
+The shared GitHub token, written straight to OpenBao rather than through
+Terraform, so it does not also sit in a state file. Key `githubToken` -- the
+property the homerun2 chart reads from that entry (`vaultProperty: githubToken`
+in stuttgart-things/argocd `apps/homerun2/install/templates/secrets.yaml`):
+
+```bash
+export VAULT_TOKEN=$(tr -d '[:space:]' < ~/.vaulttoken)
+python3 -c 'import json,os; print(json.dumps({"data":{"githubToken":open(os.path.expanduser("~/.githubtoken")).read().strip()}}))' \
+  | curl -sk -H "X-Vault-Token: $VAULT_TOKEN" -X POST --data @- \
+      https://openbao.platform.sthings.lab/v1/homerun2/data/_git-pat      # 200, version 1
+# checked: key githubToken, 40 chars ghp_…, and api.github.com/user answers 200 with it
+```
+
+Render, against what is INSTALLED on this cluster -- the live Compositions,
+the live Function packages, the live EnvironmentConfigs and AppSecretProfiles
+as extra resources -- not against a checkout:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl get composition cluster -o yaml          > composition.yaml   # xplane-cluster 0.20.0
+kubectl get functions.pkg.crossplane.io -o yaml  # -> functions.yaml, annotated
+#   render.crossplane.io/runtime-docker-pull-policy: IfNotPresent, images pre-pulled:
+#   crossplane render's own pull ran into its deadline on this uplink
+kubectl get environmentconfigs,appsecretprofiles -o yaml > extra.yaml
+crossplane render clusters/machinery-hv-xrs/app-dev-hv.yaml composition.yaml functions.yaml \
+  --extra-resources extra.yaml --include-function-results
+```
+
+Four findings, in the order the render hit them:
+
+1. **The order does not render as the mapping stands.** The `tabletennis`
+   profile pulls schmetterpause, whose `-backup` entry reads the shared
+   `object-store-backup`:
+   `shared object-store-backup has no vault.shared entry in the EnvironmentConfig for environment 'sthings-lab'`.
+   It needs a `vault.shared.object-store-backup` entry in
+   `cluster-vault-sthings-lab` AND a seeded `schmetterpause/_backup` (S3
+   credentials for CloudNativePG backups -- the MinIO on platform is the
+   candidate). Added for the render only below, not on the cluster.
+2. **The environment reaches the VM** -- the question this render was for. The
+   VM is emitted once the RancherCluster publishes `status.nodeCommandSecret`
+   (given as an observed resource), and
+   `HarvesterVM.spec.environmentConfig: sthings-lab` -- straight from
+   `ClusterStack.spec.environmentConfig` (xplane-cluster `logic.k`, `vmChild`).
+   Rendered one level further through the live `harvester-vm` Composition:
+   namespace `vms`, providerConfig `harvester`, image
+   `default/sthings-u26-26.924.1008`, class `lh-fdd94630-…`, network
+   `default/vms` -- all from `harvestervm-sthings-lab`.
+3. **BLOCKER -- ansible cannot log in.** Rendered one level further again,
+   through the `cloud-init` Composition, the VM boots with
+
+   ```
+   #cloud-config
+   hostname: app-dev-hv
+   ssh_pwauth: false
+   disable_root: true
+   ```
+
+   -- no users, no `chpasswd`, password SSH OFF. The ansible stages log in with
+   `tekton-ci/ansible-credentials`, a user and a PASSWORD. The ClusterStack
+   passes only `vmName`/`hostname` into `HarvesterVM.spec.cloudInit`, the
+   HarvesterVM XRD defaults `sshPasswordAuth: false`, and neither the order
+   nor the EnvironmentConfig can set users or password auth. The bake path
+   works because blueprints' `harvester-vm` module sets the cloud-init login
+   itself. An upstream change in xplane-cluster / harvester-vm.
+4. **`manage_filesystem+-true`** is hardcoded into the base-OS stage. On a
+   single-root-disk VM that is the `'lvm_disk' is undefined` failure
+   homerun2-dev and machinery-hv hit. `spec.ansible.extraVars` is appended
+   AFTER it, so `manage_filesystem+-false` there is the likely override --
+   unverified which one AnsibleRun lets win.
