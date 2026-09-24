@@ -1,0 +1,41 @@
+---
+# The STABLE XRs this cluster owns -- the clusters it builds.
+#
+# `prune: false`, AND IT IS NOT A STYLE CHOICE. Pruning an XR tears down the
+# cluster it stands for -- VM, OpenBao entries, Rancher and Argo CD
+# registration -- because a file was moved, renamed or dropped in a bad rebase.
+# Deleting is a deliberate two-step; ../machinery-hv-xrs/README.md spells it
+# out.
+#
+# This is the opposite of crossplane-mgmt today, whose `xrs/` is synced by an
+# Argo CD Application with prune ON (clusters/crossplane-mgmt/README.md).
+#
+# `wait: false`: a ClusterStack takes tens of minutes and reports its own
+# readiness. Flux's job is to apply the order, not to sit on it.
+#
+# `dependsOn: machinery-hv-fleet-state`: an order resolves provider configs,
+# EnvironmentConfigs and AppSecretProfiles at render time. Applied before those
+# exist it does not wait -- it renders wrong or fails, and a ClusterStack that
+# fails halfway has already built a VM.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: machinery-hv-xrs
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: cicd
+spec:
+  interval: 1h
+  retryInterval: 5m
+  timeout: 5m
+  force: false
+  prune: false
+  suspend: false
+  wait: false
+  dependsOn:
+    - name: machinery-hv-fleet-state
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/machinery-hv-xrs

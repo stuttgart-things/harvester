@@ -1,0 +1,41 @@
+---
+# What this cluster IS, as opposed to what it RUNS: the provider configs, the
+# EnvironmentConfigs and the credentials that make it the cluster this lab
+# builds clusters from. Modelled on machinery-fleet-state in stuttgart-things
+# (clusters/labda/vsphere/machinery/fleet-state.yaml), which explains each
+# choice below at length.
+#
+# THE CONTENT LIVES BESIDE THIS DIRECTORY, in ../machinery-hv-fleet-state. This
+# directory has no kustomization.yaml, so flux-system applies every YAML under
+# it recursively -- a subdirectory would be applied twice, once without the
+# dependsOn below.
+#
+# dependsOn cicd-platform: the XRDs and provider CRDs these objects are
+# instances of come from there, and an apply before they exist fails rather
+# than waits.
+#
+# prune: true -- these are cluster facts; one dropped from git should leave the
+# cluster. The XR Kustomization (xrs.yaml) is the one that must not prune.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: machinery-hv-fleet-state
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: cicd
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  dependsOn:
+    - name: cicd-platform
+  sourceRef:
+    kind: GitRepository
+    # This repository, not flux-infra: the content is this cluster's own state.
+    name: flux-system
+  path: ./clusters/machinery-hv-fleet-state

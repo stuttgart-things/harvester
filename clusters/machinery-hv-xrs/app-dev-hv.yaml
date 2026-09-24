@@ -1,0 +1,68 @@
+---
+# DRAFT -- NOT LISTED in kustomization.yaml. The Harvester counterpart of
+# stuttgart-things clusters/labda/vsphere/machinery-xrs/app-dev.yaml; read that
+# file's comments first, this one only records what differs.
+#
+# DIFFERS FROM LabDA:
+#   provider: harvester      HarvesterVM instead of NativeProxmoxVM
+#   environmentConfig        sthings-lab -- selects cluster-vault-sthings-lab
+#                            and (to verify) harvestervm-sthings-lab
+#   vaultAddr                the OpenBao on platform, not the LabUL infra Vault
+#   reservation.networkKey   192.168.10, this lab's Clusterbook network
+#   size: medium             `large` (8 CPU / 16 GiB) fits on Harvester but
+#                            would be its biggest guest; start smaller
+#   no NFS labels            the lab has had no NFS server since infra.sthings.lab
+#                            was switched off (harvester#152)
+#   no observability         platform's Argo CD has no observability-platform
+#                            ApplicationSet; with the profile set, monitoring
+#                            would never appear and nothing would say so
+#
+# BLOCKERS before listing this: every step in
+# ../machinery-hv-fleet-state/README.md, plus the two open points in
+# ../machinery-hv/README.md (Harvester forwarding in ClusterStack, Argo CD
+# registration preconditions).
+apiVersion: config.stuttgart-things.com/v1alpha1
+kind: ClusterStack
+metadata:
+  name: app-dev-hv
+  namespace: default
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  provider: harvester
+  distribution: rancher-k3s
+  size: medium
+  environmentConfig: sthings-lab
+  kubeconfig:
+    vaultSecretName: vault-kubeconfig-writer  # pragma: allowlist secret
+    lifecycle:
+      vaultAddr: https://openbao.platform.sthings.lab
+  profiles:
+    - network
+    - security
+    - storage-openebs
+    - homerun2
+    - tabletennis
+  rancher:
+    environmentConfig: rancher-join-sthings-lab
+    argocd:
+      register: true
+      reservation:
+        enabled: true
+        networkKey: '192.168.10'
+      labels:
+        env: sthings-lab
+  platformEnabled: true
+  platform:
+    fluxInit:
+      enabled: false
+    clusterSecrets:
+      enabled: true
+    vaultIssuer:
+      enabled: true
+      authProvider: provider-vault
+      vaultProviderConfigRef: vault
+      vaultAddr: https://openbao.platform.sthings.lab
+      pkiRole: sthings-lab
+      caSourceSecret: openbao-pki-source-ca  # pragma: allowlist secret

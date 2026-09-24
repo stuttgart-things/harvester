@@ -1,0 +1,65 @@
+---
+# The delivery layer of this cluster -- stuttgart-things/flux → ./cicd/platform.
+# This file is why the cluster exists: `crossplane` with CROSSPLANE_PROFILE
+# machinery installs the package set generated from the KCL catalog, the same
+# one clusters/labda/vsphere/machinery in stuttgart-things runs.
+#
+# NEVER POINT THIS AT crossplane-mgmt. That cluster carries the older package
+# family under short CR names (`namespace`, `volume-claim`, upbound-registry
+# Functions); this profile applies the same sources under derived names, and a
+# second CR for one source is a duplicate lock node -- every package on the
+# cluster goes Healthy=False. The flux profile README says the same: fresh
+# cluster, then the profile.
+#
+# WHAT IS NOT SELECTED, AND WHY:
+#
+#   crossplane-capabilities -- the `harvester-demo` set cannot be configured
+#     for this lab at flux v1.80.0. Its EnvironmentConfig reads
+#     CROSSPLANE_CAPABILITY_HARVESTER_* variables, but the component's child
+#     Kustomization does not pass them through, so every value falls back to
+#     its default: providerConfigRef in-cluster (VMs built on THIS cluster, not
+#     on Harvester) and image default/image-ubuntu (does not exist here). And
+#     its ansible-run release needs sops-git, which needs an ESO Vault store.
+#     The placement and the ansible defaults are written out in
+#     ../machinery-hv-fleet-state instead, until the component can carry them
+#     (stuttgart-things/flux#514).
+#
+#   machinery / claim-machinery-api / komoplane -- the API and the dashboards
+#     already run on platform; add komoplane here if a local view is wanted.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cicd-platform
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: cicd
+spec:
+  interval: 1h
+  retryInterval: 1m
+  # 20m: the Configurations are pulled and dependency-resolved after their CRs
+  # exist, and ~20 packages on a cold cluster take minutes.
+  timeout: 20m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./cicd/platform/root
+  components:
+    - ../components/crossplane
+    # The PipelineRuns every ClusterStack's ansible stages execute in, in
+    # namespace tekton-ci.
+    - ../components/tekton
+  postBuild:
+    substitute:
+      APPS_SOURCE: flux-infra
+
+      # Shared with infra-platform.yaml -- keep them identical.
+      INFRA_DOMAIN: machinery-hv.sthings.lab
+      INFRA_GATEWAY_NAME: machinery-hv-sthings-gateway
+      INFRA_GATEWAY_NAMESPACE: default
+
+      CROSSPLANE_PROFILE: machinery

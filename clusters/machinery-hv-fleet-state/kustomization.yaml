@@ -1,0 +1,23 @@
+---
+# The fleet state of `machinery-hv`, applied by the `machinery-hv-fleet-state`
+# Kustomization in ../machinery-hv/fleet-state.yaml. See README.md beside this
+# file for what is here, what is not yet, and the order.
+#
+# ONLY WHAT IS SAFE TO APPLY IS LISTED. The prune is on, so a file dropped from
+# this list is deleted from the cluster -- and the OpenBao-side objects below
+# are not safe until OpenBao has the AppRoles and policies they name: a
+# provider config with a role that does not exist is accepted, and a policy
+# mapping naming a missing policy grants nothing, silently.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - environmentconfigs.yaml
+  - providerconfigs.yaml
+  - openbao-pki-source-ca.yaml
+  # --- not yet: each needs a step from README.md first ----------------------
+  # - secrets/ansible-credentials.enc.yaml    (step A)
+  # - secrets/harvester-kubeconfig.enc.yaml   (step A)
+  # - secrets/rancher-mgmt-kubeconfig.enc.yaml (step A)
+  # - vault-provider-configs.yaml              (step B + C)
+  # - cluster-vault-sthings-lab.yaml           (step B)
+  # - appsecretprofiles.yaml                   (step D)

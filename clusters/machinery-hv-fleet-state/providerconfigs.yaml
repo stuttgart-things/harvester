@@ -1,0 +1,38 @@
+---
+# provider-kubernetes configs for the two OTHER clusters this one drives. The
+# `in-cluster` one comes from the flux machinery profile.
+#
+# Same names and Secret shapes as on crossplane-mgmt, so an order written for
+# either cluster names the same configs. Both Secrets are SOPS-encrypted in
+# ./secrets/ and decrypted by Flux; until they exist these configs are inert,
+# and the first XR that uses one fails with the Secret named in the error.
+---
+# The Harvester cluster: HarvesterVM composes KubeVirt VirtualMachines, PVCs and
+# cloud-init Secrets through this. Named by providerConfigRef in the
+# harvestervm-sthings-lab EnvironmentConfig.
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: ClusterProviderConfig
+metadata:
+  name: harvester
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: harvester-kubeconfig
+      key: kubeconfig
+---
+# The Rancher management cluster (`platform`): the rancher-cluster child
+# creates the provisioning.cattle.io Cluster there and reads the registration
+# command back.
+apiVersion: kubernetes.m.crossplane.io/v1alpha1
+kind: ClusterProviderConfig
+metadata:
+  name: rancher-mgmt
+spec:
+  credentials:
+    source: Secret
+    secretRef:
+      namespace: crossplane-system
+      name: rancher-mgmt-kubeconfig
+      key: kubeconfig

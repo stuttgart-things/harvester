@@ -1,8 +1,10 @@
 # HARVESTER VMS
 
 VM parameter sets for `blueprints/vm`, and the two calls that turn one into a
-running RKE2 cluster. `homerun2-dev` is the only VM described here; it replaced
-`bootstrap-xplane`, which was retired along with its files.
+running RKE2 cluster. `homerun2-dev` is the VM described in detail here; it
+replaced `bootstrap-xplane`, which was retired along with its files.
+`machinery-hv` follows the same calls with its own files -- see the section at
+the end.
 
 **The full runbook -- Clusterbook reservation, these bakes, the Flux bootstrap
 and the infra components -- lives in
@@ -299,3 +301,22 @@ working-looking cluster with the wrong CNI. The air-gapped image archive was the
 slow step, roughly half of the 21 minutes.
 
 </details>
+
+## machinery-hv
+
+The Crossplane management cluster for this lab. Same two calls as above with
+the name swapped; the whole build is in
+[`clusters/machinery-hv/README.md`](../clusters/machinery-hv/README.md).
+
+| File | |
+|---|---|
+| `machinery-hv.params.yaml` | 8 vCPU / 16Gi / 80Gi on `sthings-u26-26.924.1008`. No credentials. |
+| `machinery-hv.params.enc.yaml` | **not created yet** -- the same keys plus the cloud-init credentials, SOPS/AGE encrypted. Required before the first bake. |
+| `machinery-hv.rke2.ansible-vars.yaml` | the RKE2 extra vars, identical to homerun2-dev's apart from `cluster_name`. |
+
+The parameter string for `bake-harvester`, kept here because `vms-lint.yml`
+checks it against the vars file:
+
+```bash
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+```
