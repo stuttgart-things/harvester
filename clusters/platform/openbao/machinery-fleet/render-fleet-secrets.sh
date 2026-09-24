@@ -9,13 +9,15 @@
 #           two kubeconfigs of the clusters machinery-hv drives
 #   step C  the AppRoles from `terraform output -json approles` in this
 #           directory -- run `terraform apply` first
+#   step K  the kubeconfig-reader AppRole, in the two shapes the
+#           provider-kubeconfig-vault chart reads (same terraform output)
 #
 # Re-run after rotating an AppRole (taint its secret_id, apply) and commit the
 # changed files. Idempotent otherwise: sops re-encrypts with a fresh data key,
 # so every file changes on every run -- commit only what you meant to rotate.
 #
 #   cd clusters/platform/openbao/machinery-fleet
-#   ./render-fleet-secrets.sh            # both steps
+#   ./render-fleet-secrets.sh            # all steps
 #   ./render-fleet-secrets.sh A          # one step
 set -euo pipefail
 
@@ -24,7 +26,7 @@ repo=$(cd "$here/../../../.." && pwd)
 out="$repo/clusters/machinery-hv-fleet-state/secrets"
 recipient="age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm" # pragma: allowlist secret -- the PUBLIC age recipient
 openbao="https://openbao.platform.sthings.lab"
-steps="${1:-AC}"
+steps="${1:-ACK}"
 
 mkdir -p "$out"
 
@@ -102,4 +104,17 @@ if [[ "$steps" == *C* ]]; then
         | enc vault.enc.yaml
     fi
   done
+fi
+
+if [[ "$steps" == *K* ]]; then
+  echo "step K: provider-kubeconfig reader"
+  roles=$(cd "$here" && terraform output -json approles)
+  READER_SECRET_ID=$(python3 -c 'import json,sys; print(json.loads(sys.argv[1])["machinery-hv-kubeconfig-reader"]["secret_id"])' "$roles")
+  # Helm values, not a credential shape: roleIds is a MAP keyed on the
+  # ClusterProviderConfig name, because Helm replaces lists instead of merging
+  # them (see the chart's clusterproviderconfig.yaml).
+  READER_VALUES=$(python3 -c 'import json,sys,yaml; print(yaml.safe_dump({"roleIds":{"vault-kubeconfigs":json.loads(sys.argv[1])["machinery-hv-kubeconfig-reader"]["role_id"]}}))' "$roles")
+  export READER_SECRET_ID READER_VALUES
+  secret crossplane-system vault-approle secret-id=READER_SECRET_ID | enc vault-approle-reader.enc.yaml
+  secret crossplane-system provider-kubeconfig-roleids values.yaml=READER_VALUES | enc provider-kubeconfig-roleids.enc.yaml
 fi
