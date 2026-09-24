@@ -401,3 +401,46 @@ LabDA the fleet state brings them (`provider-kubeconfig-vault` chart,
 two DRCs exist, provider-kubeconfig (every RemoteCluster, so every
 ClusterStack) and provider-minio do not run. See
 [the fleet-state README](../machinery-hv-fleet-state/README.md#provider-kubeconfig-watch-this-first).
+
+### 7. Fleet state A-D (2026-09-24)
+
+OpenBao side -- a Terraform root of its own, with every AppRole tested by a real
+login; details and the permission table in
+[`../platform/openbao/machinery-fleet/README.md`](../platform/openbao/machinery-fleet/README.md):
+
+```bash
+cd clusters/platform/openbao/machinery-fleet
+export VAULT_TOKEN=$(tr -d '[:space:]' < ~/.vaulttoken)
+terraform init -plugin-dir=../../../machinery-hv/openbao/.terraform/providers   # registry unreachable
+terraform plan -out=tfplan        # 19 to add, 0 to change, 0 to destroy
+terraform apply tfplan
+./render-fleet-secrets.sh         # 10 Secrets, encrypted into machinery-hv-fleet-state/secrets
+```
+
+Cluster side, after the push:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n flux-system get kustomization machinery-hv-fleet-state      # True @ 69e2837
+kubectl get appsecretprofiles                                          # 4 Ready
+kubectl get clusterproviderconfigs.vault.m.upbound.io                  # vault, vault-cluster-secrets, vault-kubeconfig-writer
+kubectl get environmentconfigs                                         # + cluster-vault-sthings-lab
+```
+
+The fleet-state Kustomization needed an explicit `spec.decryption` -- the
+FluxInstance's patch reaches `flux-system` only (`kubectl get kustomization
+<name> -o jsonpath='{.spec.decryption}'` was empty on every child).
+
+The two provider-kubernetes configs, proven against the RIGHT cluster rather
+than just "Ready": an Observe-only Object per config, reading `kube-system`,
+compared by UID, then deleted (Observe never touches the target):
+
+```bash
+# Object probe-<pc>, managementPolicies [Observe], forProvider.manifest: Namespace kube-system
+kubectl get objects.kubernetes.m.crossplane.io -n default probe-harvester \
+  -o jsonpath='{.status.atProvider.manifest.metadata.uid}'    # 6cd45ed0-… = harvester's kube-system
+# probe-rancher-mgmt                                          # 8acdc777-… = platform's kube-system
+kubectl delete objects.kubernetes.m.crossplane.io -n default probe-harvester probe-rancher-mgmt
+```
+
+Open: `homerun2/_git-pat` is not seeded.
