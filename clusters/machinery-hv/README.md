@@ -66,9 +66,10 @@ name swapped; read its warnings there, they all apply.
 2. **Encrypted params, dry-run render, bake** -- see
    [Log: 2](#2-vm-parameters-dry-run-render-bake-2026-09-24).
 3. **Fetch the kubeconfig** -- done 2026-09-24, see
-   [Log: 3](#3-kubeconfig-off-the-node-2026-09-24). **Open:** the static DHCP
-   lease for `be:64:f3:26:1a:60` -> `192.168.10.105` on the router --
-   `homerun2-dev` lost its etcd peer URL to a lease change (harvester#238).
+   [Log: 3](#3-kubeconfig-off-the-node-2026-09-24), including the static DHCP
+   lease `be:64:f3:26:1a:60` -> `192.168.10.105` (set on the router by hand,
+   2026-09-24 -- `homerun2-dev` lost its etcd peer URL to a lease change,
+   harvester#238).
 4. **Bootstrap Flux** with `--destination-path clusters/machinery-hv` and a
    `--branch-name`; add the two `detect-secrets` pragmas to the committed
    `config.yaml`.
@@ -251,6 +252,7 @@ sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542
 sops -d secrets/machinery-hv.yaml | kubectl --kubeconfig /dev/stdin get nodes   # Ready
 ```
 
-**Still open from this step:** the static lease on the router, `be:64:f3:26:1a:60`
--> `192.168.10.105`, hostname `machinery-hv` (docs/install.md). Until it exists
-the node address and with it this kubeconfig are a 30-day lease.
+Static lease on the router, set by hand in the DD-WRT UI on 2026-09-24 (the
+workstation key is not accepted for ssh there, so this is the one step not
+done from a shell): `BE:64:F3:26:1A:60` -> `192.168.10.105`, hostname
+`machinery-hv`. Recorded in the lease table in `docs/install.md`.

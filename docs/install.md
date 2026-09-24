@@ -195,6 +195,7 @@ Static leases (nvram `static_leases` / `static_leasenum`, DD-WRT renders them as
 | `00:E0:4C:68:1F:05` | `sthings-air12` | `192.168.10.146` |
 | `BA:B3:3E:EA:51:F3` | `homerun2-dev` | `192.168.10.117` |
 | `BA:69:A8:A3:BA:28` | `crossplane-mgmt` | `192.168.10.108` |
+| `BE:64:F3:26:1A:60` | `machinery-hv` | `192.168.10.105` |
 | `B8:27:EB:D9:33:DB` | `matrix` | `192.168.10.120` |
 
 The VM MACs are pinned in the Harvester VM spec, so they survive reboots but
