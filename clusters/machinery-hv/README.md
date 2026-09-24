@@ -444,3 +444,82 @@ kubectl delete objects.kubernetes.m.crossplane.io -n default probe-harvester pro
 ```
 
 Open: `homerun2/_git-pat` is not seeded.
+
+### 8. provider-kubeconfig and provider-minio (2026-09-24)
+
+The two packages still unhealthy after step 6 both wait on a runtime config the
+profile names and does not ship. First attempt: the `provider-kubeconfig-vault`
+chart as on LabDA, against OpenBao, with a reader AppRole:
+
+```bash
+cd clusters/platform/openbao/machinery-fleet
+./render-fleet-secrets.sh K       # crossplane-system/vault-approle (secret-id) + the roleIds values Secret
+helm template pkv oci://ghcr.io/stuttgart-things/charts/provider-kubeconfig-vault --version 0.2.0 -f <values>
+# 1 ClusterProviderConfig vault-kubeconfigs -> openbao, 1 CA, 1 DeploymentRuntimeConfig
+```
+
+It could not install -- on ANY fresh cluster, and so on LabDA's next rebuild too:
+
+```
+kubectl -n crossplane-system get helmrelease provider-kubeconfig-vault
+# Helm install failed ... resource mapping not found for name: "vault-kubeconfigs" ...
+# no matches for kind "ClusterProviderConfig" -- ensure CRDs are installed first
+```
+
+The release carries both the runtime config the provider needs to START and a
+ClusterProviderConfig whose CRD the RUNNING provider registers. Split
+(`../machinery-hv-fleet-state/provider-runtime.yaml`): the CA Secret and both
+runtime configs as plain manifests; the chart keeps the ClusterProviderConfig
+and RBAC, drops its copy of the config with a post-renderer (tested locally with
+`helm template | kustomize build`), and retries install without limit.
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl get providers.pkg.crossplane.io stuttgart-things-provider-kubeconfig-xpkg vshn-provider-minio   # both Healthy
+# the release had exhausted its old retry budget before the fix landed -- forced once:
+kubectl -n crossplane-system annotate helmrelease provider-kubeconfig-vault \
+  reconcile.fluxcd.io/requestedAt="$(date +%s)" reconcile.fluxcd.io/forceAt="$(date +%s)" --overwrite
+kubectl -n crossplane-system get helmrelease provider-kubeconfig-vault                  # Ready, install succeeded
+kubectl get clusterproviderconfigs.kubeconfig.stuttgart-things.com                     # vault-kubeconfigs -> openbao
+kubectl get pkg --no-headers | awk '$3!="True"' | wc -l                                # 0 -- 51/51 Healthy
+```
+
+Proven end to end, not by the config existing: a kubeconfig written with the
+kubeconfig-WRITER AppRole, read back by a RemoteCluster through
+`vault-kubeconfigs` (reader AppRole, OpenBao CA), then both removed:
+
+```bash
+# POST kubeconfigs/data/zz-probe {"kubeconfig": <machinery-hv's own kubeconfig>}   -> 200 (writer token)
+# RemoteCluster zz-probe: providerConfigRef vault-kubeconfigs, source {type: vault, path: zz-probe, key: kubeconfig}
+kubectl get remoteclusters.kubeconfig.stuttgart-things.com zz-probe
+# Ready=True Available / Synced=True -- atProvider: rke2 v1.35.3+rke2r1, 1 node, apiEndpoint https://192.168.10.105:6443
+kubectl delete remoteclusters.kubeconfig.stuttgart-things.com zz-probe
+# DELETE kubeconfigs/metadata/zz-probe -> 204
+```
+
+### 9. flux v1.80.1 and coredns-lab-zone (2026-09-24)
+
+flux#515 (`serve_stale` in both CoreDNS server blocks, default `24h`) merged as
+v1.80.1, which differs from v1.80.0 only in that component. This cluster was
+the first to take it: `git-repos.yaml` to `v1.80.1`, and `coredns-lab-zone`
+selected in `infra-platform.yaml` with `COREDNS_ZONE: sthings.lab`,
+`COREDNS_ZONE_SERVER: "192.168.10.1"`.
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n kube-system rollout status deploy/rke2-coredns-rke2-coredns
+# 0 of 1 updated replicas are available ... successfully rolled out -- ~47 s from Ready to rolled
+kubectl -n kube-system get cm rke2-coredns-rke2-coredns -o jsonpath='{.data.Corefile}'
+# sthings.lab.:53 { errors; cache 30 { serve_stale 24h }; forward . 192.168.10.1 }
+# .:53 { ... forward . /etc/resolv.conf; cache 30 { serve_stale 24h } ... }
+
+kubectl run dnsprobe2 --rm -i --restart=Never --image=busybox:1.36 -- sh -c 'nslookup <name>'
+# github.com                             140.82.121.3
+# ghcr.io                                140.82.121.33
+# headlamp.machinery-hv.sthings.lab      192.168.10.178
+# headlamp.homerun2-dev.sthings.lab      192.168.10.171
+# kubernetes.default.svc.cluster.local   10.43.0.1
+
+kubectl -n flux-system get kustomizations        # 20/20 Ready once the new tag had rippled through
+kubectl get pkg                                  # 51/51 Healthy -- the profile did not change
+```
