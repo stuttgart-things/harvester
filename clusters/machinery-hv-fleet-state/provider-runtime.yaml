@@ -95,7 +95,7 @@ spec:
           volumes:
             - name: vault-ca
               secret:
-                secretName: vault-pki-ca
+                secretName: vault-pki-ca # pragma: allowlist secret
 ---
 # provider-minio, as LabDA's provider-minio-runtime.yaml: its ProviderConfig has
 # no CA field, so the trust comes from SSL_CERT_FILE in the pod. There is no
