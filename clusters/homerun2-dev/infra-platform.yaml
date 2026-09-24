@@ -47,6 +47,8 @@ spec:
     # networking
     - ../components/cilium-lb
     - ../components/cilium-gateway
+    # dns -- CoreDNS rides out uplink outages (#252). Standalone, no dependency.
+    - ../components/coredns-lab-zone
     # pki
     - ../components/cert-manager-install
     - ../components/cert-manager-vault-issuer
@@ -86,6 +88,21 @@ spec:
       # int and the CR is rejected.
       CILIUM_LB_IP_START: "192.168.10.171"
       CILIUM_LB_IP_STOP: "192.168.10.171"
+
+      # ---- coredns-lab-zone -----------------------------------------------
+      # The point here is serve_stale, not the zone (#252). The uplink behind
+      # the DD-WRT router drops out for up to ~20 min at a time and the router
+      # sometimes reboots; stock CoreDNS then hands every pod an i/o timeout
+      # for ghcr.io and github.com, and Flux sources fail on DNS. With the
+      # component, CoreDNS answers from cache for COREDNS_SERVE_STALE (default
+      # 24h, left as is) while the upstream is gone.
+      #
+      # sthings.lab gets its own server block, pointed at the router: it is the
+      # only resolver that knows the lab and Clusterbook's wildcard records.
+      # No trailing dot -- the bundle's base adds it. An ADDRESS, not a name:
+      # resolving a name here would need the resolver this configures.
+      COREDNS_ZONE: sthings.lab
+      COREDNS_ZONE_SERVER: "192.168.10.1"
 
       # ---- cert-manager ---------------------------------------------------
       # Version left at the component default (v1.21.2). infra and xplane pin
