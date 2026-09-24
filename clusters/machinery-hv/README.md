@@ -65,8 +65,9 @@ name swapped; read its warnings there, they all apply.
    [Log: 1](#1-lb-address-from-clusterbook-2026-09-24).
 2. **Encrypted params, dry-run render, bake** -- see
    [Log: 2](#2-vm-parameters-dry-run-render-bake-2026-09-24).
-3. **Fetch the kubeconfig** off the node, rewrite `127.0.0.1`, encrypt it to
-   `secrets/machinery-hv.yaml`. Ask for a static DHCP lease for the VM's MAC --
+3. **Fetch the kubeconfig** -- done 2026-09-24, see
+   [Log: 3](#3-kubeconfig-off-the-node-2026-09-24). **Open:** the static DHCP
+   lease for `be:64:f3:26:1a:60` -> `192.168.10.105` on the router --
    `homerun2-dev` lost its etcd peer URL to a lease change (harvester#238).
 4. **Bootstrap Flux** with `--destination-path clusters/machinery-hv` and a
    `--branch-name`; add the two `detect-secrets` pragmas to the committed
@@ -201,4 +202,55 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
 (Run from the Claude Code session with the export path in its scratchpad
 instead of `/tmp/machinery-hv`; nothing else differed.)
 
-Result: _running_ -- recorded here once both plays show a real `PLAY RECAP`.
+Result: `Vm.bakeHarvester DONE [11m2s]`, exit 0, and -- the part that counts --
+a real `PLAY RECAP` from each playbook, in two separate dagger spans:
+
+```
+998 : sthings.baseos.setup      192.168.10.105 : ok=23   changed=5   unreachable=0  failed=0  skipped=27
+1001: sthings.rke.rke2_cluster  192.168.10.105 : ok=124  changed=40  unreachable=0  failed=0  skipped=74
+```
+
+`ok=124 changed=40` is the recap homerun2-dev produced with the same playbook
+set. The VM took `192.168.10.105` from DHCP. This log is also what
+stuttgart-things/harvester#251 tests the workflow's per-playbook recap check
+against.
+
+### 3. Kubeconfig off the node (2026-09-24)
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+NODE_IP=$(kubectl get vmi machinery-hv -n default -o jsonpath='{.status.interfaces[0].ipAddress}')
+MAC=$(kubectl get vmi machinery-hv -n default -o jsonpath='{.status.interfaces[0].mac}')
+echo "$NODE_IP $MAC"            # 192.168.10.105 be:64:f3:26:1a:60
+
+ssh-keygen -f ~/.ssh/known_hosts -R "$NODE_IP"
+USER_=$(sops -d --extract '["cloudInitUsername"]' vms/machinery-hv.params.enc.yaml)
+ssh -o StrictHostKeyChecking=accept-new -i ~/.ssh/id_ed25519 "$USER_@$NODE_IP" \
+  'sudo cat /etc/rancher/rke2/rke2.yaml' \
+  | sed "s/127.0.0.1/$NODE_IP/" > ~/.kube/machinery-hv
+chmod 600 ~/.kube/machinery-hv
+```
+
+Checked on the node, not taken from the recap:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl get nodes -o wide
+# machinery-hv   Ready   control-plane,etcd   v1.35.3+rke2r1   192.168.10.105   Ubuntu 26.04.1 LTS
+kubectl -n kube-system get ds
+# cilium         1/1
+# cilium-envoy   1/1          -- and NO kube-proxy, NO canal
+```
+
+Encrypted the way every other kubeconfig here is stored (same age recipient as
+`dagger … sops encrypt`), and proven to decrypt into a working one:
+
+```bash
+sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
+  --input-type yaml --output-type yaml ~/.kube/machinery-hv > secrets/machinery-hv.yaml
+sops -d secrets/machinery-hv.yaml | kubectl --kubeconfig /dev/stdin get nodes   # Ready
+```
+
+**Still open from this step:** the static lease on the router, `be:64:f3:26:1a:60`
+-> `192.168.10.105`, hostname `machinery-hv` (docs/install.md). Until it exists
+the node address and with it this kubeconfig are a 30-day lease.
