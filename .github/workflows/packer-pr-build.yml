@@ -74,13 +74,15 @@ jobs:
   validate:
     name: Validate packer config (all images)
     needs: detect-targets
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: `packer validate` resolves source_checksum over the
+    # network, and the dev var-files point it at the lab artifact store, which a
+    # GitHub-hosted runner cannot resolve. Validating where the images are built
+    # is also the more honest place for it. (packer is preinstalled on kvm, so
+    # no setup-packer step — same as the build jobs below.)
+    runs-on: kvm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
-
-      - name: Setup Packer
-        uses: hashicorp/setup-packer@main
 
       - name: Packer init
         working-directory: packer/_build
