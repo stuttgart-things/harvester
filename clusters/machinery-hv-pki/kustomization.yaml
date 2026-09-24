@@ -1,0 +1,8 @@
+---
+# The OpenBao root CA for cert-manager, applied by the `machinery-hv-pki`
+# Kustomization in ../machinery-hv/pki.yaml -- see there for why it is not in
+# ../machinery-hv itself.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - openbao-pki-ca.yaml

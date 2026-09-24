@@ -25,7 +25,7 @@ spec:
     domain: cluster.local
   kustomize:
     patches:
-    - patch: |-
+    - patch: |- # pragma: allowlist secret
         - op: add
           path: /spec/decryption
           value:
@@ -49,6 +49,12 @@ spec:
   sync:
     kind: GitRepository
     url: https://github.com/stuttgart-things/harvester
+    # BRIDGE -- back to refs/heads/main once #249 is merged. clusters/machinery-hv
+    # exists only on this branch until then, and on main Flux parks at
+    # `kustomization path not found` while the GitRepository reports Ready
+    # (clusters/homerun2-dev/README.md, step 4). The value lives here AND in the
+    # live FluxInstance: merge, patch the instance to main, then delete the
+    # branch -- in that order.
     ref: refs/heads/feat/machinery-hv-scaffold
     path: clusters/machinery-hv
-    pullSecret: git-token-auth
+    pullSecret: git-token-auth # pragma: allowlist secret

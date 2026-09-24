@@ -78,6 +78,6 @@ spec:
       VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/machinery-hv-certmanager
       VAULT_ISSUER_AUTH_ROLE: certmanager
       VAULT_ISSUER_SERVICE_ACCOUNT: cert-manager
-      # From ./openbao-pki-ca.yaml.
+      # From ../machinery-hv-pki/openbao-pki-ca.yaml (applied by pki.yaml).
       VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
       VAULT_ISSUER_CA_KEY: ca.crt

@@ -42,13 +42,15 @@ clusters/machinery-hv/              flux-system syncs this (recursively)
   cicd-platform.yaml                crossplane (profile machinery) + tekton
   fleet-state.yaml                  -> ../machinery-hv-fleet-state   prune: true
   xrs.yaml                          -> ../machinery-hv-xrs           prune: FALSE
-  openbao-pki-ca.yaml, openbao/     the cert-manager auth mount, as homerun2-dev
+  pki.yaml                          -> ../machinery-hv-pki  (the OpenBao CA, after cert-manager)
+  openbao/                          the cert-manager auth mount, as homerun2-dev
 clusters/machinery-hv-fleet-state/  provider configs, EnvironmentConfigs, secrets
 clusters/machinery-hv-xrs/          the ClusterStacks this cluster owns
+clusters/machinery-hv-pki/          openbao-pki-ca, in cert-manager's namespace
 vms/machinery-hv.*                  the VM shape and the RKE2 vars
 ```
 
-The two content directories sit **beside** this one, not in it: flux-system
+The content directories sit **beside** this one, not in it: flux-system
 applies everything under `clusters/machinery-hv` recursively, so a subdirectory
 would be applied twice, once without the `dependsOn` gates. Same arrangement as
 the LabDA machinery cluster.
@@ -256,3 +258,67 @@ Static lease on the router, set by hand in the DD-WRT UI on 2026-09-24 (the
 workstation key is not accepted for ssh there, so this is the one step not
 done from a shell): `BE:64:F3:26:1A:60` -> `192.168.10.105`, hostname
 `machinery-hv`. Recorded in the lease table in `docs/install.md`.
+
+### 4. Flux bootstrap (2026-09-24)
+
+Synced to the PR branch, not `main` -- `--git-ref` is the bridge the
+homerun2-dev runbook describes; `config.yaml` says how to take it back.
+
+```bash
+cd ~/harvester-machinery-hv
+# GITHUB_USER, GITHUB_TOKEN, AGE_PUB, SOPS_AGE_KEY exported by ~/.bashrc
+dagger call -m github.com/stuttgart-things/blueprints/flux@v3.2.2 \
+  bootstrap \
+  --kube-config file:///home/sthings/.kube/machinery-hv \
+  --deploy-operator=true \
+  --commit-to-git=true \
+  --repository stuttgart-things/harvester \
+  --branch-name feat/machinery-hv-scaffold \
+  --git-ref refs/heads/feat/machinery-hv-scaffold \
+  --destination-path "clusters/machinery-hv" \
+  --git-username env:GITHUB_USER \
+  --git-password env:GITHUB_TOKEN \
+  --git-token env:GITHUB_TOKEN \
+  --sops-age-key env:SOPS_AGE_KEY \
+  --age-public-key env:AGE_PUB \
+  --render-secrets=true \
+  --apply-secrets=true \
+  --apply-config=true \
+  --encrypt-secrets=true \
+  --helmfile-ref "git::https://github.com/stuttgart-things/helm.git@cicd/flux-operator.yaml.gotmpl" \
+  --operator-version "0.47.0" \
+  --wait-for-reconciliation=true \
+  --progress plain
+# exit 0, Phase 0-8 all passed; the bot committed config.yaml + secrets.yaml
+# (b36b1f1). The one `ERROR:` in the log is `helm plugin install helm-unittest`
+# inside the helmfile container -- harmless, nothing depends on it.
+
+git pull --rebase    # then the two detect-secrets pragmas into config.yaml, by hand
+```
+
+Two failures on the first reconcile, both visible only in the cluster:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl get kustomizations,gitrepositories -A
+# kustomization/flux-system  False  Secret/cert-manager/openbao-pki-ca not found: namespaces "cert-manager" not found
+# gitrepository/flux-system  False  lookup github.com on 10.43.0.10:53: server misbehaving
+```
+
+- **The CA deadlock -- a bug in this scaffold.** `openbao-pki-ca.yaml` sat in
+  this directory, in a namespace only infra-platform creates, and flux-system
+  applies this directory as one unit. Moved to `../machinery-hv-pki`, applied by
+  [`pki.yaml`](./pki.yaml) with `dependsOn: cert-manager-install`.
+- **DNS from the pod network is flaky, on both clusters.** CoreDNS forwards to
+  the router and gets `read udp 10.42.0.x -> 192.168.10.1:53: i/o timeout`;
+  the node itself resolves fine, and a test pod did too a minute later.
+  homerun2-dev shows the same: 182 timeouts in its last 200 CoreDNS log lines.
+  Not caused by this cluster; a forced reconcile got the source Ready:
+
+```bash
+kubectl -n kube-system logs -l k8s-app=kube-dns --tail=15          # the timeouts
+kubectl run dnstest --rm -i --restart=Never --image=busybox:1.36 -- nslookup github.com 192.168.10.1
+kubectl -n flux-system annotate gitrepository flux-system \
+  reconcile.fluxcd.io/requestedAt="$(date +%s)" --overwrite
+```
+
