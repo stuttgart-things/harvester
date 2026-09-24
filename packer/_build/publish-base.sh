@@ -39,6 +39,10 @@ fi
 S3_PREFIX="${S3_PREFIX:-golden}"
 KEY="${S3_PREFIX}/${IMAGE_NAME}/${IMAGE_NAME}-amd64.img"
 
+# A bare hash with no filename — dev var-files consume this as
+# source_checksum = "file:<this url>", so keep the format. Adding the filename
+# back (plain `sha256sum`) still parses, but the bare form is what is published
+# and verified today; changing it is a change to that contract.
 echo "Computing sha256 for ${IMAGE_FILE}..."
 sha256sum "${IMAGE_FILE}" | awk '{print $1}' > "${IMAGE_FILE}.sha256"
 
