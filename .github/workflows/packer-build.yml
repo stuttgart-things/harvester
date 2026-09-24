@@ -138,6 +138,20 @@ jobs:
           IMAGE_URL: ${{ steps.publish.outputs.image_url }}
         run: bash register-image.sh
 
+      - name: Prune superseded images
+        # Cleans up images that nothing uses any more: older release builds
+        # beyond KEEP, and per-PR images whose PR has closed. Never fails the
+        # job — a cleanup problem is not a reason to fail a good image.
+        if: inputs.upload_to_harvester && vars.PRUNE_IMAGES != 'false'
+        continue-on-error: true
+        working-directory: packer/_build
+        env:
+          PRUNE_DRY_RUN: "false"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash prune-images.sh
+
   # --- Detect golden images to (re)build after a merge to main ------------
   detect-golden:
     name: Detect golden images to upload
@@ -252,6 +266,20 @@ jobs:
           IMAGE_VERSION: ${{ steps.meta.outputs.version }}
           IMAGE_URL: ${{ steps.publish.outputs.image_url }}
         run: bash register-image.sh
+
+      - name: Prune superseded images
+        # Cleans up images that nothing uses any more: older release builds
+        # beyond KEEP, and per-PR images whose PR has closed. Never fails the
+        # job — a cleanup problem is not a reason to fail a good image.
+        if: env.UPLOAD_TO_HARVESTER == 'true' && vars.PRUNE_IMAGES != 'false'
+        continue-on-error: true
+        working-directory: packer/_build
+        env:
+          PRUNE_DRY_RUN: "false"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash prune-images.sh
 
       - name: Summarise the new image pin
         # The new image carries a fresh lh-<uuid>. Nothing consumes it until the

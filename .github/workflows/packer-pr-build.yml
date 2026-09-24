@@ -209,19 +209,46 @@ jobs:
           IMAGE_URL: ${{ steps.publish.outputs.image_url }}
         run: bash register-image.sh
 
-      - name: Auto-merge PR (dev only)
-        # Dev images auto-merge on a green build+upload. If the PR also touches a
-        # golden image it must be reviewed, so auto-merge is suppressed.
-        if: >-
-          success() &&
-          matrix.tier == 'dev' &&
-          steps.mode.outputs.upload == 'true' &&
-          needs.detect-targets.outputs.has_golden == 'false'
+      - name: Prune superseded images
+        # Runs while THIS PR is still open, so the image just registered is
+        # protected by its own rule (open PR). What goes is leftovers from PRs
+        # that have since closed. Never fails the build: a cleanup problem is
+        # not a reason to fail an otherwise good image.
+        if: steps.mode.outputs.upload == 'true' && vars.PRUNE_IMAGES != 'false'
+        continue-on-error: true
+        working-directory: packer/_build
+        env:
+          PRUNE_DRY_RUN: "false"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash prune-images.sh
+
+  # --- Auto-merge, once EVERY dev build is green --------------------------
+  # This deliberately does not live in the build job. As a matrix step it ran
+  # per image, so on a PR touching several dev dirs the first build to finish
+  # merged the PR while the others had not even started — there is one kvm
+  # runner, so matrix legs queue. A later build that failed then landed on main
+  # anyway, and its auto-merge step failed confusingly with "already merged".
+  # `needs: build` waits for every leg, and `success()` requires all of them.
+  auto-merge:
+    name: Auto-merge dev PR
+    needs: [detect-targets, build]
+    # A PR touching a golden dir must be reviewed, so auto-merge is suppressed.
+    if: >-
+      success() &&
+      needs.detect-targets.outputs.targets != '[]' &&
+      needs.detect-targets.outputs.has_golden == 'false' &&
+      vars.UPLOAD_TO_HARVESTER != 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Merge
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Dev build succeeded. Auto-merging PR #${{ github.event.pull_request.number }}..."
+          echo "All dev builds succeeded. Auto-merging PR #${{ github.event.pull_request.number }}..."
           gh pr merge ${{ github.event.pull_request.number }} \
+            --repo "${{ github.repository }}" \
             --auto \
             --squash \
             --delete-branch
