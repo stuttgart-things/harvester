@@ -321,4 +321,3 @@ kubectl run dnstest --rm -i --restart=Never --image=busybox:1.36 -- nslookup git
 kubectl -n flux-system annotate gitrepository flux-system \
   reconcile.fluxcd.io/requestedAt="$(date +%s)" --overwrite
 ```
-
