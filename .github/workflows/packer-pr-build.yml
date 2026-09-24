@@ -15,6 +15,11 @@ on:
       - "packer/golden/**"
       - "packer/dev/**"
       - "packer/_build/**"
+      # The build workflows themselves, so a change to them is validated by
+      # them. Without this a workflow-only PR ran no checks at all — nothing
+      # else covers these files (pr-lint watches clusters/ and itself).
+      - ".github/workflows/packer-pr-build.yml"
+      - ".github/workflows/packer-build.yml"
     types:
       - opened
       - synchronize
