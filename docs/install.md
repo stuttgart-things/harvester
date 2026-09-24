@@ -314,11 +314,42 @@ The controller fills in `network.harvesterhci.io/ready: "true"` and the connecti
 status after apply. (Harvester's UI also adds a cosmetic `network.harvesterhci.io/route`
 annotation — optional; the NAD works without it.)
 
-### 3. VM images
+### 3. Trust the sthings.lab CA
 
-VM images here are **upload-type** (a qcow2 blob in Longhorn), not URL-sourced — so they
-can't be recreated from a `VirtualMachineImage` YAML alone; the artifact must be rebuilt
-and re-imported. Reproduce via **provenance**, not a manifest dump.
+Do this **before** restoring images — they are fetched over HTTPS from the artifact
+store and Harvester verifies that certificate itself.
+
+```bash
+kubectl patch settings.harvesterhci.io additional-ca --type=merge \
+  -p "$(jq -n --arg v "$(cat packer/_build/sthings-lab-ca.crt)" '{value:$v}')"
+```
+
+Run it **from a checkout of this repo** — a wrong path makes `cat` fail, `jq` yields an
+empty string and the patch silently wipes the setting.
+
+The CA lives at [`packer/_build/sthings-lab-ca.crt`](https://github.com/stuttgart-things/harvester/blob/main/packer/_build/sthings-lab-ca.crt),
+issued by the OpenBao PKI on the platform cluster (the sthings.lab PKI moved off the
+decommissioned infra Vault — issue #152). Watch out when diagnosing this: the old and
+new CAs share the subject `C=DE, O=sva, CN=sthings.lab` and differ only by key, so a
+stale one fails as `x509: certificate signed by unknown authority ... crypto/rsa:
+verification error` rather than as an obvious name mismatch. Compare fingerprints, not
+subjects:
+
+```bash
+kubectl get settings.harvesterhci.io additional-ca -o jsonpath='{.value}' \
+  | openssl x509 -noout -fingerprint -dates
+```
+
+### 4. VM images
+
+VM images are **download-type**: Harvester pulls the qcow2 from the MinIO artifact store
+itself, so an image *can* be recreated from a `VirtualMachineImage` YAML — as long as the
+artifact is still published and step 3 is done. They used to be upload-type, until pushing
+the ~1.8 GB body through the nginx in front of the VIP started dying on its 60 s
+`proxy-read-timeout` (issue #215).
+
+The record below is **provenance**, not a manifest dump: it says how to rebuild the
+artifact, which is what a manifest cannot capture.
 
 **`u26-dev`** — Ubuntu 26 dev base image:
 
@@ -330,7 +361,7 @@ and re-imported. Reproduce via **provenance**, not a manifest dump.
 | OS type | `linux` |
 | Virtual size | 10 Gi |
 | Storage class | `harvester-longhorn` |
-| Source type | `upload` |
+| Source type | `download` |
 | Encryption | false |
 | Built by | Packer — [`stuttgart-things/harvester` → `packer/dev/u26-dev`](https://github.com/stuttgart-things/harvester/tree/main/packer/dev/u26-dev) |
 
@@ -338,10 +369,10 @@ Cloud-init (`packer/dev/u26-dev/users.yaml`) provisions a `sthings` user with pa
 sudo and the workstation SSH keys baked in — so VMs from this image are SSH-ready with no
 Harvester keypair attachment required.
 
-**Reproduce:**
-1. Build the qcow2: run the Packer template in `stuttgart-things/harvester/packer/dev/u26-dev`.
-2. Import into Harvester: UI → *Images → Create → Upload* (or `virtctl image-upload`),
-   namespace `default`, name `u26-dev`, storage class `harvester-longhorn`.
+**Reproduce:** run the `Packer Build` workflow (`workflow_dispatch`, image `dev/u26-dev`,
+*Upload to Harvester* on). It builds the qcow2, publishes it to MinIO and registers it.
+See [`packer/README.md`](../packer/README.md) for the manual equivalent and for why image
+names are versioned and never replaced in place.
 
 > Templates (`virtualmachinetemplates` / versions): recreate via UI as needed. Not
 > inlined — for a demo cluster they're cheap to rebuild and not worth committing as dumps.

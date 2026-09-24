@@ -41,24 +41,10 @@ variable "users_file" {
   description = "Path to this image's users.yaml (relative to packer/_build/)"
 }
 
-variable "harvester_vip" {
-  type        = string
-  default     = ""
-  description = "Harvester VIP address (passed via GH workflow)"
-}
-
-variable "harvester_password" {
-  type        = string
-  default     = ""
-  sensitive   = true
-  description = "Harvester admin password (passed via GH workflow)"
-}
-
-variable "upload_to_harvester" {
-  type        = string
-  default     = "false"
-  description = "Set to 'true' to upload the image to Harvester after build"
-}
+# Harvester registration is NOT a packer concern any more. The build only
+# produces the image; publish-base.sh and register-image.sh run after it as
+# ordered CI steps (issue #215), and take their config from env, not from
+# packer variables.
 
 # --- OS-specific knobs (defaults target the Ubuntu cloud image) -------------
 # Other images (e.g. Rocky) override these in their build.pkrvars.hcl.

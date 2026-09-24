@@ -1,4 +1,12 @@
 ---
+# Harvester VirtualMachineImage template. register-image.sh fills in
+# metadata.name, spec.displayName and spec.url.
+#
+# sourceType is "download", not "upload": Harvester fetches the image from the
+# MinIO artifact store itself. The upload path pushed the whole ~1.8 GB body
+# through the nginx in front of the Harvester VIP and died on its 60s
+# proxy-read-timeout (issue #215). Harvester verifies spec.url's certificate
+# against settings.harvesterhci.io/additional-ca.
 apiVersion: harvesterhci.io/v1beta1
 kind: VirtualMachineImage
 metadata:
@@ -12,7 +20,8 @@ metadata:
 spec:
   displayName:
   retry: 3
-  sourceType: upload
+  sourceType: download
+  url:
   storageClassParameters:
     migratable: 'true'
     numberOfReplicas: '3'
