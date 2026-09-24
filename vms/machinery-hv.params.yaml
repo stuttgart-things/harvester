@@ -1,0 +1,43 @@
+---
+# KCL parameters for the harvester-vm module, rendered and applied by
+# blueprints' bake-harvester. See vms/README.md for the call and
+# clusters/machinery-hv/README.md for the whole build.
+#
+# The management cluster for this lab, built fresh beside crossplane-mgmt rather
+# than by upgrading it: that cluster carries the old package family under short
+# CR names, and the flux `machinery` profile must never be layered over such a
+# cluster (stuttgart-things/flux, cicd/crossplane/profiles/README.md).
+#
+# Smaller than homerun2-dev, sized for Crossplane with ~20 packages,
+# provider-opentofu (limit 2Gi), Tekton and the PipelineRun pods of the ansible
+# stages. Harvester had 6 % CPU / 35 % memory in use when this
+# was sized (2026-09-24).
+
+vmName: machinery-hv
+namespace: default
+
+# Golden image, not *-dev: bake-harvester logs in with password auth, which only
+# the golden images carry. The versioned build the `sthings-u26` alias points at
+# since #246 (clusters/crossplane-mgmt/platform/virtual-machine/
+# env-config-virtualmachine.yaml) -- homerun2-dev still boots the older
+# default/sthings-u26 only because it has not been rebuilt. The storage class is
+# per image and per cluster; look it up before changing either:
+#
+#   kubectl get virtualmachineimages -n default \
+#     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
+imageId: sthings-u26-26.924.1008
+imageNamespace: default
+storage: 80Gi
+storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
+
+cpuCores: 8
+memory: 16Gi
+description: machinery-hv singlenode rke2 crossplane management cluster
+
+networkName: vms
+networkNamespace: default
+
+# Credentials are NOT here -- same rule as homerun2-dev.params.yaml. They are
+# in machinery-hv.params.enc.yaml (cloudInitUsername, cloudInitPassword,
+# cloudInitSshKey); pass that file to the bake, never this one, or the module
+# falls back to a well-known password.

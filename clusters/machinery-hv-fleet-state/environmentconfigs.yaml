@@ -1,0 +1,107 @@
+---
+# The EnvironmentConfigs a ClusterStack on this cluster resolves at render time.
+#
+# The first two are what the flux `crossplane-capabilities` component would
+# supply through the `harvester-demo` set, if that set could be configured for
+# this lab. At flux v1.80.0 it cannot -- see ../machinery-hv/cicd-platform.yaml
+# -- so they are written out here. Move them back into the component once it
+# passes the CROSSPLANE_CAPABILITY_HARVESTER_* variables through
+# (stuttgart-things/flux#514), and delete
+# them here in the SAME change, or two owners fight over one object.
+---
+# Harvester placement for HarvesterVM. Selected by label against the XR's
+# spec.environmentConfig; function-environment-configs wants EXACTLY ONE match.
+#
+# NOT `default`, unlike crossplane-mgmt's harvestervm-defaults and the
+# harvester-demo set: this cluster builds VMs on a Harvester it reaches through
+# a ClusterProviderConfig, and a lab-named label makes an order say which one.
+#
+# TO VERIFY before the first ClusterStack: which value the `cluster`
+# Configuration forwards from the ClusterStack onto the HarvesterVM child as
+# spec.environmentConfig (crossplane-configurations#258 Block B). If it forwards
+# ClusterStack.spec.environmentConfig, `environmentConfig: sthings-lab` on the
+# order matches this. `crossplane render` with this file as --extra-resources
+# answers it without building anything.
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: harvestervm-sthings-lab
+  labels:
+    harvester-vm.resources.stuttgart-things.com/environment: sthings-lab
+data:
+  # ../machinery-hv-fleet-state/providerconfigs.yaml -- the Harvester cluster's
+  # own API, NOT in-cluster.
+  providerConfigRef: harvester
+  namespace: vms
+  networkName: default/vms
+  # Golden image: the ansible stages log in with the password from
+  # ansible-credentials, which only the golden images accept. The storage class
+  # is per image -- look it up rather than copying:
+  #   kubectl get virtualmachineimages -n default \
+  #     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
+  imageId: default/sthings-u26-26.924.1008
+  storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
+---
+# The ansible-run defaults every AnsibleRun composes against. Label `default`
+# whatever the lab: ansible-run resolves its OWN label and fleet-wide only
+# `default` exists (crossplane-configurations#347).
+#
+# Values from the ansible capability chart's defaults
+# (stuttgart-things crossplane/platform/capabilities/ansible/values.yaml), not
+# from crossplane-mgmt's copy, which still runs the -test image and older
+# collections. A ClusterStack can add to extraCollections per order --
+# app-dev in LabDA pins sthings-rke that way.
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: ansible-run-defaults
+  labels:
+    ansible-run.resources.stuttgart-things.com/environment: default
+data:
+  namespace: tekton-ci
+  gitRepoUrl: https://github.com/stuttgart-things/stage-time.git
+  gitRevision: main
+  gitPath: pipelines/execute-ansible-playbooks.yaml
+  storageClass: openebs-hostpath
+  ansibleWorkingImage: ghcr.io/stuttgart-things/sthings-ansible:14.0.0
+  # ./secrets/ansible-credentials.enc.yaml, keys ANSIBLE_USER / ANSIBLE_PASSWORD.
+  ansibleCredentialsSecretName: ansible-credentials # pragma: allowlist secret
+  ansibleExtraCollections:
+    - community.crypto:3.2.1
+    - community.general:13.0.1
+    - ansible.posix:2.2.0
+    - kubernetes.core:6.4.0
+    - community.docker:5.2.1
+    - community.vmware:6.2.0
+    - awx.awx:24.6.1
+    - community.hashi_vault:7.1.0
+    - ansible.netcommon:8.5.2
+    - https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.918.1299/sthings-baseos-26.918.1299.tar.gz
+    - https://github.com/stuttgart-things/ansible/releases/download/sthings-awx-26.729.1166/sthings-awx-26.729.1166.tar.gz
+    - https://github.com/stuttgart-things/ansible/releases/download/sthings-rke-26.917.1297/sthings-rke-26.917.1297.tar.gz
+    - https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.917.1297/sthings-container-26.917.1297.tar.gz
+---
+# What a rancher-mode ClusterStack selects with
+# `spec.rancher.environmentConfig: rancher-join-sthings-lab`. The LabDA
+# counterpart is rancher-cluster-join-test; the shape is the same five keys.
+#
+# NOT crossplane-mgmt's rancher-cluster-defaults: that one drives the older
+# RancherCluster mode where Rancher creates the VMs itself through a
+# HarvesterConfig (cloud credential, image, sshUser). Here the ClusterStack
+# builds the VM and Rancher only publishes the registration command the join
+# stage runs.
+#
+# kubernetesVersion follows tabletennis, the cluster Rancher already runs on
+# this lab.
+apiVersion: apiextensions.crossplane.io/v1beta1
+kind: EnvironmentConfig
+metadata:
+  name: rancher-cluster-join-sthings-lab
+  labels:
+    rancher-cluster.resources.stuttgart-things.com/environment: rancher-join-sthings-lab
+data:
+  distro: k3s
+  kubernetesVersion: v1.35.4+k3s1
+  providerConfigRef: in-cluster
+  rancherNamespace: fleet-default
+  rancherProviderConfigRef: rancher-mgmt

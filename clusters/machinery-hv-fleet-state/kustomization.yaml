@@ -1,0 +1,41 @@
+---
+# The fleet state of `machinery-hv`, applied by the `machinery-hv-fleet-state`
+# Kustomization in ../machinery-hv/fleet-state.yaml. See README.md beside this
+# file for what is here, what is not yet, and the order.
+#
+# The prune is on: a file dropped from this list is deleted from the cluster,
+# and for a credential Secret that breaks every order that uses it.
+#
+# secrets/ is rendered and encrypted by
+# ../platform/openbao/machinery-fleet/render-fleet-secrets.sh -- never edit a
+# file there by hand. The OpenBao objects every file below names were created
+# by the same directory's Terraform on 2026-09-24 and tested with a real login
+# per AppRole (README.md).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - environmentconfigs.yaml
+  - providerconfigs.yaml
+  - openbao-pki-source-ca.yaml
+  # step A -- the ansible login and the kubeconfigs of the clusters driven
+  - secrets/ansible-credentials.enc.yaml
+  - secrets/harvester-kubeconfig.enc.yaml
+  - secrets/rancher-mgmt-kubeconfig.enc.yaml
+  # step B + C -- OpenBao policies, the mapping, the AppRole credentials
+  - cluster-vault-sthings-lab.yaml
+  - vault-provider-configs.yaml
+  - secrets/vault-provider-creds.enc.yaml
+  - secrets/vault-creds-cluster-secrets.enc.yaml
+  - secrets/vault-creds-kubeconfig-writer.enc.yaml
+  - secrets/vault-approle.enc.yaml
+  - secrets/vault-cluster-secrets-writer.enc.yaml
+  - secrets/vault-kubeconfig-writer.enc.yaml
+  - secrets/vault.enc.yaml
+  # step D
+  - appsecretprofiles.yaml
+  # provider-kubeconfig: the DeploymentRuntimeConfig the profile's provider
+  # waits for, and the read side of every ClusterStack's kubeconfig
+  - provider-runtime.yaml
+  - secrets/vault-approle-reader.enc.yaml
+  - secrets/provider-kubeconfig-roleids.enc.yaml
+  - provider-kubeconfig.yaml

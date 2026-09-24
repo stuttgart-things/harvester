@@ -1,0 +1,96 @@
+---
+# The infra BUNDLE for this cluster -- stuttgart-things/flux → ./infra/platform.
+#
+# The same selection and the same OpenBao issuer as ../homerun2-dev/
+# infra-platform.yaml, which documents every value below at length. What differs
+# is the name, the address, and what is NOT selected:
+#
+#   no cnpg-operator  -- no database runs here
+#   no external-secrets / sops-git / sops-secrets-operator -- the LabDA
+#     machinery cluster selects all three, because its capability charts read
+#     credentials through sops-git and sops-git reads its age key through an ESO
+#     Vault store. This cluster does not use the capability charts (see
+#     ../machinery-hv-fleet-state/README.md), and its fleet-state Secrets are
+#     SOPS-encrypted in git and decrypted by Flux itself, like every other
+#     Secret in this repo.
+#
+# `components:` must never be empty -- see the note in homerun2-dev's file.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-platform
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/platform/root
+  components:
+    # networking -- cilium-gateway is also what tekton (cicd-platform.yaml)
+    # waits on, across bundles
+    - ../components/cilium-lb
+    - ../components/cilium-gateway
+    # pki
+    - ../components/cert-manager-install
+    - ../components/cert-manager-vault-issuer
+    - ../components/cert-manager-selfsigned
+    # storage -- openebs-hostpath is the class the ansible-run PipelineRuns
+    # claim their workspace from (fleet-state ansible-run-defaults)
+    - ../components/openebs
+    # dashboards
+    - ../components/headlamp
+    - ../components/flux-web
+    # dns -- the lab zone to the router, everything else as before, and BOTH
+    # served stale while the uplink is down (harvester#252, flux#515). Selected
+    # on a cluster nobody depends on yet: adding it rolls CoreDNS, about a
+    # minute without cluster DNS on a single node.
+    - ../components/coredns-lab-zone
+  postBuild:
+    substitute:
+      FLUX_SOURCE: flux-infra
+
+      # Keep identical to cicd-platform.yaml.
+      INFRA_DOMAIN: machinery-hv.sthings.lab
+      INFRA_GATEWAY_NAME: machinery-hv-sthings-gateway
+      INFRA_GATEWAY_NAMESPACE: default
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+
+      # ---- cilium-lb ------------------------------------------------------
+      # Reserved in Clusterbook on 2026-09-24 by auto-assignment (README step
+      # 1), which also wrote *.machinery-hv.sthings.lab. Written out here by
+      # hand because nothing reads the reservation back for a Flux-built
+      # cluster -- see homerun2-dev's file. Quoted: substitute is
+      # map[string]string.
+      CILIUM_LB_IP_START: "192.168.10.178"
+      CILIUM_LB_IP_STOP: "192.168.10.178"
+
+      # ---- coredns-lab-zone -----------------------------------------------
+      # sthings.lab is answered by the DD-WRT router's dnsmasq -- the only
+      # resolver that knows the lab and Clusterbook's wildcards. No trailing
+      # dot; the base adds it. COREDNS_SERVE_STALE stays at the component
+      # default (24h).
+      COREDNS_ZONE: sthings.lab
+      COREDNS_ZONE_SERVER: "192.168.10.1"
+
+      # ---- cert-manager / the OpenBao PKI issuer --------------------------
+      CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki
+      VAULT_ISSUER_NAME: openbao-pki
+      VAULT_ISSUER_SERVER: https://openbao.platform.sthings.lab
+      VAULT_ISSUER_PKI_PATH: pki/sign/sthings-lab
+      # <cluster_name>-<k8s_auths[].name> from ./openbao/openbao.tf.
+      VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/machinery-hv-certmanager
+      VAULT_ISSUER_AUTH_ROLE: certmanager
+      VAULT_ISSUER_SERVICE_ACCOUNT: cert-manager
+      # From ../machinery-hv-pki/openbao-pki-ca.yaml (applied by pki.yaml).
+      VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
+      VAULT_ISSUER_CA_KEY: ca.crt

@@ -1,0 +1,41 @@
+---
+# The Git sources every Kustomization on this cluster pulls from.
+#
+# PINNED TO A TAG, unlike homerun2-dev's `branch: main`. This cluster exists to
+# run the flux `machinery` Crossplane profile, and that profile only becomes the
+# one this cluster needs at v1.80.0 (catalog 0.10.0: provider-vault/-minio
+# pinned, the runtime configs, provider-kubeconfig's runtimeConfigRef --
+# stuttgart-things/flux#506). On `main` a package bump would reach the
+# management cluster the moment it merges; a tag makes it a reviewed change
+# here. Same reason clusters/labda/vsphere/machinery in stuttgart-things pins
+# one tag for all three bundles.
+#
+# v1.80.1 (2026-09-24) differs from v1.80.0 only in the coredns-lab-zone
+# component (serve_stale, flux#515) -- the Crossplane profile is unchanged.
+#
+# Both objects point at the same tag. They are two because the bundles name
+# their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
+#
+# flux-bootstrap does NOT create these -- see clusters/homerun2-dev/README.md,
+# step 5.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-infra
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  ref:
+    tag: v1.80.1
+  url: https://github.com/stuttgart-things/flux.git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-apps
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  ref:
+    tag: v1.80.1
+  url: https://github.com/stuttgart-things/flux.git

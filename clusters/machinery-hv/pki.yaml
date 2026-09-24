@@ -1,0 +1,38 @@
+---
+# The OpenBao root CA the cert-manager-vault-issuer verifies OpenBao's TLS with
+# (VAULT_ISSUER_CA_SECRET in infra-platform.yaml).
+#
+# NOT A FILE IN THIS DIRECTORY, and that is the whole point of this object. The
+# Secret lives in namespace cert-manager, which the infra bundle's
+# cert-manager-install creates -- and flux-system applies this directory as ONE
+# unit. With the Secret here, the first reconcile on a fresh cluster failed:
+#
+#   Secret/cert-manager/openbao-pki-ca not found: namespaces "cert-manager" not found
+#
+# and since a Kustomization fails as a whole, infra-platform was never created,
+# so cert-manager never came, so the namespace never came. A deadlock, not a
+# race (machinery-hv, 2026-09-24). homerun2-dev carries the same file in its
+# root and never hit it only because the CA was added after cert-manager was up.
+#
+# Declaring the Namespace here instead would give it two owners -- the
+# cert-manager-install child ships it too.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: machinery-hv-pki
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: cert-manager-install
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/machinery-hv-pki

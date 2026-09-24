@@ -1,0 +1,10 @@
+---
+# The stable XRs of `machinery-hv`, applied by the `machinery-hv-xrs`
+# Kustomization in ../machinery-hv/xrs.yaml -- `prune: false`. Read README.md
+# beside this file before removing an entry.
+#
+# Empty on purpose until the fleet state is complete. app-dev-hv.yaml is the
+# first order, drafted and NOT listed.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources: []

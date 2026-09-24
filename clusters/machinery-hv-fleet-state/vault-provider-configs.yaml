@@ -1,0 +1,80 @@
+---
+# provider-vault ClusterProviderConfigs against the OpenBao on `platform`: the
+# same three roles the LabDA machinery cluster carries against its infra Vault
+# (stuttgart-things clusters/labda/vsphere/machinery-fleet-state/
+# vault-provider-configs.yaml), with the same names, so a ClusterStack written
+# there reads the same here.
+#
+#   vault                    k8s-auth bootstrap: mounts the Kubernetes auth
+#                            backends of the clusters this one builds
+#   vault-cluster-secrets    writer for the per-cluster app and observability
+#                            entries (VaultSecretSet); named by
+#                            vault.writer.providerConfigName in
+#                            cluster-vault-sthings-lab.yaml
+#   vault-kubeconfig-writer  owns kubeconfigs/<cluster>
+#
+# The AppRoles are in ../platform/openbao/machinery-fleet: `vault` logs in with
+# a second secret_id of the existing `crossplane` role (crossplane-auth-admin),
+# the other two with machinery-hv-cluster-secrets-writer and
+# machinery-hv-kubeconfig-writer.
+#
+# The credential Secrets are NOT ExternalSecrets as in LabDA: there they reshape
+# one AppRole blob from sops-git into four shapes, and this cluster has neither
+# ESO nor sops-git (see ../machinery-hv/infra-platform.yaml). Here each is one
+# SOPS-encrypted Secret in ./secrets/, rendered by that directory's
+# render-fleet-secrets.sh, holding the `credentials` JSON directly:
+#
+#   {"auth_login":{"path":"auth/approle/login","parameters":{"role_id":"…","secret_id":"…"}}}
+#
+# The cost is that a rotated AppRole has to be re-encrypted in every shape it is
+# used in -- including the tfvars Secrets in `default` that the OpenTofu
+# Workspaces read (vault-approle, vault-cluster-secrets-writer,
+# vault-kubeconfig-writer; see the LabDA file). Revisit if that becomes painful.
+#
+# `skip_child_token: true` is NOT optional: these AppRoles may not mint child
+# tokens, and the failure reads like an authentication error.
+# `skip_tls_verify: true` until the provider pod carries the OpenBao CA.
+apiVersion: vault.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: vault
+spec:
+  address: https://openbao.platform.sthings.lab
+  skip_tls_verify: true
+  skip_child_token: true
+  credentials:
+    source: Secret
+    secretRef:
+      name: vault-provider-creds
+      namespace: crossplane-system
+      key: credentials
+---
+apiVersion: vault.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: vault-cluster-secrets
+spec:
+  address: https://openbao.platform.sthings.lab
+  skip_tls_verify: true
+  skip_child_token: true
+  credentials:
+    source: Secret
+    secretRef:
+      name: vault-creds-cluster-secrets
+      namespace: crossplane-system
+      key: credentials
+---
+apiVersion: vault.m.upbound.io/v1beta1
+kind: ClusterProviderConfig
+metadata:
+  name: vault-kubeconfig-writer
+spec:
+  address: https://openbao.platform.sthings.lab
+  skip_tls_verify: true
+  skip_child_token: true
+  credentials:
+    source: Secret
+    secretRef:
+      name: vault-creds-kubeconfig-writer
+      namespace: crossplane-system
+      key: credentials

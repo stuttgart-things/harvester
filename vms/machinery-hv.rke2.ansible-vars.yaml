@@ -1,0 +1,28 @@
+---
+# Extra vars for the RKE2 cluster run on machinery-hv, for the
+# `execute-ansible` entrypoint. Identical to homerun2-dev.rke2.ansible-vars.yaml
+# apart from cluster_name -- that set ran green twice (bootstrap-xplane
+# 2026-09-02, homerun2-dev 2026-09-17), and a management cluster has no reason
+# to differ. vms/README.md carries the same values as a space-separated
+# --ansible-parameters string; vms-lint.yml checks the two agree.
+
+manage_filesystem: false
+
+rke_state: present
+rke2_k8s_version: 1.35.3
+rke2_release_kind: rke2r1
+
+cluster_setup: singlenode
+cluster_name: machinery-hv
+
+# Both, or neither: see homerun2-dev.rke2.ansible-vars.yaml.
+rke2_cni: none
+install_cilium: true
+disableKubeProxy: true
+
+rke2_airgapped_installation: true
+prepare_rancher_ha_nodes: true
+
+install_helm_diff: false
+registry_mirror_url: https://registry-1.docker.io
+fetched_kubeconfig_path: /tmp/kubeconfig
