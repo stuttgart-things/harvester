@@ -32,10 +32,15 @@ on:
         type: choice
         options: [render, apply]
         default: render
+      rebuild:
+        description: "apply only: allow running against a VM that already exists"
+        type: boolean
+        default: false
 
 env:
   DAGGER_VERSION: "0.21.8"
   SOPS_VERSION: "3.11.0"
+  KUBECTL_VERSION: "v1.35.3"
 
 jobs:
   bake:
@@ -46,7 +51,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Install dagger and sops
+      - name: Install dagger, sops and kubectl
         run: |
           set -euo pipefail
           curl -fsSL https://dl.dagger.io/dagger/install.sh \
@@ -54,7 +59,12 @@ jobs:
           curl -fsSL -o /tmp/sops \
             "https://github.com/getsops/sops/releases/download/v${SOPS_VERSION}/sops-v${SOPS_VERSION}.linux.amd64"
           sudo install -m 0755 /tmp/sops /usr/local/bin/sops && rm -f /tmp/sops
-          dagger version && sops --version
+          # kubectl for the guard before the bake and the summary after it --
+          # both read the Harvester API directly, dagger is not involved.
+          curl -fsSL -o /tmp/kubectl \
+            "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl && rm -f /tmp/kubectl
+          dagger version && sops --version && kubectl version --client
 
       - name: Resolve the profile
         id: profile
@@ -93,6 +103,7 @@ jobs:
 
           echo "vars=$vars"        >> "$GITHUB_OUTPUT"
           echo "plays=$plays"      >> "$GITHUB_OUTPUT"
+          echo "play_count=$(tr ',' '\n' <<<"$plays" | grep -c .)" >> "$GITHUB_OUTPUT"
           echo "inventory=$inv"    >> "$GITHUB_OUTPUT"
           echo "params=$params"    >> "$GITHUB_OUTPUT"
           echo "pin=$(grep -oP 'blueprints/vm@\Kv[\d.]+' vms/README.md | head -1)" >> "$GITHUB_OUTPUT"
@@ -124,6 +135,29 @@ jobs:
             --encrypted-file ./secrets/harvester.yaml \
             export --path="${RUNNER_TEMP}/harvester.kubeconfig"
           chmod 600 "${RUNNER_TEMP}/harvester.kubeconfig"
+
+      - name: Refuse to rebuild a live VM
+        if: inputs.mode == 'apply'
+        env:
+          KUBECONFIG: ${{ runner.temp }}/harvester.kubeconfig
+        run: |
+          set -euo pipefail
+          vm="${{ inputs.vm_name }}"
+          # bake-harvester applies the manifests and reruns BOTH playbooks
+          # against whatever answers on the VM's address. Against a running
+          # cluster that is rke_state=present on a live etcd -- not a no-op
+          # anyone has proven. So an existing VM is an error unless the run
+          # says, in its inputs, that this is what it wants.
+          if kubectl get vm "$vm" -n default >/dev/null 2>&1; then
+            if [[ "${{ inputs.rebuild }}" != "true" ]]; then
+              echo "::error::VM $vm already exists on Harvester -- rerun with rebuild=true if that is intended"
+              kubectl get vm,vmi "$vm" -n default || true
+              exit 1
+            fi
+            echo "::warning::VM $vm exists and rebuild=true -- running against it"
+          else
+            echo "VM $vm does not exist yet -- provisioning"
+          fi
 
       - name: Provision
         if: inputs.mode == 'apply'
@@ -168,19 +202,76 @@ jobs:
           # RECAP, and bake-harvester still exits 0. --cache-buster does not
           # reach that exec (blueprints#199). So require the recap, and require
           # it to be clean: silence here means nothing was executed.
-          if ! grep -aq 'PLAY RECAP' "$log"; then
-            echo "::error::no PLAY RECAP -- the Ansible step was served from cache or never ran"
-            grep -a 'withExec ansible-playbook' -A2 "$log" | tail -5 || true
-            exit 1
-          fi
+          #
+          # ONE RECAP PER PLAYBOOK, not one recap. The rke2 profile runs two
+          # playbooks as two execs; checking only the last recap let a failed
+          # or cached baseos run pass as long as rke2 came after it. Recap
+          # lines are counted per dagger SPAN (the `NNN :` prefix of every
+          # line in --progress plain), so an exec whose output dagger prints
+          # twice still counts once, and a cached exec -- which prints nothing
+          # -- counts zero.
+          plain="${RUNNER_TEMP}/bake.plain.log"
+          sed 's/\x1b\[[0-9;]*m//g' "$log" > "$plain"
 
-          recap=$(sed 's/\x1b\[[0-9;]*m//g' "$log" | grep -a 'ok=' | tail -1)
-          echo "$recap"
-          if ! grep -qE 'failed=0[[:space:]]' <<<"$recap" \
-             || ! grep -qE 'unreachable=0[[:space:]]' <<<"$recap"; then
-            echo "::error::playbook reported failures"
+          stats='ok=[0-9]+[[:space:]]+changed=[0-9]+[[:space:]]+unreachable=[0-9]+[[:space:]]+failed=[0-9]+'
+          grep -aE "$stats" "$plain" > "${RUNNER_TEMP}/recaps" || true
+          # `996 : ` but `1001: ` -- the padding is to three digits, so the space
+          # before the colon is optional.
+          # `|| true`: with no recap at all grep exits 1, and pipefail would end
+          # the step silently before the error below says why.
+          spans=$( { grep -oE '^[[:space:]]*[0-9]+[[:space:]]*:' "${RUNNER_TEMP}/recaps" || true; } | tr -d ' :' | sort -u | wc -l)
+          want="${{ steps.profile.outputs.play_count }}"
+
+          cat "${RUNNER_TEMP}/recaps" || true
+          if (( spans < want )); then
+            echo "::error::${spans} of ${want} playbooks produced a PLAY RECAP -- the rest were served from cache or never ran"
+            grep -a 'withExec ansible-playbook' -A2 "$plain" | tail -10 || true
             exit 1
           fi
+          if grep -aqvE 'unreachable=0[[:space:]]+failed=0([[:space:]]|$)' "${RUNNER_TEMP}/recaps"; then
+            echo "::error::a playbook reported failed or unreachable hosts"
+            exit 1
+          fi
+          echo "${spans}/${want} playbooks ran, every recap clean"
+
+      - name: Summary -- what the next steps need
+        if: inputs.mode == 'apply' && success()
+        env:
+          KUBECONFIG: ${{ runner.temp }}/harvester.kubeconfig
+        run: |
+          set -euo pipefail
+          vm="${{ inputs.vm_name }}"
+          ip=$(kubectl get vmi "$vm" -n default -o jsonpath='{.status.interfaces[0].ipAddress}')
+          mac=$(kubectl get vmi "$vm" -n default -o jsonpath='{.status.interfaces[0].mac}')
+
+          # The node address is a DHCP lease, and a singlenode RKE2/k3s cluster
+          # does not survive losing it -- etcd keeps the old peer URL
+          # (harvester#238). The static lease on the router is a manual step,
+          # so the run hands over exactly what it needs.
+          {
+            echo "## ${vm}"
+            echo
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Node address | \`${ip}\` (DHCP lease) |"
+            echo "| MAC | \`${mac}\` |"
+            echo "| Profile | \`${{ inputs.profile }}\` |"
+            echo
+            echo "### Next"
+            echo
+            echo "1. Static lease on the router: \`${mac}\` -> \`${ip}\`, hostname \`${vm}\` (docs/install.md)."
+            if [[ "${{ inputs.profile }}" == "rke2" ]]; then
+              echo "2. Fetch the kubeconfig and commit it encrypted (clusters/<cluster>/README.md, step 3):"
+              echo
+              echo '```bash'
+              echo "ssh-keygen -f ~/.ssh/known_hosts -R ${ip}"
+              echo "ssh -o StrictHostKeyChecking=accept-new <user>@${ip} 'sudo cat /etc/rancher/rke2/rke2.yaml' \\"
+              echo "  | sed \"s/127.0.0.1/${ip}/\" > ~/.kube/${vm}"
+              echo "kubectl --kubeconfig ~/.kube/${vm} get nodes"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$GITHUB_STEP_SUMMARY"
 
       - name: Remove the decrypted kubeconfig
         if: always()
