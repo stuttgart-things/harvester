@@ -321,3 +321,83 @@ kubectl run dnstest --rm -i --restart=Never --image=busybox:1.36 -- nslookup git
 kubectl -n flux-system annotate gitrepository flux-system \
   reconcile.fluxcd.io/requestedAt="$(date +%s)" --overwrite
 ```
+
+The DNS flakiness is tracked in stuttgart-things/harvester#252.
+
+### 5. OpenBao auth mount for cert-manager (2026-09-24)
+
+```bash
+cd clusters/machinery-hv/openbao
+export VAULT_TOKEN=$(tr -d '[:space:]' < ~/.vaulttoken)
+
+KUBECONFIG_PATH=/home/sthings/.kube/machinery-hv ../../platform/openbao/preflight.sh
+# cluster reachable ok / reviewer (exists=false, create=true) ok / openbao ok / VAULT_TOKEN accepted ok
+
+# preflight does not check the policy the role binds -- and a missing one fails silently
+curl -sk -H "X-Vault-Token: $VAULT_TOKEN" \
+  https://openbao.platform.sthings.lab/v1/sys/policies/acl/pki-issue       # 200, pki/issue/* + pki/sign/*
+
+terraform init
+terraform plan -out=tfplan        # Plan: 8 to add, 0 to change, 0 to destroy
+terraform apply tfplan            # Apply complete! Resources: 8 added
+```
+
+Checked rather than taken from the apply:
+
+```bash
+kubectl -n kube-system get sa vault-auth-reviewer                # exists
+kubectl get clusterrolebinding kube-system-vault-auth-reviewer-auth-delegator \
+  -o jsonpath='{.subjects[0].name}'                              # vault-auth-reviewer, NOT cert-manager
+curl -sk -H "X-Vault-Token: $VAULT_TOKEN" \
+  https://openbao.platform.sthings.lab/v1/auth/machinery-hv-certmanager/role/certmanager
+# bound cert-manager/cert-manager, token_policies [pki-issue], ttl 3600
+```
+
+The ClusterIssuer had tried before the mount existed and sat on `403 permission
+denied`; cert-manager backs off, so it was nudged:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl annotate clusterissuer openbao-pki resync="$(date +%s)" --overwrite
+kubectl get clusterissuer openbao-pki                            # True, "Vault verified"
+kubectl -n default get certificate wildcard-tls                  # True -- the proof, not the issuer
+kubectl -n default get secret wildcard-tls -o jsonpath='{.data.tls\.crt}' | base64 -d \
+  | openssl x509 -noout -subject -issuer
+# subject=CN=*.machinery-hv.sthings.lab   issuer=C=DE, O=sva, CN=sthings.lab
+curl -sk -o /dev/null -w '%{http_code} %{remote_ip}\n' https://headlamp.machinery-hv.sthings.lab/
+# 200 192.168.10.178
+```
+
+One line, the whole chain: Clusterbook's wildcard, Cilium announcing `.178`, the
+Gateway terminating with a certificate the OpenBao PKI signed.
+
+### 6. Crossplane (2026-09-24)
+
+All 19 Kustomizations Ready, including `cicd-platform`, `machinery-hv-fleet-state`
+and `machinery-hv-xrs`:
+
+```bash
+kubectl get kustomizations -n flux-system
+kubectl get pkg                                                  # 51 packages
+kubectl get providers.pkg,configurations.pkg,functions.pkg \
+  -o jsonpath='{range .items[*]}{.spec.package}{"\n"}{end}' | sed 's/:[^:]*$//' | sort | uniq -d
+# (empty) -- no source under two CR names, the #506 failure mode
+kubectl get xrd | wc -l                                          # 32 (+ header)
+```
+
+49 of 51 packages Healthy. The two that are not, and why:
+
+```bash
+kubectl get providerrevisions -l pkg.crossplane.io/package=stuttgart-things-provider-kubeconfig-xpkg \
+  -o jsonpath='{.items[*].status.conditions[?(@.type=="RuntimeHealthy")].message}'
+# cannot get referenced deployment runtime config: DeploymentRuntimeConfig "provider-kubeconfig" not found
+# vshn-provider-minio: the same, for "provider-minio"
+```
+
+The profile points both providers at a runtime config it does not ship; on
+LabDA the fleet state brings them (`provider-kubeconfig-vault` chart,
+`provider-minio-runtime.yaml`). It does **not** block anything --
+`crossplane-configs`' health check reads Configurations only -- but until the
+two DRCs exist, provider-kubeconfig (every RemoteCluster, so every
+ClusterStack) and provider-minio do not run. See
+[the fleet-state README](../machinery-hv-fleet-state/README.md#provider-kubeconfig-watch-this-first).

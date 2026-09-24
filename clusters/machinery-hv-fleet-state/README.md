@@ -73,6 +73,13 @@ Plus the tfvars twins in `default` the OpenTofu Workspaces read
 
 ## provider-kubeconfig: watch this first
 
+**Confirmed on the first build (2026-09-24), and it is two providers, not one:**
+`stuttgart-things-provider-kubeconfig-xpkg` and `vshn-provider-minio` both
+report `DeploymentRuntimeConfig "…" not found` and stay `Healthy=False`. It did
+**not** block `cicd-platform` -- its health check reads Configurations only --
+so this Kustomization and the XR one came up Ready regardless. Both DRCs have to
+come from here.
+
 The flux machinery profile (catalog 0.9.0+) points
 `stuttgart-things-provider-kubeconfig-xpkg` at a DeploymentRuntimeConfig named
 `provider-kubeconfig`, which **the profile does not ship**. On LabDA it comes
