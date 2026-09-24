@@ -126,13 +126,16 @@ jobs:
       - name: Resolve build mode
         id: mode
         run: |
-          # Golden = review-gated: build for validation only, never upload on a PR.
-          # Dev    = self-service: upload (subject to UPLOAD_TO_HARVESTER) + auto-merge.
+          # Golden = review-gated: build for validation only, never register on a PR.
+          # Dev    = self-service: register (subject to UPLOAD_TO_HARVESTER) + auto-merge.
           if [ "${{ matrix.tier }}" = "dev" ]; then
             echo "upload=${{ env.UPLOAD_TO_HARVESTER }}" >> "$GITHUB_OUTPUT"
           else
             echo "upload=false" >> "$GITHUB_OUTPUT"
           fi
+          # Dev images are registered per PR build, so the version carries the PR
+          # number — two builds of the same PR must not collide on one VMI name.
+          echo "version=pr${{ github.event.pull_request.number }}.$(date -u +%y.%-m%d.%H%M)" >> "$GITHUB_OUTPUT"
 
       - name: Show build parameters
         run: |
@@ -173,11 +176,36 @@ jobs:
       - name: Packer build
         working-directory: packer/_build
         env:
-          PKR_VAR_upload_to_harvester: ${{ steps.mode.outputs.upload }}
-          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
-          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
           PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="${{ matrix.var_file }}" .
+
+      # Only the registering (dev) builds need this — a golden PR build is
+      # validation-only and must not touch the artifact store or Harvester.
+      - name: Publish image to MinIO
+        id: publish
+        if: steps.mode.outputs.upload == 'true'
+        working-directory: packer/_build
+        env:
+          IMAGE_FILE: output/${{ matrix.name }}-amd64.img
+          IMAGE_NAME: ${{ matrix.name }}
+          S3_PREFIX: ${{ matrix.tier }}
+          S3_ENDPOINT: https://artifacts.platform.sthings.lab
+          S3_BUCKET: packer
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: bash publish-base.sh
+
+      - name: Register image with Harvester
+        if: steps.mode.outputs.upload == 'true'
+        working-directory: packer/_build
+        env:
+          UPLOAD_TO_HARVESTER: "true"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          IMAGE_NAME: ${{ matrix.name }}
+          IMAGE_VERSION: ${{ steps.mode.outputs.version }}
+          IMAGE_URL: ${{ steps.publish.outputs.image_url }}
+        run: bash register-image.sh
 
       - name: Auto-merge PR (dev only)
         # Dev images auto-merge on a green build+upload. If the PR also touches a

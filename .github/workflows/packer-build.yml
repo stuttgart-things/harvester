@@ -60,25 +60,33 @@ jobs:
     name: "Build ${{ inputs.image }}"
     if: github.event_name == 'workflow_dispatch'
     runs-on: ${{ inputs.runner }}
-    # Golden always publishes its base to MinIO, so it always needs the
-    # harvester environment's MINIO_* secrets. Dev only needs the environment
-    # when it uploads the built image to Harvester.
-    environment: ${{ (startsWith(inputs.image, 'golden/') || inputs.upload_to_harvester) && 'harvester' || '' }}
+    # Every build now publishes to MinIO — golden as a base for dev images, dev
+    # because that is where Harvester downloads it from — so the MINIO_* secrets
+    # in the harvester environment are always needed.
+    environment: harvester
     env:
       PACKER_LOG: ${{ inputs.packer_log && 1 || 0 }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Resolve image name
+      - name: Resolve image name, tier and version
         id: meta
-        run: echo "name=$(basename '${{ inputs.image }}')" >> "$GITHUB_OUTPUT"
+        run: |
+          # The Harvester VMI is versioned; the MinIO key is not. See
+          # register-image.sh for why images are never replaced in place.
+          {
+            echo "name=$(basename '${{ inputs.image }}')"
+            echo "tier=$(dirname '${{ inputs.image }}')"
+            echo "version=$(date -u +%y.%-m%d.%H%M)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Show build parameters
         run: |
           echo "Image      : ${{ inputs.image }}"
           echo "Var file   : ../${{ inputs.image }}/build.pkrvars.hcl"
-          echo "Upload     : ${{ inputs.upload_to_harvester }}"
+          echo "Version    : ${{ steps.meta.outputs.version }}"
+          echo "Register   : ${{ inputs.upload_to_harvester }}"
           echo "Runner     : ${{ inputs.runner }}"
 
       - name: Packer init
@@ -100,24 +108,35 @@ jobs:
       - name: Packer build
         working-directory: packer/_build
         env:
-          PKR_VAR_upload_to_harvester: ${{ inputs.upload_to_harvester }}
-          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
-          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
           PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="../${{ inputs.image }}/build.pkrvars.hcl" .
 
-      - name: Publish golden base to MinIO
-        # Only golden images are published as a build base for dev images.
-        if: startsWith(inputs.image, 'golden/')
+      # MinIO first, Harvester second: Harvester downloads the image from this
+      # URL itself, so it has to resolve before the VMI is created (issue #215).
+      - name: Publish image to MinIO
+        id: publish
         working-directory: packer/_build
         env:
           IMAGE_FILE: output/${{ steps.meta.outputs.name }}-amd64.img
           IMAGE_NAME: ${{ steps.meta.outputs.name }}
+          S3_PREFIX: ${{ steps.meta.outputs.tier }}
           S3_ENDPOINT: https://artifacts.platform.sthings.lab
           S3_BUCKET: packer
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: bash publish-base.sh
+
+      - name: Register image with Harvester
+        if: inputs.upload_to_harvester
+        working-directory: packer/_build
+        env:
+          UPLOAD_TO_HARVESTER: "true"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          IMAGE_NAME: ${{ steps.meta.outputs.name }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+          IMAGE_URL: ${{ steps.publish.outputs.image_url }}
+        run: bash register-image.sh
 
   # --- Detect golden images to (re)build after a merge to main ------------
   detect-golden:
@@ -176,11 +195,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Resolve image version
+        id: meta
+        run: echo "version=$(date -u +%y.%-m%d.%H%M)" >> "$GITHUB_OUTPUT"
+
       - name: Show build parameters
         run: |
           echo "Golden image : ${{ matrix.name }}"
           echo "Var file     : ${{ matrix.var_file }}"
-          echo "Upload       : ${{ env.UPLOAD_TO_HARVESTER }}"
+          echo "Version      : ${{ steps.meta.outputs.version }}"
+          echo "Register     : ${{ env.UPLOAD_TO_HARVESTER }}"
 
       - name: Packer init
         working-directory: packer/_build
@@ -196,23 +220,53 @@ jobs:
             echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
           fi
 
-      - name: Packer build + upload
+      - name: Packer build
         working-directory: packer/_build
         env:
-          PKR_VAR_upload_to_harvester: ${{ env.UPLOAD_TO_HARVESTER }}
-          PKR_VAR_harvester_vip: ${{ secrets.HARVESTER_VIP }}
-          PKR_VAR_harvester_password: ${{ secrets.HARVESTER_PASSWORD }}
           PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
         run: packer build -var-file="${{ matrix.var_file }}" .
 
+      # MinIO first, Harvester second — Harvester pulls from this URL itself.
       - name: Publish golden base to MinIO
-        # Make the freshly-built golden available as a base for dev images.
+        id: publish
         working-directory: packer/_build
         env:
           IMAGE_FILE: output/${{ matrix.name }}-amd64.img
           IMAGE_NAME: ${{ matrix.name }}
+          S3_PREFIX: golden
           S3_ENDPOINT: https://artifacts.platform.sthings.lab
           S3_BUCKET: packer
           MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
           MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
         run: bash publish-base.sh
+
+      - name: Register image with Harvester
+        id: register
+        if: env.UPLOAD_TO_HARVESTER == 'true'
+        working-directory: packer/_build
+        env:
+          UPLOAD_TO_HARVESTER: "true"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          IMAGE_NAME: ${{ matrix.name }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+          IMAGE_URL: ${{ steps.publish.outputs.image_url }}
+        run: bash register-image.sh
+
+      - name: Summarise the new image pin
+        # The new image carries a fresh lh-<uuid>. Nothing consumes it until the
+        # pin in env-config-virtualmachine.yaml is moved, so say so out loud
+        # rather than leaving a green build that changed nothing.
+        if: steps.register.outcome == 'success'
+        run: |
+          {
+            echo "### Registered \`${{ steps.register.outputs.vmi_name }}\`"
+            echo
+            echo "Update the pin in \`clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml\`:"
+            echo
+            echo '```yaml'
+            echo "      ${{ matrix.name }}:"
+            echo "        imageId: default/${{ steps.register.outputs.vmi_name }}"
+            echo "        storageClassName: ${{ steps.register.outputs.storage_class }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -107,16 +107,10 @@ build {
     ]
   }
 
-  post-processor "shell-local" {
-    execute_command = ["bash", "-c", "{{.Vars}} {{.Script}}"]
-    script          = "upload.sh"
-    environment_vars = [
-      "UPLOAD_TO_HARVESTER=${var.upload_to_harvester}",
-      "HARVESTER_VIP=${var.harvester_vip}",
-      "HARVESTER_PASSWORD=${var.harvester_password}",
-      "IMAGE_NAME=${var.image_name}",
-      "IMAGE_FILE=${var.output_location}/${var.image_name}-amd64.img",
-      "NAMESPACE=${var.namespace}"
-    ]
-  }
+  # No Harvester post-processor. Registration now happens AFTER the build, in
+  # two ordered CI steps: publish-base.sh puts the image in MinIO, then
+  # register-image.sh points Harvester at that URL (issue #215). Harvester has
+  # to be able to fetch the artifact before it is told about it, and a packer
+  # post-processor cannot express that ordering — it runs inside the build,
+  # before the publish step.
 }
