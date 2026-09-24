@@ -1,7 +1,4 @@
 ---
-# DRAFT -- NOT LISTED in kustomization.yaml until README.md steps B and C are
-# done.
-#
 # provider-vault ClusterProviderConfigs against the OpenBao on `platform`: the
 # same three roles the LabDA machinery cluster carries against its infra Vault
 # (stuttgart-things clusters/labda/vsphere/machinery-fleet-state/
@@ -16,10 +13,16 @@
 #                            cluster-vault-sthings-lab.yaml
 #   vault-kubeconfig-writer  owns kubeconfigs/<cluster>
 #
+# The AppRoles are in ../platform/openbao/machinery-fleet: `vault` logs in with
+# a second secret_id of the existing `crossplane` role (crossplane-auth-admin),
+# the other two with machinery-hv-cluster-secrets-writer and
+# machinery-hv-kubeconfig-writer.
+#
 # The credential Secrets are NOT ExternalSecrets as in LabDA: there they reshape
 # one AppRole blob from sops-git into four shapes, and this cluster has neither
 # ESO nor sops-git (see ../machinery-hv/infra-platform.yaml). Here each is one
-# SOPS-encrypted Secret in ./secrets/ holding the `credentials` JSON directly:
+# SOPS-encrypted Secret in ./secrets/, rendered by that directory's
+# render-fleet-secrets.sh, holding the `credentials` JSON directly:
 #
 #   {"auth_login":{"path":"auth/approle/login","parameters":{"role_id":"…","secret_id":"…"}}}
 #

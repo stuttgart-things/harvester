@@ -39,3 +39,12 @@ spec:
     # This repository, not flux-infra: the content is this cluster's own state.
     name: flux-system
   path: ./clusters/machinery-hv-fleet-state
+  # EXPLICIT, not inherited. The FluxInstance's decryption patch lands on the
+  # flux-system Kustomization only -- checked on this cluster, 2026-09-24:
+  # every child had an empty spec.decryption. Without this block the Secrets in
+  # secrets/ are applied as SOPS ciphertext and the apply fails on `sops:` not
+  # being a field of Secret.
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age

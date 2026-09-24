@@ -21,55 +21,37 @@ with two deliberate differences:
 
 ## What is here
 
-| File | Listed | Objects |
+| File | Objects |
+|---|---|
+| `environmentconfigs.yaml` | `harvestervm-sthings-lab`, `ansible-run-defaults`, `rancher-cluster-join-sthings-lab` |
+| `providerconfigs.yaml` | provider-kubernetes `harvester`, `rancher-mgmt` |
+| `openbao-pki-source-ca.yaml` | `default/openbao-pki-source-ca`, the OpenBao root the Platform copies onto built clusters |
+| `cluster-vault-sthings-lab.yaml` | the OpenBao policy mapping for `environmentConfig: sthings-lab` |
+| `vault-provider-configs.yaml` | provider-vault `vault`, `vault-cluster-secrets`, `vault-kubeconfig-writer` |
+| `appsecretprofiles.yaml` | `homerun2`, `schmetterpause`, `zaehlwerk`, `tabletennis` |
+| `secrets/*.enc.yaml` | the credentials below, SOPS-encrypted, decrypted by Flux |
+
+All listed and applied since 2026-09-24. `secrets/` is **generated**: rendered
+and encrypted by
+[`../platform/openbao/machinery-fleet/render-fleet-secrets.sh`](../platform/openbao/machinery-fleet/README.md),
+never edited by hand.
+
+| Secret | Keys | From |
 |---|---|---|
-| `environmentconfigs.yaml` | yes | `harvestervm-sthings-lab`, `ansible-run-defaults`, `rancher-cluster-join-sthings-lab` |
-| `providerconfigs.yaml` | yes | provider-kubernetes `harvester`, `rancher-mgmt` -- inert until step A |
-| `openbao-pki-source-ca.yaml` | yes | `default/openbao-pki-source-ca`, the OpenBao root the Platform copies onto built clusters |
-| `vault-provider-configs.yaml` | **no** | provider-vault `vault`, `vault-cluster-secrets`, `vault-kubeconfig-writer` |
-| `cluster-vault-sthings-lab.yaml` | **no** | the OpenBao policy mapping for `environmentConfig: sthings-lab` |
-| `appsecretprofiles.yaml` | **no** | `homerun2`, `schmetterpause`, `zaehlwerk`, `tabletennis` |
+| `tekton-ci/ansible-credentials` | `ANSIBLE_USER`, `ANSIBLE_PASSWORD` | the cloud-init login in `vms/machinery-hv.params.enc.yaml` |
+| `crossplane-system/harvester-kubeconfig` | `kubeconfig` | `~/.kube/harvester` |
+| `crossplane-system/rancher-mgmt-kubeconfig` | `kubeconfig` | `~/.kube/platform.sthings.lab` -- the admin kubeconfig; a scoped Rancher token would be better |
+| `crossplane-system/vault-provider-creds` | `credentials` | AppRole `crossplane` (2nd secret_id) |
+| `crossplane-system/vault-creds-cluster-secrets` | `credentials` | AppRole `machinery-hv-cluster-secrets-writer` |
+| `crossplane-system/vault-creds-kubeconfig-writer` | `credentials` | AppRole `machinery-hv-kubeconfig-writer` |
+| `default/vault-approle`, `vault-cluster-secrets-writer`, `vault-kubeconfig-writer` | `terraform.tfvars` | the same three, for the OpenTofu Workspaces |
+| `tekton-ci/vault` | `VAULT_ADDR`, `VAULT_ROLE_ID`, `VAULT_SECRET_ID` | kubeconfig-writer, for the join play's upload. Named `vault` because `ClusterStack.spec.kubeconfig.vaultSecretName` defaults to it and the read side (`vault-kubeconfigs`) is derived from that name |
 
-## What is missing, in order
+## Still open
 
-Unlisted files stay unlisted until their step is done. Every one of them fails
-**silently** when applied early -- a role naming a missing policy logs in and is
-granted nothing.
-
-**A. Encrypted Secrets** in `secrets/`, each `dagger … sops encrypt` like the rest
-of this repo:
-
-| File | Secret | Keys | Source |
-|---|---|---|---|
-| `ansible-credentials.enc.yaml` | `tekton-ci/ansible-credentials` | `ANSIBLE_USER`, `ANSIBLE_PASSWORD` | the golden image's cloud-init login; crossplane-mgmt carries the same Secret |
-| `harvester-kubeconfig.enc.yaml` | `crossplane-system/harvester-kubeconfig` | `kubeconfig` | `~/.kube/harvester` |
-| `rancher-mgmt-kubeconfig.enc.yaml` | `crossplane-system/rancher-mgmt-kubeconfig` | `kubeconfig` | `~/.kube/platform.sthings.lab` -- a scoped Rancher token rather than the admin kubeconfig would be better |
-
-`tekton-ci` must exist before the first one applies; the tekton component
-creates it.
-
-**B. OpenBao objects**, in `../platform/openbao` (Terraform, beside `approle.tf`):
-
-- KV mounts `kubeconfigs`, `homerun2`, `schmetterpause`, `observability`
-- policies `read-{homerun2,schmetterpause,observability}-clusters`,
-  `write-{homerun2,schmetterpause,observability}-clusters` (one path segment,
-  `_` entries denied -- see stuttgart-things#3017), `write-kubeconfigs`
-- the shared entry `homerun2/_git-pat`
-
-**C. AppRoles** on that OpenBao, and their `credentials` JSON encrypted into
-`secrets/`:
-
-| AppRole | Policies | ProviderConfig |
-|---|---|---|
-| k8s-auth bootstrap | may create Kubernetes auth mounts and roles (the scope of `crossplane-auth-admin`) | `vault` |
-| cluster-secrets writer | `write-*-clusters` | `vault-cluster-secrets` |
-| kubeconfig writer | `write-kubeconfigs` | `vault-kubeconfig-writer` |
-| kubeconfig reader | read on `kubeconfigs/` | provider-kubeconfig (see below) |
-
-Plus the tfvars twins in `default` the OpenTofu Workspaces read
-(`vault-approle`, `vault-cluster-secrets-writer`, `vault-kubeconfig-writer`).
-
-**D. AppSecretProfiles** -- list them once B has the mounts they name.
+- **`homerun2/_git-pat`** is not seeded (see the OpenBao README). The homerun2
+  profile's `githubToken` stays empty until it is.
+- **provider-kubeconfig and provider-minio**, below.
 
 ## provider-kubeconfig: watch this first
 

@@ -1,18 +1,20 @@
 ---
-# DRAFT -- NOT LISTED in kustomization.yaml until README.md step B is done.
-#
 # The OpenBao policy mapping for ClusterStacks with
 # `spec.environmentConfig: sthings-lab`. Shape copied from cluster-vault-labul
 # (stuttgart-things clusters/labda/vsphere/machinery-fleet-state/
 # environmentconfigs.yaml, itself a copy of crossplane-configurations
 # bootstrap/cluster/examples/environment-config-vault-labul.yaml).
 #
-# EVERY NAME HERE MUST EXIST ON THE OPENBAO before this is applied. A role
-# referencing a missing policy is accepted and its token silently has no
-# permissions -- the order builds, and the cluster's ExternalSecrets never sync.
-# The policy and mount names below are the LabUL ones, kept as the proposal; the
-# OpenBao on platform has none of them yet (it carries pki-issue,
-# crossplane-auth-admin and the tabletennis app-secrets mount).
+# EVERY NAME HERE MUST EXIST ON THE OPENBAO. A role referencing a missing
+# policy is accepted and its token silently has no permissions -- the order
+# builds, and the cluster's ExternalSecrets never sync. The mounts and the
+# read-/write-*-clusters policies are created by
+# ../platform/openbao/machinery-fleet (same names as LabUL, on purpose).
+#
+# ONE GAP: the shared entry homerun2/_git-pat below is NOT seeded -- it needs a
+# real GitHub token, and choosing whose is not a Terraform decision. Until it
+# exists, an order with the homerun2 profile gets every homerun2 key except
+# githubToken.
 apiVersion: apiextensions.crossplane.io/v1beta1
 kind: EnvironmentConfig
 metadata:

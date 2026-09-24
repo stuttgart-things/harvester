@@ -35,7 +35,9 @@ spec:
   size: medium
   environmentConfig: sthings-lab
   kubeconfig:
-    vaultSecretName: vault-kubeconfig-writer  # pragma: allowlist secret
+    # vaultSecretName left at its default `vault`: tekton-ci/vault in the fleet
+    # state carries the kubeconfig-writer AppRole, and the read side is derived
+    # from that name (-> ClusterProviderConfig `vault-kubeconfigs`).
     lifecycle:
       vaultAddr: https://openbao.platform.sthings.lab
   profiles:
