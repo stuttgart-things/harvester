@@ -123,4 +123,4 @@ spec:
           volumes:
             - name: lab-ca
               secret:
-                secretName: vault-pki-ca
+                secretName: vault-pki-ca # pragma: allowlist secret
