@@ -64,8 +64,9 @@ name swapped; read its warnings there, they all apply.
 1. **Reserve the LB address** in Clusterbook, with an explicit `ip`, then write
    it into `CILIUM_LB_IP_START` / `_STOP` in `infra-platform.yaml`. Check the
    ledger first -- `.173` and `.178` still have stale DNS records.
-2. **Create `vms/machinery-hv.params.enc.yaml`** (the params plus the cloud-init
-   credentials), then bake: `bake-harvester --vm-name machinery-hv
+2. **Bake** with `vms/machinery-hv.params.enc.yaml` (the params plus the
+   cloud-init credentials; `ANSIBLE_USER` / `ANSIBLE_PASSWORD` extracted from
+   it, as in the homerun2-dev runbook): `bake-harvester --vm-name machinery-hv
    --inventory-type cluster` with the `--ansible-parameters` string from
    [`vms/README.md`](../../vms/README.md#machinery-hv).
 3. **Fetch the kubeconfig** off the node, rewrite `127.0.0.1`, encrypt it to

@@ -37,7 +37,7 @@ description: machinery-hv singlenode rke2 crossplane management cluster
 networkName: vms
 networkNamespace: default
 
-# Credentials are NOT here -- same rule as homerun2-dev.params.yaml. They go
-# into machinery-hv.params.enc.yaml (cloudInitUsername, cloudInitPassword,
-# cloudInitSshKey), which does not exist yet: create it before the first bake,
-# the module otherwise falls back to a well-known password.
+# Credentials are NOT here -- same rule as homerun2-dev.params.yaml. They are
+# in machinery-hv.params.enc.yaml (cloudInitUsername, cloudInitPassword,
+# cloudInitSshKey); pass that file to the bake, never this one, or the module
+# falls back to a well-known password.

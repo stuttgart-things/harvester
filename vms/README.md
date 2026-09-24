@@ -311,7 +311,7 @@ the name swapped; the whole build is in
 | File | |
 |---|---|
 | `machinery-hv.params.yaml` | 8 vCPU / 16Gi / 80Gi on `sthings-u26-26.924.1008`. No credentials. |
-| `machinery-hv.params.enc.yaml` | **not created yet** -- the same keys plus the cloud-init credentials, SOPS/AGE encrypted. Required before the first bake. |
+| `machinery-hv.params.enc.yaml` | the same keys plus `cloudInitUsername`, `cloudInitPassword`, `cloudInitSshKey` (`~/.ssh/id_ed25519.pub`, the key crossplane-mgmt's Harvester VMs already trust), SOPS/AGE encrypted. |
 | `machinery-hv.rke2.ansible-vars.yaml` | the RKE2 extra vars, identical to homerun2-dev's apart from `cluster_name`. |
 
 The parameter string for `bake-harvester`, kept here because `vms-lint.yml`
