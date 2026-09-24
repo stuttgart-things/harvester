@@ -35,6 +35,7 @@ resources:
   - appsecretprofiles.yaml
   # provider-kubeconfig: the DeploymentRuntimeConfig the profile's provider
   # waits for, and the read side of every ClusterStack's kubeconfig
+  - provider-runtime.yaml
   - secrets/vault-approle-reader.enc.yaml
   - secrets/provider-kubeconfig-roleids.enc.yaml
   - provider-kubeconfig.yaml
