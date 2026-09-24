@@ -12,6 +12,7 @@ packer/
 │   ├── variables.pkr.hcl       # Variable declarations (values come from each image's var-file)
 │   ├── publish-base.sh         # Publishes the built image to the MinIO artifact store
 │   ├── register-image.sh       # Registers it with Harvester (Harvester downloads it)
+│   ├── prune-images.sh         # Removes superseded images (dry run unless told otherwise)
 │   └── vmi_template.yaml       # Harvester VirtualMachineImage CRD template
 │
 ├── golden/                     # Curated base images — REVIEW-GATED (no auto-merge)
@@ -126,6 +127,35 @@ rebuilt, which also makes rollback a one-line revert.
 
 The MinIO key is *not* versioned — dev var-files point a stable `source_url` at
 the golden artifact, and that URL has to keep resolving to the current base.
+
+#### Cleaning up
+
+Because nothing is replaced, images pile up. `prune-images.sh` removes the ones
+nothing can be using, and CI runs it after every registration (disable with the
+repo variable `PRUNE_IMAGES=false`). Run it by hand from `packer/_build`:
+
+```bash
+HARVESTER_VIP="${HARVESTER_VIP}" HARVESTER_PASSWORD="${HARVESTER_PASSWORD}" \
+  bash prune-images.sh                 # dry run: reports, deletes nothing
+```
+
+It **defaults to a dry run** and **fails closed** — any check it cannot complete
+aborts the run, because an API error must never read as "safe to delete".
+Deleting an image destroys the Longhorn backing class behind every VM disk built
+from it, so an image goes only when all of these hold:
+
+- its name is versioned; unversioned images (`sthings-u26`, `u26-dev`, …) are never touched
+- no PVC uses its storage class
+- no `imageId` in `env-config-virtualmachine.yaml` points at it — this protects a
+  freshly pinned image that nothing has booted from yet, which the PVC check alone
+  would miss
+- it is expendable for its kind: a per-PR image (`pr<N>.` in the version) once PR
+  `<N>` has closed, a release image once it falls outside the `KEEP` newest
+  (default 3). PR images deliberately ignore `KEEP` — there are only ever one or
+  two per base, so keeping "the newest three" would keep them forever.
+
+Reading PR state needs the `gh` CLI; without it PR images fall back to the `KEEP`
+rule and the run says so rather than guessing them away.
 
 ### Variables
 
