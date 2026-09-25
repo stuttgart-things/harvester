@@ -16,8 +16,9 @@ with two deliberate differences:
   encrypted file. Simpler to bootstrap, more work to rotate.
 - **The Harvester placement and the ansible-run defaults are written out**
   (`environmentconfigs.yaml`) instead of coming from flux's
-  `crossplane-capabilities` / `harvester-demo`, which cannot be configured for
-  this lab at flux v1.80.0 (stuttgart-things/flux#514) -- see [`../machinery-hv/cicd-platform.yaml`](../machinery-hv/cicd-platform.yaml).
+  `crossplane-capabilities` / `harvester-demo`. That set can be configured for
+  this lab since flux v1.80.3 (stuttgart-things/flux#514), but the component
+  depends on `sops-git`, which this cluster does not run -- see [`../machinery-hv/cicd-platform.yaml`](../machinery-hv/cicd-platform.yaml).
 
 ## What is here
 

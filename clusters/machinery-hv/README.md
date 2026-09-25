@@ -94,11 +94,14 @@ name swapped; read its warnings there, they all apply.
   ClusterStack on Harvester. Settle with `crossplane render` against the
   fleet-state EnvironmentConfigs before the first order -- in particular which
   `environmentConfig` value reaches the HarvesterVM child.
-- **flux `crossplane-capabilities` cannot target this lab** (v1.80.0): the
-  `CROSSPLANE_CAPABILITY_HARVESTER_*` variables are not passed to the child
-  Kustomization, so the `harvester-demo` set always renders its defaults
-  (`in-cluster`, `default/image-ubuntu`). Worked around in the fleet state;
-  upstream: stuttgart-things/flux#514.
+- **flux `crossplane-capabilities` is not selected**: it depends on the
+  `sops-git` Kustomization, which this cluster does not run. The
+  `harvester-demo` set can be configured for this lab since flux v1.80.3
+  (stuttgart-things/flux#514 -- the `CROSSPLANE_CAPABILITY_HARVESTER_*`
+  variables are now passed through, and `CROSSPLANE_CAPABILITY_ANSIBLE_SSH_BACKEND=none`
+  lets the cluster supply `ansible-credentials` itself), but sops-git stays a
+  hard dependency: it also owns the `stuttgart-things-charts` HelmRepository.
+  Worked around in the fleet state until this cluster carries sops-git.
 - **Argo CD registration.** The ClusterStack registers built clusters in Argo
   CD through the `argocd-cluster` Configuration; its preconditions on this lab
   (the Argo CD on platform, its provider config) are not in the fleet state yet.

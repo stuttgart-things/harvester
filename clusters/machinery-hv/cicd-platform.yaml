@@ -13,16 +13,17 @@
 #
 # WHAT IS NOT SELECTED, AND WHY:
 #
-#   crossplane-capabilities -- the `harvester-demo` set cannot be configured
-#     for this lab at flux v1.80.0. Its EnvironmentConfig reads
-#     CROSSPLANE_CAPABILITY_HARVESTER_* variables, but the component's child
-#     Kustomization does not pass them through, so every value falls back to
-#     its default: providerConfigRef in-cluster (VMs built on THIS cluster, not
-#     on Harvester) and image default/image-ubuntu (does not exist here). And
-#     its ansible-run release needs sops-git, which needs an ESO Vault store.
-#     The placement and the ansible defaults are written out in
-#     ../machinery-hv-fleet-state instead, until the component can carry them
-#     (stuttgart-things/flux#514).
+#   crossplane-capabilities -- the component depends on the `sops-git`
+#     Kustomization, which this cluster does not select (see
+#     infra-platform.yaml): sops-git reads its age key through an ESO Vault
+#     store, and it also owns the `stuttgart-things-charts` HelmRepository the
+#     capability releases pull from, so no variable removes the dependency.
+#     The `harvester-demo` set itself CAN be configured for this lab since
+#     flux v1.80.3 (stuttgart-things/flux#514): all six
+#     CROSSPLANE_CAPABILITY_HARVESTER_* values are passed through, and
+#     CROSSPLANE_CAPABILITY_ANSIBLE_SSH_BACKEND=none drops the sops-git read of
+#     the ansible SSH file. Until this cluster carries sops-git, the placement
+#     and the ansible defaults stay written out in ../machinery-hv-fleet-state.
 #
 #   machinery / claim-machinery-api / komoplane -- the API and the dashboards
 #     already run on platform; add komoplane here if a local view is wanted.
