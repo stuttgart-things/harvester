@@ -595,50 +595,34 @@ curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|
 ## 9. The table tennis stack
 
 [`tabletennis.yaml`](./tabletennis.yaml) runs **schmetterpause** (players, TTR,
-tournaments, history) and **zaehlwerk** (the scoring API and its panel).
-Credentials are in [`tabletennis-secrets.enc.yaml`](./tabletennis-secrets.enc.yaml);
-the database is not in this directory at all, for a reason worth reading below.
+tournaments, history) and **zaehlwerk** (the scoring API and its panel) from
+`apps/tabletennis/profiles/sops` in stuttgart-things/flux -- one Kustomization,
+with the credentials substituted from
+[`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml).
 
-### Assembled here rather than consumed from a profile
+### From the upstream profile, not a copy of it
 
-`apps/tabletennis/profiles/base` takes every credential from ExternalSecrets
-against a `ClusterSecretStore`, and unlike `apps/homerun2` it ships no `sops/`
-variant -- those patches sit in the *shared* `release.yaml` the production
-tabletennis cluster runs. Splitting an `eso/` component out of a file in active
-use is a bigger change than one cluster should force, so this file does what the
-profile does minus ESO: the two OCIRepositories, the namespaces, upstream's
-HTTPRoute/ConfigMap/Deployment patches copied verbatim, `$patch: delete` on the
-three ExternalSecrets, and plain Secrets in their place.
+Until flux#483 the upstream profile took every credential from ExternalSecrets,
+so this cluster assembled the stack by hand and upstream changes did not reach
+it. `profiles/sops` is the same pair with plain Secrets instead. It deletes the
+three ExternalSecrets, because without ESO their CRD does not exist here and
+they would fail the dry-run. It also builds `schmetterpause-db` with all three
+keys, `SP_DATABASE_URL` included. That key is what cost a second outage here
+when only `spec.data[]` was copied.
 
-The cost is honest: upstream changes to those patches do not reach us, so when
-`apps/tabletennis` moves this file has to be re-read against it. **flux#483**
-tracks giving it a real sops path; this cluster is the worked example.
+What stays local is only what the profile does not know: the domain and gateway,
+the database size (`2Gi`, the size the Cluster was created at; the profile's
+`1Gi` would be a shrink), the pinned versions, and two patches that go into the
+child Kustomizations: `SP_PUBLIC_BASE_URL` and zaehlwerk's `OMNI_PITCHER_URL`
+over the gateway (see below for why not the in-cluster panel component).
 
-Two `$patch: delete` entries are not tidiness. Without ESO the
-`externalsecrets.external-secrets.io` CRD does not exist here at all, so leaving
-those objects in fails the dry-run and takes the whole Kustomization with it.
-
-### The database lives in a sibling directory
-
-[`../homerun2-dev-seeds/schmetterpause-db.yaml`](../homerun2-dev-seeds/schmetterpause-db.yaml)
-holds the CloudNativePG `Cluster`. `flux-system` applies `clusters/homerun2-dev`
-recursively and a Kustomization fails as a whole, so a CNPG `Cluster` in *this*
-directory is a deadlock rather than a race -- the CRD comes from `cnpg-operator`,
-which `infra-platform` creates, which `flux-system` itself has to apply:
-
-```
-Cluster/schmetterpause/schmetterpause-db dry-run failed: no matches for kind
-"Cluster" in version "postgresql.cnpg.io/v1"
-```
-
-That blocked every object in `clusters/homerun2-dev` on 2026-09-17, including
-the one that installs the CRD. `prune: false`, because the PVC hangs off the
-`Cluster` by ownerReference and CNPG has no retention of its own.
-
-And one trap that cost a second outage: the `schmetterpause-db` Secret must also
-carry **`SP_DATABASE_URL`**. Upstream's ExternalSecret does not copy that key, it
-*synthesises* it in `target.template` -- replicate only `spec.data[]` and the app
-comes up with a username, a password and no DSN.
+The CloudNativePG `Cluster` comes from the profile too. It used to sit in a
+sibling directory (`homerun2-dev-seeds`) because a CNPG object applied directly
+by `flux-system` deadlocks on its own CRD. That blocked every object in
+`clusters/homerun2-dev` on 2026-09-17. Inside `tabletennis`, which
+`dependsOn: infra-platform`, that cannot happen. The `Cluster` and the
+`schmetterpause` Namespace both carry `prune: disabled`, because the PVC hangs
+off the `Cluster` by ownerReference and CNPG has no retention of its own.
 
 ### `tabletennis` is a stream nobody reads, and that is the decision
 
