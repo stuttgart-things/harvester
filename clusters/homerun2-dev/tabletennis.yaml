@@ -35,12 +35,22 @@ metadata:
   name: zaehlwerk
   labels:
     toolkit.fluxcd.io/tenant: sthings-team
+  annotations:
+    # Handover to apps/tabletennis/profiles/sops (flux#483): the next change
+    # moves this object under that profile's Kustomization. Not pruned in the
+    # meantime, so flux-system lets go of it instead of deleting it first.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:
   name: schmetterpause-kustomize
   namespace: schmetterpause
+  annotations:
+    # Handover to apps/tabletennis/profiles/sops (flux#483): the next change
+    # moves this object under that profile's Kustomization. Not pruned in the
+    # meantime, so flux-system lets go of it instead of deleting it first.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/schmetterpause-kustomize
@@ -54,6 +64,11 @@ kind: OCIRepository
 metadata:
   name: zaehlwerk-kustomize
   namespace: zaehlwerk
+  annotations:
+    # Handover to apps/tabletennis/profiles/sops (flux#483): the next change
+    # moves this object under that profile's Kustomization. Not pruned in the
+    # meantime, so flux-system lets go of it instead of deleting it first.
+    kustomize.toolkit.fluxcd.io/prune: disabled
 spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/zaehlwerk-kustomize
@@ -134,7 +149,10 @@ spec:
   interval: 1h
   retryInterval: 1m
   timeout: 10m
-  prune: true
+  # false for the handover to apps/tabletennis/profiles/sops (flux#483):
+  # removing this Kustomization must leave its objects for the new one to
+  # adopt, not delete them first.
+  prune: false
   wait: true
   dependsOn:
     # The CRD, and the Gateway its HTTPRoutes attach to.
@@ -233,7 +251,10 @@ spec:
   interval: 1h
   retryInterval: 1m
   timeout: 10m
-  prune: true
+  # false for the handover to apps/tabletennis/profiles/sops (flux#483):
+  # removing this Kustomization must leave its objects for the new one to
+  # adopt, not delete them first.
+  prune: false
   wait: true
   dependsOn:
     - name: infra-platform
