@@ -2,12 +2,19 @@
 # The EnvironmentConfigs a ClusterStack on this cluster resolves at render time.
 #
 # The first two are what the flux `crossplane-capabilities` component would
-# supply through the `harvester-demo` set, if that set could be configured for
-# this lab. At flux v1.80.0 it cannot -- see ../machinery-hv/cicd-platform.yaml
-# -- so they are written out here. Move them back into the component once it
-# passes the CROSSPLANE_CAPABILITY_HARVESTER_* variables through
-# (stuttgart-things/flux#514), and delete
-# them here in the SAME change, or two owners fight over one object.
+# supply through the `harvester-demo` set. The set can carry them since flux
+# v1.80.3 (stuttgart-things/flux#514), but the component depends on `sops-git`,
+# which this cluster does not run -- see ../machinery-hv/cicd-platform.yaml --
+# so they are written out here.
+#
+# MOVING THEM INTO THE COMPONENT, once sops-git is selected: set
+# CROSSPLANE_CAPABILITY_SET=harvester-demo, the six
+# CROSSPLANE_CAPABILITY_HARVESTER_* values from harvestervm-sthings-lab below
+# (ENVIRONMENT=sthings-lab, PROVIDER_CONFIG=harvester, STORAGE_CLASS, NAMESPACE,
+# NETWORK, IMAGE) and, if ansible-credentials stays SOPS-encrypted here,
+# CROSSPLANE_CAPABILITY_ANSIBLE_SSH_BACKEND=none. Delete both objects here in
+# the SAME change: ansible-run-defaults would get two owners, and a second
+# Harvester EnvironmentConfig breaks the exactly-one selector match.
 ---
 # Harvester placement for HarvesterVM. Selected by label against the XR's
 # spec.environmentConfig; function-environment-configs wants EXACTLY ONE match.

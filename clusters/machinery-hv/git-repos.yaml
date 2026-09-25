@@ -13,6 +13,12 @@
 # v1.80.1 (2026-09-24) differs from v1.80.0 only in the coredns-lab-zone
 # component (serve_stale, flux#515) -- the Crossplane profile is unchanged.
 #
+# v1.80.3 (2026-09-25) changes nothing this cluster renders: the
+# crossplane-capabilities passthrough (flux#514, not selected here), the
+# schmetterpause alerts, and bumps to external-secrets / velero (not selected)
+# and to the cicd-platform profile's function-go-templating (the machinery
+# profile pins its own).
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -26,7 +32,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.1
+    tag: v1.80.3
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -37,5 +43,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.1
+    tag: v1.80.3
   url: https://github.com/stuttgart-things/flux.git
