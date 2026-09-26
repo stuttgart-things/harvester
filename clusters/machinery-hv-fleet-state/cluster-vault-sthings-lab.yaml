@@ -50,3 +50,17 @@ data:
     reservedEntries: {}
     writer:
       providerConfigName: vault-cluster-secrets
+  # The node network of a MACHINE POOL (xplane-cluster 0.22.0): Rancher builds
+  # the VM, and its address is reserved in clusterbook BEFORE the VM exists and
+  # handed to it as a static cloud-init config -- the only way to reach a node
+  # that has no CNI yet, because Rancher names it at random and DHCP would pick
+  # its address. The reservation comes from the same 192.168.10 ledger as the
+  # LoadBalancer addresses (the .170s, outside the router's DHCP range), keyed
+  # <cluster>-node.
+  machinePool:
+    networkKey: "192.168.10"
+    prefixLength: 24
+    gateway: 192.168.10.1
+    nameservers:
+      - 192.168.10.1
+    clusterbookProviderConfigRef: clusterbook  # clusterbook.yaml
