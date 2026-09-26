@@ -156,7 +156,10 @@ spec:
   retryInterval: 1m
   timeout: 10m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -242,7 +245,10 @@ spec:
   retryInterval: 1m
   timeout: 5m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -282,7 +288,10 @@ spec:
   retryInterval: 1m
   timeout: 10m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -317,7 +326,10 @@ spec:
   retryInterval: 1m
   timeout: 5m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -354,7 +366,10 @@ spec:
   retryInterval: 1m
   timeout: 10m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -388,7 +403,10 @@ spec:
   retryInterval: 1m
   timeout: 5m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -431,7 +449,10 @@ spec:
   retryInterval: 1m
   timeout: 10m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
@@ -464,7 +485,10 @@ spec:
   retryInterval: 1m
   timeout: 5m
   force: false
-  prune: true
+  # false for the handover to apps/homerun2/profiles/sops (flux#543):
+  # removing this Kustomization must leave its objects for homerun2 or
+  # homerun2-routes to adopt, not delete them first.
+  prune: false
   suspend: false
   wait: true
   dependsOn:
