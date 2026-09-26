@@ -1,0 +1,50 @@
+---
+# provider-clusterbook on machinery-hv: what reserves a MACHINE POOL node's
+# address (xplane-cluster 0.22.0, `{name}-node-ip`). The provider itself comes
+# with the machinery profile (cicd-platform); this is its target and the RBAC
+# the in-cluster provider-kubernetes needs to wrap an IPReservation in an
+# Object -- IPReservation is cluster-scoped, a namespaced composite cannot
+# compose it directly.
+#
+# The clusterbook API runs on `platform`, behind its Gateway, so the URL is the
+# public one the Log in ../machinery-hv/README.md uses with curl. VERIFY ON THE
+# FIRST ORDER: that endpoint's certificate is signed by the OpenBao PKI
+# (sthings.lab), and it is not known here whether provider-clusterbook trusts
+# that CA -- `curl -k` is how the lab talks to it today. A reservation that
+# never gets an address with a TLS error in the IPReservation's conditions is
+# this line.
+apiVersion: clusterbook.stuttgart-things.com/v1alpha1
+kind: ClusterProviderConfig
+metadata:
+  name: clusterbook
+spec:
+  url: https://clusterbook.platform.sthings.lab
+---
+# Shape of crossplane-configurations bootstrap/ip-reservation/examples/rbac.yaml,
+# minus the RemoteCluster rule the machine pool does not need. A no-op where the
+# provider's ServiceAccount is already cluster-admin; check with
+#
+#   SA=$(kubectl get sa -n crossplane-system -o name | grep provider-kubernetes | head -1 | cut -d/ -f2)
+#   kubectl auth can-i create ipreservations.ipreservation.clusterbook.stuttgart-things.com \
+#     --as=system:serviceaccount:crossplane-system:$SA
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: provider-kubernetes-node-ip-reservation
+rules:
+  - apiGroups: ["ipreservation.clusterbook.stuttgart-things.com"]
+    resources: ["ipreservations"]
+    verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: provider-kubernetes-node-ip-reservation
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: provider-kubernetes-node-ip-reservation
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: system:serviceaccounts:crossplane-system
