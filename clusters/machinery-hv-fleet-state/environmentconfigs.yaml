@@ -90,13 +90,25 @@ data:
 ---
 # What a rancher-mode ClusterStack selects with
 # `spec.rancher.environmentConfig: rancher-join-sthings-lab`. The LabDA
-# counterpart is rancher-cluster-join-test; the shape is the same five keys.
+# counterpart is rancher-cluster-join-test; the first five keys are its shape.
 #
-# NOT crossplane-mgmt's rancher-cluster-defaults: that one drives the older
-# RancherCluster mode where Rancher creates the VMs itself through a
-# HarvesterConfig (cloud credential, image, sshUser). Here the ClusterStack
-# builds the VM and Rancher only publishes the registration command the join
-# stage runs.
+# TWO WAYS TO GET A NODE, one environment for both:
+#
+#   machine pool   the DEFAULT for `provider: harvester` since xplane-cluster
+#                  0.22.0. Rancher creates the VM itself through a
+#                  HarvesterConfig -- the way tabletennis was built on
+#                  crossplane-mgmt -- and needs the Harvester block below.
+#   custom node    `spec.rancher.infrastructure: generic`. The ClusterStack
+#                  builds the VM and Rancher only publishes the registration
+#                  command the join stage runs. Blocked on Harvester by
+#                  stuttgart-things/crossplane-configurations#503 (the VM boots
+#                  with no user the ansible stages can log in as). Ignores the
+#                  Harvester block.
+#
+# The machine pool also relies on the SPLIT layout the first five keys already
+# describe: Rancher (rancher-mgmt) is not the cluster Crossplane runs on
+# (in-cluster), so rancher-cluster bridges Rancher's kubeconfig next to the XR,
+# where the ClusterStack copies it into kubeconfigs/<cluster>.
 #
 # kubernetesVersion follows tabletennis, the cluster Rancher already runs on
 # this lab.
@@ -112,3 +124,13 @@ data:
   providerConfigRef: in-cluster
   rancherNamespace: fleet-default
   rancherProviderConfigRef: rancher-mgmt
+  # The machine pool's Harvester, as Rancher knows it -- the same values as
+  # crossplane-mgmt's rancher-cluster-defaults, because it is the same Rancher
+  # and the same Harvester. The cloud credential lives on Rancher (platform),
+  # not here; this is only its name. Sizing is NOT here: it comes from the
+  # ClusterStack's `size`.
+  cloudCredentialSecretName: cattle-global-data:cc-cl944  # pragma: allowlist secret
+  imageName: default/sthings-u26-k3s
+  networkName: default/vms
+  vmNamespace: default
+  sshUser: sthings

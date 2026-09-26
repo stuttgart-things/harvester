@@ -4,26 +4,53 @@
 # file's comments first, this one only records what differs.
 #
 # DIFFERS FROM LabDA:
-#   provider: harvester      HarvesterVM instead of NativeProxmoxVM
+#   provider: harvester      RANCHER builds the VM: the RancherCluster gets a
+#                            Harvester machine pool, the way tabletennis was
+#                            built on crossplane-mgmt (xplane-cluster 0.22.0,
+#                            the default for provider: harvester). No
+#                            HarvesterVM, no base-OS or join play, no
+#                            ansible-credentials login
 #   environmentConfig        sthings-lab -- selects cluster-vault-sthings-lab
-#                            and (to verify) harvestervm-sthings-lab
+#   rancher.environmentConfig
+#                            rancher-join-sthings-lab -- also carries the
+#                            Harvester the machine pool is built on (cloud
+#                            credential, image, network)
 #   vaultAddr                the OpenBao on platform, not the LabUL infra Vault
 #   reservation.networkKey   192.168.10, this lab's Clusterbook network
 #   size: medium             `large` (8 CPU / 16 GiB) fits on Harvester but
-#                            would be its biggest guest; start smaller
+#                            would be its biggest guest; start smaller.
+#                            Becomes the pool's HarvesterConfig: 4 CPU / 8 GiB
+#                            / 64 GiB
+#   CNI                      the distribution's (k3s: flannel), not cilium from
+#                            the Platform -- Rancher's proxy needs a pod
+#                            network before anything can be installed through
+#                            it. Same as tabletennis today
 #   no NFS labels            the lab has had no NFS server since infra.sthings.lab
 #                            was switched off (harvester#152)
 #   no observability         platform's Argo CD has no observability-platform
 #                            ApplicationSet; with the profile set, monitoring
 #                            would never appear and nothing would say so
 #
-# BLOCKER before listing this: stuttgart-things/crossplane-configurations#503 --
-# a harvester ClusterStack's VM boots with no cloud-init users and
-# ssh_pwauth false, so the password-based ansible stages cannot log in.
-# Also before listing this: every step in
-# ../machinery-hv-fleet-state/README.md, plus the two open points in
-# ../machinery-hv/README.md (Harvester forwarding in ClusterStack, Argo CD
-# registration preconditions).
+# NOT BLOCKED BY crossplane-configurations#503 ANY MORE: that is the custom-node
+# VM this stack used to build, which no ansible stage could log into. On the
+# machine pool Rancher's node driver brings its own cloud-init and nothing logs
+# in by password.
+#
+# BEFORE LISTING THIS:
+#   1. xplane-cluster 0.22.0 published (stuttgart-things/kcl, branch
+#      claude/harvester-cluster-stack-status-yrmcuv), and the `cluster`
+#      Configuration in crossplane-configurations pinned to it and installed
+#      on this cluster -- until then the installed Composition still builds a
+#      HarvesterVM.
+#   2. `crossplane render` of this file against the live Compositions, as in
+#      ../machinery-hv/README.md Log step 10: a RancherCluster with
+#      infrastructure: harvester and a VaultSecretSet app-dev-hv-kubeconfig-set, no
+#      HarvesterVM, no AnsibleRun.
+#   3. the network profile: its ApplicationSets default cilium-lb and
+#      cilium-gateway on, and this cluster runs flannel. tabletennis carries
+#      the same labels -- check what they actually do there before copying.
+#   4. every step in ../machinery-hv-fleet-state/README.md, plus the Argo CD
+#      registration preconditions in ../machinery-hv/README.md.
 apiVersion: config.stuttgart-things.com/v1alpha1
 kind: ClusterStack
 metadata:
@@ -37,12 +64,12 @@ spec:
   distribution: rancher-k3s
   size: medium
   environmentConfig: sthings-lab
-  kubeconfig:
-    # vaultSecretName left at its default `vault`: tekton-ci/vault in the fleet
-    # state carries the kubeconfig-writer AppRole, and the read side is derived
-    # from that name (-> ClusterProviderConfig `vault-kubeconfigs`).
-    lifecycle:
-      vaultAddr: https://openbao.platform.sthings.lab
+  # NO kubeconfig block. On the machine pool no play uploads anything: the stack
+  # copies Rancher's kubeconfig into kubeconfigs/app-dev-hv itself, through the
+  # provider-vault ClusterProviderConfig `vault-kubeconfig-writer` (fleet
+  # state), and that VaultSecretSet owns and deletes the entry -- the
+  # `lifecycle` Workspace this block used to switch on is refused there. The
+  # read side stays the default `vault-kubeconfigs`.
   profiles:
     - network
     - security
