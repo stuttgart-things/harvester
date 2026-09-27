@@ -29,7 +29,8 @@
 #   CNI                      none from k3s; cilium from the Platform, through
 #                            node:6443 -- the same as every rancher order.
 #                            Rancher's proxy cannot be that path (it needs
-#                            cattle-cluster-agent on a pod network) and is not
+#                            cattle-cluster-agent on a pod network) and does
+#                            not have to be
 #   no NFS labels            the lab has had no NFS server since infra.sthings.lab
 #                            was switched off (harvester#152)
 #   no observability         platform's Argo CD has no observability-platform
