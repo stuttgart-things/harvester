@@ -39,3 +39,5 @@ resources:
   - secrets/vault-approle-reader.enc.yaml
   - secrets/provider-kubeconfig-roleids.enc.yaml
   - provider-kubeconfig.yaml
+  # provider-clusterbook: the machine pool's node address
+  - clusterbook.yaml

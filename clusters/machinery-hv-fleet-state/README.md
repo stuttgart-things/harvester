@@ -24,10 +24,11 @@ with two deliberate differences:
 
 | File | Objects |
 |---|---|
-| `environmentconfigs.yaml` | `harvestervm-sthings-lab`, `ansible-run-defaults`, `rancher-cluster-join-sthings-lab` |
+| `environmentconfigs.yaml` | `harvestervm-sthings-lab`, `ansible-run-defaults`, `rancher-cluster-join-sthings-lab` (also the Harvester a machine pool is built on) |
 | `providerconfigs.yaml` | provider-kubernetes `harvester`, `rancher-mgmt` |
 | `openbao-pki-source-ca.yaml` | `default/openbao-pki-source-ca`, the OpenBao root the Platform copies onto built clusters |
-| `cluster-vault-sthings-lab.yaml` | the OpenBao policy mapping for `environmentConfig: sthings-lab` |
+| `cluster-vault-sthings-lab.yaml` | the OpenBao policy mapping for `environmentConfig: sthings-lab`, and the machine pool's node network (`machinePool`) |
+| `clusterbook.yaml` | provider-clusterbook `clusterbook`, and the RBAC to wrap an `IPReservation` -- the machine pool's node address (added with xplane-cluster 0.22.0, not yet applied) |
 | `vault-provider-configs.yaml` | provider-vault `vault`, `vault-cluster-secrets`, `vault-kubeconfig-writer` |
 | `appsecretprofiles.yaml` | `homerun2`, `schmetterpause`, `zaehlwerk`, `tabletennis` |
 | `secrets/*.enc.yaml` | the credentials below, SOPS-encrypted, decrypted by Flux |
