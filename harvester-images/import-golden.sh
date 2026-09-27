@@ -5,20 +5,21 @@ set -euo pipefail
 # sourceType: download VMIs.
 #
 # The S3 endpoint (artifacts.platform.sthings.lab) is served by the sthings-lab
-# private CA. Harvester's image-download path verifies TLS and has NO insecure
+# private CA -- the OpenBao root on platform since the infra Vault was retired
+# (#152); platform's wildcard is issued by openbao-pki. Harvester's image-download path verifies TLS and has NO insecure
 # option, so this script trusts that root via Setting/additional-ca FIRST, then
 # applies the VirtualMachineImage manifests.
 #
 # Requires: kubectl + jq + curl, with KUBECONFIG pointed at the HARVESTER cluster.
 #
 # Env:
-#   VAULT_CA_URL  CA source (default: https://vault.infra.sthings.lab/v1/pki/ca/pem)
+#   VAULT_CA_URL  CA source (default: https://openbao.platform.sthings.lab/v1/pki/ca/pem)
 #   CA_FILE       path to a PEM file; overrides VAULT_CA_URL when set
 #   MANIFEST      VMI manifest (default: <script dir>/golden-images.yaml)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MANIFEST="${MANIFEST:-${SCRIPT_DIR}/golden-images.yaml}"
-VAULT_CA_URL="${VAULT_CA_URL:-https://vault.infra.sthings.lab/v1/pki/ca/pem}"
+VAULT_CA_URL="${VAULT_CA_URL:-https://openbao.platform.sthings.lab/v1/pki/ca/pem}"
 
 # 1. Obtain the sthings-lab root CA (public material — a cert, not a key).
 if [ -n "${CA_FILE:-}" ]; then

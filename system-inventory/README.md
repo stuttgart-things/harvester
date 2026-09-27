@@ -43,20 +43,20 @@ fields:
 
 ```yaml
 hosts:
-  - system: infra-sthings
-    hostname: infra
-    ip: 192.168.10.150
+  - system: platform-sthings
+    hostname: platform
+    ip: 192.168.10.160
     kind: k3s-cluster              # host | k3s-cluster | hypervisor | router
-    cluster: infra                 # matches the directory under clusters/
+    cluster: platform              # matches the directory under clusters/
     description: >-
-      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
+      Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP).
     services:
-      - name: Vault
-        fqdn: vault.infra.sthings.lab
+      - name: OpenBao
+        fqdn: openbao.platform.sthings.lab
         description: PKI for sthings-lab.
-      - name: NFS
-        port: 2049
-        description: Shared storage behind the NFS CSI driver.
+      - name: Kubernetes API
+        port: 6443
+        description: API server of the cluster.
 ```
 
 Both the service index and the host table under **Addresses** are sortable by

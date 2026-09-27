@@ -107,7 +107,7 @@ hosts:
       - name: Harvester UI
         fqdn: harvester.sthings.lab
         description: >-
-          Web UI, TLS certificate issued by the Vault PKI on the infra cluster.
+          Web UI, TLS certificate issued by openbao-pki on the platform cluster.
 
   - system: harvester
     hostname: harvester-vip
@@ -123,60 +123,6 @@ hosts:
         description: >-
           RKE2 API server of the Harvester cluster. Source of the kubeconfig
           fetched during install.
-
-  - system: infra-sthings
-    hostname: infra
-    ip: 192.168.10.150
-    kind: k3s-cluster
-    cluster: infra
-    description: >-
-      Single-node k3s cluster `infra.sthings.lab` (Cilium LB VIP).
-      Carries the lab-wide services the other clusters depend on.
-    services:
-      - name: Vault
-        fqdn: vault.infra.sthings.lab
-        description: >-
-          PKI for sthings-lab. Issues the wildcard certificates the other
-          clusters request through their vault-pki ClusterIssuer.
-      - name: Clusterbook
-        fqdn: clusterbook.infra.sthings.lab
-        description: >-
-          Reserves IP and FQDN for new clusters and writes the DNS records
-          to the DD-WRT router.
-      - name: Headlamp
-        fqdn: headlamp.infra.sthings.lab
-        description: Kubernetes dashboard for this cluster.
-      - name: Flux UI
-        fqdn: flux-ui.infra.sthings.lab
-        description: Web view of the Flux reconciliation state.
-      - name: NFS
-        port: 2049
-        description: >-
-          Shared storage behind the NFS CSI driver, backing the PVs of all
-          clusters.
-
-  - system: xplane-sthings
-    hostname: xplane
-    ip: 192.168.10.155
-    kind: k3s-cluster
-    cluster: xplane
-    description: >-
-      Single-node k3s cluster `xplane.sthings.lab` (Cilium LB VIP).
-      Crossplane management cluster, reconciles the claims in this repo.
-    services:
-      - name: Crossplane
-        description: >-
-          Reconciles the claims under claims/. No ingress - reached through
-          the Kubernetes API.
-      - name: claim-machinery-api
-        fqdn: claim-machinery-api.xplane.sthings.lab
-        description: Renders the KCL-based Crossplane claim templates.
-      - name: Komoplane
-        fqdn: komoplane.xplane.sthings.lab
-        description: Web UI for inspecting Crossplane resources and their status.
-      - name: Headlamp
-        fqdn: headlamp.xplane.sthings.lab
-        description: Kubernetes dashboard for this cluster.
 
   - system: platform-sthings
     hostname: platform
@@ -215,7 +161,18 @@ hosts:
         description: >-
           Developer portal. Catalog entries come from the catalog-info.yaml
           files in this repo.
+      - name: OpenBao
+        fqdn: openbao.platform.sthings.lab
+        description: >-
+          PKI for sthings-lab (root CN=sthings.lab) and the Vault API the
+          clusters use: openbao-pki ClusterIssuers log in with Kubernetes
+          auth, Crossplane with AppRoles. Replaced the infra Vault (#152).
+      - name: Clusterbook
+        fqdn: clusterbook.platform.sthings.lab
+        description: >-
+          Reserves IP and FQDN for new clusters and writes the DNS records
+          to the DD-WRT router. Moved here from the infra cluster.
       - name: Clusterbook operator
         description: >-
           Reconciles ClusterbookCluster resources against the Clusterbook API
-          on the infra cluster. No ingress.
+          on this cluster. No ingress.
