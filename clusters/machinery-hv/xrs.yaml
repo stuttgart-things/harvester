@@ -4,7 +4,7 @@
 # `prune: false`, AND IT IS NOT A STYLE CHOICE. Pruning an XR tears down the
 # cluster it stands for -- VM, OpenBao entries, Rancher and Argo CD
 # registration -- because a file was moved, renamed or dropped in a bad rebase.
-# Deleting is a deliberate two-step; ../machinery-hv-xrs/README.md spells it
+# Deleting is a deliberate two-step; ./xrs/README.md spells it
 # out.
 #
 # This is the opposite of crossplane-mgmt today, whose `xrs/` is synced by an
@@ -38,4 +38,4 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./clusters/machinery-hv-xrs
+  path: ./clusters/machinery-hv/xrs

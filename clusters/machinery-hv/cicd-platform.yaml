@@ -23,7 +23,7 @@
 #     CROSSPLANE_CAPABILITY_HARVESTER_* values are passed through, and
 #     CROSSPLANE_CAPABILITY_ANSIBLE_SSH_BACKEND=none drops the sops-git read of
 #     the ansible SSH file. Until this cluster carries sops-git, the placement
-#     and the ansible defaults stay written out in ../machinery-hv-fleet-state.
+#     and the ansible defaults stay written out in ./fleet-state.
 #
 #   machinery / claim-machinery-api / komoplane -- the API and the dashboards
 #     already run on platform; add komoplane here if a local view is wanted.

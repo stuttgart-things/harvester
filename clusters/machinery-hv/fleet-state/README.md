@@ -3,7 +3,7 @@
 What the cluster **is**, as opposed to what it runs: the provider configs,
 EnvironmentConfigs and credentials that make `machinery-hv` the cluster this lab
 builds clusters from. Applied by the `machinery-hv-fleet-state` Kustomization in
-[`../machinery-hv/fleet-state.yaml`](../machinery-hv/fleet-state.yaml) (`prune: true`,
+[`../fleet-state.yaml`](../fleet-state.yaml) (`prune: true`,
 `dependsOn: cicd-platform`).
 
 Modelled on the LabDA machinery cluster's
@@ -18,7 +18,7 @@ with two deliberate differences:
   (`environmentconfigs.yaml`) instead of coming from flux's
   `crossplane-capabilities` / `harvester-demo`. That set can be configured for
   this lab since flux v1.80.3 (stuttgart-things/flux#514), but the component
-  depends on `sops-git`, which this cluster does not run -- see [`../machinery-hv/cicd-platform.yaml`](../machinery-hv/cicd-platform.yaml).
+  depends on `sops-git`, which this cluster does not run -- see [`../cicd-platform.yaml`](../cicd-platform.yaml).
 
 ## What is here
 
@@ -35,7 +35,7 @@ with two deliberate differences:
 
 All listed and applied since 2026-09-24. `secrets/` is **generated**: rendered
 and encrypted by
-[`../platform/openbao/machinery-fleet/render-fleet-secrets.sh`](../platform/openbao/machinery-fleet/README.md),
+[`../../platform/openbao/machinery-fleet/render-fleet-secrets.sh`](../../platform/openbao/machinery-fleet/README.md),
 never edited by hand.
 
 | Secret | Keys | From |

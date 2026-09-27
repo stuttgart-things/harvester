@@ -1,0 +1,29 @@
+---
+# What flux-system applies from this directory: the Flux objects of
+# `machinery-hv`, and nothing below them.
+#
+# WHY THIS FILE EXISTS. Without a kustomization.yaml, flux-system applies every
+# YAML under clusters/machinery-hv recursively. The content directories
+# (fleet-state/, xrs/, pki/) would then be applied twice: once here, without
+# the dependsOn gates their own Kustomizations carry, and once by those. With
+# it, flux-system applies exactly this list, and each subdirectory is applied
+# only by the Kustomization that names it as its path.
+#
+# A NEW FLUX OBJECT IN THIS DIRECTORY MUST BE LISTED HERE, or it is never
+# applied. Dropping an entry is worse: flux-system prunes, so the object goes,
+# and a Kustomization that goes takes its prune: true content with it.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # the FluxInstance and its sops key (committed by the Flux bootstrap)
+  - config.yaml
+  - secrets.yaml
+  - git-repos.yaml
+  - infra-platform.yaml
+  - cicd-platform.yaml
+  # -> ./pki          the OpenBao CA, after cert-manager
+  - pki.yaml
+  # -> ./fleet-state  prune: true
+  - fleet-state.yaml
+  # -> ./xrs          prune: FALSE
+  - xrs.yaml

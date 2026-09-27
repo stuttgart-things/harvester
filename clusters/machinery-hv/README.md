@@ -36,24 +36,30 @@ crossplane-mgmt keeps running `tabletennis` until its successor is built here.
 ## Layout
 
 ```
-clusters/machinery-hv/              flux-system syncs this (recursively)
+clusters/machinery-hv/              flux-system syncs this -- only what kustomization.yaml lists
+  kustomization.yaml                the Flux objects below, NOT the subdirectories
   git-repos.yaml                    flux-infra / flux-apps @ v1.80.0
   infra-platform.yaml               cilium, cert-manager + OpenBao issuer, openebs, UIs
   cicd-platform.yaml                crossplane (profile machinery) + tekton
-  fleet-state.yaml                  -> ../machinery-hv-fleet-state   prune: true
-  xrs.yaml                          -> ../machinery-hv-xrs           prune: FALSE
-  pki.yaml                          -> ../machinery-hv-pki  (the OpenBao CA, after cert-manager)
+  fleet-state.yaml                  -> ./fleet-state   prune: true
+  xrs.yaml                          -> ./xrs           prune: FALSE
+  pki.yaml                          -> ./pki  (the OpenBao CA, after cert-manager)
   openbao/                          the cert-manager auth mount, as homerun2-dev
-clusters/machinery-hv-fleet-state/  provider configs, EnvironmentConfigs, secrets
-clusters/machinery-hv-xrs/          the ClusterStacks this cluster owns
-clusters/machinery-hv-pki/          openbao-pki-ca, in cert-manager's namespace
+  fleet-state/                      provider configs, EnvironmentConfigs, secrets
+  xrs/                              the ClusterStacks this cluster owns
+  pki/                              openbao-pki-ca, in cert-manager's namespace
 vms/machinery-hv.*                  the VM shape and the RKE2 vars
 ```
 
-The content directories sit **beside** this one, not in it: flux-system
-applies everything under `clusters/machinery-hv` recursively, so a subdirectory
-would be applied twice, once without the `dependsOn` gates. Same arrangement as
-the LabDA machinery cluster.
+The content directories sit **in** this one, and `kustomization.yaml` is what
+makes that safe. Without it flux-system applies every YAML under
+`clusters/machinery-hv` recursively, and a subdirectory would be applied twice,
+once without the `dependsOn` gates. With it flux-system applies only the files
+listed there. **A new Flux object in this directory has to be added to
+`kustomization.yaml`**, or it is never applied. Until 2026-09-27 the three
+content directories sat beside this one as `machinery-hv-fleet-state`,
+`machinery-hv-xrs` and `machinery-hv-pki`. The Kustomization objects kept those
+names; only their `path` moved.
 
 `config.yaml` and `secrets.yaml` do not exist yet -- the Flux bootstrap commits
 them (step 4).
@@ -79,11 +85,11 @@ name swapped; read its warnings there, they all apply.
 6. **`terraform apply` in `openbao/`**, then let `infra-platform` reconcile.
 7. **Watch `cicd-platform`.** `kubectl get pkg` should show the catalog's set,
    all `Healthy`, with long CR names and no duplicates. Then read
-   [the provider-kubeconfig note](../machinery-hv-fleet-state/README.md#provider-kubeconfig-watch-this-first).
+   [the provider-kubeconfig note](./fleet-state/README.md#provider-kubeconfig-watch-this-first).
 8. **Fleet state**, steps A-D in
-   [`../machinery-hv-fleet-state/README.md`](../machinery-hv-fleet-state/README.md).
+   [`./fleet-state/README.md`](./fleet-state/README.md).
 9. **First order**: list `app-dev-hv.yaml` in
-   [`../machinery-hv-xrs`](../machinery-hv-xrs/README.md) once the open points
+   [`./xrs`](./xrs/README.md) once the open points
    below are answered.
 
 ## Open points
@@ -310,7 +316,7 @@ kubectl get kustomizations,gitrepositories -A
 
 - **The CA deadlock -- a bug in this scaffold.** `openbao-pki-ca.yaml` sat in
   this directory, in a namespace only infra-platform creates, and flux-system
-  applies this directory as one unit. Moved to `../machinery-hv-pki`, applied by
+  applies this directory as one unit. Moved to `../machinery-hv-pki` (today `./pki`), applied by
   [`pki.yaml`](./pki.yaml) with `dependsOn: cert-manager-install`.
 - **DNS from the pod network is flaky, on both clusters.** CoreDNS forwards to
   the router and gets `read udp 10.42.0.x -> 192.168.10.1:53: i/o timeout`;
@@ -403,7 +409,7 @@ LabDA the fleet state brings them (`provider-kubeconfig-vault` chart,
 `crossplane-configs`' health check reads Configurations only -- but until the
 two DRCs exist, provider-kubeconfig (every RemoteCluster, so every
 ClusterStack) and provider-minio do not run. See
-[the fleet-state README](../machinery-hv-fleet-state/README.md#provider-kubeconfig-watch-this-first).
+[the fleet-state README](./fleet-state/README.md#provider-kubeconfig-watch-this-first).
 
 ### 7. Fleet state A-D (2026-09-24)
 
@@ -417,7 +423,7 @@ export VAULT_TOKEN=$(tr -d '[:space:]' < ~/.vaulttoken)
 terraform init -plugin-dir=../../../machinery-hv/openbao/.terraform/providers   # registry unreachable
 terraform plan -out=tfplan        # 19 to add, 0 to change, 0 to destroy
 terraform apply tfplan
-./render-fleet-secrets.sh         # 10 Secrets, encrypted into machinery-hv-fleet-state/secrets
+./render-fleet-secrets.sh         # 10 Secrets, encrypted into machinery-hv/fleet-state/secrets
 ```
 
 Cluster side, after the push:
@@ -471,7 +477,7 @@ kubectl -n crossplane-system get helmrelease provider-kubeconfig-vault
 
 The release carries both the runtime config the provider needs to START and a
 ClusterProviderConfig whose CRD the RUNNING provider registers. Split
-(`../machinery-hv-fleet-state/provider-runtime.yaml`): the CA Secret and both
+(`./fleet-state/provider-runtime.yaml`): the CA Secret and both
 runtime configs as plain manifests; the chart keeps the ClusterProviderConfig
 and RBAC, drops its copy of the config with a post-renderer (tested locally with
 `helm template | kustomize build`), and retries install without limit.
@@ -553,7 +559,7 @@ kubectl get functions.pkg.crossplane.io -o yaml  # -> functions.yaml, annotated
 #   render.crossplane.io/runtime-docker-pull-policy: IfNotPresent, images pre-pulled:
 #   crossplane render's own pull ran into its deadline on this uplink
 kubectl get environmentconfigs,appsecretprofiles -o yaml > extra.yaml
-crossplane render clusters/machinery-hv-xrs/app-dev-hv.yaml composition.yaml functions.yaml \
+crossplane render clusters/machinery-hv/xrs/app-dev-hv.yaml composition.yaml functions.yaml \
   --extra-resources extra.yaml --include-function-results
 ```
 
