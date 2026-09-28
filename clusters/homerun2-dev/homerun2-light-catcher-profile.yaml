@@ -11,19 +11,29 @@
 # 36 LEDs in one segment). Pods reach it by name -- CoreDNS forwards
 # sthings.lab to the router (coredns-lab-zone).
 #
-# Effect and palette names are WLED's own, looked up by name against the
-# device's /json/eff and /json/pal. Blurz and DJ Light, which the base profile
-# uses, are audio-reactive: with the AudioReactive usermod off and no
-# microphone they barely light. Hence Strobe, Breathe, Aurora and Twinkle.
+# EFFECT NAMES ARE NOT LOOKED UP ON THE DEVICE. light-catcher v1.2.0 maps
+# `fx` through a fixed table of 15 names (internal/profile/profile.go, FxMap),
+# and only Solid, Blink, Breathe and Wipe carry the IDs WLED 16 uses: Twinkle
+# sends 5 (Random Colors), Aurora 12 (Fade), and a name outside the table --
+# Strobe -- logs `unknown effect` and lights nothing. Until upstream looks
+# names up in /json/eff, use those four. `segments` is parsed but not sent.
 #
-# Rules are matched in document order, first match wins. There is no way to
-# fan one message out to both the WLED and the mock: this profile has
-# replaced the mock, whose dashboard stays up but no longer receives anything.
+# Colours: palettes sunset, beach, forest, ocean, or red, yellow, green, blue,
+# white.
 #
-# THE CATCHER READS THIS ONCE, AT STARTUP. Flux applies a change here without
-# touching the pod, so it has no effect until:
+# duration 10: the matrix scrolls a title once in 8-12 s and ignores its own
+# duration, so 10 s keeps the light on for about as long (hosts/matrix/
+# profile.yaml). After it the catcher sends {"on": false}. A burst still drifts:
+# the light restarts its timer per message, the matrix drops what arrives
+# while it is busy.
 #
-#   kubectl -n homerun2 rollout restart deploy/homerun2-light-catcher
+# Rules are matched in document order, first match wins; severity is matched
+# case-insensitively, system case-sensitively. There is no way to fan one
+# message out to both the WLED and the mock: this profile has replaced the
+# mock, whose dashboard stays up but no longer receives anything.
+#
+# Re-read on every message (the ConfigMap is mounted as a directory, so the
+# kubelet's sync is all it takes) -- no restart needed after a change.
 #
 # No ${VAR} in here: the Kustomization that applies this file (the
 # FluxInstance's own sync) has no postBuild, so none would be substituted.
@@ -38,8 +48,8 @@ data:
       error:
         systems: ["*"]
         severity: [error, critical]
-        fx: Strobe
-        duration: 5
+        fx: Blink
+        duration: 10
         color: red
         segments: [0]
         endpoint: http://wled-matrix.sthings.lab
@@ -47,23 +57,31 @@ data:
         systems: ["*"]
         severity: [warning]
         fx: Breathe
-        duration: 4
+        duration: 10
         color: yellow
         segments: [0]
         endpoint: http://wled-matrix.sthings.lab
       success:
         systems: ["*"]
         severity: [success]
-        fx: Aurora
-        duration: 3
-        color: forest
+        fx: Solid
+        duration: 10
+        color: green
         segments: [0]
         endpoint: http://wled-matrix.sthings.lab
       info:
         systems: ["*"]
         severity: [info]
-        fx: Twinkle
-        duration: 3
+        fx: Wipe
+        duration: 10
         color: ocean
+        segments: [0]
+        endpoint: http://wled-matrix.sthings.lab
+      debug:
+        systems: ["*"]
+        severity: [debug]
+        fx: Solid
+        duration: 10
+        color: blue
         segments: [0]
         endpoint: http://wled-matrix.sthings.lab
