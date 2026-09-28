@@ -24,9 +24,20 @@ source "file" "user_data" {
         # Give the designated user (default: sthings) a password in addition to
         # its keys, so it can also log in via SSH password. The hash comes from
         # CI (openssl passwd -6 of the STHINGS_PASSWORD secret); empty = key-only.
+        #
+        # TWO conditionals, one per type, on purpose. A single
+        # `cond ? { lock_passwd = false, hashed_passwd = "…" } : {}` makes HCL
+        # unify both branches to map(string), so yamlencode wrote
+        # lock_passwd as the STRING "false". cloud-init tests
+        # `if kwargs.get("lock_passwd", True):`, a non-empty string is truthy,
+        # and it locked the hash it had just set: every image since #108
+        # shipped `sthings` as `!$6$…` (harvester#265). Kept apart, each branch
+        # stays single-typed and lock_passwd stays a YAML boolean.
         (u.name == var.password_user && var.sthings_password != "") ? {
-          lock_passwd   = false
           hashed_passwd = var.sthings_password
+        } : {},
+        (u.name == var.password_user && var.sthings_password != "") ? {
+          lock_passwd = false
         } : {}
       )]
     )
