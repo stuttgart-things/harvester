@@ -88,14 +88,18 @@ später ein Lessons-Learned-Punkt.
 
 ```
 packer/_build/          gemeinsame Build-Logik, EINE Kopie
-packer/golden/          kuratierte Basis  → Review-gated, kein Auto-Merge
-packer/dev/             Spielwiese        → baut, lädt hoch, auto-merged
+packer/golden/          kuratierte Basis  → Review-gated, Release + Pin-PR nach Review
+packer/dev/             Spielwiese        → PR-Build, Auto-Merge, Release + Pin-PR
 ```
 
 `packer/dev/u26-dev/users.yaml` öffnen: ein Entwickler hängt seinen SSH-Key an,
 `packages.yaml`: seine Pakete. `packer-pr-build.yml` erkennt den geänderten
-Ordner, baut **nur das Delta** auf dem publizierten Golden-Artefakt aus MinIO,
-lädt es als `VirtualMachineImage` nach Harvester und merged bei grün.
+Ordner, baut **nur das Delta** auf dem publizierten Golden-Artefakt aus MinIO
+(Checksumme geprüft), legt es in MinIO ab, registriert ein Wegwerf-Image
+`<name>-pr<N>.<version>` in Harvester (Harvester lädt es selbst herunter) und
+merged bei grün. Danach stößt der Auto-Merge `packer-release.yml` an: Release
+`<name>-<version>` plus ein `pin-bot/<name>`-PR, der den Pin verschiebt und sich
+bei Dev selbst merged. Erst mit dem Pin booten neue VMs das neue Image.
 Berührt derselbe PR ein `golden/`-Verzeichnis, erzwingt CI die Review.
 
 **Live-Empfehlung:** einen bereits gemergten Dev-Image-PR aufrufen und den grünen
