@@ -159,15 +159,23 @@ data:
   clusterbookProviderConfigRef: default
   # Every platform toggle 'false' by default; a profile flips what it needs.
   # auto-project creates the AppProject every AppSet deploys into.
+  #
+  # NOT network-platform/cilium-lb or /cilium-gateway, although
+  # crossplane-mgmt's defaults carry both as "false": the ClusterStack profile
+  # `network` does not set them, because the AppSets select with NotIn and an
+  # ABSENT key means on. A default "false" here outranks that silence -- the
+  # env default fills every key the order leaves out -- so app-dev-hv came up
+  # with network-platform "true" and no LoadBalancer and no Gateway
+  # (2026-09-28). crossplane-mgmt's RancherCluster orders set both "true" by
+  # hand, which is why the defaults never bit there. The umbrella stays
+  # "false": an order without the profile gets no network platform.
   defaultLabels:
     allow-all: "false"
     auto-project: "true"
     cicd-platform: "false"
     cicd-platform/openebs: "false"
     network-platform: "false"
-    network-platform/cilium-gateway: "false"
     network-platform/cilium-gateway-secondary: "false"
-    network-platform/cilium-lb: "false"
     security-platform: "false"
     storage-platform: "false"
     storage-platform/longhorn: "false"
