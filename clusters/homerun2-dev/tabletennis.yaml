@@ -60,12 +60,15 @@ spec:
       # NOT the profile's 1Gi default. The Cluster was created at 2Gi, and a
       # smaller size is a shrink that CNPG refuses.
       SCHMETTERPAUSE_DB_STORAGE_SIZE: 2Gi
-      # The versions this cluster ran before the handover, pinned so that the
-      # switch changes where the manifests come from and nothing else.
-      # schmetterpause v0.13.0 (the profile's default) runs database migrations;
-      # take that step on its own.
-      SCHMETTERPAUSE_VERSION: v0.11.0
-      ZAEHLWERK_VERSION: v0.5.0
+      # Pinned rather than left to the profile's defaults, so a flux-apps
+      # change never upgrades this cluster by surprise. v0.14.0 on 2026-09-28,
+      # on an empty database and before the restore: the office
+      # (homerun2-test1) runs v0.14.0, and a recovered database must meet an
+      # app at least as new as its schema. The init container migrates
+      # v0.11 -> v0.14 (v0.13 brings migrations). zaehlwerk v0.7.0 goes with
+      # it: v0.6.0 reads v0.14's GET /api/operators.
+      SCHMETTERPAUSE_VERSION: v0.14.0
+      ZAEHLWERK_VERSION: v0.7.0
   patches:
     # The base ships SP_PUBLIC_BASE_URL as https://schmetterpause.cluster.example.com,
     # a placeholder. schmetterpause builds absolute links from it (login
