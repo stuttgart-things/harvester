@@ -3,8 +3,10 @@ name: Packer Build
 
 # Two entry points:
 #   * workflow_dispatch — manually build any golden/dev image (optionally upload).
-#   * push to main (golden) — review-gated golden images are uploaded AFTER merge
-#     (their PR build is validation-only). Dev images upload during their PR build.
+#   * push to main (golden + dev) — every changed image is released: built from
+#     main, registered as <name>-<version>, and its pin moved by a pin PR
+#     (packer-release.yml). The PR build before it is a test: validation-only
+#     for golden, a throwaway pr<N> image for dev.
 # Build always runs from packer/_build/ selecting an image via its build.pkrvars.hcl.
 
 on:
@@ -46,10 +48,11 @@ on:
     branches:
       - main
     paths:
-      # Only a changed golden dir triggers a post-merge rebuild. Shared _build
-      # changes do NOT auto-rebuild every golden (see detect-golden); rebuild
-      # affected images via workflow_dispatch or by touching their dir.
+      # Only a changed image dir triggers a release. Shared _build changes do
+      # NOT auto-rebuild every image (see detect-release); rebuild affected
+      # images via workflow_dispatch or by touching their dir.
       - "packer/golden/**"
+      - "packer/dev/**"
 
 permissions:
   contents: read
@@ -152,149 +155,88 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: bash prune-images.sh
 
-  # --- Detect golden images to (re)build after a merge to main ------------
-  detect-golden:
-    name: Detect golden images to upload
+  # --- Detect images to release after a merge to main --------------------
+  detect-release:
+    name: Detect images to release
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      targets: ${{ steps.detect.outputs.targets }}
+      golden: ${{ steps.detect.outputs.golden }}
+      dev: ${{ steps.detect.outputs.dev }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           fetch-depth: 2
 
-      - name: Detect changed golden images
+      - name: Detect changed image dirs
         id: detect
         run: |
-          # Rebuild ONLY the golden dirs that changed in this push. A shared
-          # _build change does NOT blanket-rebuild every golden (avoids wasteful
+          # Release ONLY the image dirs that changed in this push. A shared
+          # _build change does NOT blanket-rebuild every image (avoids wasteful
           # re-uploads when the change is a no-op for most images). If a _build
           # change must propagate to other images, touch their dir or rebuild
           # them manually via workflow_dispatch.
-          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" || true)
-          DIRS=$(echo "$CHANGED" | grep -oP '^packer/golden/[^/]+' | sort -u || true)
+          #
+          # catalog-info.yaml is Backstage metadata and *.md is documentation,
+          # neither is a build input (same rule as packer-pr-build.yml). This
+          # matters more here than on a PR: a release moves a pin, and for a dev
+          # image that pin PR merges itself — a README edit to u26-dev would
+          # otherwise move u26-dev AND the ubuntu24 alias on crossplane-mgmt.
+          # A dir whose var-file is gone was deleted — there is nothing to build.
+          CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
+            | grep -vE '/catalog-info\.yaml$|\.md$' || true)
 
-          if [ -z "$DIRS" ]; then
-            echo "targets=[]" >> "$GITHUB_OUTPUT"
-            echo "No golden images to rebuild."
-            exit 0
-          fi
+          for tier in golden dev; do
+            DIRS=$(echo "$CHANGED" | grep -oP "^packer/${tier}/[^/]+" | sort -u || true)
+            NAMES=$(for d in $DIRS; do
+              if [ -f "$d/build.pkrvars.hcl" ]; then basename "$d"; fi
+            done)
+            JSON=$(echo "$NAMES" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            echo "${tier}=$JSON" >> "$GITHUB_OUTPUT"
+            echo "${tier} images to release: $JSON"
+          done
 
-          JSON=$(echo "$DIRS" | jq -R -s -c '
-            split("\n") | map(select(length > 0)) | map(
-              (split("/")) as $p | {
-                name:     $p[2],
-                var_file: ("../golden/" + $p[2] + "/build.pkrvars.hcl")
-              })')
-          echo "targets=$JSON" >> "$GITHUB_OUTPUT"
-          echo "Golden images to upload: $JSON"
-
-  # --- Post-merge build + upload of golden images -------------------------
-  upload-golden:
-    name: "Upload golden ${{ matrix.name }}"
-    needs: detect-golden
-    if: github.event_name == 'push' && needs.detect-golden.outputs.targets != '[]'
-    runs-on: kvm
-    environment: harvester
-    env:
-      PACKER_LOG: 0
-      UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
+  # --- Release: build, register, open a pin PR ---------------------------
+  # Golden before dev: a dev image layers on the golden artifact in MinIO, so
+  # when one push changes both, dev must build on the new golden, not the old.
+  release-golden:
+    name: "Release golden/${{ matrix.name }}"
+    needs: detect-release
+    if: needs.detect-release.outputs.golden != '[]'
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJson(needs.detect-golden.outputs.targets) }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+        name: ${{ fromJson(needs.detect-release.outputs.golden) }}
+    permissions:
+      contents: write        # the pin PR pushes its branch
+      pull-requests: write   # ...and opens it
+    uses: ./.github/workflows/packer-release.yml
+    with:
+      tier: golden
+      name: ${{ matrix.name }}
+    secrets: inherit # pragma: allowlist secret
 
-      - name: Resolve image version
-        id: meta
-        run: echo "version=$(date -u +%y.%-m%d.%H%M)" >> "$GITHUB_OUTPUT"
-
-      - name: Show build parameters
-        run: |
-          echo "Golden image : ${{ matrix.name }}"
-          echo "Var file     : ${{ matrix.var_file }}"
-          echo "Version      : ${{ steps.meta.outputs.version }}"
-          echo "Register     : ${{ env.UPLOAD_TO_HARVESTER }}"
-
-      - name: Packer init
-        working-directory: packer/_build
-        run: packer init .
-
-      - name: Compute sthings password hash
-        env:
-          STHINGS_PASSWORD: ${{ secrets.STHINGS_PASSWORD }}
-        run: |
-          if [ -n "${STHINGS_PASSWORD}" ]; then
-            HASH=$(openssl passwd -6 "${STHINGS_PASSWORD}")
-            echo "::add-mask::${HASH}"
-            echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
-          fi
-
-      - name: Packer build
-        working-directory: packer/_build
-        env:
-          PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
-        run: packer build -var-file="${{ matrix.var_file }}" .
-
-      # MinIO first, Harvester second — Harvester pulls from this URL itself.
-      - name: Publish golden base to MinIO
-        id: publish
-        working-directory: packer/_build
-        env:
-          IMAGE_FILE: output/${{ matrix.name }}-amd64.img
-          IMAGE_NAME: ${{ matrix.name }}
-          S3_PREFIX: golden
-          S3_ENDPOINT: https://artifacts.platform.sthings.lab
-          S3_BUCKET: packer
-          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
-          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-        run: bash publish-base.sh
-
-      - name: Register image with Harvester
-        id: register
-        if: env.UPLOAD_TO_HARVESTER == 'true'
-        working-directory: packer/_build
-        env:
-          UPLOAD_TO_HARVESTER: "true"
-          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
-          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
-          IMAGE_NAME: ${{ matrix.name }}
-          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
-          IMAGE_URL: ${{ steps.publish.outputs.image_url }}
-        run: bash register-image.sh
-
-      - name: Prune superseded images
-        # Cleans up images that nothing uses any more: older release builds
-        # beyond KEEP, and per-PR images whose PR has closed. Never fails the
-        # job — a cleanup problem is not a reason to fail a good image.
-        if: env.UPLOAD_TO_HARVESTER == 'true' && vars.PRUNE_IMAGES != 'false'
-        continue-on-error: true
-        working-directory: packer/_build
-        env:
-          PRUNE_DRY_RUN: "false"
-          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
-          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
-          GH_TOKEN: ${{ github.token }}
-        run: bash prune-images.sh
-
-      - name: Summarise the new image pin
-        # The new image carries a fresh lh-<uuid>. Nothing consumes it until the
-        # pin in env-config-virtualmachine.yaml is moved, so say so out loud
-        # rather than leaving a green build that changed nothing.
-        if: steps.register.outcome == 'success'
-        run: |
-          {
-            echo "### Registered \`${{ steps.register.outputs.vmi_name }}\`"
-            echo
-            echo "Update the pin in \`clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml\`:"
-            echo
-            echo '```yaml'
-            echo "      ${{ matrix.name }}:"
-            echo "        imageId: default/${{ steps.register.outputs.vmi_name }}"
-            echo "        storageClassName: ${{ steps.register.outputs.storage_class }}"
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
+  release-dev:
+    name: "Release dev/${{ matrix.name }}"
+    needs: [detect-release, release-golden]
+    # Runs when no golden was released (skipped), not when one failed: a dev
+    # build on a golden that failed to publish would layer on the stale base.
+    if: >-
+      always() &&
+      needs.detect-release.result == 'success' &&
+      needs.detect-release.outputs.dev != '[]' &&
+      needs.release-golden.result != 'failure' &&
+      needs.release-golden.result != 'cancelled'
+    strategy:
+      fail-fast: false
+      matrix:
+        name: ${{ fromJson(needs.detect-release.outputs.dev) }}
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/packer-release.yml
+    with:
+      tier: dev
+      name: ${{ matrix.name }}
+    secrets: inherit # pragma: allowlist secret

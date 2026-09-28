@@ -13,6 +13,7 @@ packer/
 │   ├── publish-base.sh         # Publishes the built image to the MinIO artifact store
 │   ├── register-image.sh       # Registers it with Harvester (Harvester downloads it)
 │   ├── prune-images.sh         # Removes superseded images (dry run unless told otherwise)
+│   ├── pin-image.py            # Moves an image's pin in env-config-virtualmachine.yaml
 │   └── vmi_template.yaml       # Harvester VirtualMachineImage CRD template
 │
 ├── golden/                     # Curated base images — REVIEW-GATED (no auto-merge)
@@ -46,11 +47,24 @@ it up) but follow deliberately different governance:
 
 - **Golden — review-gated.** The PR build is *validation-only*: it builds to prove
   the image works, but does **no upload and no auto-merge**. A human reviews and
-  merges. After the merge to `main`, `packer-build.yml` rebuilds it, uploads it to
-  Harvester, and (re)publishes the base to S3 (MinIO).
-- **Dev — self-service.** The PR build **builds, uploads to Harvester, and
-  auto-merges** on green — as long as the PR doesn't also touch a golden dir, which
-  forces a review.
+  merges.
+- **Dev — self-service.** The PR build is a test: it builds, registers a throwaway
+  `<name>-pr<N>.<version>` image, and **auto-merges** on green — as long as the PR
+  changes nothing outside `packer/dev/` (a golden dir, a workflow, `_build/`, …),
+  which forces a review.
+
+After the merge to `main`, `packer-build.yml` **releases** every changed image
+through `packer-release.yml`, golden before dev. "Changed" means a build input:
+an edit to only `catalog-info.yaml` or a `*.md` file builds, releases and pins
+nothing, neither on the PR nor after the merge.
+
+1. build it from `main`, publish it to MinIO (for golden: the base dev images
+   layer on) and register it with Harvester as `<name>-<version>`;
+2. open a `pin-bot/<name>` PR that moves its pin in
+   `env-config-virtualmachine.yaml` (`pin-image.py` — see below).
+
+The pin PR follows the tier: **dev auto-merges, golden waits for review**, since
+moving a golden pin moves every VM rebuilt from that alias.
 
 > **Bootstrap rule:** a new golden must be merged + published to S3 **once** before
 > its dev image can build, because the dev's `source_url` points at the golden
@@ -120,10 +134,21 @@ disks, Harvester will not delete it under them, and recreating mints a *new*
 uuid regardless — which invalidates the pins in
 `clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`.
 
-So a new image does not take effect on its own. After registering, move the pin
-in that file to the new `imageId` + `storageClassName`; the CI job prints both
-in its step summary. Existing VMs keep running on the old image until they are
-rebuilt, which also makes rollback a one-line revert.
+So a new image does not take effect on its own: its pin in that file has to move
+to the new `imageId` + `storageClassName`. After a merge the release workflow
+does that as a `pin-bot/<name>` PR. `pin-image.py` moves every entry whose
+`imageId`, version stripped, is the image — so aliases such as `ubuntu24` (→
+`u26-dev`) follow along — and adds an entry under the image's own name if none
+exists. For a manual build (`workflow_dispatch`), move the pin yourself or run
+it from `packer/_build`:
+
+```bash
+IMAGE_NAME=u26-dev IMAGE_ID=default/u26-dev-26.928.1200 \
+STORAGE_CLASS=lh-<uuid> python3 pin-image.py
+```
+
+Existing VMs keep running on the old image until they are rebuilt, which also
+makes rollback a one-line revert (revert the pin PR).
 
 The MinIO key is *not* versioned — dev var-files point a stable `source_url` at
 the golden artifact, and that URL has to keep resolving to the current base.
@@ -177,5 +202,6 @@ registering happen after the build and read their config from the environment
 
 Two software templates drive these tiers:
 
-- `harvester-packer-devimage` → edits `dev/<name>/`, auto-merge.
+- `harvester-packer-devimage` → edits `dev/<name>/`, auto-merge; the release after
+  it moves the pin automatically.
 - `harvester-packer-adminimage` → edits `golden/<name>/`, review-gated draft PR.
