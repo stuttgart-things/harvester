@@ -1,0 +1,194 @@
+---
+name: Packer Release
+
+# Builds ONE image from main, registers it with Harvester under a release name
+# (<name>-<YY.MDD.HHMM>), and opens a PR that moves its pin in
+# env-config-virtualmachine.yaml. Called by packer-build.yml after a merge.
+#
+# Why a pin PR: images are never replaced in place (register-image.sh), so a
+# registered image changes nothing until its pin moves. Without this, a dev
+# image built through the self-service template never reached a VM, and its
+# per-PR image was pruned once the PR closed.
+#
+# Governance follows the tier:
+#   dev    -> the pin PR auto-merges (self-service, like the dev PR itself)
+#   golden -> the pin PR waits for review (moving a golden pin moves every VM
+#             built from it, so a human decides when)
+
+on:
+  workflow_call:
+    inputs:
+      tier:
+        description: "golden or dev"
+        required: true
+        type: string
+      name:
+        description: "Image name (the dir under packer/<tier>/)"
+        required: true
+        type: string
+
+jobs:
+  release:
+    name: "Build + register ${{ inputs.tier }}/${{ inputs.name }}"
+    runs-on: kvm
+    environment: harvester
+    env:
+      PACKER_LOG: 0
+      UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
+    outputs:
+      vmi_name: ${{ steps.register.outputs.vmi_name }}
+      storage_class: ${{ steps.register.outputs.storage_class }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Resolve image version
+        id: meta
+        run: echo "version=$(date -u +%y.%-m%d.%H%M)" >> "$GITHUB_OUTPUT"
+
+      - name: Show build parameters
+        run: |
+          echo "Image    : ${{ inputs.tier }}/${{ inputs.name }}"
+          echo "Var file : ../${{ inputs.tier }}/${{ inputs.name }}/build.pkrvars.hcl"
+          echo "Version  : ${{ steps.meta.outputs.version }}"
+          echo "Register : ${{ env.UPLOAD_TO_HARVESTER }}"
+
+      - name: Packer init
+        working-directory: packer/_build
+        run: packer init .
+
+      - name: Compute sthings password hash
+        env:
+          STHINGS_PASSWORD: ${{ secrets.STHINGS_PASSWORD }}
+        run: |
+          if [ -n "${STHINGS_PASSWORD}" ]; then
+            HASH=$(openssl passwd -6 "${STHINGS_PASSWORD}")
+            echo "::add-mask::${HASH}"
+            echo "STHINGS_PASSWORD_HASH=${HASH}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Packer build
+        working-directory: packer/_build
+        env:
+          PKR_VAR_sthings_password: ${{ env.STHINGS_PASSWORD_HASH }}
+        run: packer build -var-file="../${{ inputs.tier }}/${{ inputs.name }}/build.pkrvars.hcl" .
+
+      # MinIO first, Harvester second — Harvester pulls from this URL itself.
+      # For golden this is also the base dev images layer on.
+      - name: Publish image to MinIO
+        id: publish
+        working-directory: packer/_build
+        env:
+          IMAGE_FILE: output/${{ inputs.name }}-amd64.img
+          IMAGE_NAME: ${{ inputs.name }}
+          S3_PREFIX: ${{ inputs.tier }}
+          S3_ENDPOINT: https://artifacts.platform.sthings.lab
+          S3_BUCKET: packer
+          MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
+          MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
+        run: bash publish-base.sh
+
+      - name: Register image with Harvester
+        id: register
+        if: env.UPLOAD_TO_HARVESTER == 'true'
+        working-directory: packer/_build
+        env:
+          UPLOAD_TO_HARVESTER: "true"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          IMAGE_NAME: ${{ inputs.name }}
+          IMAGE_VERSION: ${{ steps.meta.outputs.version }}
+          IMAGE_URL: ${{ steps.publish.outputs.image_url }}
+        run: bash register-image.sh
+
+      - name: Prune superseded images
+        # Cleans up images that nothing uses any more: older release builds
+        # beyond KEEP, and per-PR images whose PR has closed. Never fails the
+        # job — a cleanup problem is not a reason to fail a good image. The
+        # image just registered is the newest release of its base, so KEEP
+        # protects it until its pin PR lands.
+        if: env.UPLOAD_TO_HARVESTER == 'true' && vars.PRUNE_IMAGES != 'false'
+        continue-on-error: true
+        working-directory: packer/_build
+        env:
+          PRUNE_DRY_RUN: "false"
+          HARVESTER_VIP: ${{ secrets.HARVESTER_VIP }}
+          HARVESTER_PASSWORD: ${{ secrets.HARVESTER_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash prune-images.sh
+
+  pin:
+    name: "Pin ${{ inputs.tier }}/${{ inputs.name }}"
+    needs: release
+    if: needs.release.outputs.vmi_name != ''
+    runs-on: ubuntu-latest
+    # One pin PR per image at a time. Its branch is per image too, so a golden
+    # pin PR waiting for review is never overwritten by a dev release.
+    concurrency:
+      group: packer-pin-${{ inputs.name }}
+      cancel-in-progress: false
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Move the pin
+        id: pin
+        working-directory: packer/_build
+        env:
+          IMAGE_NAME: ${{ inputs.name }}
+          IMAGE_ID: default/${{ needs.release.outputs.vmi_name }}
+          STORAGE_CLASS: ${{ needs.release.outputs.storage_class }}
+        run: |
+          {
+            echo "changes<<EOF"
+            python3 pin-image.py
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open pin PR
+        id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: pin-bot/${{ inputs.name }}
+          delete-branch: true
+          commit-message: "chore(pin): ${{ inputs.name }} -> ${{ needs.release.outputs.vmi_name }} [pin-bot]"
+          title: "chore(pin): ${{ inputs.name }} -> ${{ needs.release.outputs.vmi_name }} [pin-bot]"
+          body: |
+            `${{ inputs.tier }}/${{ inputs.name }}` was rebuilt from ${{ github.sha }} and
+            registered with Harvester as `${{ needs.release.outputs.vmi_name }}`.
+            This moves its pin in `env-config-virtualmachine.yaml`:
+
+            ```
+            ${{ steps.pin.outputs.changes }}
+            ```
+
+            ${{ inputs.tier == 'dev' && 'Dev tier: auto-merges. New VMs boot from the new image; existing VMs keep theirs until rebuilt.' || 'Golden tier: **review-gated**. Merging moves every VM built from this alias to the new image on its next rebuild.' }}
+
+            Reverting this PR is a complete rollback — the previous image stays
+            on Harvester while it is among the newest releases of its base.
+          labels: pin
+          author: "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+
+      - name: Auto-merge (dev only)
+        if: inputs.tier == 'dev' && steps.pr.outputs.pull-request-number != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr merge "${{ steps.pr.outputs.pull-request-number }}" \
+            --repo "${{ github.repository }}" \
+            --auto \
+            --squash \
+            --delete-branch
+
+      - name: Summary
+        if: steps.pr.outputs.pull-request-url != ''
+        run: |
+          {
+            echo "### Pin PR for \`${{ needs.release.outputs.vmi_name }}\`"
+            echo
+            echo "${{ steps.pr.outputs.pull-request-url }}"
+            echo
+            echo '```'
+            echo "${{ steps.pin.outputs.changes }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -3,7 +3,8 @@ name: Packer PR Build
 
 # Folder-driven build for the golden / dev image tiers.
 #   packer/golden/<name>/  -> curated base, REVIEW-GATED (build-only on PR, no upload, no auto-merge)
-#   packer/dev/<name>/     -> self-service playground (build + upload + auto-merge on PR)
+#   packer/dev/<name>/     -> self-service playground (test build + pr<N> image + auto-merge on PR;
+#                             released + pinned after merge by packer-build.yml)
 #   packer/_build/         -> shared packer logic (changes trigger a validate of every image)
 # Build always runs from packer/_build/ selecting an image via its build.pkrvars.hcl.
 
@@ -20,6 +21,7 @@ on:
       # else covers these files (pr-lint watches clusters/ and itself).
       - ".github/workflows/packer-pr-build.yml"
       - ".github/workflows/packer-build.yml"
+      - ".github/workflows/packer-release.yml"
     types:
       - opened
       - synchronize
@@ -36,6 +38,7 @@ jobs:
     outputs:
       targets: ${{ steps.detect.outputs.targets }}
       has_golden: ${{ steps.detect.outputs.has_golden }}
+      dev_only: ${{ steps.detect.outputs.dev_only }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -46,6 +49,18 @@ jobs:
         id: detect
         run: |
           BASE="origin/${{ github.base_ref }}"
+
+          # Auto-merge is for self-service dev PRs only. A PR that also changes
+          # anything outside packer/dev/ — workflows, _build, clusters/, docs —
+          # carries changes nobody reviewed, so it waits for a human.
+          OUTSIDE_DEV=$(git diff --name-only "$BASE"...HEAD | grep -vE '^packer/dev/' || true)
+          if [ -z "$OUTSIDE_DEV" ]; then
+            echo "dev_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dev_only=false" >> "$GITHUB_OUTPUT"
+            echo "Changes outside packer/dev/ (no auto-merge):"
+            echo "$OUTSIDE_DEV"
+          fi
           # catalog-info.yaml is Backstage metadata, not a build input — a
           # provenance/catalog-only edit (e.g. the catalog-bot refresh) must not
           # trigger an image rebuild, so exclude it before matching image dirs.
@@ -261,11 +276,13 @@ jobs:
   auto-merge:
     name: Auto-merge dev PR
     needs: [detect-targets, build]
-    # A PR touching a golden dir must be reviewed, so auto-merge is suppressed.
+    # A PR touching a golden dir, or anything else outside packer/dev/, must be
+    # reviewed, so auto-merge is suppressed.
     if: >-
       success() &&
       needs.detect-targets.outputs.targets != '[]' &&
       needs.detect-targets.outputs.has_golden == 'false' &&
+      needs.detect-targets.outputs.dev_only == 'true' &&
       vars.UPLOAD_TO_HARVESTER != 'false'
     runs-on: ubuntu-latest
     steps:

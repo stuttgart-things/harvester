@@ -28,15 +28,17 @@ from that: the bucket must stay public-read, and Harvester must trust the CA tha
 signed the artifact URL (`settings.harvesterhci.io/additional-ca`), or the image
 fails to import with `x509: certificate signed by unknown authority`.
 
-Each PR build registers its own image, named `u26-dev-pr<N>.<YY.MDD.HHMM>` —
-images are never replaced in place, because Harvester will not delete one while a
-VM boots from its Longhorn backing class. Consuming a new image means moving the
-pin in
-[`env-config-virtualmachine.yaml`](../../../clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml);
-the `ubuntu24` alias is what points at `u26-dev`.
+Each PR build registers its own test image, named `u26-dev-pr<N>.<YY.MDD.HHMM>`.
+It is throwaway: `prune-images.sh` removes it once the PR is closed and nothing
+uses it.
 
-Old per-PR images accumulate and are not cleaned up automatically — prune them on
-Harvester when a PR is done with, checking first that nothing is pinned to them.
+After the merge, `packer-build.yml` releases the image from `main` as
+`u26-dev-<YY.MDD.HHMM>` and opens a `pin-bot/u26-dev` PR that moves the pin in
+[`env-config-virtualmachine.yaml`](../../../clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml)
+to it — the `ubuntu24` alias, which points at `u26-dev`. For a dev image that PR
+auto-merges. Images are never replaced in place, because Harvester will not
+delete one while a VM boots from its Longhorn backing class; existing VMs keep
+their image until they are rebuilt.
 
 Build logic is shared in [`packer/_build/`](../../_build/). See
 [`packer/README.md`](../../README.md) for how to build.
