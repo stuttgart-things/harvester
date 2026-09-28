@@ -98,6 +98,12 @@ spec:
       # abandoned match.
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
 
+      # The light-catcher's profile, from ./homerun2-light-catcher-profile.yaml:
+      # every effect on the real WLED (wled-matrix.sthings.lab) instead of the
+      # wled-mock (flux#570). Unset, or on a flux-apps revision before #570,
+      # the base's mock profile is mounted. Either merge order is safe.
+      HOMERUN2_LIGHT_CATCHER_PROFILE_CM: homerun2-light-catcher-profile-wled
+
       # NOT redundant with substituteFrom. Both carry a `:-changeme` default
       # upstream, so a missing value does not fail -- it installs the literal
       # string `changeme` as the bearer token and the scout token. They come

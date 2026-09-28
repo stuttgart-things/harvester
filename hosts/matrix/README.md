@@ -2,10 +2,12 @@
 
 A Raspberry Pi 3B+ driving a 64x64 HUB75 RGB matrix through an Adafruit HAT.
 It runs [homerun2-led-catcher](https://github.com/stuttgart-things/homerun2-led-catcher)
-natively under systemd, in `standalone` mode: there is no Redis, and the panel is
-driven over HTTP (`/display`). The same port serves the **demo UI**, a simulator
-of the panel with a Panel control form. Between displays the panel shows a
-clock.
+natively under systemd, in `full` mode: it consumes the `messages` stream from
+homerun2-dev's Redis (`192.168.10.179:6379`, consumer group
+`homerun2-led-matrix`), and the panel can still be driven over HTTP
+(`/display`). The same port serves the **demo UI**, a simulator of the panel
+with a Panel control form. Between displays the panel shows a clock. Until
+2026-09-28 it ran `standalone`, with no Redis at all.
 
 There is no Kubernetes on the Pi. Everything here is one Ansible play, a DNS
 record on the DD-WRT and a certificate from the OpenBao PKI on `platform`.
@@ -135,7 +137,9 @@ cd hosts/matrix
 # credentials only in the environment; the module passes them as Dagger secrets
 export SSH_USER=sthings SSH_PASSWORD='…'
 umask 077
-printf 'LED_API_TOKEN=%s\nVAULT_TOKEN=%s\n' "$LED_API_TOKEN" "$VAULT_TOKEN" > ansible.env
+# REDIS_PASSWORD: homerun2-dev's, e.g.
+#   kubectl -n homerun2 get secret redis-stack-auth -o jsonpath='{.data.redis-password}' | base64 -d
+printf 'LED_API_TOKEN=%s\nVAULT_TOKEN=%s\nREDIS_PASSWORD=%s\n' "$LED_API_TOKEN" "$VAULT_TOKEN" "$REDIS_PASSWORD" > ansible.env
 
 dagger -m github.com/stuttgart-things/dagger/ansible call execute \
   --src . \
@@ -147,6 +151,8 @@ dagger -m github.com/stuttgart-things/dagger/ansible call execute \
   --env-secrets file:ansible.env \
   --parameters "ansible_become_password='{{ lookup(\"env\", \"ANSIBLE_PASSWORD\") }}' \
 led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
+led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
+led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
 led_catcher_version=v0.12.0 \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock \
@@ -161,6 +167,9 @@ rm -f ansible.env
 | `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
+| `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
+| `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
+| `led_redis_password` | written to `/etc/default/led-catcher` beside the token |
 | `led_api_token` | the bearer token for `POST /display`, written to `/etc/default/led-catcher` (`0600`) |
 | `run_id` | **must change on every call**. Dagger caches the `ansible-playbook` step, and without it a second call replays the first result and never reaches the Pi |
 
@@ -191,7 +200,8 @@ journalctl -u caddy -f
 ## Known state
 
 - **Under-voltage.** `vcgencmd get_throttled` reported `0x50005` (2026-09-21):
-  under-voltage now, throttled now, both have happened before. The ARM clock
+  under-voltage now, throttled now, both have happened before. Still there on
+  2026-09-28: `0xd0005`, which adds a soft temperature limit having been hit. The ARM clock
   stays at 600 MHz. Needs a 5.1 V/2.5 A supply with a short, thick cable, and
   the panel powered through the HAT rather than from the Pi.
 - **Load.** The matrix library's refresh thread keeps core 3 (reserved with

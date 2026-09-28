@@ -1,0 +1,52 @@
+---
+# Redis on the LAN, for the LED matrix Pi (hosts/matrix): its led-catcher
+# consumes the `messages` stream from here in LED_MODE=full.
+#
+# A Service of our own rather than HOMERUN2_REDIS_SERVICE_TYPE=LoadBalancer on
+# the chart's: that would expose Sentinel's 26379 as well, and still need a
+# second address -- default-pool is a /32 and the Gateway holds it.
+#
+# 192.168.10.179 is reserved in Clusterbook as `179:ASSIGNED:homerun2-dev-redis`
+# (2026-09-28), without DNS: *.homerun2-dev.sthings.lab already resolves to
+# the Gateway on .171, so a name under it would point at the wrong address.
+# Clients use the IP.
+#
+# The pool selects this Service only, so nothing else can take .179, and the
+# Service asks for the address explicitly. The L2 announcement policy covers
+# every LoadBalancer IP already -- nothing to add there.
+#
+# Only port 6379, password-protected (redis-stack-auth). The selector is the
+# master pod: one node, no replicas -- with replicas a connection could land
+# on a read-only one, and XREADGROUP would fail.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: homerun2-redis
+spec:
+  blocks:
+    - start: "192.168.10.179"
+      stop: "192.168.10.179"
+  serviceSelector:
+    matchLabels:
+      homerun2.stuttgart-things.com/lb-pool: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-stack-lb
+  namespace: homerun2
+  labels:
+    homerun2.stuttgart-things.com/lb-pool: redis
+  annotations:
+    lbipam.cilium.io/ips: "192.168.10.179"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/instance: redis-stack
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: node
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP
