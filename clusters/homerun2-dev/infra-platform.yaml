@@ -103,6 +103,13 @@ spec:
       # resolving a name here would need the resolver this configures.
       COREDNS_ZONE: sthings.lab
       COREDNS_ZONE_SERVER: "192.168.10.1"
+      # The router answers AAAA with NXDOMAIN for its *.platform.sthings.lab
+      # wildcard (A resolves). musl (every Alpine image) reads that as "no such
+      # name" -- on machinery-hv an Ansible pod could not resolve
+      # openbao.platform.sthings.lab (harvester#265). CoreDNS answers AAAA in
+      # this zone itself, empty; the lab has no IPv6 (flux#567). Same as
+      # machinery-hv (#276).
+      COREDNS_ZONE_NODATA_TYPE: AAAA
 
       # ---- cert-manager ---------------------------------------------------
       # Version left at the component default (v1.21.2). infra and xplane pin
