@@ -700,60 +700,56 @@ remove the browser control that is currently the only way to switch.
 
 ---
 
-## 10. Restoring schmetterpause from the office
+## 10. schmetterpause's data: restored from the office, backed up to platform
 
-The office's schmetterpause (homerun2-test1, labul vSphere, v0.14.0) archives
-through Barman Cloud into `s3://schmetterpause-cnpg/schmetterpause-db/` on the
-labul MinIO. This cluster recovers from a copy of that archive on the MinIO on
-platform: same bucket name, user `schmetterpause-cnpg` (read/write on that
-bucket only), credentials in
-[`schmetterpause-db-backup.enc.yaml`](./schmetterpause-db-backup.enc.yaml).
-[`tabletennis.yaml`](./tabletennis.yaml) selects `schmetterpause-db-recovery`
-(flux#573); it does nothing until the Cluster is re-created.
-
-**1. Copy the archive** (from a machine that reaches both MinIOs). Take a
-fresh base backup on homerun2-test1 first, then copy the whole
-`schmetterpause-db/` prefix -- a recovery needs a base backup *and* every WAL
-after it. Check the size first: platform's disk has ~21G free.
-
-```bash
-# labul: an alias with read access to schmetterpause-cnpg there
-mc du labul/schmetterpause-cnpg/schmetterpause-db/
-export MC_HOST_lab="https://schmetterpause-cnpg:$(sops -d --extract '["stringData"]["ACCESS_SECRET_KEY"]' \
-  clusters/homerun2-dev/schmetterpause-db-backup.enc.yaml)@artifacts.platform.sthings.lab"
-mc mirror labul/schmetterpause-cnpg/schmetterpause-db/ lab/schmetterpause-cnpg/schmetterpause-db/
-mc ls lab/schmetterpause-cnpg/schmetterpause-db/base/     # at least one backup directory
-```
-
-**2. Recover.** The database here must still be empty (it was: 0 players,
-0 matches), because this deletes it:
+**Restored 2026-09-28 from a `pg_dump`** of the office's schmetterpause
+(homerun2-test1, v0.14.0), with schmetterpause's own
+`scripts/db.sh restore kubernetes` from a v0.14.0 checkout: it refuses a
+database that already has players, resets the schema and loads the dump as
+`schmetterpause` in one transaction. The app has to be scaled to 0 first.
 
 ```bash
 export KUBECONFIG=~/.kube/homerun2-dev
-kubectl -n schmetterpause exec schmetterpause-db-1 -- psql -d schmetterpause -Atc 'select count(*) from players'
-kubectl -n schmetterpause delete cluster schmetterpause-db        # the PVC goes with it
-flux reconcile kustomization tabletennis -n flux-system --with-source
-kubectl -n schmetterpause get cluster schmetterpause-db -w        # "Cluster in healthy state"
-kubectl -n schmetterpause rollout restart deploy/schmetterpause
+kubectl -n schmetterpause scale deployment/schmetterpause --replicas=0
+sh scripts/db.sh restore kubernetes schmetterpause-<time>.sql     # in the schmetterpause repo
+kubectl -n schmetterpause scale deployment/schmetterpause --replicas=1
+kubectl -n schmetterpause exec -i schmetterpause-db-1 -c postgres -- \
+  psql -d schmetterpause -X -q -A -t < scripts/db-counts.sql
 ```
 
-**3. Check** against the office's numbers (18 players, 74 matches on
-2026-09-20, more since), and sign in with a PIN:
+The dump came without its `.counts` file, so the script compared nothing; the
+counts were compared by hand against the dump's COPY blocks, all equal:
+18 players, 77 matches (72 confirmed, 5 pending), 140 sets, 144 TTR entries,
+36 identities, 31 credentials, 11 kiosk grants, 1 tournament with 5 players,
+goose at `20260916170000`. The dump holds PIN and recovery-code hashes: it
+does not go into git, and not onto shared storage.
+
+The Barman route prepared for this (`schmetterpause-db-recovery`, flux#573,
+#299) was not needed and is deselected again: the office handed over a dump,
+not an archive.
+
+**Backups** go through `schmetterpause-db-backup-sops` (flux#573) into
+`s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/` on the MinIO on
+platform (`https://artifacts.platform.sthings.lab`): WAL continuously, a base
+backup every night at 03:00 UTC and once immediately, 30 days kept.
+Credentials in [`schmetterpause-db-backup.enc.yaml`](./schmetterpause-db-backup.enc.yaml):
+user `schmetterpause-cnpg`, read/write on that bucket only (created
+2026-09-28). The `serverName` is deliberately not `schmetterpause-db` --
+that path stays free for a copy of the office's own archive, and the plugin
+refuses to archive into a non-empty path.
 
 ```bash
-kubectl -n schmetterpause exec schmetterpause-db-1 -- psql -d schmetterpause -Atc \
-  "select (select count(*) from players), (select count(*) from matches), (select max(version_id) from goose_db_version)"
+kubectl -n schmetterpause get cluster schmetterpause-db \
+  -o jsonpath='{.status.conditions[?(@.type=="ContinuousArchiving")]}'
+kubectl -n schmetterpause get backups.postgresql.cnpg.io
 ```
 
-The app logs in with this cluster's `SCHMETTERPAUSE_DB_PASSWORD`: the
-component sets the owner's password from `schmetterpause-db` after recovery.
-If it cannot, `ALTER ROLE schmetterpause PASSWORD '…'` from that Secret fixes
-it.
+`ContinuousArchiving=True` alone proves nothing (it shows True without a
+plugin, too); a Backup in phase `completed` does.
 
-**Afterwards**: only one environment takes results at a time. This cluster
-then archives on its own via `schmetterpause-db-backup-sops`, under a
-`SCHMETTERPAUSE_BACKUP_SERVER_NAME` of its own -- never under
-`schmetterpause-db` in this bucket, which is the office's archive.
+**Only one environment takes results at a time** (schmetterpause ADR-0016).
+Results entered in the office after the dump are not in this copy, and
+nothing merges the two; which one is the writer is a decision, not a sync.
 
 ---
 
