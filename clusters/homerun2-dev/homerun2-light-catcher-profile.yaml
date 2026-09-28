@@ -1,0 +1,69 @@
+---
+# The light-catcher's profile -- caller-supplied, so the effects go to the
+# real WLED instead of the wled-mock.
+#
+# homerun2.yaml sets HOMERUN2_LIGHT_CATCHER_PROFILE_CM to this ConfigMap's
+# name (flux#570); unset, the component mounts the base's own profile, whose
+# rules all point at http://homerun2-wled-mock. That ConfigMap still exists,
+# it is just no longer mounted.
+#
+# The device: wled-matrix.sthings.lab (192.168.10.123, ESP32, WLED 16.0.1,
+# 36 LEDs in one segment). Pods reach it by name -- CoreDNS forwards
+# sthings.lab to the router (coredns-lab-zone).
+#
+# Effect and palette names are WLED's own, looked up by name against the
+# device's /json/eff and /json/pal. Blurz and DJ Light, which the base profile
+# uses, are audio-reactive: with the AudioReactive usermod off and no
+# microphone they barely light. Hence Strobe, Breathe, Aurora and Twinkle.
+#
+# Rules are matched in document order, first match wins. There is no way to
+# fan one message out to both the WLED and the mock: this profile has
+# replaced the mock, whose dashboard stays up but no longer receives anything.
+#
+# THE CATCHER READS THIS ONCE, AT STARTUP. Flux applies a change here without
+# touching the pod, so it has no effect until:
+#
+#   kubectl -n homerun2 rollout restart deploy/homerun2-light-catcher
+#
+# No ${VAR} in here: the Kustomization that applies this file (the
+# FluxInstance's own sync) has no postBuild, so none would be substituted.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-light-catcher-profile-wled
+  namespace: homerun2
+data:
+  profile.yaml: |
+    effects:
+      error:
+        systems: ["*"]
+        severity: [error, critical]
+        fx: Strobe
+        duration: 5
+        color: red
+        segments: [0]
+        endpoint: http://wled-matrix.sthings.lab
+      warning:
+        systems: ["*"]
+        severity: [warning]
+        fx: Breathe
+        duration: 4
+        color: yellow
+        segments: [0]
+        endpoint: http://wled-matrix.sthings.lab
+      success:
+        systems: ["*"]
+        severity: [success]
+        fx: Aurora
+        duration: 3
+        color: forest
+        segments: [0]
+        endpoint: http://wled-matrix.sthings.lab
+      info:
+        systems: ["*"]
+        severity: [info]
+        fx: Twinkle
+        duration: 3
+        color: ocean
+        segments: [0]
+        endpoint: http://wled-matrix.sthings.lab

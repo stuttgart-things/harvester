@@ -521,6 +521,42 @@ the RBAC ships with its base) and selects them with
 `app.kubernetes.io/part-of=homerun2`. A component without that label is simply
 absent from the view, which reads as an empty panel rather than an error.
 
+### The real devices: LED matrix and WLED
+
+Two pieces of hardware hang off this stack since 2026-09-28:
+
+| Device | Address | Fed by |
+|---|---|---|
+| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN |
+| WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the light-catcher here, via [`homerun2-light-catcher-profile.yaml`](./homerun2-light-catcher-profile.yaml) |
+
+**Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
+`redis-stack-lb` on `192.168.10.179:6379`, with a Cilium pool of its own that
+only that Service can draw from. `.179` is reserved in Clusterbook as
+`homerun2-dev-redis`, deliberately without DNS -- a name under
+`*.homerun2-dev.sthings.lab` would resolve to the Gateway on `.171`.
+
+```bash
+kubectl -n homerun2 get svc redis-stack-lb        # EXTERNAL-IP 192.168.10.179
+redis-cli -h 192.168.10.179 -a "$REDIS_PASSWORD" --no-auth-warning ping
+kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
+  'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning XINFO GROUPS messages'
+```
+
+The Pi's catcher uses its own consumer group, `homerun2-led-matrix`. **It must
+not share `homerun2-led-catcher` with the in-cluster simulator:** consumers in
+one group split the stream between them, and each would show only every other
+message.
+
+**The WLED profile** replaces the base's, which points every rule at the
+wled-mock; `HOMERUN2_LIGHT_CATCHER_PROFILE_CM` in
+[`homerun2.yaml`](./homerun2.yaml) makes the component mount it (flux#570).
+The catcher reads it at startup only -- after editing it:
+
+```bash
+kubectl -n homerun2 rollout restart deploy/homerun2-light-catcher
+```
+
 ---
 
 ## What this cluster does not have yet
