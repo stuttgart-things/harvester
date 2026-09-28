@@ -60,6 +60,17 @@ path "sys/mounts" {
   capabilities = ["read", "list"]
 }
 
+# Read-only, one auth mount's configuration. provider-vault's
+# auth.vault Backend (v4) OBSERVES a mount with
+# GET sys/mounts/auth/<path>, not sys/auth/<path>; without this the first
+# ClusterStack on machinery-hv (app-dev-hv, 2026-09-28) never got past its
+# Platform: `app-dev-hv-certmanager-backend` 403'd on observe, so it was never
+# created either. Read only -- creating, tuning and deleting stay on
+# sys/auth/* above.
+path "sys/mounts/auth/*" {
+  capabilities = ["read"]
+}
+
 # NOTE: sys/policies/acl/* is deliberately ABSENT. The VaultK8sAuth XR has a
 # `policies` field that CREATES policies named {clusterName}-{name}; without
 # this path that field cannot be used, and `tokenPolicies` may only REFERENCE
