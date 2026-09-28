@@ -700,6 +700,63 @@ remove the browser control that is currently the only way to switch.
 
 ---
 
+## 10. Restoring schmetterpause from the office
+
+The office's schmetterpause (homerun2-test1, labul vSphere, v0.14.0) archives
+through Barman Cloud into `s3://schmetterpause-cnpg/schmetterpause-db/` on the
+labul MinIO. This cluster recovers from a copy of that archive on the MinIO on
+platform: same bucket name, user `schmetterpause-cnpg` (read/write on that
+bucket only), credentials in
+[`schmetterpause-db-backup.enc.yaml`](./schmetterpause-db-backup.enc.yaml).
+[`tabletennis.yaml`](./tabletennis.yaml) selects `schmetterpause-db-recovery`
+(flux#573); it does nothing until the Cluster is re-created.
+
+**1. Copy the archive** (from a machine that reaches both MinIOs). Take a
+fresh base backup on homerun2-test1 first, then copy the whole
+`schmetterpause-db/` prefix -- a recovery needs a base backup *and* every WAL
+after it. Check the size first: platform's disk has ~21G free.
+
+```bash
+# labul: an alias with read access to schmetterpause-cnpg there
+mc du labul/schmetterpause-cnpg/schmetterpause-db/
+export MC_HOST_lab="https://schmetterpause-cnpg:$(sops -d --extract '["stringData"]["ACCESS_SECRET_KEY"]' \
+  clusters/homerun2-dev/schmetterpause-db-backup.enc.yaml)@artifacts.platform.sthings.lab"
+mc mirror labul/schmetterpause-cnpg/schmetterpause-db/ lab/schmetterpause-cnpg/schmetterpause-db/
+mc ls lab/schmetterpause-cnpg/schmetterpause-db/base/     # at least one backup directory
+```
+
+**2. Recover.** The database here must still be empty (it was: 0 players,
+0 matches), because this deletes it:
+
+```bash
+export KUBECONFIG=~/.kube/homerun2-dev
+kubectl -n schmetterpause exec schmetterpause-db-1 -- psql -d schmetterpause -Atc 'select count(*) from players'
+kubectl -n schmetterpause delete cluster schmetterpause-db        # the PVC goes with it
+flux reconcile kustomization tabletennis -n flux-system --with-source
+kubectl -n schmetterpause get cluster schmetterpause-db -w        # "Cluster in healthy state"
+kubectl -n schmetterpause rollout restart deploy/schmetterpause
+```
+
+**3. Check** against the office's numbers (18 players, 74 matches on
+2026-09-20, more since), and sign in with a PIN:
+
+```bash
+kubectl -n schmetterpause exec schmetterpause-db-1 -- psql -d schmetterpause -Atc \
+  "select (select count(*) from players), (select count(*) from matches), (select max(version_id) from goose_db_version)"
+```
+
+The app logs in with this cluster's `SCHMETTERPAUSE_DB_PASSWORD`: the
+component sets the owner's password from `schmetterpause-db` after recovery.
+If it cannot, `ALTER ROLE schmetterpause PASSWORD '…'` from that Secret fixes
+it.
+
+**Afterwards**: only one environment takes results at a time. This cluster
+then archives on its own via `schmetterpause-db-backup-sops`, under a
+`SCHMETTERPAUSE_BACKUP_SERVER_NAME` of its own -- never under
+`schmetterpause-db` in this bucket, which is the office's archive.
+
+---
+
 ## The predecessor, and why it is gone
 
 `bootstrap-xplane` was the singlenode RKE2 VM this one replaces. It was retired
