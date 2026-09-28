@@ -145,10 +145,15 @@ while [ "$(date +%s)" -lt "${DEADLINE}" ]; do
     echo "      ${IMAGE_NAME}:"
     echo "        imageId: ${NAMESPACE}/${VMI_NAME}"
     echo "        storageClassName: ${SC}"
-    # Surface both to the workflow so a later step can use them.
+    # Surface them to the workflow so a later step can use them. vmi_version
+    # is what a job OUTPUT should carry: GitHub drops any job output that
+    # contains a secret's value, and one secret's value is a substring of the
+    # golden image names (sthings-…), so vmi_name never left the job for a
+    # golden release (packer-release.yml).
     if [ -n "${GITHUB_OUTPUT:-}" ]; then
       {
         echo "vmi_name=${VMI_NAME}"
+        echo "vmi_version=${IMAGE_VERSION}"
         echo "storage_class=${SC}"
       } >> "${GITHUB_OUTPUT}"
     fi

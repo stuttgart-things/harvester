@@ -64,8 +64,14 @@ jobs:
     env:
       PACKER_LOG: 0
       UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
+    # The VERSION, not the image name: GitHub drops a job output that contains
+    # any secret's value ("Skip output 'vmi_name' since it may contain
+    # secret"), and one secret's value is part of every golden image name. The
+    # first dispatched golden release (sthings-u26, 2026-09-28) registered
+    # fine and then skipped its pin for exactly that reason. The pin job puts
+    # the name back together from inputs.name, which is not filtered.
     outputs:
-      vmi_name: ${{ steps.register.outputs.vmi_name }}
+      vmi_version: ${{ steps.register.outputs.vmi_version }}
       storage_class: ${{ steps.register.outputs.storage_class }}
     steps:
       - name: Checkout repository
@@ -159,8 +165,11 @@ jobs:
   pin:
     name: "Pin ${{ inputs.tier }}/${{ inputs.name }}"
     needs: release
-    if: needs.release.outputs.vmi_name != ''
+    if: needs.release.outputs.vmi_version != ''
     runs-on: ubuntu-latest
+    env:
+      # register-image.sh's naming: <name>-<version>.
+      VMI_NAME: ${{ inputs.name }}-${{ needs.release.outputs.vmi_version }}
     # Declared here, not only by the caller: a dispatched run gets the repo's
     # default token permissions, which may be read-only. Under workflow_call
     # these match what packer-build.yml grants, so nothing is widened.
@@ -181,7 +190,7 @@ jobs:
         working-directory: packer/_build
         env:
           IMAGE_NAME: ${{ inputs.name }}
-          IMAGE_ID: default/${{ needs.release.outputs.vmi_name }}
+          IMAGE_ID: default/${{ env.VMI_NAME }}
           STORAGE_CLASS: ${{ needs.release.outputs.storage_class }}
         run: |
           {
@@ -196,11 +205,11 @@ jobs:
         with:
           branch: pin-bot/${{ inputs.name }}
           delete-branch: true
-          commit-message: "chore(pin): ${{ inputs.name }} -> ${{ needs.release.outputs.vmi_name }} [pin-bot]"
-          title: "chore(pin): ${{ inputs.name }} -> ${{ needs.release.outputs.vmi_name }} [pin-bot]"
+          commit-message: "chore(pin): ${{ inputs.name }} -> ${{ env.VMI_NAME }} [pin-bot]"
+          title: "chore(pin): ${{ inputs.name }} -> ${{ env.VMI_NAME }} [pin-bot]"
           body: |
             `${{ inputs.tier }}/${{ inputs.name }}` was rebuilt from ${{ github.sha }} and
-            registered with Harvester as `${{ needs.release.outputs.vmi_name }}`.
+            registered with Harvester as `${{ env.VMI_NAME }}`.
             This moves its pin in `env-config-virtualmachine.yaml`:
 
             ```
@@ -229,7 +238,7 @@ jobs:
         if: steps.pr.outputs.pull-request-url != ''
         run: |
           {
-            echo "### Pin PR for \`${{ needs.release.outputs.vmi_name }}\`"
+            echo "### Pin PR for \`${{ env.VMI_NAME }}\`"
             echo
             echo "${{ steps.pr.outputs.pull-request-url }}"
             echo
