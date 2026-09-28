@@ -37,6 +37,40 @@ spec:
   path: ./apps/platform/root
   components:
     - ../components/openbao
+  # The OpenBao agent injector as a Recreate Deployment. The chart ships it with
+  # a HARD pod anti-affinity against itself and the default RollingUpdate: on
+  # this single node the new pod can never sit beside the old one, so every
+  # chart upgrade left it Pending and the HelmRelease Stalled
+  # ("timeout waiting for: Deployment/openbao/openbao-agent-injector"), seen
+  # after the cold start on 2026-09-28. Recreate stops the old pod first; the
+  # anti-affinity stays, so the value is still right on a bigger cluster. The
+  # injector's webhook is failurePolicy Ignore, so the gap costs nothing.
+  #
+  # Nested, because the HelmRelease is not an object of this path: the
+  # component renders a child Kustomization `openbao`, and the HelmRelease comes
+  # from ITS path. So this appends a patch to the child's own patch list.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: openbao
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                kind: HelmRelease
+                name: openbao
+              patch: |
+                apiVersion: helm.toolkit.fluxcd.io/v2
+                kind: HelmRelease
+                metadata:
+                  name: openbao
+                spec:
+                  values:
+                    injector:
+                      strategy:
+                        type: Recreate
   postBuild:
     substitute:
       APPS_SOURCE: flux-infra
