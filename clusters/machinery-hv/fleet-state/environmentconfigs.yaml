@@ -46,8 +46,8 @@ data:
   # is per image -- look it up rather than copying:
   #   kubectl get virtualmachineimages -n default \
   #     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
-  imageId: default/sthings-u26-26.924.1008
-  storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
+  imageId: default/sthings-u26-26.928.0903
+  storageClassName: lh-ed436c27-9813-4e94-bbcb-b9f56a6fb11e
 ---
 # The ansible-run defaults every AnsibleRun composes against. Label `default`
 # whatever the lab: ansible-run resolves its OWN label and fleet-wide only
@@ -130,14 +130,16 @@ data:
   # not here; this is only its name. Sizing is NOT here: it comes from the
   # ClusterStack's `size`.
   cloudCredentialSecretName: cattle-global-data:cc-cl944  # pragma: allowlist secret
-  # The golden image, NOT sthings-u26-k3s: the kubeconfig stage logs in as
-  # sshUser with the password from ansible-credentials, and only images built
-  # by CI with STHINGS_PASSWORD (#108) accept it. sthings-u26-k3s (2026-06-09)
-  # predates that and ships `sthings` locked -- hvpool-test1 got
-  # "Permission denied (publickey,password)" on all 12 attempts (#265).
+  # The kubeconfig stage logs in as sshUser with the password from
+  # ansible-credentials. Unlike the VM path, the machine pool sets no password
+  # through cloud-init, so the IMAGE must ship `sthings` unlocked: only builds
+  # after #274 do (before it, lock_passwd was rendered as the string "false"
+  # and cloud-init locked the hash -- #265). 26.928.0903 is the first; checked
+  # offline, `sthings` is `$6$…` without `!`.
   # k3s is not needed in the image: Rancher's system-agent installs it.
-  # Same image as cluster-vault-sthings-lab above; move both together.
-  imageName: default/sthings-u26-26.924.1008
+  # Same image as cluster-vault-sthings-lab above; move both together. pin-bot
+  # does NOT move these (it edits crossplane-mgmt's pin file only).
+  imageName: default/sthings-u26-26.928.0903
   networkName: default/vms
   vmNamespace: default
   sshUser: sthings
