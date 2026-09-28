@@ -1,6 +1,6 @@
-# S3 credentials for schmetterpause-db's Barman Cloud ObjectStores -- the
-# recovery source now (schmetterpause-db-origin), this cluster's own backups
-# later (schmetterpause-db, via schmetterpause-db-backup-sops).
+# S3 credentials for schmetterpause-db's Barman Cloud ObjectStore -- this
+# cluster's own backups (schmetterpause-db, via schmetterpause-db-backup-sops,
+# under serverName schmetterpause-db-homerun2-dev).
 #
 # The MinIO on platform (https://artifacts.platform.sthings.lab), user
 # `schmetterpause-cnpg` with policy `schmetterpause-cnpg-rw`: read/write on the

@@ -39,22 +39,22 @@ spec:
     - name: infra-platform
     # zaehlwerk's panel pitches into omni-pitcher.
     - name: homerun2
-    # The ObjectStore CRD schmetterpause-db-recovery needs (infra-platform
+    # The ObjectStore CRD schmetterpause-db-backup-sops needs (infra-platform
     # waits on it too; named here so the reason is visible).
     - name: cnpg-barman-cloud
   sourceRef:
     kind: GitRepository
     name: flux-apps
   path: ./apps/tabletennis/profiles/sops
-  # schmetterpause-db starts from the office's backups (homerun2-test1), copied
-  # into s3://schmetterpause-cnpg/schmetterpause-db/ on the MinIO on platform
-  # (flux#573). INERT UNTIL THE CLUSTER IS RE-CREATED: CNPG reads bootstrap
-  # once, so the running Cluster ignores this. The recovery itself -- deleting
-  # schmetterpause-db and its PVC so Flux re-creates it -- is a deliberate
-  # step, see ./README.md. Leaving this here afterwards is harmless, but a
-  # later re-creation of the Cluster would recover the same archive again.
+  # schmetterpause-db archives WAL continuously and takes a base backup every
+  # night into s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/ on the
+  # MinIO on platform (flux#573). Its data came from the office on 2026-09-28
+  # as a pg_dump (README section 10), so there is no Barman archive to recover
+  # from any more -- schmetterpause-db-recovery is gone again. NEVER archive
+  # under `schmetterpause-db` in this bucket: that path is reserved for a copy
+  # of the office's own archive.
   components:
-    - ../../components/schmetterpause-db-recovery
+    - ../../components/schmetterpause-db-backup-sops
   postBuild:
     # SCHMETTERPAUSE_SESSION_KEY, SCHMETTERPAUSE_DB_PASSWORD,
     # ZAEHLWERK_OMNI_PITCHER_TOKEN and ZAEHLWERK_REDIS_PASSWORD -- the values
@@ -72,11 +72,14 @@ spec:
       # NOT the profile's 1Gi default. The Cluster was created at 2Gi, and a
       # smaller size is a shrink that CNPG refuses.
       SCHMETTERPAUSE_DB_STORAGE_SIZE: 2Gi
-      # Recovery source (schmetterpause-db-recovery). Credentials and CA from
-      # the Secret schmetterpause-db-backup (./schmetterpause-db-backup.enc.yaml).
-      SCHMETTERPAUSE_RECOVERY_BUCKET: schmetterpause-cnpg
-      SCHMETTERPAUSE_RECOVERY_S3_ENDPOINT: https://artifacts.platform.sthings.lab
-      SCHMETTERPAUSE_RECOVERY_SERVER_NAME: schmetterpause-db
+      # Backups (schmetterpause-db-backup-sops). Credentials and CA from the
+      # Secret schmetterpause-db-backup (./schmetterpause-db-backup.enc.yaml).
+      # 30d like the office; the database is a few MB, and the gzipped WAL of
+      # an idle hour is small.
+      SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
+      SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: https://artifacts.platform.sthings.lab
+      SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-homerun2-dev
+      SCHMETTERPAUSE_BACKUP_RETENTION: 30d
       # Pinned rather than left to the profile's defaults, so a flux-apps
       # change never upgrades this cluster by surprise. v0.14.0 since
       # 2026-09-28 (#305), before the restore: the office (homerun2-test1)
