@@ -66,6 +66,16 @@ nothing, neither on the PR nor after the merge.
 The pin PR follows the tier: **dev auto-merges, golden waits for review**, since
 moving a golden pin moves every VM rebuilt from that alias.
 
+A dev PR that auto-merges does **not** reach `packer-build.yml`: the merge is
+done with `GITHUB_TOKEN`, and GitHub starts no workflow for a push that token
+causes. The auto-merge job therefore dispatches `packer-release.yml` itself,
+once per dev image. The same dispatch releases an image by hand, e.g. after a
+`_build/` change that no push rebuilds:
+
+```bash
+gh workflow run packer-release.yml --ref main -f tier=golden -f name=sthings-u26
+```
+
 > **Bootstrap rule:** a new golden must be merged + published to S3 **once** before
 > its dev image can build, because the dev's `source_url` points at the golden
 > artifact in S3. So you don't land a brand-new golden + dev green in a single PR —

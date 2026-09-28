@@ -3,7 +3,8 @@ name: Packer Release
 
 # Builds ONE image from main, registers it with Harvester under a release name
 # (<name>-<YY.MDD.HHMM>), and opens a PR that moves its pin in
-# env-config-virtualmachine.yaml. Called by packer-build.yml after a merge.
+# env-config-virtualmachine.yaml. Called by packer-build.yml after a merge,
+# and dispatched by packer-pr-build.yml after a dev PR auto-merges (below).
 #
 # Why a pin PR: images are never replaced in place (register-image.sh), so a
 # registered image changes nothing until its pin moves. Without this, a dev
@@ -26,12 +27,40 @@ on:
         description: "Image name (the dir under packer/<tier>/)"
         required: true
         type: string
+  # WHY A DISPATCH ENTRY. A dev PR auto-merges with GITHUB_TOKEN, and GitHub
+  # starts no workflow for events that token causes -- so the push of that
+  # merge never reached packer-build.yml, and the dev image was never released
+  # (harvester#270, 2026-09-28: merged, no run on its commit). workflow_dispatch
+  # is the one event GITHUB_TOKEN may start, so the auto-merge job dispatches
+  # this workflow itself. It is also the manual way to release an image again,
+  # e.g. after a _build change that a push does not rebuild.
+  #
+  # `name` is a free string, not a choice list, so a dev image created through
+  # the Backstage template can be released without editing this file.
+  workflow_dispatch:
+    inputs:
+      tier:
+        description: "golden or dev"
+        required: true
+        type: choice
+        options:
+          - golden
+          - dev
+      name:
+        description: "Image name (the dir under packer/<tier>/)"
+        required: true
+        type: string
 
 jobs:
   release:
     name: "Build + register ${{ inputs.tier }}/${{ inputs.name }}"
+    # A release is built from main and nothing else: a dispatch from a branch
+    # would register a release name for code that never merged.
+    if: github.ref == 'refs/heads/main'
     runs-on: kvm
     environment: harvester
+    permissions:
+      contents: read
     env:
       PACKER_LOG: 0
       UPLOAD_TO_HARVESTER: ${{ vars.UPLOAD_TO_HARVESTER != 'false' }}
@@ -41,6 +70,16 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Check the image exists
+        # A dispatch takes `name` as free text; fail with a clear message
+        # instead of a packer error about a missing var-file.
+        run: |
+          VAR_FILE="packer/${{ inputs.tier }}/${{ inputs.name }}/build.pkrvars.hcl"
+          if [ ! -f "$VAR_FILE" ]; then
+            echo "::error::$VAR_FILE not found on ${{ github.ref_name }}"
+            exit 1
+          fi
 
       - name: Resolve image version
         id: meta
@@ -122,6 +161,12 @@ jobs:
     needs: release
     if: needs.release.outputs.vmi_name != ''
     runs-on: ubuntu-latest
+    # Declared here, not only by the caller: a dispatched run gets the repo's
+    # default token permissions, which may be read-only. Under workflow_call
+    # these match what packer-build.yml grants, so nothing is widened.
+    permissions:
+      contents: write        # the pin PR pushes its branch
+      pull-requests: write   # ...opens it, and enables its auto-merge
     # One pin PR per image at a time. Its branch is per image too, so a golden
     # pin PR waiting for review is never overwritten by a dev release.
     concurrency:
