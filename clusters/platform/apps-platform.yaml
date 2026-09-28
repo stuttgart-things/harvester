@@ -37,14 +37,18 @@ spec:
   path: ./apps/platform/root
   components:
     - ../components/openbao
-  # The OpenBao agent injector as a Recreate Deployment. The chart ships it with
-  # a HARD pod anti-affinity against itself and the default RollingUpdate: on
-  # this single node the new pod can never sit beside the old one, so every
-  # chart upgrade left it Pending and the HelmRelease Stalled
+  # The OpenBao agent injector WITHOUT its pod anti-affinity. The chart ships a
+  # HARD anti-affinity of the injector against itself plus the default
+  # RollingUpdate: on this single node the new pod can never sit beside the old
+  # one, so every chart upgrade left it Pending and the HelmRelease Stalled
   # ("timeout waiting for: Deployment/openbao/openbao-agent-injector"), seen
-  # after the cold start on 2026-09-28. Recreate stops the old pod first; the
-  # anti-affinity stays, so the value is still right on a bigger cluster. The
-  # injector's webhook is failurePolicy Ignore, so the gap costs nothing.
+  # after the cold start on 2026-09-28. `affinity: ""` drops the block (the
+  # chart renders it only when set), and the rolling update goes through.
+  #
+  # NOT `strategy: Recreate`, tried first (#291): the live Deployment keeps the
+  # API-server-defaulted spec.strategy.rollingUpdate, and server-side apply then
+  # fails with "rollingUpdate: Forbidden: may not be specified when strategy
+  # type is 'Recreate'".
   #
   # Nested, because the HelmRelease is not an object of this path: the
   # component renders a child Kustomization `openbao`, and the HelmRelease comes
@@ -69,8 +73,7 @@ spec:
                 spec:
                   values:
                     injector:
-                      strategy:
-                        type: Recreate
+                      affinity: ""
   postBuild:
     substitute:
       APPS_SOURCE: flux-infra
