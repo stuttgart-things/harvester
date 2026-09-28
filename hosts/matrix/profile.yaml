@@ -12,19 +12,25 @@
 # a human act (clusters/homerun2-dev/README.md, section 9): the `tabletennis`
 # button on https://matrix.sthings.lab, and `messages` -- or `reset` -- after
 # the match.
+# `text` scrolls exactly once and ignores `duration`: (64 + width in px) x 30 ms,
+# 8-12 s for a demo-pitcher title in 6x10. The WLED rules in
+# clusters/homerun2-dev/homerun2-light-catcher-profile.yaml stay on for 10 s to
+# match. The system prefix is dropped when the title already names it -- the
+# demo-pitcher's titles read `[ERROR] prometheus ...`, and `{{ system }}: ` in
+# front of that printed the system twice and added a second of scrolling.
 displayRules:
   error-all:
     systems: ["*"]
     severity: [ERROR, CRITICAL]
     kind: text
-    text: "{{ system }}: {{ title }}"
+    text: "{{ title if system in title else system ~ ': ' ~ title }}"
     font: 6x10.bdf
     duration: 5
   warning-all:
     systems: ["*"]
     severity: [WARNING]
     kind: text
-    text: "{{ system }}: {{ title }}"
+    text: "{{ title if system in title else system ~ ': ' ~ title }}"
     font: 6x10.bdf
     duration: 5
   # A live score, not a notification: it should stay readable between points
@@ -48,9 +54,10 @@ displayRules:
     duration: 3
   default-info:
     systems: ["*"]
-    severity: [INFO, SUCCESS]
+    # DEBUG too: the demo-pitcher sends it, and without a rule nothing shows.
+    severity: [INFO, SUCCESS, DEBUG]
     kind: text
-    text: "{{ system }}: {{ title }}"
+    text: "{{ title if system in title else system ~ ': ' ~ title }}"
     font: 6x10.bdf
     duration: 5
 colors:

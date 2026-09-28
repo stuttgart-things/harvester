@@ -551,11 +551,10 @@ message.
 **The WLED profile** replaces the base's, which points every rule at the
 wled-mock; `HOMERUN2_LIGHT_CATCHER_PROFILE_CM` in
 [`homerun2.yaml`](./homerun2.yaml) makes the component mount it (flux#570).
-The catcher reads it at startup only -- after editing it:
-
-```bash
-kubectl -n homerun2 rollout restart deploy/homerun2-light-catcher
-```
+The catcher re-reads it on every message, so an edit applies once the kubelet
+has synced the ConfigMap (up to a minute); no restart. Effect names go through
+a fixed table in light-catcher v1.2.0, not the device's own list -- only
+Solid, Blink, Breathe and Wipe are right; the file explains.
 
 ---
 
