@@ -1,7 +1,7 @@
 # `machinery-hv` — stable XRs
 
 The orders this cluster owns: the clusters it builds. Applied by the
-`machinery-hv-xrs` Kustomization in [`../machinery-hv/xrs.yaml`](../machinery-hv/xrs.yaml).
+`machinery-hv-xrs` Kustomization in [`../xrs.yaml`](../xrs.yaml).
 The same four rules as the LabDA machinery cluster
 ([stuttgart-things `machinery-xrs/README.md`](https://github.com/stuttgart-things/stuttgart-things/blob/main/clusters/labda/vsphere/machinery-xrs/README.md)):
 
@@ -23,7 +23,7 @@ kubectl patch clusterstack <name> --type=merge -p '{"spec":{"platformEnabled":fa
 kubectl delete clusterstack <name>
 
 # 2. only once the object is really gone:
-git rm clusters/machinery-hv-xrs/<name>.yaml   # and drop it from kustomization.yaml
+git rm clusters/machinery-hv/xrs/<name>.yaml   # and drop it from kustomization.yaml
 ```
 
 ## Moving an order here from crossplane-mgmt

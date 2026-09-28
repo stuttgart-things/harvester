@@ -5,10 +5,10 @@
 # (clusters/labda/vsphere/machinery/fleet-state.yaml), which explains each
 # choice below at length.
 #
-# THE CONTENT LIVES BESIDE THIS DIRECTORY, in ../machinery-hv-fleet-state. This
-# directory has no kustomization.yaml, so flux-system applies every YAML under
-# it recursively -- a subdirectory would be applied twice, once without the
-# dependsOn below.
+# THE CONTENT LIVES IN ./fleet-state. flux-system does not apply it: the
+# kustomization.yaml beside this file lists only the Flux objects of this
+# directory, so the subdirectory is applied once, by this Kustomization, behind
+# the dependsOn below.
 #
 # dependsOn cicd-platform: the XRDs and provider CRDs these objects are
 # instances of come from there, and an apply before they exist fails rather
@@ -38,7 +38,7 @@ spec:
     kind: GitRepository
     # This repository, not flux-infra: the content is this cluster's own state.
     name: flux-system
-  path: ./clusters/machinery-hv-fleet-state
+  path: ./clusters/machinery-hv/fleet-state
   # EXPLICIT, not inherited. The FluxInstance's decryption patch lands on the
   # flux-system Kustomization only -- checked on this cluster, 2026-09-24:
   # every child had an empty spec.decryption. Without this block the Secrets in

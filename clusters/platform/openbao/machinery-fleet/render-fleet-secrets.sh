@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders the credential Secrets of machinery-hv's fleet state and encrypts them
-# straight into clusters/machinery-hv-fleet-state/secrets/. Nothing is written
+# straight into clusters/machinery-hv/fleet-state/secrets/. Nothing is written
 # in plain text: every manifest goes from python's stdout into `sops --encrypt`
 # on stdin.
 #
@@ -23,7 +23,7 @@ set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 repo=$(cd "$here/../../../.." && pwd)
-out="$repo/clusters/machinery-hv-fleet-state/secrets"
+out="$repo/clusters/machinery-hv/fleet-state/secrets"
 recipient="age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm" # pragma: allowlist secret -- the PUBLIC age recipient
 openbao="https://openbao.platform.sthings.lab"
 steps="${1:-ACK}"

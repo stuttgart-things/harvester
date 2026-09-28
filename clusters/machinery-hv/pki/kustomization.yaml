@@ -1,7 +1,7 @@
 ---
 # The OpenBao root CA for cert-manager, applied by the `machinery-hv-pki`
-# Kustomization in ../machinery-hv/pki.yaml -- see there for why it is not in
-# ../machinery-hv itself.
+# Kustomization in ../pki.yaml -- see there for why flux-system does not apply
+# it directly.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:

@@ -49,15 +49,15 @@
 #      to that module -- until then the installed Composition still builds a
 #      HarvesterVM. All three are on branches named
 #      claude/harvester-cluster-stack-status-yrmcuv.
-#   2. ../machinery-hv-fleet-state/clusterbook.yaml applied, and one
+#   2. ../fleet-state/clusterbook.yaml applied, and one
 #      reservation proven by hand through it -- the TLS trust of
 #      clusterbook.platform.sthings.lab is the open question there.
 #   3. `crossplane render` of this file against the live Compositions, as in
-#      ../machinery-hv/README.md Log step 10: an IPReservation
+#      ../README.md Log step 10: an IPReservation
 #      app-dev-hv-node-ip, then a RancherCluster with infrastructure: harvester
 #      and networkData, no HarvesterVM, no join.
-#   4. every step in ../machinery-hv-fleet-state/README.md, plus the Argo CD
-#      registration preconditions in ../machinery-hv/README.md.
+#   4. every step in ../fleet-state/README.md, plus the Argo CD
+#      registration preconditions in ../README.md.
 apiVersion: config.stuttgart-things.com/v1alpha1
 kind: ClusterStack
 metadata:

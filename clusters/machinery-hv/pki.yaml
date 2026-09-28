@@ -2,10 +2,11 @@
 # The OpenBao root CA the cert-manager-vault-issuer verifies OpenBao's TLS with
 # (VAULT_ISSUER_CA_SECRET in infra-platform.yaml).
 #
-# NOT A FILE IN THIS DIRECTORY, and that is the whole point of this object. The
-# Secret lives in namespace cert-manager, which the infra bundle's
-# cert-manager-install creates -- and flux-system applies this directory as ONE
-# unit. With the Secret here, the first reconcile on a fresh cluster failed:
+# NOT A FILE flux-system APPLIES (it lives in ./pki, which the
+# kustomization.yaml beside this file leaves out), and that is the whole point
+# of this object. The Secret lives in namespace cert-manager, which the infra
+# bundle's cert-manager-install creates -- and flux-system applies its files as
+# ONE unit. With the Secret here, the first reconcile on a fresh cluster failed:
 #
 #   Secret/cert-manager/openbao-pki-ca not found: namespaces "cert-manager" not found
 #
@@ -35,4 +36,4 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./clusters/machinery-hv-pki
+  path: ./clusters/machinery-hv/pki

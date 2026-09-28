@@ -9,7 +9,7 @@
 # policy is accepted and its token silently has no permissions -- the order
 # builds, and the cluster's ExternalSecrets never sync. The mounts and the
 # read-/write-*-clusters policies are created by
-# ../platform/openbao/machinery-fleet (same names as LabUL, on purpose).
+# ../../platform/openbao/machinery-fleet (same names as LabUL, on purpose).
 #
 # ONE GAP: the shared entry homerun2/_git-pat below is NOT seeded -- it needs a
 # real GitHub token, and choosing whose is not a Terraform decision. Until it
