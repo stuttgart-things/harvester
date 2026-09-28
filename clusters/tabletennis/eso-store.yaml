@@ -19,10 +19,9 @@
 #
 # The Role: ESO logs in by minting a token for the ServiceAccount named in
 # serviceAccountRef (TokenRequest), and the chart does NOT grant its controller
-# `create serviceaccounts/token` -- checked on 2026-09-28
-# (`kubectl auth can-i --as=system:serviceaccount:external-secrets:external-secrets
-#   create serviceaccounts/token -n external-secrets` -> no), the gap
-# ./openbao/README.md warned about. Scoped to that one ServiceAccount.
+# `create serviceaccounts/token` -- checked on 2026-09-28 with
+# `kubectl auth can-i` as ESO's ServiceAccount in its own namespace: no. That is
+# the gap ./openbao/README.md warned about. Scoped to that one ServiceAccount.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
