@@ -39,8 +39,8 @@ data:
         imageId: default/u26-dev
         storageClassName: lh-7f7c570a-a326-4232-b291-3f2a946aeadf
       sthings-u26:                                               # alias -> newest build
-        imageId: default/sthings-u26-26.924.1008
-        storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
+        imageId: default/sthings-u26-26.928.0903
+        storageClassName: lh-ed436c27-9813-4e94-bbcb-b9f56a6fb11e
       sthings-u26-k3s:
         imageId: default/sthings-u26-k3s
         storageClassName: lh-103a0ea1-2403-4370-9c01-f5bd45077375
