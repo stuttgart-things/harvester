@@ -700,6 +700,25 @@ remove the browser control that is currently the only way to switch.
 
 ---
 
+### zaehlwerk -> schmetterpause, and zaehlwerk's CA
+
+Since 2026-09-28 a won match goes from zaehlwerk to schmetterpause
+(`schmetterpause-scoreboard-sops` + `zaehlwerk-handover-sops`, one token:
+`SCHMETTERPAUSE_SCOREBOARD_TOKEN` in `homerun2-secrets-subst`). zaehlwerk calls
+both schmetterpause and omni-pitcher through the Gateway, whose certificate the
+sthings.lab CA signs. It trusts that CA only through
+[`zaehlwerk-trust-bundle.yaml`](./zaehlwerk-trust-bundle.yaml) -- trust-manager
+would write that ConfigMap elsewhere, and there is none here. Before it
+existed every panel pitch failed with `x509: certificate signed by unknown
+authority`, and no score ever reached the LED matrix.
+
+```bash
+kubectl -n zaehlwerk logs deploy/zaehlwerk | grep -E 'authenticated|x509|handover|result'
+```
+
+The admin page of schmetterpause shows the Zählwerk as configured once the
+token is set.
+
 ## 10. schmetterpause's data: restored from the office, backed up to platform
 
 **Restored 2026-09-28 from a `pg_dump`** of the office's schmetterpause
