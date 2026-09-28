@@ -43,6 +43,17 @@ data:
       git-pat:
         mount: homerun2
         entry: _git-pat
+      # The S3 credential schmetterpause's CloudNativePG backups write with
+      # (keys access_key, secret_key): read by the `schmetterpause` profile's
+      # `-backup` entry, so the `tabletennis` profile does not render without
+      # it ("shared object-store-backup has no vault.shared entry", README Log
+      # step 10). Same mount/entry as LabDA's fleet state. SEEDED, not written
+      # by any order: the writer AppRoles may only READ `_` entries
+      # (write-<mount>-clusters, clusters/platform/openbao/machinery-fleet) --
+      # one entry every cluster reads.
+      object-store-backup:
+        mount: schmetterpause
+        entry: _backup
     # Entries hand-seeded clusters still read. homerun2-dev runs from SOPS in
     # this repo, not from OpenBao, so nothing is reserved yet -- add the name of
     # any cluster that gets a hand-written entry before a ClusterStack could
