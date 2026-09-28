@@ -143,3 +143,42 @@ data:
   networkName: default/vms
   vmNamespace: default
   sshUser: sthings
+
+  # ---- Argo CD registration (spec.rancher.argocd.register) ----------------
+  # rancher-cluster (4f/4g) writes the cluster-<name> Secret and a
+  # ClusterbookCluster onto the cluster Argo CD and the clusterbook-operator
+  # run on: platform, reached through `rancher-mgmt` -- the same Argo CD
+  # crossplane-mgmt registers tabletennis with. Values copied from
+  # crossplane-mgmt's rancher-cluster-defaults (checked 2026-09-28); absent,
+  # the registration had no namespace, no reservation network and none of the
+  # 'false' siblings the AppSets' NotIn selectors rely on.
+  argocdNamespace: argocd
+  argocdProviderConfigRef: rancher-mgmt
+  # platform's ClusterbookProviderConfig `default` (tabletennis uses it).
+  clusterbookNetworkKey: "192.168.10"
+  clusterbookProviderConfigRef: default
+  # Every platform toggle 'false' by default; a profile flips what it needs.
+  # auto-project creates the AppProject every AppSet deploys into.
+  defaultLabels:
+    allow-all: "false"
+    auto-project: "true"
+    cicd-platform: "false"
+    cicd-platform/openebs: "false"
+    network-platform: "false"
+    network-platform/cilium-gateway: "false"
+    network-platform/cilium-gateway-secondary: "false"
+    network-platform/cilium-lb: "false"
+    security-platform: "false"
+    storage-platform: "false"
+    storage-platform/longhorn: "false"
+    storage-platform/nfs-csi-install: "false"
+    storage-platform/nfs-csi-storageclasses: "false"
+  defaultAnnotations:
+    clusterbook.stuttgart-things.com/vault-pki-path: pki/sign/sthings-lab
+    clusterbook.stuttgart-things.com/vault-server: https://openbao.platform.sthings.lab
+    clusterbook.stuttgart-things.com/vault-token-secret: cert-manager-vault-token  # pragma: allowlist secret
+  # NOT the vaultPkiSource* keys crossplane-mgmt carries: they feed the
+  # AppSet's own vault-pki issuer, and an order with platform.vaultIssuer on
+  # (every ClusterStack here) opts out of it -- xplane-cluster derives
+  # network-platform/cert-manager-vault-pki: "false". Their source Secret
+  # (cert-manager/cert-manager-vault-token) does not exist on this cluster.

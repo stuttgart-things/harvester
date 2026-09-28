@@ -1,5 +1,5 @@
 ---
-# DRAFT -- NOT LISTED in kustomization.yaml. The Harvester counterpart of
+# The first order of machinery-hv (listed 2026-09-28). The Harvester counterpart of
 # stuttgart-things clusters/labda/vsphere/machinery-xrs/app-dev.yaml; read that
 # file's comments first, this one only records what differs.
 #
@@ -12,9 +12,11 @@
 #   node address             static, reserved in clusterbook as
 #                            `app-dev-hv-node` BEFORE the VM exists
 #                            (machinePool in cluster-vault-sthings-lab). The
-#                            kubeconfig stage logs in there with the Packer
-#                            image's credentials (tekton-ci/ansible-credentials)
-#                            and retries until the node is up
+#                            kubeconfig stage logs in there with
+#                            tekton-ci/ansible-credentials, which only images
+#                            built after #274 accept (sthings-u26-26.928.0903+,
+#                            rancher-cluster-join-sthings-lab.imageName), and
+#                            retries until the node is up
 #   environmentConfig        sthings-lab -- selects cluster-vault-sthings-lab
 #   rancher.environmentConfig
 #                            rancher-join-sthings-lab -- also carries the
@@ -36,28 +38,22 @@
 #   no observability         platform's Argo CD has no observability-platform
 #                            ApplicationSet; with the profile set, monitoring
 #                            would never appear and nothing would say so
+#   no homerun2              the same, for homerun2-platform (checked
+#                            2026-09-28): no ApplicationSet selects it on
+#                            platform. Add the profile back once one does
 #
 # NOT BLOCKED BY crossplane-configurations#503 ANY MORE: that is the custom-node
 # VM this stack used to build, which boots with no user the ansible stages can
 # log in as. The machine pool boots the lab's Packer image, whose login the
 # ansible credentials are.
 #
-# BEFORE LISTING THIS:
-#   1. published and installed: xplane-cluster 0.22.0 (stuttgart-things/kcl)
-#      and rancher-cluster v0.10.0 (crossplane-configurations, the
-#      `harvester.networkData` field), plus the `cluster` Configuration pinned
-#      to that module -- until then the installed Composition still builds a
-#      HarvesterVM. All three are on branches named
-#      claude/harvester-cluster-stack-status-yrmcuv.
-#   2. ../fleet-state/clusterbook.yaml applied, and one
-#      reservation proven by hand through it -- the TLS trust of
-#      clusterbook.platform.sthings.lab is the open question there.
-#   3. `crossplane render` of this file against the live Compositions, as in
-#      ../README.md Log step 10: an IPReservation
-#      app-dev-hv-node-ip, then a RancherCluster with infrastructure: harvester
-#      and networkData, no HarvesterVM, no join.
-#   4. every step in ../fleet-state/README.md, plus the Argo CD
-#      registration preconditions in ../README.md.
+# PROVEN BEFORE LISTING (harvester#265, #267): xplane-cluster 0.23.1 /
+# cluster v0.12.3 / rancher-cluster v0.11.0 installed; one clusterbook
+# reservation by hand; the throwaway hvpool-test1 Ready end to end (node-ip,
+# machine pool, kubeconfig on attempt 1, access, cilium, Rancher Active); the
+# Argo CD keys in rancher-cluster-join-sthings-lab (fleet-state).
+#
+# Teardown is two phases -- see kustomization.yaml beside this file.
 apiVersion: config.stuttgart-things.com/v1alpha1
 kind: ClusterStack
 metadata:
@@ -82,7 +78,6 @@ spec:
     - network
     - security
     - storage-openebs
-    - homerun2
     # NOT tabletennis in the first order: it pulls schmetterpause, whose -backup
     # entry reads the shared object-store-backup -- not in
     # cluster-vault-sthings-lab and not seeded, and the render fails on it

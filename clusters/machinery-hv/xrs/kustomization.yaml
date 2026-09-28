@@ -3,8 +3,14 @@
 # Kustomization in ../xrs.yaml -- `prune: false`. Read README.md
 # beside this file before removing an entry.
 #
-# Empty on purpose until the fleet state is complete. app-dev-hv.yaml is the
-# first order, drafted and NOT listed.
+# app-dev-hv is the first order (2026-09-28): the machine-pool path was proven
+# end to end with the throwaway hvpool-test1 first (harvester#265).
+#
+# TEARDOWN IS TWO PHASES: `platformEnabled: false` on the XR, wait for the
+# Platform and its Usage to go, THEN delete -- a one-phase delete is refused
+# (xplane-cluster `stack-uses-platform`). And rule 1 in README.md: removing a
+# line here deletes nothing.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-resources: []
+resources:
+  - app-dev-hv.yaml
