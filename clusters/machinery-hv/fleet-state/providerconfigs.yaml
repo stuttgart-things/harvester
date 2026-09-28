@@ -42,3 +42,28 @@ spec:
       namespace: crossplane-system
       name: rancher-mgmt-kubeconfig
       key: kubeconfig
+---
+# provider-minio against platform's MinIO (artifacts.platform.sthings.lab):
+# what crossplane-configurations storage/minio's MinioBucket XRs compose
+# buckets, policies and users with -- first use, the per-cluster CloudNativePG
+# backup buckets of schmetterpause (../xrs/).
+#
+# The credential is the dedicated MinIO user `crossplane` (policy
+# crossplane-admin: user/policy admin + s3:* on buckets), NOT the root account.
+# render-fleet-secrets.sh step M creates it inside the MinIO pod and encrypts
+# its keys; the same step rotates them.
+#
+# TLS: the ProviderConfig has no CA field. The provider trusts the lab root
+# through its DeploymentRuntimeConfig `provider-minio` (SSL_CERT_FILE from
+# crossplane-system/vault-pki-ca, CN=sthings.lab), which already verifies this
+# endpoint (checked 2026-09-28).
+apiVersion: minio.crossplane.io/v1
+kind: ProviderConfig
+metadata:
+  name: minio
+spec:
+  minioURL: https://artifacts.platform.sthings.lab
+  credentials:
+    apiSecretRef:
+      name: minio-crossplane
+      namespace: crossplane-system

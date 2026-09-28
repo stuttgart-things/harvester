@@ -10,6 +10,9 @@
 #   step R  the `rancher-mgmt` kubeconfig: a TOKEN kubeconfig for the scoped
 #           ServiceAccount crossplane-machinery on platform
 #           (../../crossplane-machinery-access.yaml), not platform's admin one
+#   step M  provider-minio's credential: CREATES (or re-keys) the MinIO user
+#           `crossplane` on platform's MinIO, then encrypts its keys. Writes to
+#           MinIO -- run it on purpose, not as part of a routine re-render
 #   step C  the AppRoles from `terraform output -json approles` in this
 #           directory -- run `terraform apply` first
 #   step K  the kubeconfig-reader AppRole, in the two shapes the
@@ -29,7 +32,7 @@ repo=$(cd "$here/../../../.." && pwd)
 out="$repo/clusters/machinery-hv/fleet-state/secrets"
 recipient="age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm" # pragma: allowlist secret -- the PUBLIC age recipient
 openbao="https://openbao.platform.sthings.lab"
-steps="${1:-ARCK}"
+steps="${1:-ARCK}"   # M only when named: it changes MinIO
 
 mkdir -p "$out"
 
@@ -89,6 +92,45 @@ if [[ "$steps" == *R* ]]; then
   export RANCHER_KUBECONFIG
   secret crossplane-system rancher-mgmt-kubeconfig kubeconfig=RANCHER_KUBECONFIG \
     | enc rancher-mgmt-kubeconfig.enc.yaml
+fi
+
+if [[ "$steps" == *M* ]]; then
+  echo "step M: provider-minio user \`crossplane\` on platform's MinIO"
+  # A dedicated user, not the MinIO root account -- the permission set
+  # crossplane-configurations storage/minio needs (examples/
+  # crossplane-minio-policy.json): user/policy admin and s3:* on buckets.
+  #
+  # Everything that touches the root account happens INSIDE the MinIO pod: the
+  # Bitnami image keeps root's keys in MINIO_ROOT_{USER,PASSWORD}_FILE, mc is
+  # in the image, and the alias with root's keys is removed again before the
+  # exec ends. Only the NEW user's password crosses, on stdin.
+  #
+  # Idempotent: `user add` on an existing user sets a new secret key, so this
+  # step is also the rotation -- run it, commit, and machinery-hv's
+  # provider-minio picks up the new Secret on its next reconcile.
+  pk="$HOME/.kube/platform.sthings.lab"
+  M_USER=crossplane
+  M_PASS=$(openssl rand -hex 24)
+  export M_USER M_PASS
+  # Single quotes on purpose: $pw and $MINIO_ROOT_*_FILE expand in the POD.
+  # shellcheck disable=SC2016
+  printf '%s\n' "$M_PASS" | kubectl --kubeconfig "$pk" -n minio exec -i deploy/minio-deployment -- sh -c '
+    set -e
+    read -r pw
+    cat > /tmp/crossplane-admin.json <<EOF
+{"Version":"2012-10-17","Statement":[
+ {"Effect":"Allow","Action":["admin:CreateUser","admin:DeleteUser","admin:ListUsers","admin:GetUser","admin:EnableUser","admin:DisableUser","admin:CreatePolicy","admin:DeletePolicy","admin:GetPolicy","admin:ListUserPolicies","admin:AttachUserOrGroupPolicy"]},
+ {"Effect":"Allow","Action":["s3:*"],"Resource":["arn:aws:s3:::*"]}]}
+EOF
+    mc alias set cpx http://localhost:9000 "$(cat "$MINIO_ROOT_USER_FILE")" "$(cat "$MINIO_ROOT_PASSWORD_FILE")" >/dev/null
+    trap "mc alias rm cpx >/dev/null 2>&1; rm -f /tmp/crossplane-admin.json" EXIT
+    mc admin policy create cpx crossplane-admin /tmp/crossplane-admin.json >/dev/null
+    mc admin user add cpx crossplane "$pw" >/dev/null
+    mc admin policy attach cpx crossplane-admin --user crossplane >/dev/null 2>&1 || true
+    mc admin user info cpx crossplane | grep -E "Status|Policy"
+  '
+  secret crossplane-system minio-crossplane AWS_ACCESS_KEY_ID=M_USER AWS_SECRET_ACCESS_KEY=M_PASS \
+    | enc minio-crossplane.enc.yaml
 fi
 
 if [[ "$steps" == *C* ]]; then
