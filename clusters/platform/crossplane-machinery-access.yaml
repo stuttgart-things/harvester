@@ -1,0 +1,190 @@
+---
+# The identity machinery-hv's Crossplane uses on this Rancher -- the
+# `rancher-mgmt` ClusterProviderConfig
+# (../machinery-hv/fleet-state/providerconfigs.yaml), which is also the
+# `argocdProviderConfigRef` of rancher-cluster-join-sthings-lab.
+#
+# WHY. Until 2026-09-28 that ProviderConfig read platform's ADMIN kubeconfig
+# (Secret rancher-mgmt-kubeconfig on machinery-hv). Anything that can read
+# crossplane-system on machinery-hv could then act as cluster-admin on the
+# cluster that runs Rancher, Argo CD, OpenBao, Harbor and MinIO. Same move as
+# LabDA's machinery (stuttgart-things
+# clusters/labda/vsphere/sthings-platform/crossplane-machinery-access.yaml,
+# stuttgart-things#3241/#3243/#3251/#3260), adapted to this lab.
+#
+# WHAT IT MAY DO -- what the rancher-cluster Composition (v0.11.0) emits against
+# rancherProviderConfigRef / argocdProviderConfigRef on the Harvester
+# machine-pool path, checked against the five live `rancher-mgmt` Objects of
+# app-dev-hv, not guessed:
+#
+#   (1a)  rke-machine-config.cattle.io HarvesterConfig  fleet-default  managed (*)
+#   (1b)  provisioning.cattle.io Cluster                fleet-default  managed (*)
+#   bridge <name>-kubeconfig Secret                     fleet-default  Observe
+#   (4f)  <name>-argocd-kubeconfig Secret               argocd         managed (*)
+#   (4g)  ClusterbookCluster                            cluster-scoped managed (*)
+#
+# plus, only on the custom-node path (nodeRegistration), which this lab does
+# not use today but LabDA's grant carries:
+#
+#   (1e)  ClusterRegistrationToken                      c-m-<id>       Observe
+#
+# (1a) is the difference to LabDA, which has no Harvester.
+#
+# "Observe" still needs `patch`: provider-kubernetes computes an Observe
+# object's desired state with a server-side-apply DRY RUN, which is a patch
+# request (found on LabDA, stuttgart-things#3260).
+#
+# CREATOR RBAC. Rancher's webhook stamps `field.cattle.io/creatorId` with the
+# requester on CREATE and then gives that user cluster-owner on the new cluster
+# (a `creator-cluster-owner` CRTB). For this ServiceAccount that would undo the
+# scoping on every cluster it builds, so NEW orders set
+# `spec.rancher.clusterAnnotations: {field.cattle.io/no-creator-rbac: "true"}`
+# (rancher-cluster v0.11.0). Never on a cluster that already has a creatorId --
+# app-dev-hv keeps `system:admin`; the webhook refuses the annotation on an
+# existing creator, and the Object would re-apply it for ever.
+#
+# DELIBERATELY NOT GRANTED:
+#   - Secrets in cattle-global-data: the Harvester cloud credential is only
+#     referenced by name (cattle-global-data:cc-cl944); webhook v0.10.6 does
+#     not check access to it on a provisioning Cluster.
+#   - Secrets in c-m-<id> (1f): only Rancher >= 2.15 writes the registration
+#     token Secret there. This Rancher is 2.14.2.
+# Each shows up as `forbidden` on the composed Object when it is needed.
+#
+# Applied by this cluster's root sync (config.yaml, sync.path clusters/platform,
+# applied recursively). The kubeconfig built from the token below is rendered
+# by ./openbao/machinery-fleet/render-fleet-secrets.sh, step R.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crossplane-machinery
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crossplane-machinery
+  namespace: crossplane-machinery
+---
+# A long-lived token, on purpose: provider-kubernetes cannot renew a
+# TokenRequest token, and the kubeconfig built from it goes into sops-git.
+# Rotate by deleting this Secret (Kubernetes mints a new token), then
+# render-fleet-secrets.sh R and commit.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crossplane-machinery-token
+  namespace: crossplane-machinery
+  annotations:
+    kubernetes.io/service-account.name: crossplane-machinery
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crossplane-machinery
+  namespace: fleet-default
+rules:
+  - apiGroups: ["provisioning.cattle.io"]
+    resources: ["clusters"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # (1a) the machine pool's node template. Not in LabDA's grant: LabDA has no
+  # Harvester.
+  - apiGroups: ["rke-machine-config.cattle.io"]
+    resources: ["harvesterconfigs"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+  # Only OBSERVED (<name>-kubeconfig): `patch` for the SSA dry run, and no
+  # create/delete. This does let the identity read every downstream cluster's
+  # kubeconfig Secret in fleet-default -- the same trade-off LabDA accepts.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-machinery
+  namespace: fleet-default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-machinery
+    namespace: crossplane-machinery
+---
+# (1e) Only for a custom-node order. c-m-<id> is created by Rancher per
+# cluster, so this has to be a ClusterRole. Kept for parity with LabDA, so a
+# custom-node order does not fail on it later.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane-machinery-registration-tokens
+rules:
+  - apiGroups: ["management.cattle.io"]
+    resources: ["clusterregistrationtokens"]
+    verbs: ["get", "list", "watch", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-machinery-registration-tokens
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crossplane-machinery-registration-tokens
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-machinery
+    namespace: crossplane-machinery
+---
+# (4f) The Argo CD cluster Secret rancher-cluster writes for a registered
+# cluster. Scoped to the argocd namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crossplane-machinery
+  namespace: argocd
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-machinery
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-machinery
+    namespace: crossplane-machinery
+---
+# (4g) The ClusterbookCluster clusterbook-operator turns into the IP/DNS
+# reservation and the Argo CD cluster Secret. Cluster-scoped on this platform,
+# hence a ClusterRole -- limited to that one resource.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: crossplane-machinery-clusterbook
+rules:
+  - apiGroups: ["clusterbook.stuttgart-things.com"]
+    resources: ["clusterbookclusters"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-machinery-clusterbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crossplane-machinery-clusterbook
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-machinery
+    namespace: crossplane-machinery
