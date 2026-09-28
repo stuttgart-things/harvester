@@ -4,9 +4,12 @@
 # in plain text: every manifest goes from python's stdout into `sops --encrypt`
 # on stdin.
 #
-# Two sources:
+# Sources:
 #   step A  the ansible login (from vms/machinery-hv.params.enc.yaml) and the
-#           two kubeconfigs of the clusters machinery-hv drives
+#           Harvester kubeconfig
+#   step R  the `rancher-mgmt` kubeconfig: a TOKEN kubeconfig for the scoped
+#           ServiceAccount crossplane-machinery on platform
+#           (../../crossplane-machinery-access.yaml), not platform's admin one
 #   step C  the AppRoles from `terraform output -json approles` in this
 #           directory -- run `terraform apply` first
 #   step K  the kubeconfig-reader AppRole, in the two shapes the
@@ -18,7 +21,7 @@
 #
 #   cd clusters/platform/openbao/machinery-fleet
 #   ./render-fleet-secrets.sh            # all steps
-#   ./render-fleet-secrets.sh A          # one step
+#   ./render-fleet-secrets.sh R          # one step
 set -euo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -26,7 +29,7 @@ repo=$(cd "$here/../../../.." && pwd)
 out="$repo/clusters/machinery-hv/fleet-state/secrets"
 recipient="age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm" # pragma: allowlist secret -- the PUBLIC age recipient
 openbao="https://openbao.platform.sthings.lab"
-steps="${1:-ACK}"
+steps="${1:-ARCK}"
 
 mkdir -p "$out"
 
@@ -59,13 +62,31 @@ if [[ "$steps" == *A* ]]; then
   A_USER=$(sops -d --extract '["cloudInitUsername"]' "$params")
   A_PASS=$(sops -d --extract '["cloudInitPassword"]' "$params")
   HV_KUBECONFIG=$(cat "$HOME/.kube/harvester")
-  RANCHER_KUBECONFIG=$(cat "$HOME/.kube/platform.sthings.lab")
-  export A_USER A_PASS HV_KUBECONFIG RANCHER_KUBECONFIG
+  export A_USER A_PASS HV_KUBECONFIG
 
   secret tekton-ci ansible-credentials ANSIBLE_USER=A_USER ANSIBLE_PASSWORD=A_PASS \
     | enc ansible-credentials.enc.yaml
   secret crossplane-system harvester-kubeconfig kubeconfig=HV_KUBECONFIG \
     | enc harvester-kubeconfig.enc.yaml
+fi
+
+if [[ "$steps" == *R* ]]; then
+  echo "step R: rancher-mgmt -- token kubeconfig of crossplane-machinery on platform"
+  # Until 2026-09-28 this was a copy of ~/.kube/platform.sthings.lab: platform's
+  # ADMIN kubeconfig. Now the long-lived token of the scoped ServiceAccount
+  # (../../crossplane-machinery-access.yaml). The admin kubeconfig is used here
+  # only to READ that token; the server and CA come from the same place, so
+  # the Secret keeps its name and key and the ClusterProviderConfig is unchanged.
+  # Rotate: delete crossplane-machinery/crossplane-machinery-token on platform,
+  # wait for the new token, run this step, commit.
+  pk="$HOME/.kube/platform.sthings.lab"
+  SA_TOKEN=$(kubectl --kubeconfig "$pk" -n crossplane-machinery get secret crossplane-machinery-token -o jsonpath='{.data.token}' | base64 -d)
+  SA_CA=$(kubectl --kubeconfig "$pk" -n crossplane-machinery get secret crossplane-machinery-token -o jsonpath='{.data.ca\.crt}')
+  SA_SERVER=$(kubectl --kubeconfig "$pk" config view --minify -o jsonpath='{.clusters[0].cluster.server}')
+  [[ -n "$SA_TOKEN" && -n "$SA_CA" && -n "$SA_SERVER" ]] || { echo "crossplane-machinery token not found on platform" >&2; exit 1; }
+  export SA_TOKEN SA_CA SA_SERVER
+  RANCHER_KUBECONFIG=$(python3 -c 'import os,yaml; print(yaml.safe_dump({"apiVersion":"v1","kind":"Config","clusters":[{"name":"platform","cluster":{"server":os.environ["SA_SERVER"],"certificate-authority-data":os.environ["SA_CA"]}}],"users":[{"name":"crossplane-machinery","user":{"token":os.environ["SA_TOKEN"]}}],"contexts":[{"name":"platform","context":{"cluster":"platform","user":"crossplane-machinery"}}],"current-context":"platform"}, sort_keys=False))')
+  export RANCHER_KUBECONFIG
   secret crossplane-system rancher-mgmt-kubeconfig kubeconfig=RANCHER_KUBECONFIG \
     | enc rancher-mgmt-kubeconfig.enc.yaml
 fi

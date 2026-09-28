@@ -452,6 +452,11 @@ kubectl get objects.kubernetes.m.crossplane.io -n default probe-harvester \
 kubectl delete objects.kubernetes.m.crossplane.io -n default probe-harvester probe-rancher-mgmt
 ```
 
+Since 2026-09-28 `rancher-mgmt` is the scoped ServiceAccount
+`crossplane-machinery` (`clusters/platform/crossplane-machinery-access.yaml`),
+which may NOT read `kube-system`: probe it with an Observe Object on a
+provisioning Cluster in `fleet-default` instead (e.g. `app-dev-hv`).
+
 Open: `homerun2/_git-pat` is not seeded.
 
 ### 8. provider-kubeconfig and provider-minio (2026-09-24)

@@ -42,7 +42,7 @@ never edited by hand.
 |---|---|---|
 | `tekton-ci/ansible-credentials` | `ANSIBLE_USER`, `ANSIBLE_PASSWORD` | the cloud-init login in `vms/machinery-hv.params.enc.yaml` |
 | `crossplane-system/harvester-kubeconfig` | `kubeconfig` | `~/.kube/harvester` |
-| `crossplane-system/rancher-mgmt-kubeconfig` | `kubeconfig` | `~/.kube/platform.sthings.lab` -- the admin kubeconfig; a scoped Rancher token would be better |
+| `crossplane-system/rancher-mgmt-kubeconfig` | `kubeconfig` | step `R`: a token kubeconfig for the scoped ServiceAccount `crossplane-machinery` on platform (`clusters/platform/crossplane-machinery-access.yaml`). Was platform's admin kubeconfig until 2026-09-28 |
 | `crossplane-system/vault-provider-creds` | `credentials` | AppRole `crossplane` (2nd secret_id) |
 | `crossplane-system/vault-creds-cluster-secrets` | `credentials` | AppRole `machinery-hv-cluster-secrets-writer` |
 | `crossplane-system/vault-creds-kubeconfig-writer` | `credentials` | AppRole `machinery-hv-kubeconfig-writer` |

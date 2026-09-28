@@ -13,6 +13,18 @@ The same four rules as the LabDA machinery cluster
    object says which cluster reconciles it. An XR applied to crossplane-mgmt
    instead does nothing there -- that cluster has no `ClusterStack` XRD.
 4. **Only `spec` and `metadata` in git**, never what Crossplane writes back.
+5. **A NEW order sets `spec.rancher.clusterAnnotations:
+   {field.cattle.io/no-creator-rbac: "true"}`.** `rancher-mgmt` is the scoped
+   ServiceAccount `crossplane-machinery` since 2026-09-28. Without the
+   annotation Rancher stamps it as the cluster's creator and gives it
+   cluster-owner on every cluster it builds, which undoes the scoping. It is
+   honoured at CREATE only: never add it to an existing order -- the webhook
+   refuses it next to a creatorId, and the Object would re-apply it for ever.
+   `app-dev-hv` was created with the admin credential and keeps it
+   (`creatorId: system:admin`). The machine pool's HarvesterConfig cannot carry
+   the annotation yet (rancher-cluster v0.11.0 sets it on the Cluster only), so
+   the ServiceAccount becomes that HarvesterConfig's creator -- limited to that
+   one object.
 
 ## Deleting an XR
 
