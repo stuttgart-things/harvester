@@ -123,8 +123,25 @@ this is pinned to a commit rather than to that tag.
 
 ## Then: the ClusterSecretStore
 
-This makes the secrets *reachable*; the store is what reaches. From
-`infra/external-secrets/cluster-secret-store-vault` in `stuttgart-things/argocd`:
+This makes the secrets *reachable*; the store is what reaches. It is in
+[`../eso-store.yaml`](../eso-store.yaml), applied by hand (this cluster has no
+GitOps of its own, and the fleet's external-secrets-stores ApplicationSet
+assumes a ClusterStack's `<cluster>-eso` / `eso` convention), together with the
+RBAC ESO turned out to need:
+
+```bash
+kubectl --kubeconfig ~/.kube/tabletennis apply -f ../eso-store.yaml
+```
+
+Done on 2026-09-28: `terraform apply` 5 added (with
+`k8s_auth_reviewer_create = false`, see below), the store `Valid`, all seven
+homerun2 ExternalSecrets `SecretSynced`. The two findings from that run are in
+`openbao.tf` and `../eso-store.yaml`: the reviewer already existed (composed by
+the XR's `spec.vaultAuth`), and ESO's controller could NOT mint its own token
+(`can-i create serviceaccounts/token` -> no) until the Role there granted it.
+
+The store, for reference (from `infra/external-secrets/cluster-secret-store-vault`
+in `stuttgart-things/argocd`):
 
 ```yaml
 name: vault-tabletennis

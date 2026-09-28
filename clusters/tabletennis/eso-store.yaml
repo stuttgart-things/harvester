@@ -1,0 +1,77 @@
+---
+# tabletennis' ClusterSecretStore, and the one RBAC grant it needs.
+#
+# APPLIED BY HAND: tabletennis is a RancherCluster order on crossplane-mgmt with
+# no GitOps of its own on the cluster, and the fleet's external-secrets-stores
+# ApplicationSet does not fit it -- that AppSet assumes a ClusterStack's
+# convention (auth mount `<cluster>-eso`, ServiceAccount `eso` created by the
+# Platform). This cluster's ESO mount comes from ./openbao
+# (`tabletennis-sthings-eso`, bound to ESO's own ServiceAccount), see its
+# README "Then: the ClusterSecretStore".
+#
+#   kubectl --kubeconfig ~/.kube/tabletennis apply -f clusters/tabletennis/eso-store.yaml
+#   kubectl --kubeconfig ~/.kube/tabletennis get clustersecretstore vault-tabletennis   # Valid
+#
+# (~/.kube/tabletennis: derived from the Argo CD cluster Secret,
+# ../OPENBAO-CLUSTERBOOK.md.) Order: ../platform/openbao/app-secrets, then
+# ./openbao, then this file -- a store whose role has no policy reports Valid
+# while every ExternalSecret under it fails.
+#
+# The Role: ESO logs in by minting a token for the ServiceAccount named in
+# serviceAccountRef (TokenRequest), and the chart does NOT grant its controller
+# `create serviceaccounts/token` -- checked on 2026-09-28
+# (`kubectl auth can-i --as=system:serviceaccount:external-secrets:external-secrets
+#   create serviceaccounts/token -n external-secrets` -> no), the gap
+# ./openbao/README.md warned about. Scoped to that one ServiceAccount.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: external-secrets-self-token
+  namespace: external-secrets
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    resourceNames: ["external-secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: external-secrets-self-token
+  namespace: external-secrets
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: external-secrets-self-token
+subjects:
+  - kind: ServiceAccount
+    name: external-secrets
+    namespace: external-secrets
+---
+# Read by both bundles on this cluster: homerun2-platform (secret-key homerun2)
+# and tabletennis-platform (schmetterpause, zaehlwerk), all under the KV mount
+# `tabletennis` that ../platform/openbao/app-secrets owns.
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vault-tabletennis
+spec:
+  provider:
+    vault:
+      server: https://openbao.platform.sthings.lab
+      path: tabletennis
+      version: v2
+      # The OpenBao root, which the network platform already puts on every
+      # Vault-aware cluster.
+      caProvider:
+        type: Secret
+        name: vault-pki-ca
+        namespace: cert-manager
+        key: ca.crt
+      auth:
+        kubernetes:
+          mountPath: tabletennis-sthings-eso
+          role: eso
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets
