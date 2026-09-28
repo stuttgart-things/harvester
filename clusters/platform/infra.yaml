@@ -148,52 +148,6 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: nfs-csi
-  namespace: flux-system
-spec:
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: flux-infra
-  path: ./infra/nfs-csi
-  prune: true
-  wait: true
-  # STEP 1 OF 2 of removing nfs-csi (harvester#267 step 8). Its server,
-  # infra.sthings.lab, is gone (#240) and no PV uses nfs.csi.k8s.io
-  # (checked 2026-09-28: 0 PVs, 0 VolumeSnapshots). But this Kustomization's
-  # inventory holds Namespace/kube-system: deleting the Kustomization would
-  # make Flux garbage-collect kube-system, which the API server refuses, and
-  # the finalizer would hang. So first mark it never-prune and let that
-  # reconcile; step 2 deletes this Kustomization, taking only the two
-  # HelmReleases and the kube-system HelmRepository with it.
-  #
-  # Target by kind only: patches run BEFORE postBuild substitution, so the
-  # Namespace is still named `${NFS_CSI_NAMESPACE:-kube-system}` here, and it
-  # is the only Namespace this path renders. It has no annotations upstream,
-  # hence the whole map.
-  patches:
-    - target:
-        kind: Namespace
-      patch: |
-        - op: add
-          path: /metadata/annotations
-          value:
-            kustomize.toolkit.fluxcd.io/prune: disabled
-  postBuild:
-    substitute:
-      NFS_SERVER_FQDN: "infra.sthings.lab"
-      NFS_SHARE_PATH: /data/nfs/sthings
-      CLUSTER_NAME: platform
-      NFS_CSI_NAMESPACE: kube-system
-      NFS_CSI_VERSION: v4.13.1
-      NFS_CSI_ENABLE_CRDS: "true"
-      NFS_CSI_ENABLE_SNAPSHOTTER: "true"
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
   name: trust-manager
   namespace: flux-system
 spec:
