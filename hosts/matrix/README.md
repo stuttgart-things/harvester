@@ -154,7 +154,7 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.12.0 \
+led_catcher_version=v0.13.0 \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock \
 run_id=$(date +%s%N)" \
@@ -165,7 +165,7 @@ rm -f ansible.env
 
 | Parameter | |
 |---|---|
-| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it |
+| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |

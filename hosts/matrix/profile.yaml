@@ -12,27 +12,29 @@
 # a human act (clusters/homerun2-dev/README.md, section 9): the `tabletennis`
 # button on https://matrix.sthings.lab, and `messages` -- or `reset` -- after
 # the match.
-# `text` scrolls exactly once and ignores `duration`: (64 + width in px) x 30 ms,
-# 8-12 s for a demo-pitcher title in 6x10. The WLED rules in
-# clusters/homerun2-dev/homerun2-light-catcher-profile.yaml stay on for 10 s to
-# match. The system prefix is dropped when the title already names it -- the
-# demo-pitcher's titles read `[ERROR] prometheus ...`, and `{{ system }}: ` in
-# front of that printed the system twice and added a second of scrolling.
+# Notifications are `card`s (homerun2-led-catcher#121): a header bar in the
+# severity colour with the system, the title wrapped over 3-4 lines, the
+# message as a ticker, tags, and author + HH:MM of the event. strip_prefix
+# drops the `[ERROR] prometheus` the demo-pitcher puts in front of every title
+# -- the header already says both. No `text`: on a card it would replace the
+# message in the ticker line.
+#
+# duration 10 matches the WLED (clusters/homerun2-dev/homerun2-light-catcher-
+# profile.yaml), which stays on for 10 s per event. A card, unlike `text`,
+# honours it -- also mid-scroll: a long message does not finish in 10 s.
 displayRules:
   error-all:
     systems: ["*"]
     severity: [ERROR, CRITICAL]
-    kind: text
-    text: "{{ title if system in title else system ~ ': ' ~ title }}"
-    font: 6x10.bdf
-    duration: 5
+    kind: card
+    strip_prefix: true
+    duration: 10
   warning-all:
     systems: ["*"]
     severity: [WARNING]
-    kind: text
-    text: "{{ title if system in title else system ~ ': ' ~ title }}"
-    font: 6x10.bdf
-    duration: 5
+    kind: card
+    strip_prefix: true
+    duration: 10
   # A live score, not a notification: it should stay readable between points
   # rather than scroll past once. `hold` keeps it up until the next point
   # replaces it, and `static` renders the title alone — the panel is 64x64 and
@@ -56,10 +58,9 @@ displayRules:
     systems: ["*"]
     # DEBUG too: the demo-pitcher sends it, and without a rule nothing shows.
     severity: [INFO, SUCCESS, DEBUG]
-    kind: text
-    text: "{{ title if system in title else system ~ ': ' ~ title }}"
-    font: 6x10.bdf
-    duration: 5
+    kind: card
+    strip_prefix: true
+    duration: 10
 colors:
   error: [255, 0, 0]
   critical: [255, 0, 0]
