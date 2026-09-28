@@ -1,0 +1,84 @@
+---
+# app-dev-hv's CloudNativePG backup target: ONE bucket for this SOURCE cluster,
+# on platform's MinIO, and its credential in OpenBao for the cluster to read.
+#
+# PER CLUSTER, never shared (decided 2026-09-28, harvester#267). Two clusters
+# running schmetterpause produce identically named WAL segments with different
+# contents -- both default serverName to the database name -- and LabDA lost
+# 22 WAL segments to exactly that on 2026-09-24 (stuttgart-things
+# clusters/labda/vsphere/machinery-xrs/minio-backup-target.yaml). So the bucket
+# is named for its source: <cluster>-schmetterpause-cnpg.
+#
+# The chain, all Crossplane on machinery-hv:
+#   MinioBucket (storage/minio, ProviderConfig `minio`)
+#     -> bucket + policy + user app-dev-hv-schmetterpause-cnpg-backup on MinIO
+#     -> keys in Secret default/app-dev-hv-schmetterpause-cnpg-backup
+#   VaultSecretSet (vault/vault-secrets, ClusterProviderConfig
+#   `vault-cluster-secrets`)
+#     -> reads that Secret (secretKeyRef, same namespace)
+#     -> writes OpenBao schmetterpause/app-dev-hv-backup {access_key, secret_key}
+#
+# NOT the shared schmetterpause/_backup: that is one credential every cluster
+# reads, and the writer AppRole may only read `_` entries on purpose. The
+# cluster's order points its backup at this entry instead
+# (rancher.argocd.annotations tabletennis-platform.stuttgart-things.com/
+# db-backup-*), once it gets the tabletennis profile.
+#
+# `deletionPolicy` stays at Orphan: deleting this file (or the XR) must not take
+# the backups with it -- that is the reason they exist. Rule 1 of README.md
+# applies: removing it from kustomization.yaml deletes nothing either.
+apiVersion: storage.stuttgart-things.com/v1alpha1
+kind: MinioBucket
+metadata:
+  name: app-dev-hv-schmetterpause-cnpg
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  providerConfigRef:
+    name: minio
+  bucketName: app-dev-hv-schmetterpause-cnpg
+  region: us-east-1
+  access:
+    # Every operation on this bucket and nothing else: barman writes base
+    # backups and WAL, lists, and deletes what falls out of retention.
+    - name: backup
+      scope: bucket
+      connectionSecret:
+        name: app-dev-hv-schmetterpause-cnpg-backup
+        # Next to the VaultSecretSet below: a secretKeyRef reads only its own
+        # namespace.
+        namespace: default
+---
+apiVersion: vault.stuttgart-things.com/v1alpha1
+kind: VaultSecretSet
+metadata:
+  name: app-dev-hv-backup
+  namespace: default
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  # The cluster-secrets writer: write on schmetterpause/data/+ except `_`
+  # entries (write-schmetterpause-clusters,
+  # clusters/platform/openbao/machinery-fleet).
+  providerConfigRef:
+    name: vault-cluster-secrets
+  # The mount belongs to Terraform (machinery-fleet); only write into it.
+  mount:
+    path: schmetterpause
+    type: kv-v2
+    create: false
+  secrets:
+    - path: app-dev-hv-backup
+      data:
+        # The key names the schmetterpause chart's CNPG backup reads
+        # (access_key / secret_key), the same shape as the shared _backup.
+        - key: access_key
+          secretKeyRef:
+            name: app-dev-hv-schmetterpause-cnpg-backup
+            key: AWS_ACCESS_KEY_ID
+        - key: secret_key
+          secretKeyRef:
+            name: app-dev-hv-schmetterpause-cnpg-backup
+            key: AWS_SECRET_ACCESS_KEY

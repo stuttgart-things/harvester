@@ -14,3 +14,5 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - app-dev-hv.yaml
+  # its CloudNativePG backup target (bucket per source cluster) -- see the file
+  - app-dev-hv-backup.yaml
