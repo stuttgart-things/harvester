@@ -21,6 +21,7 @@ resources:
   - secrets/ansible-credentials.enc.yaml
   - secrets/harvester-kubeconfig.enc.yaml
   - secrets/rancher-mgmt-kubeconfig.enc.yaml
+  - secrets/minio-crossplane.enc.yaml
   # step B + C -- OpenBao policies, the mapping, the AppRole credentials
   - cluster-vault-sthings-lab.yaml
   - vault-provider-configs.yaml
