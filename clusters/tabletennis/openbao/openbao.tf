@@ -71,11 +71,12 @@ module "openbao-base-setup" {
   certmanager_vault_issuer_enabled = false
   pki_enabled                      = false
 
-  // k8s_auth_reviewer_create is left at its default, so the module creates the
-  // token reviewer. RUN ../../platform/openbao/preflight.sh first -- if
-  // blueprints CreateVaultKubernetesAuth has already run against this cluster
-  // the apply stops with `serviceaccounts "vault-auth-reviewer" already exists`
-  // and needs k8s_auth_reviewer_create = false.
+  // The token reviewer ALREADY EXISTS on tabletennis and is not ours: the
+  // RancherCluster XR's spec.vaultAuth (crossplane-mgmt, rancher-cluster
+  // steps 6a-6c) composes kube-system/vault-auth-reviewer for the certmanager
+  // mount. preflight.sh stops on it (2026-09-28), so the module must reuse it
+  // rather than create it -- the argument exists on the pinned commit only.
+  k8s_auth_reviewer_create = false
   //
   // Mount path comes out as <cluster_name>-<name>, i.e.
   // /v1/auth/tabletennis-sthings-eso. The name is load-bearing: the
