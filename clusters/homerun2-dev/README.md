@@ -409,12 +409,15 @@ its one address.
 
 ## 7. The homerun2 application stack
 
-[`homerun2.yaml`](./homerun2.yaml) applies `./apps/homerun2/profiles/base` and,
-once it is Ready, `./apps/homerun2/profiles/base-routes`. Credentials come from
+[`homerun2.yaml`](./homerun2.yaml) applies `./apps/homerun2/profiles/sops` and,
+once it is Ready, `./apps/homerun2/profiles/sops-routes` (flux#543): two Flux
+Kustomizations for the whole stack. Until 2026-09-28 it was ten -- `profiles/base`
+plus one pair per add-on (see *The four add-on components*); the switch is
+harvester#261. Credentials come from
 [`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml), which
 Flux decrypts with the same `sops-age` key it uses for everything else here.
 
-### Why `profiles/base` and not the apps-platform bundle
+### Why the `sops` profiles and not the apps-platform bundle
 
 The bundle component (`apps/platform/components/homerun2`) uses
 `profiles/platform`, which selects each component's **`eso/`** variant:
@@ -424,7 +427,7 @@ auth mount that Flux cannot create -- it takes a Vault token and this cluster's
 API address, so it comes from
 `blueprints/argocd create-vault-kubernetes-auth --auth-name eso`.
 
-`profiles/base` selects the **`sops/`** variants instead: ordinary Secrets whose
+`profiles/sops` (like `profiles/base` before it) selects the **`sops/`** variants instead: ordinary Secrets whose
 values arrive through `substituteFrom`. The credentials then live in this repo,
 encrypted, and the cluster needs no ESO at all. `HOMERUN2_SECRET_STORE` and
 `HOMERUN2_SECRET_PATH` do not appear anywhere in the rendered output.
@@ -455,7 +458,7 @@ same class of reason.
 - **`HOMERUN2_REDIS_STORAGE_CLASS` must be set.** Its default is `standard`,
   which does not exist here; `openebs-hostpath` is the only class on this
   cluster. Unset, the PVC never binds while the HelmRelease reports installed.
-- **`profiles/base-routes` uses the ORIGINAL variable names** -- `DOMAIN`,
+- **`profiles/sops-routes` uses the ORIGINAL variable names** -- `DOMAIN`,
   `GATEWAY_NAME`, `GATEWAY_NAMESPACE`, not the `INFRA_*` names the infra bundle
   introduced. They must carry the same values as `infra-platform.yaml`'s
   `INFRA_*`, or the routes attach to nothing.
@@ -480,8 +483,10 @@ against these start scripts. Migrating is its own change.
 ### The four add-on components
 
 `profiles/base` is the core: redis-stack, omni-pitcher, core-catcher, scout and
-notification-catcher. Four more run here, each as its own pair of Kustomizations
-in [`homerun2.yaml`](./homerun2.yaml) -- the component, then its routes:
+notification-catcher. Four more run here. Since 2026-09-28 all of them come from
+the one profile `profiles/sops` (and `profiles/sops-routes`), which selects the
+core plus these four; before that each had its own pair of Kustomizations in
+[`homerun2.yaml`](./homerun2.yaml), on the profiles below:
 
 | Component | Profile | Upstream change | Added by |
 |---|---|---|---|
@@ -500,15 +505,15 @@ credential-agnostic despite its name, and it is the one add-on with no
 
 Two things to expect when reading the cluster back:
 
-- **Each add-on appears TWICE in `flux get kustomizations -A`.** These profiles
-  are kustomize Components that render their own `OCIRepository` plus a child
-  Kustomization of the same name in namespace `homerun2`. The one in
-  `flux-system` with source `flux-apps` is ours; the one in `homerun2` with the
-  OCI source is the child. Same name, different namespace -- not a conflict, and
-  the reason the Kustomization count rises by three per add-on pair, not two.
-- **The routes profiles use `DOMAIN`, `GATEWAY_NAME` and `GATEWAY_NAMESPACE`,**
-  exactly like `base-routes` -- not the `INFRA_*` names. Same values, different
-  spelling; see the trap above.
+- **Every component appears as a child in namespace `homerun2`.** The profile
+  is built from kustomize Components that each render an `OCIRepository` plus a
+  child Kustomization (`homerun2-led-catcher`, …) there. In `flux-system` only
+  `homerun2` and `homerun2-routes` are ours (source `flux-apps`).
+- **The routes profile uses `DOMAIN`, `GATEWAY_NAME` and `GATEWAY_NAMESPACE`,**
+  not the `INFRA_*` names. Same values, different spelling; see the trap above.
+- **`UI_STREAM_PRESETS` is a variable now**
+  (`HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS`), no longer a patch on the
+  led-catcher's child Kustomization; see section 9.
 
 One operational note on config-viewer: it reads Deployments and ConfigMaps in
 its own namespace through the Kubernetes API (`get` and `list`, nothing more --
@@ -527,7 +532,7 @@ absent from the view, which reads as an empty panel rather than an error.
   changes.
 - **No ExternalSecrets.** There is no `external-secrets` and no
   `ClusterSecretStore` on this cluster, and the homerun2 stack does not need
-  one: it runs `profiles/base`, whose credentials come from a SOPS-encrypted
+  one: it runs `profiles/sops`, whose credentials come from a SOPS-encrypted
   `substituteFrom` Secret in this repo. Adding ESO later means
   `external-secrets` + `external-secrets-vault-store` in the bundle and a
   second OpenBao auth mount (`eso`, policy `read-homerun2-dev`) beside the
@@ -585,10 +590,9 @@ curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|
 # issuer: CN=sthings.lab   <- OpenBao root, not CN=cluster-ca
 ```
 
-- **No `homerun2-*` extras.** The stack runs `profiles/base`: redis-stack,
-  omni-pitcher, core-catcher, scout, notification-catcher. `led-catcher`,
-  `light-catcher`, `demo-pitcher` and `config-viewer` are separate components
-  that `profiles/base` does not carry -- see section 7.
+- **One profile for the stack.** `profiles/sops` carries redis-stack,
+  omni-pitcher, core-catcher, scout, notification-catcher, led-catcher,
+  light-catcher + wled-mock, demo-pitcher and config-viewer -- see section 7.
 
 ---
 
@@ -641,6 +645,7 @@ the led-catcher's switch is HTTP-only -- a message in a stream cannot trigger it
 
 So the switch is a human act. The led-catcher's web simulator carries it, and
 [`homerun2.yaml`](./homerun2.yaml) sets `UI_STREAM_PRESETS=messages,tabletennis`
+(as `HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS`)
 so the control actually offers both -- unset, it offers only the configured
 stream and there is no way to reach `tabletennis` from the table. The header's
 `overridden` badge and `reset` button are what stop a panel sitting on a dead
