@@ -31,6 +31,13 @@
 # step 4 planned: crossplane-configs owns that Configuration and would revert
 # a patch on its next reconcile.
 #
+# v1.95.0 (2026-09-28) changes one object this cluster renders: the
+# coredns-lab-zone HelmChartConfig gets COREDNS_ZONE_NODATA_TYPE (flux#567),
+# set to AAAA in infra-platform.yaml. Rendered at both tags: every other path
+# and bundle is byte-identical, except the bundle's default
+# CROSSPLANE_OPENTOFU_PROVIDER_VERSION (v1.1.8 -> v1.1.9), which the machinery
+# profile's own provider pin overrides (v1.1.6 runs), as before.
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -44,7 +51,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.94.3
+    tag: v1.95.0
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -55,5 +62,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.94.3
+    tag: v1.95.0
   url: https://github.com/stuttgart-things/flux.git

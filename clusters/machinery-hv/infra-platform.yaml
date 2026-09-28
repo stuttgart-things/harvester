@@ -81,6 +81,12 @@ spec:
       # default (24h).
       COREDNS_ZONE: sthings.lab
       COREDNS_ZONE_SERVER: "192.168.10.1"
+      # The router answers AAAA with NXDOMAIN for its *.platform.sthings.lab
+      # wildcard (A resolves). musl reads that as "no such name": the Ansible
+      # pod of a ClusterStack's kubeconfig stage failed to resolve
+      # openbao.platform.sthings.lab (harvester#265). CoreDNS answers AAAA in
+      # this zone itself, empty; the lab has no IPv6 (flux#567, v1.95.0).
+      COREDNS_ZONE_NODATA_TYPE: AAAA
 
       # ---- cert-manager / the OpenBao PKI issuer --------------------------
       CERT_MANAGER_SELFSIGNED_ISSUER: openbao-pki
