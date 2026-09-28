@@ -19,6 +19,18 @@
 # and to the cicd-platform profile's function-go-templating (the machinery
 # profile pins its own).
 #
+# v1.94.3 (2026-09-28) changes one object this cluster renders: the
+# `cluster` Configuration in the machinery profile, v0.11.10 -> v0.12.3
+# (flux#562-#564). That is the ClusterStack machine-pool path (xplane-cluster
+# 0.22.0, harvester#265) plus two additive changes: extraPlaybooks and the kargo
+# profile (xplane-cluster 0.23.x). Checked by rendering every path and bundle
+# this cluster pulls at both tags: everything else is byte-identical. The
+# bundle's CROSSPLANE_VERSION default moves to 2.4.2, but the machinery profile
+# pins the chart to 2.3.3 over it (install/catalog-patch.yaml), so nothing
+# changes there. Taken through the tag, not the in-place patch harvester#265
+# step 4 planned: crossplane-configs owns that Configuration and would revert
+# a patch on its next reconcile.
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -32,7 +44,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.3
+    tag: v1.94.3
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -43,5 +55,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.80.3
+    tag: v1.94.3
   url: https://github.com/stuttgart-things/flux.git
