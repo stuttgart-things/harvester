@@ -152,6 +152,7 @@ dagger -m github.com/stuttgart-things/dagger/ansible call execute \
   --parameters "ansible_become_password='{{ lookup(\"env\", \"ANSIBLE_PASSWORD\") }}' \
 led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
+led_profile_src=/src/profile.yaml led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
 led_catcher_version=v0.12.0 \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
@@ -169,6 +170,8 @@ rm -f ansible.env
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
 | `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
+| `led_profile_src` | [`profile.yaml`](./profile.yaml) in this directory, at `/src` inside the Dagger container. Installed on every run, and the catcher restarts when it changes: edit it here, not on the Pi |
+| `led_ui_stream_presets` | the `messages` / `tabletennis` buttons in the demo UI, which switch the panel to the score and back |
 | `led_redis_password` | written to `/etc/default/led-catcher` beside the token |
 | `led_api_token` | the bearer token for `POST /display`, written to `/etc/default/led-catcher` (`0600`) |
 | `run_id` | **must change on every call**. Dagger caches the `ansible-playbook` step, and without it a second call replays the first result and never reaches the Pi |
@@ -196,6 +199,27 @@ The demo UI's **Panel control** does the same with the token typed in.
 journalctl -u led-catcher -f     # on the Pi
 journalctl -u caddy -f
 ```
+
+## Table tennis
+
+zaehlwerk pitches each score onto the `tabletennis` stream. The panel only
+shows it while subscribed to that stream, and switching is done by hand, as on
+the cluster's simulator ([why](../../clusters/homerun2-dev/README.md#tabletennis-is-a-stream-nobody-reads-and-that-is-the-decision)):
+the **tabletennis** button on https://matrix.sthings.lab before the match, and
+**messages** or **reset** afterwards. The score stays up between points
+(`tabletennis-score` in [`profile.yaml`](./profile.yaml): `kind: static`,
+`hold: true`). A restart falls back to `messages`, because the switch is not
+persisted.
+
+From a terminal:
+
+```bash
+curl -s -X POST https://matrix.sthings.lab/streams -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
+curl -s -X POST https://matrix.sthings.lab/streams -H 'content-type: application/json' -d '{"streams": ["messages"]}'
+```
+
+`/streams` is unauthenticated, like on the cluster. Anyone on the lab network
+can switch the panel.
 
 ## Known state
 
