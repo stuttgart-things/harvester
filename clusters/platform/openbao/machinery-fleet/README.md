@@ -66,6 +66,11 @@ Each AppRole logged in and was tried against what it must and must not reach
 - **`homerun2/_git-pat`**, the shared entry the `homerun2` AppSecretProfile's
   `githubToken` reads. It needs a real GitHub token, and whose token that is,
   is a decision for a person, not for Terraform. Seed it by hand.
+- **The `rancher-mgmt` kubeconfig** is not an AppRole: step `R` of
+  `render-fleet-secrets.sh` builds it from the token of the ServiceAccount
+  `crossplane-machinery` on platform (`../../crossplane-machinery-access.yaml`).
+  Rotate it by deleting `crossplane-machinery/crossplane-machinery-token` on
+  platform, waiting for the new token, `./render-fleet-secrets.sh R`, commit.
 - **Rotation** is explicit: `terraform taint 'vault_approle_auth_backend_role_secret_id.fleet["…"]'`,
   apply, rerun `render-fleet-secrets.sh C`, commit. secret_ids do not expire
   (`secret_id_ttl = 0`), for the reason `../openbao.tf` gives.

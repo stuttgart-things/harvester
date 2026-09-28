@@ -23,8 +23,14 @@ spec:
       key: kubeconfig
 ---
 # The Rancher management cluster (`platform`): the rancher-cluster child
-# creates the provisioning.cattle.io Cluster there and reads the registration
-# command back.
+# creates the provisioning.cattle.io Cluster and its HarvesterConfig there, and
+# registers the cluster with Argo CD and clusterbook (argocdProviderConfigRef).
+#
+# The credential is the SCOPED ServiceAccount crossplane-machinery on platform
+# (clusters/platform/crossplane-machinery-access.yaml), not platform's admin
+# kubeconfig (until 2026-09-28). A new order therefore sets
+# `spec.rancher.clusterAnnotations: {field.cattle.io/no-creator-rbac: "true"}`
+# -- see xrs/README.md rule 5.
 apiVersion: kubernetes.m.crossplane.io/v1alpha1
 kind: ClusterProviderConfig
 metadata:
