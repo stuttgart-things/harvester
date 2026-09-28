@@ -1,6 +1,7 @@
 ---
 # The collection that carries sthings.container.homerun2_led_catcher_pi.
 # 26.921.1352 and later: TLS (led_tls_*) and the idle clock (led_idle), stuttgart-things/ansible#1252.
+# 26.928.1374 and later: led_profile_src and led_ui_stream_presets, stuttgart-things/ansible#1275.
 collections:
-  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.921.1352/sthings-container-26.921.1352.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.928.1374/sthings-container-26.928.1374.tar.gz
     type: url

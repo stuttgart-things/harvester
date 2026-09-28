@@ -53,6 +53,8 @@ go.work.sum
 
 # env file
 .env
+# credentials for the Dagger ansible module's --env-secrets (hosts/*/README.md)
+ansible.env
 
 # Editor/IDE
 # .idea/
