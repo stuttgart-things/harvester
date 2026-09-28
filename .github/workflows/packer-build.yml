@@ -178,11 +178,14 @@ jobs:
           # change must propagate to other images, touch their dir or rebuild
           # them manually via workflow_dispatch.
           #
-          # catalog-info.yaml is Backstage metadata, not a build input (same
-          # rule as packer-pr-build.yml), and a dir whose var-file is gone was
-          # deleted — there is nothing to build.
+          # catalog-info.yaml is Backstage metadata and *.md is documentation,
+          # neither is a build input (same rule as packer-pr-build.yml). This
+          # matters more here than on a PR: a release moves a pin, and for a dev
+          # image that pin PR merges itself — a README edit to u26-dev would
+          # otherwise move u26-dev AND the ubuntu24 alias on crossplane-mgmt.
+          # A dir whose var-file is gone was deleted — there is nothing to build.
           CHANGED=$(git diff --name-only "${{ github.event.before }}" "${{ github.sha }}" \
-            | grep -vE '/catalog-info\.yaml$' || true)
+            | grep -vE '/catalog-info\.yaml$|\.md$' || true)
 
           for tier in golden dev; do
             DIRS=$(echo "$CHANGED" | grep -oP "^packer/${tier}/[^/]+" | sort -u || true)

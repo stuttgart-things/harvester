@@ -54,7 +54,9 @@ it up) but follow deliberately different governance:
   which forces a review.
 
 After the merge to `main`, `packer-build.yml` **releases** every changed image
-through `packer-release.yml`, golden before dev:
+through `packer-release.yml`, golden before dev. "Changed" means a build input:
+an edit to only `catalog-info.yaml` or a `*.md` file builds, releases and pins
+nothing, neither on the PR nor after the merge.
 
 1. build it from `main`, publish it to MinIO (for golden: the base dev images
    layer on) and register it with Harvester as `<name>-<version>`;

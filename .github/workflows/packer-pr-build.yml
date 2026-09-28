@@ -61,11 +61,13 @@ jobs:
             echo "Changes outside packer/dev/ (no auto-merge):"
             echo "$OUTSIDE_DEV"
           fi
-          # catalog-info.yaml is Backstage metadata, not a build input — a
-          # provenance/catalog-only edit (e.g. the catalog-bot refresh) must not
-          # trigger an image rebuild, so exclude it before matching image dirs.
+          # catalog-info.yaml is Backstage metadata and *.md is documentation,
+          # neither is a build input — a provenance/catalog-only edit (e.g. the
+          # catalog-bot refresh) or a README fix must not trigger an image
+          # rebuild, so exclude them before matching image dirs. Same rule as
+          # detect-release in packer-build.yml.
           CHANGED=$(git diff --name-only "$BASE"...HEAD \
-            | grep -vE '/catalog-info\.yaml$' \
+            | grep -vE '/catalog-info\.yaml$|\.md$' \
             | grep -oP '^packer/(golden|dev)/[^/]+' | sort -u || true)
 
           if [ -z "$CHANGED" ]; then
