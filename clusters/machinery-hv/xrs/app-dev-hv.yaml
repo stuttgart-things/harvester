@@ -38,9 +38,19 @@
 #   no observability         platform's Argo CD has no observability-platform
 #                            ApplicationSet; with the profile set, monitoring
 #                            would never appear and nothing would say so
-#   no homerun2              the same, for homerun2-platform (checked
-#                            2026-09-28): no ApplicationSet selects it on
-#                            platform. Add the profile back once one does
+#   homerun2 + tabletennis   added 2026-09-28, once platform installed both
+#                            ApplicationSets (stuttgart-things/flux#571,
+#                            argocd#544). tabletennis reads homerun2's
+#                            secrets (omni-pitcher token, redis password), so
+#                            homerun2 is required in the same order.
+#                            secretStores names both mounts: the profiles set
+#                            the secrets-config gates, but the
+#                            ClusterSecretStores vault-homerun2 /
+#                            vault-schmetterpause only exist when the stores
+#                            AppSet is told about them
+#   backup                   schmetterpause's CNPG backups go to the bucket of
+#                            THIS cluster (app-dev-hv-backup.yaml beside this
+#                            file), not the shared _backup entry
 #
 # NOT BLOCKED BY crossplane-configurations#503 ANY MORE: that is the custom-node
 # VM this stack used to build, which boots with no user the ansible stages can
@@ -78,6 +88,14 @@ spec:
     - network
     - security
     - storage-openebs
+    - homerun2
+    - tabletennis
+  # The ClusterSecretStores the two profiles read through (external-secrets-
+  # stores AppSet, kv-mounts derived from this list; ESO logs in via the
+  # Platform's Vault issuer auth, policies read-<mount>-clusters).
+  secretStores:
+    - homerun2
+    - schmetterpause
     # NOT tabletennis in the first order: it pulls schmetterpause, whose -backup
     # entry reads the shared object-store-backup -- not in
     # cluster-vault-sthings-lab and not seeded, and the render fails on it
@@ -91,6 +109,17 @@ spec:
         networkKey: '192.168.10'
       labels:
         env: sthings-lab
+      annotations:
+        # CloudNativePG backups of schmetterpause-db into THIS cluster's bucket
+        # (app-dev-hv-backup.yaml: MinioBucket + VaultSecretSet), not the
+        # shared schmetterpause/_backup.
+        tabletennis-platform.stuttgart-things.com/db-backup-enabled: 'true'
+        tabletennis-platform.stuttgart-things.com/db-backup-endpoint-url: https://artifacts.platform.sthings.lab
+        tabletennis-platform.stuttgart-things.com/db-backup-destination-path: s3://app-dev-hv-schmetterpause-cnpg/
+        tabletennis-platform.stuttgart-things.com/db-backup-remote-key: app-dev-hv-backup
+        tabletennis-platform.stuttgart-things.com/db-backup-secret-store: vault-schmetterpause
+        # The database PVC's class; the AppSet default is "" (no class).
+        tabletennis-platform.stuttgart-things.com/storage-class: openebs-hostpath
   platformEnabled: true
   platform:
     fluxInit:
