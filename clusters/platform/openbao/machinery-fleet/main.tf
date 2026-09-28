@@ -110,6 +110,11 @@ resource "vault_policy" "write_clusters" {
   EOT
 }
 
+// create/update on kubeconfigs/metadata: the ClusterStack's
+// `kubeconfig-vault` Workspace (xplane-cluster) writes custom_metadata
+// (managed-by, cluster) to kubeconfigs/metadata/<cluster> after the kubeconfig
+// stage. Without them it failed with 403 and kept the XR from turning Ready,
+// even though the kubeconfig itself was written (harvester#265, hvpool-test1).
 resource "vault_policy" "write_kubeconfigs" {
   name   = "write-kubeconfigs"
   policy = <<-EOT
@@ -117,7 +122,7 @@ resource "vault_policy" "write_kubeconfigs" {
       capabilities = ["create", "read", "update", "delete"]
     }
     path "kubeconfigs/metadata/+" {
-      capabilities = ["read", "list", "delete"]
+      capabilities = ["create", "read", "update", "list", "delete"]
     }
   EOT
 }
