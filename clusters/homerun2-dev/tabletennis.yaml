@@ -55,6 +55,14 @@ spec:
   # of the office's own archive.
   components:
     - ../../components/schmetterpause-db-backup-sops
+    # The handover: a won match goes from zaehlwerk to schmetterpause's
+    # POST /api/results, and the scoring page offers schmetterpause's players
+    # and observers. Two ends of one feature -- both or neither (flux README).
+    # One credential, SCHMETTERPAUSE_SCOREBOARD_TOKEN (substituteFrom), read by
+    # both. zaehlwerk calls https://schmetterpause.homerun2-dev.sthings.lab
+    # through the Gateway and trusts it via ./zaehlwerk-trust-bundle.yaml.
+    - ../../components/schmetterpause-scoreboard-sops
+    - ../../components/zaehlwerk-handover-sops
   postBuild:
     # SCHMETTERPAUSE_SESSION_KEY, SCHMETTERPAUSE_DB_PASSWORD,
     # ZAEHLWERK_OMNI_PITCHER_TOKEN and ZAEHLWERK_REDIS_PASSWORD -- the values
@@ -80,6 +88,12 @@ spec:
       SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: https://artifacts.platform.sthings.lab
       SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-homerun2-dev
       SCHMETTERPAUSE_BACKUP_RETENTION: 30d
+      # Where zaehlwerk hands a won match over (zaehlwerk-handover-sops). Set
+      # rather than left to the component's nested default
+      # (https://${SCHMETTERPAUSE_HOSTNAME}.${DOMAIN}) -- same value, nothing
+      # to resolve. The token is SCHMETTERPAUSE_SCOREBOARD_TOKEN from the
+      # Secret above.
+      ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.homerun2-dev.sthings.lab
       # Pinned rather than left to the profile's defaults, so a flux-apps
       # change never upgrades this cluster by surprise. v0.14.0 since
       # 2026-09-28 (#305), before the restore: the office (homerun2-test1)
