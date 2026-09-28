@@ -287,6 +287,10 @@ jobs:
       needs.detect-targets.outputs.dev_only == 'true' &&
       vars.UPLOAD_TO_HARVESTER != 'false'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write        # merge the PR
+      pull-requests: write
+      actions: write         # dispatch packer-release.yml (below)
     steps:
       - name: Merge
         env:
@@ -298,3 +302,33 @@ jobs:
             --auto \
             --squash \
             --delete-branch
+
+      # This merge is done with GITHUB_TOKEN, and GitHub starts no workflow for
+      # a push that token causes: packer-build.yml never sees it, so without
+      # this step a self-service dev image is tested but never released or
+      # pinned (harvester#270). workflow_dispatch is the exception GitHub
+      # allows, so dispatch the release per image. Wait for the merge first:
+      # --auto may queue it, and the release must build the merged main.
+      - name: Dispatch the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGETS: ${{ needs.detect-targets.outputs.targets }}
+        run: |
+          PR=${{ github.event.pull_request.number }}
+          for _ in $(seq 1 30); do
+            STATE=$(gh pr view "$PR" --repo "${{ github.repository }}" --json state --jq .state)
+            [ "$STATE" = "MERGED" ] && break
+            sleep 10
+          done
+          if [ "$STATE" != "MERGED" ]; then
+            echo "::warning::PR #$PR is $STATE after 5 min; no release dispatched. Release by hand: gh workflow run packer-release.yml --ref main -f tier=dev -f name=<name>"
+            exit 0
+          fi
+          for NAME in $(echo "$TARGETS" | jq -r '.[] | select(.tier == "dev") | .name' | sort -u); do
+            echo "Dispatching the release of dev/$NAME"
+            gh workflow run packer-release.yml \
+              --repo "${{ github.repository }}" \
+              --ref main \
+              -f tier=dev \
+              -f name="$NAME"
+          done
