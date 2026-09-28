@@ -130,7 +130,14 @@ data:
   # not here; this is only its name. Sizing is NOT here: it comes from the
   # ClusterStack's `size`.
   cloudCredentialSecretName: cattle-global-data:cc-cl944  # pragma: allowlist secret
-  imageName: default/sthings-u26-k3s
+  # The golden image, NOT sthings-u26-k3s: the kubeconfig stage logs in as
+  # sshUser with the password from ansible-credentials, and only images built
+  # by CI with STHINGS_PASSWORD (#108) accept it. sthings-u26-k3s (2026-06-09)
+  # predates that and ships `sthings` locked -- hvpool-test1 got
+  # "Permission denied (publickey,password)" on all 12 attempts (#265).
+  # k3s is not needed in the image: Rancher's system-agent installs it.
+  # Same image as cluster-vault-sthings-lab above; move both together.
+  imageName: default/sthings-u26-26.924.1008
   networkName: default/vms
   vmNamespace: default
   sshUser: sthings
