@@ -7,7 +7,7 @@
 # compose it directly.
 #
 # The clusterbook API runs on `platform`, behind its Gateway, so the URL is the
-# public one the Log in ../machinery-hv/README.md uses with curl. Its
+# public one the Log in ../README.md uses with curl. Its
 # certificate is signed by the OpenBao PKI (sthings.lab), and provider-clusterbook
 # trusts only the system roots unless told otherwise
 # (internal/client/client.go), so customCA carries the OpenBao root -- the same

@@ -10,7 +10,7 @@
 # name is what crossplane-configurations' CLAUDE.md calls fragile.
 #
 # Public, so plain YAML. `default`, because that is where the XRs are ordered.
-# Byte-identical to ../homerun2-dev/openbao-pki-ca.yaml and to
+# Byte-identical to ../../homerun2-dev/openbao-pki-ca.yaml and to
 #
 #   curl -sk https://openbao.platform.sthings.lab/v1/pki/ca/pem
 #

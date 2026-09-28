@@ -3,7 +3,7 @@
 What the Crossplane management cluster `machinery-hv` needs on the OpenBao that
 runs on `platform`: the KV mounts built clusters keep their kubeconfigs and app
 secrets in, the policies over them, and the AppRoles machinery-hv logs in with.
-The consumer side is [`clusters/machinery-hv-fleet-state`](../../../machinery-hv-fleet-state/README.md).
+The consumer side is [`clusters/machinery-hv/fleet-state`](../../../machinery-hv/fleet-state/README.md).
 
 A root of its own, with its own state (`tfstate-default-openbao-machinery-fleet`
 in `cert-manager` on `platform`). `../` holds the PKI, platform's auth mount and

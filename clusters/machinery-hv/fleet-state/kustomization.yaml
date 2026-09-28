@@ -1,13 +1,13 @@
 ---
 # The fleet state of `machinery-hv`, applied by the `machinery-hv-fleet-state`
-# Kustomization in ../machinery-hv/fleet-state.yaml. See README.md beside this
+# Kustomization in ../fleet-state.yaml. See README.md beside this
 # file for what is here, what is not yet, and the order.
 #
 # The prune is on: a file dropped from this list is deleted from the cluster,
 # and for a credential Secret that breaks every order that uses it.
 #
 # secrets/ is rendered and encrypted by
-# ../platform/openbao/machinery-fleet/render-fleet-secrets.sh -- never edit a
+# ../../platform/openbao/machinery-fleet/render-fleet-secrets.sh -- never edit a
 # file there by hand. The OpenBao objects every file below names were created
 # by the same directory's Terraform on 2026-09-24 and tested with a real login
 # per AppRole (README.md).

@@ -10,7 +10,7 @@
 #     machinery cluster selects all three, because its capability charts read
 #     credentials through sops-git and sops-git reads its age key through an ESO
 #     Vault store. This cluster does not use the capability charts (see
-#     ../machinery-hv-fleet-state/README.md), and its fleet-state Secrets are
+#     ./fleet-state/README.md), and its fleet-state Secrets are
 #     SOPS-encrypted in git and decrypted by Flux itself, like every other
 #     Secret in this repo.
 #
@@ -91,6 +91,6 @@ spec:
       VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/machinery-hv-certmanager
       VAULT_ISSUER_AUTH_ROLE: certmanager
       VAULT_ISSUER_SERVICE_ACCOUNT: cert-manager
-      # From ../machinery-hv-pki/openbao-pki-ca.yaml (applied by pki.yaml).
+      # From ./pki/openbao-pki-ca.yaml (applied by pki.yaml).
       VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
       VAULT_ISSUER_CA_KEY: ca.crt

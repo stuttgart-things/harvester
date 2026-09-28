@@ -6,7 +6,7 @@
 // auth mounts, kubeconfig entries, app secrets for the clusters it builds) goes
 // through provider-vault with AppRoles, not through a Kubernetes auth mount on
 // this cluster. Those AppRoles are OpenBao-side objects and belong under
-// ../../platform/openbao, not here -- see ../../machinery-hv-fleet-state/README.md.
+// ../../platform/openbao, not here -- see ../fleet-state/README.md.
 //
 // ORDER: apply this BEFORE the ClusterIssuer exists, and after
 // ../../platform/openbao has created the `pki-issue` policy. A role bound to a

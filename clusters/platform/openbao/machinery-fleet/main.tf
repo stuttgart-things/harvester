@@ -3,7 +3,7 @@
 // clusters' secrets and kubeconfigs live in, the policies over them, and the
 // AppRoles machinery-hv logs in with. The consumer side -- provider configs,
 // the policy mapping, the credential Secrets -- is
-// clusters/machinery-hv-fleet-state.
+// clusters/machinery-hv/fleet-state.
 //
 // A ROOT OF ITS OWN, not more resources in ../approle.tf. That root's state
 // carries the PKI, platform's own auth mount and the `crossplane` AppRole every
@@ -192,7 +192,7 @@ variable "openbao_addr" {
 // ---- outputs ------------------------------------------------------------------
 //
 // Read ONLY by ./render-fleet-secrets.sh, which encrypts them straight into
-// clusters/machinery-hv-fleet-state/secrets/ -- never into a plaintext file.
+// clusters/machinery-hv/fleet-state/secrets/ -- never into a plaintext file.
 output "approles" {
   description = "role_id and secret_id per AppRole machinery-hv logs in with"
   sensitive   = true
