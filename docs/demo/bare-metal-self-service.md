@@ -14,7 +14,7 @@ zeigt, ist die **zweite** Lesart:
 | Lesart | Im Lab vorhanden? |
 |---|---|
 | Physische Server per PXE/Redfish/Metal3 ausrollen (Layer 0) | **Nur als Runbook** — `docs/install.md` beschreibt Node, Netz, Disks und die äquivalente automatische `config.yaml` (PXE-tauglich). Kein Metal3/Tinkerbell, keine Live-Neuinstallation in 30 Minuten. |
-| Self-Service auf einer Bare-Metal-Plattform (Layer 1–2) | **Vollständig live** — Harvester/SUSE Virtualization auf dem Blech, darüber Backstage → Git → Flux → Crossplane. |
+| Self-Service auf einer Bare-Metal-Plattform (Layer 1–2) | **Vollständig live** — Harvester/SUSE Virtualization auf dem Blech, darüber Backstage → Git → Argo CD → Crossplane. |
 
 Empfehlung: Layer 0 in 3–4 Minuten als **reproduzierbares Artefakt** zeigen
 (Runbook + `config.yaml`), nicht live installieren. Der Rest der Zeit gehört dem
@@ -32,10 +32,15 @@ Demo und sollte am Anfang explizit gesagt werden.
 | Ebene | System | Adresse | Rolle |
 |---|---|---|---|
 | Blech | `harvester` | `192.168.10.110`, VIP `.139` | Harvester v1.8.0 (SUSE Virtualization), Single Node, SL Micro 6.2 |
-| VM | `infra` | `192.168.10.150` | k3s: Vault (PKI), Clusterbook (IP/DNS), NFS |
-| VM | `xplane` | `192.168.10.155` | k3s: **Crossplane**, claim-machinery-api, Komoplane |
-| VM | `platform` | `192.168.10.160` | k3s: **Backstage**, Harbor, MinIO (Golden Images), Rancher, ArgoCD |
+| VM | `platform` | `192.168.10.160` | k3s: **Backstage**, claim-machinery-api, **Argo CD**, OpenBao (PKI), Clusterbook (IP/DNS), Harbor, MinIO (Golden Images), Rancher |
+| VM | `crossplane-mgmt` | `192.168.10.108` | **Crossplane** für den VM-Pfad: `XVirtualMachine` → Harvester. Von Argo CD auf platform gespeist (`showcase-crossplane-xrs`) |
+| VM | `machinery-hv` | `192.168.10.105` | Crossplane für ganze Cluster (`ClusterStack`), Flux-gesteuert |
+| VM | `app-dev-hv` | `192.168.10.176` | Ein bestellter Cluster (aus `machinery-hv`), darauf homerun2 + tabletennis |
+| VM | `homerun2-dev` | `192.168.10.117` | App-Cluster (homerun2, tabletennis) |
 | Netz | `ddwrt` | `192.168.10.1` | Gateway, DNS `*.sthings.lab`, DHCP `.100–.149` |
+
+`infra` und `xplane` gibt es nicht mehr (#240): Vault/PKI und Clusterbook sind
+nach `platform` gewandert (OpenBao), Crossplane nach `crossplane-mgmt`.
 
 Quelle: `system-inventory/inventory.yaml` → `topology.svg` + die interaktive
 GitHub-Pages-Seite. **Das ist der beste Einstiegs-Slide der ganzen Demo**, weil
@@ -66,7 +71,7 @@ IPs — die Adressvergabe ist ein CI-Gate, kein Excel-Sheet.
 ### 1 · Layer 0 — das Blech (4 min)
 
 Harvester-UI (`harvester.sthings.lab`) → Hosts, Disks, VM-Networks. Ein Node,
-drei laufende VMs.
+alle Cluster aus der Tabelle oben laufen als VMs darauf.
 
 Dann `docs/install.md` daneben: dieselben Werte als Runbook — Bond `enp5s0`,
 MAC, VIP `.139`, CIDRs, Disk-Layout, DD-WRT-Reservierung. Und der Abschnitt
@@ -114,59 +119,70 @@ laufen zu lassen kostet die halbe Demo.
 ### 3 · Layer 2 — Der Hauptakt: VM per Pull Request (12 min)
 
 Der durchgehende Pfad. Vier Fenster vorbereiten: **Backstage**, **GitHub**,
-**Terminal (kubectl/flux gegen `xplane`)**, **Harvester-UI**.
+**Argo CD** (`argocd.platform.sthings.lab`, App `showcase-crossplane-xrs`) plus
+**Terminal (kubectl gegen `crossplane-mgmt`)**, **Harvester-UI**.
 
-**3.1 Bestellung (2 min)** — Backstage (`backstage.platform.sthings.lab`),
-Template *Crossplane Claim*, Template-Auswahl `virtualmachine-harvester`,
-Parameter ausfüllen: Name, CPU, RAM, Disk, Image, Netz. Absenden.
+**3.1 Bestellung (2 min)** — Backstage (`backstage.platform.sthings.lab`) →
+*Create* → Template **Harvester VM**. Parameter: Name, T-Shirt-Size
+(`small`…`xlarge`), Base Image (`sthings-u26` = gepinntes Golden Image),
+optional *Ansible base-OS provisioning*. Ziel steht fest auf
+`stuttgart-things/harvester` / `clusters/crossplane-mgmt/xrs` / `virtual-machine`
+(backstage-resources#58). Absenden.
 
 Was dahinter passiert, dabei sagen: Backstage ruft die **claim-machinery-api**
-(`claims.platform.sthings.lab`), die rendert das **KCL**-Template aus
-`stuttgart-things/kcl` — die Katalog-URLs stehen in `api-templates-profiles.yaml`.
+(`claims.platform.sthings.lab`), die rendert das **KCL**-Template
+`xr-virtualmachine-harvester` aus `stuttgart-things/kcl` und öffnet den PR.
 
 **3.2 Der PR (3 min)** — GitHub, der frisch geöffnete PR gegen dieses Repo:
 
 ```
-claims/apps/<name>/<template>.yaml     # der Crossplane-Claim
-claims/apps/<name>/kustomization.yaml  # Flux-Einstieg
-claims/apps/<name>/catalog-info.yaml   # Backstage-Katalogeintrag
-claims/apps/kustomization.yaml         # Parent, um den Eintrag ergänzt
-claims/registry.yaml                   # Inventar-Eintrag
+clusters/crossplane-mgmt/xrs/virtual-machine/<name>/<name>.yaml         # das XR (XVirtualMachine)
+clusters/crossplane-mgmt/xrs/virtual-machine/<name>/kustomization.yaml
+clusters/crossplane-mgmt/xrs/virtual-machine/<name>/catalog-info.yaml   # Backstage-Katalogeintrag
+clusters/crossplane-mgmt/xrs/virtual-machine/kustomization.yaml         # Parent, um den Eintrag ergänzt
 ```
 
 Das ist der Punkt, an dem die Demo entweder zündet oder nicht — **den Diff
 wirklich zeigen**. Vier Dinge daran benennen:
 
-1. Der Claim ist deklarativ und lesbar (`claims/apps/dev-vm/harvestervm-developer.yaml`
-   als Referenz danebenlegen: PVC, cloud-init, CPU/RAM, Netz).
+1. Das XR ist deklarativ und kurz: Name, Size, Image. CPU/RAM/Disk, Netz,
+   StorageClass und Image-Version kommen aus der EnvironmentConfig
+   `virtualmachine-harvester`
+   (`clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml`),
+   die der Packer-Pin-Bot pflegt — hier schließt sich der Kreis zu Abschnitt 2.
 2. Der **Katalogeintrag entsteht mit der Ressource**, nicht später von Hand.
-3. `registry.yaml` ist das Inventar — Git ist die Datenbank, es gibt keine zweite.
-4. CI läuft: *Lint Claims*, *PR Lint*, *Catalog Index*.
+3. Git ist die Datenbank, es gibt keine zweite.
+4. CI läuft: *Validate Claims* (Kyverno-Policies), *PR Lint*.
 
 Merge.
 
-**3.3 Reconcile (4 min)** — Terminal gegen `xplane`:
+**3.3 Reconcile (4 min)** — Argo CD: App `showcase-crossplane-xrs` →
+*Refresh* (statt ~3 min Poll). Der App-Baum zeigt das neue `XVirtualMachine`.
+Parallel im Terminal gegen `crossplane-mgmt`:
 
 ```bash
-flux reconcile source git harvester            # statt 1 min Poll-Intervall zu warten
-flux reconcile kustomization harvester-claims-apps
-kubectl get harvestervm,pvc -A -w
+export KUBECONFIG=~/.kube/crossplane-mgmt
+kubectl get xvirtualmachines.resources.stuttgart-things.com -A -w
+crossplane beta trace xvirtualmachine <name> -n default   # XR → HarvesterVM → Managed Resources
 ```
 
-Parallel **Komoplane** (`komoplane.xplane.sthings.lab`): der Composition-Baum —
-Claim → XR → Managed Resources. Hier wird sichtbar, dass Crossplane über
-`ProviderConfig harvester` in den *anderen* Cluster schreibt.
+Hier sichtbar machen: Crossplane läuft auf `crossplane-mgmt` und schreibt über
+die `ClusterProviderConfig harvester` in den *anderen* Cluster — Harvester.
+Und: Argo CD auf `platform` verwaltet nur Git → `crossplane-mgmt`, nicht die VM.
 
-**3.4 Die VM (3 min)** — Harvester-UI: PVC wird angelegt, VM bootet,
-Guest-Agent meldet die IP. Dann aus dem Terminal per SSH rein.
+**3.4 Die VM (3 min)** — Harvester-UI (Namespace `vms`): PVC wird angelegt,
+VM bootet, Guest-Agent meldet die IP (`status.share.ip` am XR). Dann aus dem
+Terminal per SSH rein.
 
 > „Von *Formular abgeschickt* bis *SSH* — und der einzige menschliche Eingriff
 > dazwischen war ein Merge-Klick."
 
 **3.5 Rückweg in den Katalog (kurz)** — Backstage-Katalog neu laden: die neue
 Komponente ist da, weil `catalog-info.yaml` im selben PR lag und
-`.backstage/catalog-index.sh` (Catalog-Index-Bot) sie in
-`catalog-locations.yaml` aufgenommen hat.
+`.backstage/catalog-index.sh` sie in `.backstage/catalog-locations.yaml`
+aufnimmt. **In der Generalprobe prüfen**, ob der Index-Lauf nach dem Merge
+automatisch kommt (PR #198 des catalog-bot ist seit 2026-09-14 offen) —
+sonst `.backstage/catalog-index.sh` vorher laufen lassen oder den Punkt weglassen.
 
 > **Deadtime-Trick:** Während die VM bootet, den zweiten, vorbereiteten PR
 > mergen (siehe *Plan B*) oder Abschnitt 4 vorziehen. Nie schweigend auf einen
@@ -176,17 +192,23 @@ Komponente ist da, weil `catalog-info.yaml` im selben PR lag und
 
 ### 4 · Day 2 — Löschen ist der ehrlichere Teil (3 min)
 
+Backstage-Template *Delete Resource Claim* — **nur wenn es in der Generalprobe
+das XR unter `clusters/crossplane-mgmt/xrs` gefunden hat** (es arbeitet über
+`claims/registry.yaml`). Sonst derselbe Effekt als Hand-PR:
+
 ```bash
-claims delete --repo stuttgart-things/harvester \
-  --resource-name <name> --category apps --git-push --create-pr
+git switch -c chore/delete-<name>
+git rm -r clusters/crossplane-mgmt/xrs/virtual-machine/<name>
+# Eintrag aus clusters/crossplane-mgmt/xrs/virtual-machine/kustomization.yaml entfernen
+git commit -am "chore(crossplane-mgmt): delete VM <name>" && gh pr create --fill
 ```
 
-PR zeigen: Verzeichnis weg, Parent-Kustomization bereinigt, Registry-Eintrag
-weg. Mergen → Flux `prune: true` → die VM verschwindet aus Harvester, die
-Komponente aus dem Backstage-Katalog.
+PR zeigen: Verzeichnis weg, Parent-Kustomization bereinigt. Mergen → Argo CD
+`prune: true` → das XR verschwindet, Crossplane löscht VM und PVC in Harvester,
+die Komponente fällt aus dem Backstage-Katalog.
 
-> „Es gibt keinen zweiten Weg. Wer die VM in der Harvester-UI löscht, bekommt
-> sie von Flux zurück."
+> „Es gibt keinen zweiten Weg. Wer das XR von Hand löscht, bekommt es von
+> Argo CD zurück."
 
 Das ist der Abschnitt, den die meisten Self-Service-Demos weglassen — und
 genau der, nach dem im Betrieb gefragt wird.
@@ -195,10 +217,16 @@ genau der, nach dem im Betrieb gefragt wird.
 
 ### 5 · Der Closer, falls Zeit bleibt (2 min, optional)
 
-Derselbe Mechanismus, größeres Objekt: `ranchercluster-harvester-bootstrap` aus
-`api-templates-profiles.yaml`. Ein Claim, ein PR — und es entsteht kein
-einzelner Node, sondern ein ganzer Kubernetes-Cluster auf demselben Blech.
-Dazu `ansiblerun-baseos` für die Konfiguration nach dem Boot.
+Derselbe Mechanismus, größeres Objekt — und diesmal **schon gelaufen**:
+`clusters/machinery-hv/xrs/app-dev-hv.yaml`. Eine `ClusterStack`-Bestellung,
+aus der Crossplane auf `machinery-hv` einen ganzen Cluster macht: IP aus
+Clusterbook, VM über den Rancher-Machine-Pool auf Harvester, Kubeconfig nach
+OpenBao, cilium, Vault-Issuer, Registrierung in Argo CD — danach rollen die
+AppSets homerun2 und tabletennis aus. Zeigen: die ~50 Zeilen Bestellung, dann
+`app-dev-hv` in Argo CD mit seinen Applications und eine laufende App im Browser.
+
+> Ehrlich bleiben: für `ClusterStack` gibt es (noch) kein Backstage-Template —
+> die Bestellung ist ein PR von Hand. Der Weg danach ist derselbe.
 
 > „Die Größe des Objekts ändert am Weg nichts. Das ist der eigentliche Gewinn."
 
@@ -211,7 +239,7 @@ Dazu `ansiblerun-baseos` für die Konfiguration nach dem Boot.
 | 0–3 | Architektur / Inventory | Browser: Inventory-Seite |
 | 3–7 | Layer 0: Blech + Runbook | Harvester-UI, `docs/install.md` |
 | 7–12 | Layer 1: Golden/Dev Images | GitHub PR, Harvester Images |
-| 12–24 | **Layer 2: VM per PR** | Backstage → GitHub → Terminal → Harvester |
+| 12–24 | **Layer 2: VM per PR** | Backstage → GitHub → Argo CD / Terminal → Harvester |
 | 24–27 | Delete / Day 2 | Terminal, GitHub |
 | 27–30 | Lessons Learned | Slide |
 
@@ -224,16 +252,17 @@ auf zwei Minuten zusammen. Abschnitt 3 und 4 sind unantastbar.
 
 | Risiko | Vorbereitung |
 |---|---|
-| Flux-Intervall (1 min Source, 5 min Kustomization) | `flux reconcile` im Terminal-History; nie auf den Poll warten |
+| Argo-CD-Poll (~3 min) | *Refresh* in der App `showcase-crossplane-xrs`; nie auf den Poll warten |
 | VM-Boot dauert | Zweiter, identischer PR bereits gemergt und die VM **läuft** — als Schnitt „hier eine, die ich vorbereitet habe" |
-| claim-machinery-api / Backstage nicht erreichbar | Denselben Claim per `claims render --git-push --create-pr` aus dem Terminal — das ist ohnehin die Kernaussage „Backstage ist UI, keine Voraussetzung" |
-| Image fehlt in Harvester | `harvester-images/import-golden.sh` vorher gelaufen; **Achtung private CA**, ohne `additional-ca` schlägt der Download an TLS fehl |
+| claim-machinery-api / Backstage nicht erreichbar | Das XR aus der Generalprobe kopieren, Name ändern, als PR nach `clusters/crossplane-mgmt/xrs/virtual-machine/` — das ist ohnehin die Kernaussage „Backstage ist UI, keine Voraussetzung" |
+| Image fehlt in Harvester | Das in `env-config-virtualmachine.yaml` gepinnte Image (`sthings-u26` → `default/sthings-u26-<version>`) als `VirtualMachineImage` in Harvester prüfen; sonst `harvester-images/import-golden.sh`. **Achtung private CA**, ohne `additional-ca` schlägt der Download an TLS fehl |
 | Packer-Build zu langsam | Nur gemergten PR + fertiges `VirtualMachineImage` zeigen |
 | Live-Netz/DNS wackelt | Screenshots von PR-Diff, Komoplane-Baum und laufender VM in der Hinterhand |
 
-**Vor der Demo abhaken:** Golden-Images in Harvester importiert · `additional-ca`
-gesetzt · Backstage-Katalog frisch reindiziert · alter Demo-Claim aufgeräumt
-(Name ist sonst belegt) · Terminal-History vorbereitet · Schriftgrößen.
+**Vor der Demo abhaken:** das Runbook-Issue #309
+durchgehen — Lab hoch, gepinnte Golden-Images in Harvester, Generalprobe-VM
+läuft, Delete-Weg getestet, Backstage-Katalog frisch, alter Demo-Name
+aufgeräumt (sonst belegt), Terminal-History, Schriftgrößen.
 
 ---
 
