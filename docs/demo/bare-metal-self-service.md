@@ -50,6 +50,18 @@ er aus dem Repo generiert wird und nicht aus Visio.
 
 ## Ablauf
 
+Drei Teile, die aufeinander aufbauen (Runbook für die Generalprobe: #309):
+
+1. **Teil 1 — Dev-Image per Backstage** (Abschnitt 2): wasserdicht, läuft live
+   an und wird am Ende eingesammelt.
+2. **Teil 2 — Harvester-VM per Backstage + Argo CD** (Abschnitte 3–4). Die VM
+   bootet mit `os: ubuntu24` genau das Image aus Teil 1.
+3. **Teil 3 — Rancher-Cluster per `ClusterStack`** (Abschnitt 5).
+
+Choreografie: Teil 1 **zuerst anstoßen**, weil die Kette vom Klick bis zum Pin
+~25–30 min braucht (Zeit aus der Generalprobe in #309 eintragen). Während sie
+läuft, Teil 2 und 3 zeigen, danach zu Teil 1 zurück.
+
 ### 0 · Architektur-Frame (3 min)
 
 Interaktive Inventory-Seite öffnen (Tab *Topology*), auf `harvester` klicken.
@@ -87,7 +99,7 @@ später ein Lessons-Learned-Punkt.
 
 ---
 
-### 2 · Layer 1 — Golden Images als Self-Service mit zwei Geschwindigkeiten (5 min)
+### 2 · Teil 1 — Dev-Image als Self-Service mit zwei Geschwindigkeiten (5 min + Rückkehr)
 
 `packer/` zeigen — die Governance steckt im Ordner-Layout:
 
@@ -107,9 +119,24 @@ merged bei grün. Danach stößt der Auto-Merge `packer-release.yml` an: Release
 bei Dev selbst merged. Erst mit dem Pin booten neue VMs das neue Image.
 Berührt derselbe PR ein `golden/`-Verzeichnis, erzwingt CI die Review.
 
-**Live-Empfehlung:** einen bereits gemergten Dev-Image-PR aufrufen und den grünen
-Run zeigen, dazu das fertige Image in der Harvester-UI. Ein Packer-Build live
-laufen zu lassen kostet die halbe Demo.
+**Live:** Backstage → *Create* → **Create Harvester VM-Template**. Basis
+`ubuntu26` (→ `u26-dev`), einen User `demo` mit SSH-Key (kein `:` im
+Key-Kommentar), ein Paket (z. B. `htop`). **Nicht Rocky/Leap** — der Default
+`groups: sudo` passt dort nicht (offen aus #267). Absenden, dann:
+
+1. PR in `packer/dev/u26-dev/` zeigen: `users.yaml`, `packages.yaml`,
+   `build.pkrvars.hcl` (Golden-Basis + `.sha256`), `catalog-info.yaml`.
+2. GitHub → Actions: `packer-pr-build.yml` läuft auf dem `kvm`-Runner an.
+   **Hier weggehen** — weiter mit Abschnitt 3.
+3. **Rückkehr am Ende:** PR ist auto-gemergt, `packer-release.yml` hat
+   `u26-dev-<version>` released, der `pin-bot/u26-dev`-PR hat `u26-dev` und
+   `ubuntu24` in `env-config-virtualmachine.yaml` verschoben und sich selbst
+   gemergt. In Harvester: das Wegwerf-Image `u26-dev-pr<N>.<version>` und das
+   Release-Image. Wenn die Zeit reicht: `demo-vm-0` (Generalprobe, `ubuntu24`)
+   — der User `demo` kommt per Key rein.
+
+Das Showcase-Deck dazu liegt in `backstage-resources`
+(`templates/harvester-packer-devimage/showcase`, Slidev).
 
 > „Zwei Tiers, ein Mechanismus. Der Unterschied ist nicht das Tool, sondern
 > welcher Ordner angefasst wird."
@@ -215,10 +242,22 @@ genau der, nach dem im Betrieb gefragt wird.
 
 ---
 
-### 5 · Der Closer, falls Zeit bleibt (2 min, optional)
+### 5 · Teil 3 — Ein ganzer Rancher-Cluster (5 min)
 
-Derselbe Mechanismus, größeres Objekt — und diesmal **schon gelaufen**:
-`clusters/machinery-hv/xrs/app-dev-hv.yaml`. Eine `ClusterStack`-Bestellung,
+Derselbe Mechanismus, größeres Objekt: die Bestellung `demo-hv`
+(`clusters/machinery-hv/xrs/demo-hv.yaml`, #311). Je nach Laufzeit aus der
+Generalprobe (#309 Block 4) **live bestellen** (zu Beginn zusammen mit Teil 1
+mergen, hier die Stufen zeigen) oder den fertigen `demo-hv` zeigen:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+crossplane beta trace clusterstack demo-hv -n default
+```
+
+Stufen: node-ip (Clusterbook) → rancher (Machine-Pool) → VM/k3s → kubeconfig
+(OpenBao) → access → platform (cilium, Vault-Issuer) → Registrierung in Argo CD.
+
+Als Ausbau-Stufe daneben: `clusters/machinery-hv/xrs/app-dev-hv.yaml`. Eine `ClusterStack`-Bestellung,
 aus der Crossplane auf `machinery-hv` einen ganzen Cluster macht: IP aus
 Clusterbook, VM über den Rancher-Machine-Pool auf Harvester, Kubeconfig nach
 OpenBao, cilium, Vault-Issuer, Registrierung in Argo CD — danach rollen die
@@ -238,13 +277,15 @@ AppSets homerun2 und tabletennis aus. Zeigen: die ~50 Zeilen Bestellung, dann
 |---|---|---|
 | 0–3 | Architektur / Inventory | Browser: Inventory-Seite |
 | 3–7 | Layer 0: Blech + Runbook | Harvester-UI, `docs/install.md` |
-| 7–12 | Layer 1: Golden/Dev Images | GitHub PR, Harvester Images |
-| 12–24 | **Layer 2: VM per PR** | Backstage → GitHub → Argo CD / Terminal → Harvester |
-| 24–27 | Delete / Day 2 | Terminal, GitHub |
-| 27–30 | Lessons Learned | Slide |
+| 7–11 | **Teil 1 anstoßen**: Dev-Image per Backstage | Backstage → GitHub PR → Actions |
+| 11–21 | **Teil 2: VM per PR** | Backstage → GitHub → Argo CD / Terminal → Harvester |
+| 21–23 | Delete / Day 2 | GitHub, Argo CD |
+| 23–27 | **Teil 3: Rancher-Cluster** | GitHub, Terminal machinery-hv, Argo CD |
+| 27–29 | **Teil 1 einsammeln**: Release, Pin-PR, Image | GitHub, Harvester Images |
+| 29–30 | Lessons Learned | Slide |
 
-Puffer ist knapp. Bei Zeitdruck fällt **zuerst Abschnitt 5**, dann Abschnitt 1
-auf zwei Minuten zusammen. Abschnitt 3 und 4 sind unantastbar.
+Puffer ist knapp. Bei Zeitdruck fällt **zuerst Abschnitt 1** auf zwei Minuten
+zusammen, dann Delete. Teil 1 muss laufen, Teil 2 auch.
 
 ---
 
