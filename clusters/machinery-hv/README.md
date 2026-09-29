@@ -17,7 +17,7 @@ has open points listed at the end.
 | Domain | `machinery-hv.sthings.lab` |
 | Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
-| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.80.0` |
+| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
 
 ## Why not upgrade crossplane-mgmt
@@ -38,7 +38,7 @@ crossplane-mgmt keeps running `tabletennis` until its successor is built here.
 ```
 clusters/machinery-hv/              flux-system syncs this -- only what kustomization.yaml lists
   kustomization.yaml                the Flux objects below, NOT the subdirectories
-  git-repos.yaml                    flux-infra / flux-apps @ v1.80.0
+  git-repos.yaml                    flux-infra / flux-apps @ v1.95.0
   infra-platform.yaml               cilium, cert-manager + OpenBao issuer, openebs, UIs
   cicd-platform.yaml                crossplane (profile machinery) + tekton
   fleet-state.yaml                  -> ./fleet-state   prune: true
@@ -624,4 +624,32 @@ export KUBECONFIG=~/.kube/machinery-hv
 kubectl -n flux-system patch fluxinstance flux --type=merge \
   -p '{"spec":{"sync":{"ref":"refs/heads/main"}}}'
 kubectl -n flux-system get gitrepository flux-system -o jsonpath='{.spec.ref}{"  "}{.status.artifact.revision}'
+```
+
+### 12. flux v1.80.3 → v1.94.3 → v1.95.0 (2026-09-28)
+
+Three tags in one day, each taken through `git-repos.yaml`, never patched in
+place (the bundles own what they apply, so an in-place patch is reverted).
+
+- **v1.80.3** (#257, verified in #258 / harvester#267 step 1): both
+  GitRepositories on `v1.80.3`, 20/20 Kustomizations Ready, 51/51 packages
+  Healthy, and **no** `harvester-vm-defaults` EnvironmentConfig, so
+  `crossplane-capabilities` was not selected by accident.
+- **v1.94.3** (#272): the machinery profile's `crossplane-configs` moves
+  `cluster:v0.11.10` → `cluster:v0.12.3` (the machine-pool path, harvester#265).
+  Rendered at both tags first: every other path byte-identical. `rancher-cluster`
+  is a dependency, not in the catalog, so it was patched in place to v0.11.0
+  (#265 step 4); Flux does not revert it.
+- **v1.95.0** (#276): `COREDNS_ZONE_NODATA_TYPE: AAAA` (stuttgart-things/flux#567),
+  so CoreDNS answers AAAA in `sthings.lab` itself and musl in the Ansible pod
+  resolves `openbao.platform.sthings.lab` again. About 1 min without cluster DNS.
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n flux-system get gitrepository flux-infra flux-apps -o custom-columns=NAME:.metadata.name,REF:.spec.ref.tag
+kubectl -n flux-system get kustomizations        # 20/20 Ready
+kubectl get pkg                                  # 51/51 Healthy
+kubectl get configuration.pkg | grep -E 'cluster' # cluster v0.12.3, rancher-cluster v0.11.0, both Healthy
+kubectl get lock lock -o json | jq -r '.packages[].source' | sort | uniq -d   # empty
+kubectl get environmentconfigs | grep harvester-vm-defaults                   # nothing
 ```
