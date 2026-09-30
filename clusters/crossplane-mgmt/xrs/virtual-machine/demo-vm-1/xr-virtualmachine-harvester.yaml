@@ -1,0 +1,11 @@
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: XVirtualMachine
+metadata:
+  name: demo-vm-1
+  namespace: default
+spec:
+  size: small
+  provider: harvester
+  environment: harvester
+  os: sthings-u26
+  ansible: false
