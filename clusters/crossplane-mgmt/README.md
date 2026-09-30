@@ -46,6 +46,24 @@ them.
 
 ## Manual one-offs
 
+### provider-kubernetes runtime config (2026-09-30)
+
+The Provider is installed as a Configuration dependency and is not in git, so
+its `runtimeConfigRef` is set by hand. The DeploymentRuntimeConfig it points at
+is GitOps'd: [`platform/providers/drc-provider-kubernetes.yaml`](./platform/providers/drc-provider-kubernetes.yaml)
+(`--poll=1m`, see the comment there). After Argo CD has synced it:
+
+```bash
+export KUBECONFIG=~/.kube/crossplane-mgmt
+kubectl get deploymentruntimeconfigs.pkg.crossplane.io provider-kubernetes
+kubectl patch providers.pkg.crossplane.io crossplane-contrib-provider-kubernetes --type merge \
+  -p '{"spec":{"runtimeConfigRef":{"apiVersion":"pkg.crossplane.io/v1beta1","kind":"DeploymentRuntimeConfig","name":"provider-kubernetes"}}}'
+kubectl -n crossplane-system get $(kubectl -n crossplane-system get deploy -o name | grep provider-kubernetes) \
+  -o jsonpath='{.spec.template.spec.containers[0].args}'
+```
+
+Rollback: patch `name` back to `default`.
+
 
 
 
