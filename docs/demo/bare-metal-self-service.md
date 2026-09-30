@@ -59,8 +59,9 @@ Drei Teile, die aufeinander aufbauen (Runbook für die Generalprobe: #309):
 3. **Teil 3 — Rancher-Cluster per `ClusterStack`** (Abschnitt 5).
 
 Choreografie: Teil 1 **zuerst anstoßen**, weil die Kette vom Klick bis zum Pin
-~25–30 min braucht (Zeit aus der Generalprobe in #309 eintragen). Während sie
-läuft, Teil 2 und 3 zeigen, danach zu Teil 1 zurück.
+**~16 min** braucht (Generalprobe 2026-09-30: Klick 05:32:50 → PR-Build 6 min →
+Auto-Merge → Release 6,5 min → Pin 05:46:13 → Argo CD live 05:48:52). Während
+sie läuft, Teil 2 und 3 zeigen, danach zu Teil 1 zurück.
 
 ### 0 · Architektur-Frame (3 min)
 
@@ -125,15 +126,19 @@ Key-Kommentar), ein Paket (z. B. `htop`). **Nicht Rocky/Leap** — der Default
 `groups: sudo` passt dort nicht (offen aus #267). Absenden, dann:
 
 1. PR in `packer/dev/u26-dev/` zeigen: `users.yaml`, `packages.yaml`,
-   `build.pkrvars.hcl` (Golden-Basis + `.sha256`), `catalog-info.yaml`.
+   `catalog-info.yaml`. `build.pkrvars.hcl` (Golden-Basis + `.sha256`) ist
+   **nicht** im PR, sondern steht schon auf main — daneben im Repo zeigen.
 2. GitHub → Actions: `packer-pr-build.yml` läuft auf dem `kvm`-Runner an.
    **Hier weggehen** — weiter mit Abschnitt 3.
 3. **Rückkehr am Ende:** PR ist auto-gemergt, `packer-release.yml` hat
-   `u26-dev-<version>` released, der `pin-bot/u26-dev`-PR hat `u26-dev` und
-   `ubuntu24` in `env-config-virtualmachine.yaml` verschoben und sich selbst
-   gemergt. In Harvester: das Wegwerf-Image `u26-dev-pr<N>.<version>` und das
-   Release-Image. Wenn die Zeit reicht: `demo-vm-0` (Generalprobe, `ubuntu24`)
-   — der User `demo` kommt per Key rein.
+   `u26-dev-<version>` released, der `pin-bot/u26-dev`-PR hat den Alias
+   `ubuntu24` (der einzige Eintrag für u26-dev) in
+   `env-config-virtualmachine.yaml` verschoben und sich selbst gemergt. In
+   Harvester: das Release-Image. Das Wegwerf-Image `u26-dev-pr<N>.<version>`
+   ist dann **schon weg** — `prune-images.sh` löscht es im Release-Lauf, weil
+   der PR geschlossen ist. Wer es zeigen will: in den ~6 min zwischen PR-Build
+   und Release in die Harvester-Images schauen. Wenn die Zeit reicht:
+   `demo-vm-0` (Generalprobe, `ubuntu24`) — der User `demo` kommt per Key rein.
 
 Das Showcase-Deck dazu liegt in `backstage-resources`
 (`templates/harvester-packer-devimage/showcase`, Slidev).
@@ -185,12 +190,13 @@ Merge.
 
 **3.3 Reconcile (4 min)** — Argo CD: App `showcase-crossplane-xrs` →
 *Refresh* (statt ~3 min Poll). Der App-Baum zeigt das neue `XVirtualMachine`.
+Generalprobe: **Merge → XR Ready in 72 s**.
 Parallel im Terminal gegen `crossplane-mgmt`:
 
 ```bash
 export KUBECONFIG=~/.kube/crossplane-mgmt
 kubectl get xvirtualmachines.resources.stuttgart-things.com -A -w
-crossplane beta trace xvirtualmachine <name> -n default   # XR → HarvesterVM → Managed Resources
+crossplane resource trace xvirtualmachine <name> -n default   # XR → HarvesterVM → Managed Resources
 ```
 
 Hier sichtbar machen: Crossplane läuft auf `crossplane-mgmt` und schreibt über
@@ -198,18 +204,31 @@ die `ClusterProviderConfig harvester` in den *anderen* Cluster — Harvester.
 Und: Argo CD auf `platform` verwaltet nur Git → `crossplane-mgmt`, nicht die VM.
 
 **3.4 Die VM (3 min)** — Harvester-UI (Namespace `vms`): PVC wird angelegt,
-VM bootet, Guest-Agent meldet die IP (`status.share.ip` am XR). Dann aus dem
-Terminal per SSH rein.
+VM bootet, Guest-Agent meldet die IP. Die IP **an der Quelle** zeigen — die
+Harvester-UI oder:
+
+```bash
+KUBECONFIG=~/.kube/harvester kubectl get vmi -n vms <name>
+```
+
+`status.share.ip` am XR hing in der Generalprobe ~10 min hinter *Ready*
+(provider-kubernetes pollte alle 10 min); seit #320 pollt er jede Minute, für
+die Bühne trotzdem nicht darauf warten. Dann per SSH rein. DHCP vergibt IPs
+neu, `known_hosts` hat oft einen alten Key für dieselbe IP — vorher
+`ssh-keygen -R <ip>` oder auf der Bühne
+`ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no …`.
 
 > „Von *Formular abgeschickt* bis *SSH* — und der einzige menschliche Eingriff
 > dazwischen war ein Merge-Klick."
 
-**3.5 Rückweg in den Katalog (kurz)** — Backstage-Katalog neu laden: die neue
-Komponente ist da, weil `catalog-info.yaml` im selben PR lag und
-`.backstage/catalog-index.sh` sie in `.backstage/catalog-locations.yaml`
-aufnimmt. **In der Generalprobe prüfen**, ob der Index-Lauf nach dem Merge
-automatisch kommt (PR #198 des catalog-bot ist seit 2026-09-14 offen) —
-sonst `.backstage/catalog-index.sh` vorher laufen lassen oder den Punkt weglassen.
+**3.5 Rückweg in den Katalog (kurz)** — Nach dem Merge öffnet der
+catalog-bot von selbst den PR `catalog-bot/refresh` („[catalog-bot]“), der
+`catalog-info.yaml` in `.backstage/catalog-locations.yaml` aufnimmt. Er merged
+**nicht** selbst: zeigen („der Katalog pflegt sich per PR“), mergen, dann in
+Backstage die Location refreshen. Die VM erscheint unter Kind **Component**,
+Type **`crossplane-claim`** — nicht unter Resources. (Seit dem Backstage-Neustart
+am 2026-09-30 lädt die Instanz den Index dieses Repos wirklich; vorher hing sie
+auf dem sthings-dev-Index.)
 
 > **Deadtime-Trick:** Während die VM bootet, den zweiten, vorbereiteten PR
 > mergen (siehe *Plan B*) oder Abschnitt 4 vorziehen. Nie schweigend auf einen
@@ -219,9 +238,25 @@ sonst `.backstage/catalog-index.sh` vorher laufen lassen oder den Punkt weglasse
 
 ### 4 · Day 2 — Löschen ist der ehrlichere Teil (3 min)
 
-Backstage-Template *Delete Resource Claim* — **nur wenn es in der Generalprobe
-das XR unter `clusters/crossplane-mgmt/xrs` gefunden hat** (es arbeitet über
-`claims/registry.yaml`). Sonst derselbe Effekt als Hand-PR:
+**Löschen = den Bestell-PR reverten.** Im gemergten Bestell-PR auf GitHub
+**„Revert“** → „Create pull request“. Der Revert-PR entfernt genau, was die
+Bestellung angelegt hat: das Verzeichnis und die Zeile in der
+Parent-Kustomization. CI grün, mergen → Argo CD `prune: true` → das XR
+verschwindet, Crossplane löscht VM, PVC und cloud-init-Secret in Harvester.
+Generalprobe: **49 s** vom Merge bis alles weg ist (#323 revertet #318).
+
+Regeln:
+
+- **Nur den zuletzt gemergten Bestell-PR** reverten — alle Bestellungen
+  ändern dieselbe Parent-`kustomization.yaml`; kam danach eine weitere dazu,
+  meldet der Revert-Button einen Konflikt.
+- **Keinen Packer-PR** reverten: der Revert ist wieder ein Dev-PR, baut,
+  merged, released und pinnt neu (~15 min). Ein Image-Rollback ist ein
+  Revert des **Pin-PRs**.
+
+Das Backstage-Template *Delete Resource Claim* **nicht** verwenden: sein Picker
+fragt die Machinery-Registry-API, die nicht deployt ist (404), und das Template
+ist seit dem Katalog-Wechsel nicht mehr im Katalog. Fallback ohne GitHub-UI:
 
 ```bash
 git switch -c chore/delete-<name>
@@ -229,10 +264,6 @@ git rm -r clusters/crossplane-mgmt/xrs/virtual-machine/<name>
 # Eintrag aus clusters/crossplane-mgmt/xrs/virtual-machine/kustomization.yaml entfernen
 git commit -am "chore(crossplane-mgmt): delete VM <name>" && gh pr create --fill
 ```
-
-PR zeigen: Verzeichnis weg, Parent-Kustomization bereinigt. Mergen → Argo CD
-`prune: true` → das XR verschwindet, Crossplane löscht VM und PVC in Harvester,
-die Komponente fällt aus dem Backstage-Katalog.
 
 > „Es gibt keinen zweiten Weg. Wer das XR von Hand löscht, bekommt es von
 > Argo CD zurück."
@@ -251,11 +282,23 @@ mergen, hier die Stufen zeigen) oder den fertigen `demo-hv` zeigen:
 
 ```bash
 export KUBECONFIG=~/.kube/machinery-hv
-crossplane beta trace clusterstack demo-hv -n default
+crossplane resource trace clusterstack demo-hv -n default
 ```
 
 Stufen: node-ip (Clusterbook) → rancher (Machine-Pool) → VM/k3s → kubeconfig
 (OpenBao) → access → platform (cilium, Vault-Issuer) → Registrierung in Argo CD.
+
+Generalprobe: Rancher-Cluster angelegt 07:16:57 → VM läuft 07:17:20 →
+`access` 07:25:24 → `platform` 07:26:55 → `ready` 08:26:14. Die Stunde dazwischen
+waren drei Blocker, keiner davon Laufzeit: Umzug der Hardware, voller
+Clusterbook-Pool (#309, `.174/.175` ergänzt) und clusterbook-operator v0.20.0
+gegen die neuen Network-AppSets (#332). Ohne sie **~15–20 min**. Für die Bühne
+deshalb: **`demo-hv` fertig zeigen**, nicht live bestellen. `demo-hv`
+war die **erste Bestellung mit der eingeschränkten Identität**
+`crossplane-machinery` und `no-creator-rbac`: der Rancher-Webhook verlangte
+`get` auf das Cloud-Credential (#325). Seitdem legt Rancher den Cluster ohne
+`creatorId` an — die Identität wird nicht Owner der Cluster, die sie baut.
+Das ist selbst eine Folie wert.
 
 Als Ausbau-Stufe daneben: `clusters/machinery-hv/xrs/app-dev-hv.yaml`. Eine `ClusterStack`-Bestellung,
 aus der Crossplane auf `machinery-hv` einen ganzen Cluster macht: IP aus
@@ -294,6 +337,10 @@ zusammen, dann Delete. Teil 1 muss laufen, Teil 2 auch.
 | Risiko | Vorbereitung |
 |---|---|
 | Argo-CD-Poll (~3 min) | *Refresh* in der App `showcase-crossplane-xrs`; nie auf den Poll warten |
+| IP fehlt am XR (`share.ip: []`) | IP aus `kubectl get vmi -n vms` bzw. der Harvester-UI zeigen |
+| SSH: *REMOTE HOST IDENTIFICATION HAS CHANGED* | `ssh-keygen -R <ip>` vorher, oder `-o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no` |
+| Delete-Template / Registry | Revert-Button am Bestell-PR (Abschnitt 4), getestet |
+| `demo-vm-0` bei Pin-Wechsel durch Teil 1 | Getestet: VM läuft weiter, SSH geht, XR bleibt Ready, Argo Synced — nur das Disk-Object wird `Synced=False` (PVC-Spec unveränderlich). Nach Teil 1 den Trace von `demo-vm-0` **nicht** zeigen, oder als ehrlichen Befund |
 | VM-Boot dauert | Zweiter, identischer PR bereits gemergt und die VM **läuft** — als Schnitt „hier eine, die ich vorbereitet habe" |
 | claim-machinery-api / Backstage nicht erreichbar | Das XR aus der Generalprobe kopieren, Name ändern, als PR nach `clusters/crossplane-mgmt/xrs/virtual-machine/` — das ist ohnehin die Kernaussage „Backstage ist UI, keine Voraussetzung" |
 | Image fehlt in Harvester | Das in `env-config-virtualmachine.yaml` gepinnte Image (`sthings-u26` → `default/sthings-u26-<version>`) als `VirtualMachineImage` in Harvester prüfen; sonst `harvester-images/import-golden.sh`. **Achtung private CA**, ohne `additional-ca` schlägt der Download an TLS fehl |
@@ -308,6 +355,13 @@ aufgeräumt (sonst belegt), Terminal-History, Schriftgrößen.
 ---
 
 ## Lessons Learned — Vorschlag
+
+> Aus der Generalprobe (2026-09-30, #309): Die Kette selbst lief. Aufgehalten
+> hat, was *zwischen* den Repos und Versionen driftet — Backstage lud eine alte
+> Katalog-Config (subPath-Mount, kein Neustart), ein RBAC-Kommentar behauptete
+> das Gegenteil des Webhook-Codes (#325), die Network-AppSets verlangten ein
+> Label, das erst die nächste Operator-Version setzt (#332), und der
+> Clusterbook-Pool war leer. Kandidat für eine eigene Folie.
 
 Der bestehende Slide hat drei Bullets im Ton „Erkenntnis, nicht Feature". In
 demselben Ton, passend zu **dieser** Demo. Drei bis vier auswählen — mehr
