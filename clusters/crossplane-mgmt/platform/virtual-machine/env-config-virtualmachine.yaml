@@ -54,8 +54,8 @@ data:
         imageId: default/sthings-leap
         storageClassName: lh-3a6f72f1-c87e-44c3-b136-4020dbefea6c
       leap-dev:
-        imageId: default/leap-dev-26.928.0910
-        storageClassName: lh-7309ad37-8673-4292-9217-b6758cd56e4d
+        imageId: default/leap-dev-26.930.0912
+        storageClassName: lh-01d1c654-c06f-484c-ae48-1c2324cd4557
     providerConfigRef: harvester
     namespace: vms                                               # on the HARVESTER cluster
     networkName: default/vms
