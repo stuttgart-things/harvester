@@ -7,11 +7,6 @@ metadata:
 spec:
   targets:
     - ../catalog-info.yaml
-    - ../claims/apps/dev-vm/catalog-info.yaml
-    - ../claims/infra/demo1/catalog-info.yaml
-    - ../claims/infra/martin/catalog-info.yaml
-    - ../claims/infra/movies/catalog-info.yaml
-    - ../claims/infra/test123/catalog-info.yaml
     - ../clusters/crossplane-mgmt/xrs/infra/demo-ns/catalog-info.yaml
     - ../clusters/crossplane-mgmt/xrs/infra/martin-demo-ns/catalog-info.yaml
     - ../clusters/crossplane-mgmt/xrs/infra/silvio/catalog-info.yaml
