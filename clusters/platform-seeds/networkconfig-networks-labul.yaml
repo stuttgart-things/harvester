@@ -70,6 +70,29 @@
 # (clusterbook runs LOAD_CONFIG_FROM=cr, no PVC), so git can define its initial
 # contents and must not define its ongoing contents.
 #
+# ---------------------------------------------------------------------------
+# 2026-09-30: POOL EXTENDED BY .174 AND .175 -- IN THE LIVE CR, NOT HERE.
+#
+# The pool was exhausted: 8 addresses (171-173, 176-180), all ASSIGNED to live
+# clusters. demo-hv's node took the last one (172), and the clusterbook-operator
+# then failed its gateway/DNS reservation for ever:
+#
+#   reserve IP: reserve request returned status 409: {"error":"no available IPs in network"}
+#
+# -> no Argo CD cluster secret, no platform apps, ClusterStack stuck at
+# `platform` (harvester#309, block 4). .174/.175 answered no ping, had no ARP
+# entry and no DNS name, and nothing in this repo referenced them. Added with:
+#
+#   kubectl -n clusterbook patch networkconfig networks-labul --type json -p \
+#     '[{"op":"add","path":"/spec/networks/192.168.10/-","value":"174"},
+#       {"op":"add","path":"/spec/networks/192.168.10/-","value":"175"}]'
+#
+# clusterbook picked it up at once (Total 10, Available 2) and demo-hv got 175.
+# The list below is NOT updated: this file is a seed (`ssa: Ignore`), the live
+# CR is the database, and a new install seeded from here would not know which
+# of these addresses are really free. Extend a fresh pool the same way, after
+# checking the router's DHCP range.
+#
 # ORDERING — THIS IS WHY THE FILE LIVES OUTSIDE clusters/platform.
 #
 # flux-system applies clusters/platform RECURSIVELY, and a Kustomization fails
