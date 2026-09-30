@@ -5,3 +5,6 @@ packages:
   - git
   - jq
   - nginx
+  - yq
+  - tmux
+  - glances

@@ -12,3 +12,9 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
     ssh_authorized_keys:
       - volkey # pragma: allowlist secret
+  - name: sven
+    groups: sudo
+    shell: /bin/bash
+    sudo: ALL=(ALL) NOPASSWD:ALL # pragma: allowlist secret
+    ssh_authorized_keys:
+      - hallo # pragma: allowlist secret
