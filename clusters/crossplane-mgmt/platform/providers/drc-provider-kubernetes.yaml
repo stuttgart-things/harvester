@@ -1,0 +1,31 @@
+---
+# Runtime config for provider-kubernetes only. It used to share `default` with
+# provider-kubeconfig; this copy keeps default's env and adds a shorter poll.
+#
+# --poll=1m: provider-kubernetes re-reads an Object's remote resource only once
+# per poll interval (default 10m) unless the Object itself changes. The
+# harvester-vm Composition reads a VM's IP from an Observe-only Object on the
+# VMI, whose first snapshot is taken before the guest agent reports. With 10m,
+# XVirtualMachine status.share.ip stayed [] for ~10 min after Ready (harvester#309,
+# 2026-09-30). 34 Objects on this cluster, so 1m is ~34 GETs/min.
+#
+# The Provider object is NOT in git (installed as a Configuration dependency),
+# so pointing it at this config is a manual patch -- see ../../README.md,
+# "Manual one-offs".
+apiVersion: pkg.crossplane.io/v1beta1
+kind: DeploymentRuntimeConfig
+metadata:
+  name: provider-kubernetes
+spec:
+  deploymentTemplate:
+    spec:
+      selector: {}
+      template:
+        spec:
+          containers:
+            - name: package-runtime
+              args:
+                - --poll=1m
+              env:
+                - name: ENABLE_SERVER_SIDE_APPLY
+                  value: "false"
