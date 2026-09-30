@@ -36,8 +36,8 @@ data:
   harvester:
     images:
       ubuntu24:                                                  # alias for u26-dev
-        imageId: default/u26-dev-26.930.0539
-        storageClassName: lh-0596cfcb-ec50-4015-ac93-1c7a1710a0cf
+        imageId: default/u26-dev-26.930.0720
+        storageClassName: lh-10c3bcce-ff3e-4938-bcf9-b4b23c8ee32b
       sthings-u26:                                               # alias -> newest build
         imageId: default/sthings-u26-26.928.0903
         storageClassName: lh-ed436c27-9813-4e94-bbcb-b9f56a6fb11e
