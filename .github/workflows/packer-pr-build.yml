@@ -297,9 +297,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "All dev builds succeeded. Auto-merging PR #${{ github.event.pull_request.number }}..."
+          # No --auto -- same reason as the pin job in packer-release.yml: with
+          # auto-merge disabled in the repo, --auto fails as soon as any check
+          # is still pending. Every dev build is green here (needs: build).
           gh pr merge ${{ github.event.pull_request.number }} \
             --repo "${{ github.repository }}" \
-            --auto \
             --squash \
             --delete-branch
 
@@ -308,7 +310,7 @@ jobs:
       # this step a self-service dev image is tested but never released or
       # pinned (harvester#270). workflow_dispatch is the exception GitHub
       # allows, so dispatch the release per image. Wait for the merge first:
-      # --auto may queue it, and the release must build the merged main.
+      # the merge above is immediate now (no --auto), the wait just confirms it.
       - name: Dispatch the release
         env:
           GH_TOKEN: ${{ github.token }}
