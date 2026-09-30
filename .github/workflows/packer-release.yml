@@ -227,10 +227,15 @@ jobs:
         if: inputs.tier == 'dev' && steps.pr.outputs.pull-request-number != ''
         env:
           GH_TOKEN: ${{ github.token }}
+        # No --auto: auto-merge is off in this repo (allow_auto_merge: false), and
+        # with --auto gh tries to ENABLE it whenever a check is still pending --
+        # GraphQL refuses ("Auto merge is not allowed for this repository") and
+        # the pin PR stays open (#326, 2026-09-30: PR Lint was action_required).
+        # There are no required checks on main, so a plain merge is what --auto
+        # did whenever nothing happened to be pending.
         run: |
           gh pr merge "${{ steps.pr.outputs.pull-request-number }}" \
             --repo "${{ github.repository }}" \
-            --auto \
             --squash \
             --delete-branch
 
