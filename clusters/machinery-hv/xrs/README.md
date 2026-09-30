@@ -51,7 +51,6 @@ address, the same OpenBao mounts and the same Argo CD registration.
 |---|---|---|
 | `app-dev-hv.yaml` | yes | the first order (2026-09-28), admin credential as creator; homerun2 + tabletennis |
 | `app-dev-hv-backup.yaml` | yes | app-dev-hv's CNPG backup bucket |
-| `demo-hv.yaml` | yes | demo order for 2026-09-30 (harvester#309 part 3), base platform only, first order with `no-creator-rbac` |
 
 ## Build log: demo-hv (2026-09-30, harvester#309 block 4)
 
