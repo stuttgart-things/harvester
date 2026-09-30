@@ -43,9 +43,8 @@ spec:
       # rejected by the Gateway API validation, failing the whole Kustomization.
       INFRA_DOMAIN: platform.sthings.lab
       # Same for the HTTPRoute parentRef: ks-argo-cd defaults GATEWAY_NAME to
-      # cilium-gateway, which does not exist here. Left unset, this route and
-      # apps/argo-cd-httproute.yaml fight over argocd/argocd-server and the UI
-      # 404s whenever the bundle wins.
+      # cilium-gateway, which does not exist here; left unset, the UI 404s at
+      # the gateway. The bundle is the only owner of argocd/argocd-server.
       INFRA_GATEWAY_NAME: platform-sthings-gateway
       INFRA_GATEWAY_NAMESPACE: default
       INGRESS_SECRET_NAME: argocd-server-tls # pragma: allowlist secret
