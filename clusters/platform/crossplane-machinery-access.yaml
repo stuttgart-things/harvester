@@ -43,10 +43,17 @@
 # app-dev-hv keeps `system:admin`; the webhook refuses the annotation on an
 # existing creator, and the Object would re-apply it for ever.
 #
+# (1c)  `get` on the ONE Secret cattle-global-data/cc-cl944, the Harvester
+#       cloud credential the Cluster references. Webhook v0.10.6
+#       (validateCloudCredentialAccess) runs a SubjectAccessReview for exactly
+#       that on every CREATE, and answers `denied the request: Unauthorized`
+#       without it -- the first order with this identity (demo-hv, 2026-09-30,
+#       harvester#309) hit it. This comment used to claim the webhook does not
+#       check; it does. Trade-off: the identity can read that credential
+#       (Harvester kubeconfig). resourceNames keeps it to that one Secret.
+#
 # DELIBERATELY NOT GRANTED:
-#   - Secrets in cattle-global-data: the Harvester cloud credential is only
-#     referenced by name (cattle-global-data:cc-cl944); webhook v0.10.6 does
-#     not check access to it on a provisioning Cluster.
+#   - Any other Secret in cattle-global-data (the other cloud credentials).
 #   - Secrets in c-m-<id> (1f): only Rancher >= 2.15 writes the registration
 #     token Secret there. This Rancher is 2.14.2.
 # Each shows up as `forbidden` on the composed Object when it is needed.
@@ -108,6 +115,32 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: crossplane-machinery
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-machinery
+    namespace: crossplane-machinery
+---
+# (1c) see the header. A NEW cloud credential needs its name added here.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: crossplane-machinery-cloud-credential
+  namespace: cattle-global-data
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["cc-cl944"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-machinery-cloud-credential
+  namespace: cattle-global-data
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery-cloud-credential
 subjects:
   - kind: ServiceAccount
     name: crossplane-machinery
