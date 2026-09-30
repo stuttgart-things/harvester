@@ -1,0 +1,20 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: xrs-test
+  description: Crossplane claim (xr-rancher-cluster-harvester) - xrs-test
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/clusters/crossplane-mgmt/xrs/infra/xrs-test
+    claim-machinery/template: xr-rancher-cluster-harvester
+    claim-machinery/category: infra
+  tags:
+    - crossplane
+    - claim
+    - xr-rancher-cluster-harvester
+    - infra
+spec:
+  type: crossplane-claim
+  lifecycle: production
+  owner: platform-team
