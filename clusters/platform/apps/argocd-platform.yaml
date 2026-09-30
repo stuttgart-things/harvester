@@ -60,7 +60,11 @@ spec:
       # to this file. Unset would mean channel `none` and no delivery.
       ARGO_CD_TEAMS_CHANNEL: "platform"
       CLUSTERBOOK_OPERATOR_NAMESPACE: clusterbook-system
-      CLUSTERBOOK_OPERATOR_VERSION: v0.20.0
+      # v0.21.0: stamps clusterbook.stuttgart-things.com/cluster-ready, which the
+      # network AppSets gate on since stuttgart-things/argocd#566 (2026-09-30).
+      # On v0.20.0 no cluster had it, so every network AppSet matched nothing
+      # (demo-hv never got cert-manager; app-dev-hv's cert-manager app vanished).
+      CLUSTERBOOK_OPERATOR_VERSION: v0.21.0
       # clusterbook backend for the bundled ClusterbookProviderConfig/default.
       # apps/clusterbook-operator-config.yaml applies the same object from the
       # flux-system Kustomization, so both must name the same URL -- otherwise
