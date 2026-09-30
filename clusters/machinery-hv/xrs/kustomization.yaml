@@ -16,5 +16,3 @@ resources:
   - app-dev-hv.yaml
   # its CloudNativePG backup target (bucket per source cluster) -- see the file
   - app-dev-hv-backup.yaml
-  # demo order for 2026-09-30 (harvester#309 part 3)
-  - demo-hv.yaml
