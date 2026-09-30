@@ -131,3 +131,20 @@ kubectl -n argocd get secret -l argocd.argoproj.io/secret-type=cluster -o json \
 
 **`ready` at 08:26:14.** Without the three stops, rancher -> ready is roughly
 15-20 min (VM at +0.5 min, `access` at +8.5 min, `platform` at +10 min).
+
+**Teardown (2026-09-30, after the demo).** Git first, then the cluster: with
+`prune: disabled` a merge does not delete the object, it only stops Flux from
+re-applying `platformEnabled: true` or recreating it mid-teardown (#340).
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+flux reconcile ks machinery-hv-xrs -n flux-system --with-source    # demo-hv still there, now unmanaged
+kubectl patch clusterstack demo-hv --type=merge -p '{"spec":{"platformEnabled":false}}'   # 15:17:06
+kubectl get platform demo-hv-platform -n default                   # gone at 15:17:51
+kubectl delete clusterstack demo-hv --wait=false                    # 15:17:59
+# 15:18:45: ClusterStack, Rancher Cluster and Harvester VM gone
+curl -sk https://clusterbook.platform.sthings.lab/api/v1/networks   # Assigned 7, Available 3: .172/.175 released
+```
+
+Checked afterwards: no ClusterbookCluster, no Argo CD cluster secret, apps or
+project, no PVC on Harvester, no managed resource or Secret on machinery-hv.
