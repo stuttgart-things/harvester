@@ -10,6 +10,7 @@ nav:
       - Overview: architecture/overview.md
       - Claim Lifecycle: architecture/claim-lifecycle.md
       - Claim Registry: architecture/claim-registry.md
+      - Dev Image Chain: architecture/dev-image-chain.md
   - Services:
       - Claims CLI: services/claims-cli.md
       - Claim Registry API: services/claim-registry-api.md
