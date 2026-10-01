@@ -9,6 +9,12 @@
 # XVirtualMachine status.share.ip stayed [] for ~10 min after Ready (harvester#309,
 # 2026-09-30). 34 Objects on this cluster, so 1m is ~34 GETs/min.
 #
+# --enable-watches: lets an Object with `watch: true` be re-read when the remote
+# resource CHANGES instead of on the next poll. harvester-vm v0.1.13 sets it on
+# the VMI Object (virtual-machine v0.1.15 pulls it), so the IP arrives as soon
+# as the guest agent reports (harvester#345). Objects without `watch` keep
+# polling, so --poll=1m stays until it is clear nothing else needs it.
+#
 # The Provider object is NOT in git (installed as a Configuration dependency),
 # so pointing it at this config is a manual patch -- see ../../README.md,
 # "Manual one-offs".
@@ -26,6 +32,7 @@ spec:
             - name: package-runtime
               args:
                 - --poll=1m
+                - --enable-watches
               env:
                 - name: ENABLE_SERVER_SIDE_APPLY
                   value: "false"
