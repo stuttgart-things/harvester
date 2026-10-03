@@ -147,8 +147,11 @@ took the upgrade path (Helm revision 2 → 3), still 1.20.2. The 7 `changed` tas
 - `Upgrade cilium configuration`: by design; it always runs `cilium upgrade`.
 - `Generate self-signed certificate` + `Create cert-manager namespace and
   secret`: **a new root CA on every run.** Nothing here uses that CA (the infra
-  bundle builds its own chain in cert-manager), but it is not idempotent. The
-  role should keep an existing `root-ca.pem` (deploy-configure-rke follow-up).
+  bundle builds its own chain in cert-manager), but it is not idempotent.
+  **Fixed in sthings.rke 26.1003.1401** (deploy-configure-rke 2026.10.03-2,
+  stuttgart-things/deploy-configure-rke#44): the role keeps an existing
+  `root-ca.pem` and applies the secret idempotently, and `k3s_cluster` now sets
+  `create_root_cert: false`, so this play skips the block entirely.
 
 **UFW:** baseos/`configure_rke_node` leaves UFW active with an allow list
 (22, 443, 6443, 8472/udp, 30000-33000, ...). It has no rule for 80/tcp, nor for
