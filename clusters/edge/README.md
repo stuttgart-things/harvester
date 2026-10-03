@@ -25,7 +25,7 @@ not from Git.
 | Domain | `edge-tt-test1.4sthings.tiab.ssc.sva.de` (Clusterbook DNS wildcard) for the lab test; changes on the hardware |
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (cilium-cli 0.20.1, Gateway API v1.6.1), no kube-proxy, no flannel, no traefik, no servicelb |
 | Storage | k3s `local-path` (the default class). Nothing here is meant to survive the box. |
-| Certificates | cert-manager, self-signed root → `cluster-ca` → `*.<INFRA_DOMAIN>` |
+| Certificates | cert-manager, ClusterIssuer `edge-ca`: the **persistent** edge root → intermediate → `*.<INFRA_DOMAIN>` ([The edge CA](#the-edge-ca)) |
 | Secrets | SOPS only: [`apps/edge-secrets-subst.enc.yaml`](./apps/edge-secrets-subst.enc.yaml), decrypted by Flux |
 | GitOps | Flux Operator, syncing `clusters/edge`; content from `oci://ghcr.io/stuttgart-things/flux/repo` |
 
@@ -87,6 +87,36 @@ can be stopped or removed without touching it (`flux suspend ks edge-apps`).
    On this fresh test node that was intended: 11:13 merge, infra Ready again
    about 8 minutes later. On a node that matters, set
    `kustomize.toolkit.fluxcd.io/prune: disabled` on the moving objects first.
+
+## The edge CA
+
+One root for everything on the box: the gateway wildcard now, and the OpenBao
+ACME issuer for the ESP32 devices later (harvester#364, phase 3). It is
+**persistent**: generated once (2026-10-03) and kept in git, so a reinstall,
+or the move to the LattePanda, does not change what clients and devices
+trust.
+
+| | Where | |
+|---|---|---|
+| Root CA, public | [`edge-root-ca.crt`](./edge-root-ca.crt) | `O=stuttgart-things, CN=stuttgart-things edge root CA`, EC P-384, valid until 2046-10-03. **This is what clients and devices trust.** |
+| Root key + all intermediate keys | `secrets/edge-root-ca.enc.yaml` (repo root, SOPS) | **offline**: outside every Flux path, never in the cluster. Only needed to sign a new intermediate. |
+| Intermediate "(cert-manager)" | [`infra/ca/edge-ca.enc.yaml`](./infra/ca/edge-ca.enc.yaml) (SOPS) | EC P-256, 5 years (until 2031-10-03), `pathlen:0`. Secret `cert-manager/edge-ca`: `tls.crt` = intermediate + root, `ca.crt` = root. |
+| Issuer | [`infra/ca/clusterissuer.yaml`](./infra/ca/clusterissuer.yaml) | ClusterIssuer `edge-ca`; `CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca` makes the gateway wildcard come from it |
+
+The self-signed `cluster-ca` from `cert-manager-selfsigned` still exists. It is
+regenerated per install, and nothing that clients see uses it any more.
+
+```bash
+# trust it on a client
+sudo cp clusters/edge/edge-root-ca.crt /usr/local/share/ca-certificates/edge-root-ca.crt && sudo update-ca-certificates
+# check the chain the gateway serves
+openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcerts </dev/null | grep -E "s:|i:"
+```
+
+**A new intermediate** (OpenBao in phase 3, or a rotation) is signed with the
+root from `secrets/edge-root-ca.enc.yaml`. Decrypt it only locally, into a
+scratch directory, and shred it afterwards. The new intermediate key goes
+SOPS-encrypted next to the existing ones; the root key never leaves that file.
 
 ## What runs here, and what deliberately does not
 

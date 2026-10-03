@@ -1,0 +1,35 @@
+---
+# Applies ./ca (the persistent edge intermediate + ClusterIssuer edge-ca) in a
+# Kustomization of its own:
+#   - the Secret lives in namespace cert-manager, which cert-manager-install
+#     creates -- dependsOn it instead of failing the edge-infra apply on a fresh
+#     cluster;
+#   - it carries a SOPS file, so it needs its own decryption block (the
+#     FluxInstance's sops patch only reaches flux-system; README, Layout).
+# cert-manager-selfsigned's wildcard Certificate waits for this issuer, so
+# infra-platform (wait: true) becomes Ready only after it -- no deadlock: this
+# one depends on cert-manager-install, not on infra-platform.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: edge-ca
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  dependsOn:
+    - name: cert-manager-install
+  interval: 1h
+  retryInterval: 30s
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/infra/ca
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age # pragma: allowlist secret

@@ -7,10 +7,9 @@
 # nothing here reaches a lab service. Not selected, compared with machinery-hv
 # and homerun2-dev:
 #
-#   cert-manager-vault-issuer -- no OpenBao. cert-manager-selfsigned builds its
-#     own chain: selfsigned → cluster-ca (CA issuer) → *.INFRA_DOMAIN.
-#     CERT_MANAGER_SELFSIGNED_ISSUER is therefore left at its default
-#     (cluster-ca).
+#   cert-manager-vault-issuer -- no OpenBao (yet: harvester#364 phase 3). The
+#     gateway wildcard comes from the persistent edge CA instead
+#     (CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca, ./ca).
 #   coredns-lab-zone -- forwards to the lab router. On the edge, clients resolve
 #     *.INFRA_DOMAIN themselves (README, "DNS on the edge").
 #   openebs -- k3s ships local-path as the default StorageClass. Adding
@@ -80,6 +79,11 @@ spec:
       INFRA_GATEWAY_NAME: edge-gateway
       INFRA_GATEWAY_NAMESPACE: default
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+      # The wildcard is issued by the persistent edge CA (./ca, ClusterIssuer
+      # edge-ca), not by the component's self-signed cluster-ca -- that one is
+      # regenerated on every install. cluster-ca stays (MinIO's unused
+      # pre-release Certificates still name it).
+      CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
 
       # ---- cilium-lb ------------------------------------------------------
       # ONE address on the node's LAN, the Gateway's VIP. Lab test node
