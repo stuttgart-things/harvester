@@ -17,4 +17,7 @@ resources:
   - flux-sources.yaml
   - infra-platform.yaml
   - homerun2.yaml
+  # -> ./homerun2-notify: the catcher's routing ConfigMap, in its own
+  #    Kustomization (namespace homerun2 does not exist before homerun2 runs)
+  - homerun2-notify.yaml
   - tabletennis.yaml

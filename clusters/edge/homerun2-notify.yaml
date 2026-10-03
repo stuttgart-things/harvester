@@ -1,0 +1,29 @@
+---
+# Applies ./homerun2-notify (the notification-catcher's routing ConfigMap) in a
+# Kustomization of its own, NOT through flux-system.
+#
+# The ConfigMap lives in namespace homerun2, which only the homerun2
+# Kustomization creates. Listed in ./kustomization.yaml, it would make the
+# flux-system apply fail on a fresh cluster -- and since flux-system is what
+# creates the homerun2 Kustomization, nothing would ever create the
+# namespace: deadlock (the hardware install starts fresh). On its own, this one
+# fails and retries until homerun2 has created the namespace, then applies; the
+# notification-catcher pod mounts it and homerun2 (wait: true) gets Ready.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-notify
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/homerun2-notify
