@@ -1,4 +1,7 @@
-# Flux never reads ./k3s: inventory, vars and runbook for the k3s install
-# (run by hand / by dagger, not by a controller). kustomization.yaml already
-# lists only the Flux objects; this keeps it that way even if that file goes.
+# Flux never reads these: they are run by hand / by dagger, not by a controller.
+#   ./k3s        inventory, vars and runbook for the k3s install (Ansible)
+#   ./terraform  Terraform roots for the on-node services (MinIO, OpenBao)
+# kustomization.yaml already lists only the Flux objects; this keeps it that
+# way even if that file goes.
 k3s/
+terraform/

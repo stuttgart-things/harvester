@@ -14,12 +14,12 @@
 # (ghcr.io/bitnami/minio-object-browser) that cannot be pulled
 # (flux apps/platform/components/minio/ks-minio.yaml).
 #
-# The bucket comes from `defaultBuckets` -- the MinIO container creates it at
-# start. The chart's provisioning Job is NOT used: its client image
-# (bitnami/minio-client) is gone from Docker Hub, and the release's
-# global.imageRegistry would redirect it to ghcr anyway. CNPG therefore uses the
-# root credentials (one consumer on this node); a dedicated user is a later
-# refinement.
+# Buckets, users and policies are Terraform's (../terraform/minio): the bucket
+# schmetterpause-cnpg, the user schmetterpause-cnpg and its bucket-only policy.
+# The chart's provisioning Job is NOT used: its client image
+# (bitnami/minio-client) is gone from Docker Hub. The bucket was first created
+# via `defaultBuckets` (#365) and adopted by Terraform with an import block;
+# defaultBuckets is gone so that Terraform is the only owner.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -38,15 +38,6 @@ spec:
     kind: OCIRepository
     name: flux-repo
   path: ./apps/minio
-  patches:
-    - target:
-        group: helm.toolkit.fluxcd.io
-        kind: HelmRelease
-        name: minio-deployment
-      patch: |
-        - op: add
-          path: /spec/values/defaultBuckets
-          value: schmetterpause-cnpg
   postBuild:
     substituteFrom:
       # MINIO_ADMIN_USER / MINIO_ADMIN_PASSWORD
