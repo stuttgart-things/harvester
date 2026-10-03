@@ -228,6 +228,36 @@ does. `homerun2-notify` fails once with `namespaces "homerun2" not found`, then
 applies (see [Layout](#layout)). The routes wait for homerun2, and tabletennis
 waits for homerun2 and cnpg-operator.
 
+### Backups (schmetterpause → MinIO on the node)
+
+```bash
+kubectl -n schmetterpause get cluster schmetterpause-db \
+  -o jsonpath='{.status.conditions[?(@.type=="ContinuousArchiving")].message}'   # Continuous archiving is working
+kubectl -n schmetterpause get backups.postgresql.cnpg.io                         # daily at 03:00, PHASE completed
+```
+
+**The first `immediate` backup fails on a fresh rollout** with `requested
+plugin is not available: barman-cloud.cloudnative-pg.io`. The ScheduledBackup
+fires as soon as tabletennis applies, before the Barman Cloud plugin has
+registered with the CNPG operator. WAL archiving is not affected. Delete the
+failed Backup and, to have a base backup right away, start one:
+
+```bash
+kubectl -n schmetterpause apply -f - <<EOF
+apiVersion: postgresql.cnpg.io/v1
+kind: Backup
+metadata: {name: schmetterpause-db-manual, namespace: schmetterpause}
+spec:
+  cluster: {name: schmetterpause-db}
+  method: plugin
+  pluginConfiguration: {name: barman-cloud.cloudnative-pg.io}
+EOF
+```
+
+Seen on 2026-10-03 (#365): the immediate one failed after 18s, and a manual
+one 3 minutes later completed. The bucket and its credentials move to
+Terraform next (harvester#364, phase 1b).
+
 ## First rollout: 2026-10-03
 
 On `edge-tt-test1` (LabDA, 8 vCPU / 15Gi), with flux/repo v1.111.0,
