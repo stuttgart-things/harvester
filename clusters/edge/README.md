@@ -54,6 +54,37 @@ clusters/edge/
 Two layers, so the apps start only once the whole infra bundle is Ready, and
 can be stopped or removed without touching it (`flux suspend ks edge-apps`).
 
+### Three things the layers need, learned on 2026-10-03
+
+1. **Every layer that applies a `*.enc.yaml` needs its own `decryption`
+   block.** The FluxInstance's sops patch (`config.yaml`,
+   `kustomize.patches`) reaches only the Kustomization the instance itself
+   creates, `flux-system`, not the ones applied from git. Before the split,
+   `flux-system` applied `edge-secrets-subst.enc.yaml`. After it, `edge-apps`
+   applied the file still encrypted, and the dry-run failed with
+   `no matches for kind "ENC[AES256_GCM,...]"` (fixed in #360).
+   `apps.yaml` carries the block; `infra.yaml` needs none as long as `./infra`
+   has no SOPS file.
+
+2. **An object in a namespace that an app creates cannot sit in the same
+   layer apply.** `homerun2-notification-catcher-notify` lives in `homerun2`,
+   which only exists after the `homerun2` Kustomization has run. Listed in
+   `apps/kustomization.yaml`, it would fail the `edge-apps` apply on a fresh
+   cluster, and with it the `homerun2` Kustomization it is supposed to
+   create: a deadlock. It has its own Kustomization (`homerun2-notify`,
+   `retryInterval: 30s`). **Its first attempt fails on purpose** with
+   `namespaces "homerun2" not found`; the retry applies it once homerun2 is
+   there. That message right after a fresh rollout is not an error.
+
+3. **Moving Kustomizations between layers rebuilds them.** When `#359` moved
+   `infra-platform`, `homerun2` and `tabletennis` from `flux-system` into
+   `edge-infra` / `edge-apps`, `flux-system` pruned them. Their own
+   `prune: true` took the infra namespaces (cert-manager, cnpg-system,
+   reloader) and all of homerun2 with them, and the layers recreated them.
+   On this fresh test node that was intended: 11:13 merge, infra Ready again
+   about 8 minutes later. On a node that matters, set
+   `kustomize.toolkit.fluxcd.io/prune: disabled` on the moving objects first.
+
 ## What runs here, and what deliberately does not
 
 | Layer | Selected | Left out, and why |
@@ -187,9 +218,11 @@ kubectl -n schmetterpause get cluster,pods    # CNPG schmetterpause-db, 1 instan
 curl -k https://schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de/
 ```
 
-Expected order: redis-stack takes about 70s before it answers. homerun2 waits
-for it, the routes wait for homerun2, and tabletennis waits for homerun2 and
-cnpg-operator.
+Expected order: `edge-infra` (the whole bundle) → `edge-apps` → homerun2.
+redis-stack takes about 70s before it answers, and the catchers restart until it
+does. `homerun2-notify` fails once with `namespaces "homerun2" not found`, then
+applies (see [Layout](#layout)). The routes wait for homerun2, and tabletennis
+waits for homerun2 and cnpg-operator.
 
 ## Footprint
 
