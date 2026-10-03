@@ -1,0 +1,11 @@
+---
+# What edge-apps (../apps.yaml) applies. ./homerun2-notify is NOT listed: it is
+# applied by its own Kustomization (homerun2-notify.yaml), see there.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # SOPS: the substitutions homerun2 and tabletennis read
+  - edge-secrets-subst.enc.yaml
+  - homerun2.yaml
+  - homerun2-notify.yaml
+  - tabletennis.yaml

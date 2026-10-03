@@ -1,20 +1,22 @@
 ---
-# What flux-system applies from this directory. Same rule as
-# ../machinery-hv/kustomization.yaml: a new Flux object here must be listed, or
-# it is never applied.
+# What flux-system applies from this directory: the FluxInstance, its secrets,
+# the content source and the two layers -- nothing below them. Each layer
+# directory is applied only by its own Kustomization:
 #
-# config.yaml and secrets.yaml do not exist until the Flux bootstrap commits
-# them (README, step 5). Until then this kustomization does not build, and
-# nothing applies it either.
+#   infra.yaml -> ./infra   (edge-infra)
+#   apps.yaml  -> ./apps    (edge-apps, dependsOn edge-infra)
+#   ./k3s is Ansible, never Flux (.sourceignore)
+#
+# A NEW FLUX OBJECT IN THIS DIRECTORY MUST BE LISTED HERE, or it is never
+# applied. Dropping an entry is worse: flux-system prunes, and a layer
+# Kustomization that goes takes everything it applied with it.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # the FluxInstance and its sops key (committed by the Flux bootstrap)
   - config.yaml
   - secrets.yaml
-  # SOPS: the substitutions homerun2 and tabletennis read
-  - edge-secrets-subst.enc.yaml
-  - flux-sources.yaml
-  - infra-platform.yaml
-  - homerun2.yaml
-  - tabletennis.yaml
+  # OCIRepository flux-repo: what every layer's content comes from
+  - sources.yaml
+  - infra.yaml
+  - apps.yaml

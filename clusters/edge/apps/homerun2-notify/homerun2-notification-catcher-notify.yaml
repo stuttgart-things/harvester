@@ -1,0 +1,22 @@
+---
+# The notification-catcher's routing file -- caller-supplied, like
+# ../../../homerun2-dev/homerun2-notification-catcher-notify.yaml (the chart
+# mounts `<name>-notify` but does not ship it since catcher v3.0.0). Without it
+# the pod hangs in ContainerCreating (`configmap ... not found`), and with
+# wait: true the whole homerun2 Kustomization -- and routes and tabletennis
+# behind it -- stays not Ready.
+#
+# NO OUTPUTS, on purpose: the edge node sends nothing off the box. An empty
+# list passes the catcher's validation (it only checks the outputs present;
+# homerun2-notification-catcher internal/config/notify.go Validate), and with
+# no ${VAR} in it nothing has to resolve -- TEAMS_WEBHOOK_URL stays empty in
+# edge-secrets-subst. The catcher still consumes its streams and logs.
+# To notify somewhere, add an output here (msteams | webhook).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-notification-catcher-notify
+  namespace: homerun2
+data:
+  config.yaml: |
+    outputs: []

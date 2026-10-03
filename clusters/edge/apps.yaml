@@ -1,0 +1,30 @@
+---
+# Layer 2: the applications -- ./apps (homerun2, tabletennis, their SOPS
+# substitutions and the notification-catcher's routing ConfigMap).
+#
+# Starts only once edge-infra is Ready (the whole infra bundle). To stop all
+# apps and keep the infra running: `flux suspend ks edge-apps`; deleting it
+# removes the apps (prune) and leaves the infra alone.
+#
+# wait: false -- homerun2 and tabletennis report their own readiness, and a
+# slow app should not hold this layer's apply.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: edge-apps
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: edge-infra
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/apps
