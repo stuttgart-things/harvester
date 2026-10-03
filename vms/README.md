@@ -320,24 +320,3 @@ checks it against the vars file:
 ```bash
   --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
 ```
-
-## edge
-
-The lab stand-in for the edge box, a LattePanda Mu (N100, 8GB, 64GB eMMC).
-Unlike the two VMs above, it runs **k3s**, not RKE2. The playbook is
-`sthings.rke.k3s_cluster`. The whole build is in
-[`clusters/edge/README.md`](../clusters/edge/README.md).
-
-| File | |
-|---|---|
-| `edge.params.yaml` | 4 vCPU / 8Gi / 64Gi, the N100's shape, on `sthings-u26-26.924.1008`. No credentials. |
-| `edge.params.enc.yaml` | **not created yet**: the same keys plus `cloudInitUsername`, `cloudInitPassword`, `cloudInitSshKey`, SOPS/AGE encrypted. |
-| `edge.requirements-data.yaml` | the collections `bake-harvester` installs, passed as `--requirements-data`. Without it the module uses the ansible repo's template, which pins an rke collection too old for the edge vars. |
-| `edge.k3s.ansible-vars.yaml` | the k3s extra vars: k3s 1.35.9 on sqlite (`k3s_cluster_init=false`), Cilium 1.20.2 via cilium-cli 0.20.1, Gateway API v1.6.1. Needs sthings.rke >= 26.1003.1399. |
-
-The parameter string for `bake-harvester`, kept here because `vms-lint.yml`
-checks it against the vars file:
-
-```bash
-  --ansible-parameters "manage_filesystem=false install_k3s=true k3s_state=present k3s_k8s_version=1.35.9 k3s_release_kind=k3s1 k3s_cluster_init=false cluster_setup=singlenode cluster_name=edge install_cilium=true cilium_version=0.20.1 cilium_chart_version=1.20.2 cilium_gateway_api_crds_version=v1.6.1 prepare_rancher_ha_nodes=true install_helm_diff=false fetched_kubeconfig_path=/tmp/kubeconfig" \
-```

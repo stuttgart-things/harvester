@@ -1,12 +1,13 @@
 ---
-# Extra vars for the k3s run on the edge VM (and later the LattePanda), for the
-# `execute-ansible` entrypoint. The README passes the same values to
-# `bake-harvester` as a space-separated --ansible-parameters string; CI checks
-# that the two agree (vms-lint.yml).
+# Extra vars for sthings.rke.k3s_cluster on the edge node -- the lab test VM
+# now, the LattePanda later. Used as-is by both runs in ./README.md:
+#   ansible-playbook ... -e @k3s-vars.yaml
+#   dagger ... execute-ansible --parameters-file k3s-vars.yaml
 #
 # Needs sthings.rke >= 26.1003.1399 (deploy-configure-rke 2026.10.03-1):
 # cilium_chart_version and k3s_cluster_init do not exist in older collections,
-# and an older collection would silently ignore them. requirements.yaml pins it.
+# and an older collection would silently ignore them. ./requirements.yaml
+# pins it -- for both runs.
 #
 # What the role does on k3s WITHOUT being told (k3s_config defaults): flannel
 # none, kube-proxy and network policy disabled, servicelb and traefik disabled.
@@ -14,7 +15,8 @@
 # Cilium is installed with kubeProxyReplacement, Gateway API, L2 announcements,
 # and k8sServiceHost = the node's default IPv4.
 
-# One root disk, no data disk -- see homerun2-dev.rke2.ansible-vars.yaml.
+# The role's LVM handling is baseos' job, and baseos already ran (the VM
+# request does it). Keep it off here so a k3s run never touches the disks.
 manage_filesystem: false
 
 # k3s 1.35.9 (latest 1.35 patch, 2026-09-30).
@@ -42,4 +44,4 @@ cilium_gateway_api_crds_version: v1.6.1
 
 prepare_rancher_ha_nodes: true
 install_helm_diff: false
-fetched_kubeconfig_path: /tmp/kubeconfig
+fetched_kubeconfig_path: /tmp/kubeconfig-edge.yaml

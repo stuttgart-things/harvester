@@ -3,22 +3,24 @@
 A single-node **k3s** cluster for the edge box, a LattePanda Mu (Intel N100,
 8GB LPDDR5, 64GB eMMC). It runs only occasionally, and when it runs it has to
 manage with **only that one node**: no OpenBao, no NFS, no lab DNS, no S3, no
-Rancher. It is built on a lab VM of the same shape first (`vms/edge.*`), then
+Rancher. It is tested on a lab VM first (`edge-tt-test1`, LabDA), then built
 on the hardware.
 
-The chain: Ansible (base OS + k3s + Cilium) → Flux Operator → the infra bundle
+The chain: VM + base OS (Backstage request) → k3s + Cilium ([`k3s/`](./k3s/))
+→ Flux Operator → the infra bundle
 → homerun2 → tabletennis. Everything Flux reconciles comes from **one OCI
 artifact** of `stuttgart-things/flux` ([`flux-sources.yaml`](./flux-sources.yaml)),
 not from Git.
 
-> **Status: draft, not built yet.** Two values are placeholders: the LB address
-> in [`infra-platform.yaml`](./infra-platform.yaml), and `vms/edge.params.enc.yaml`,
-> which does not exist yet.
+> **Status: in progress.** The test VM exists with its base OS. k3s + Cilium
+> come next ([`k3s/`](./k3s/)). The LB address in
+> [`infra-platform.yaml`](./infra-platform.yaml) is still a placeholder.
 
 | | |
 |---|---|
-| Cluster / VM name | `edge` |
-| Shape | 4 vCPU / 8Gi / 64Gi (VM) = N100 / 8GB / 64GB eMMC (hardware) |
+| Cluster | `edge` |
+| Test node | `edge-tt-test1` / 10.100.136.89 (LabDA vSphere, 8 vCPU / 15Gi / 128Gi) |
+| Target | LattePanda Mu: N100 / 8GB / 64GB eMMC |
 | LB address | **TODO**: one address, the Cilium VIP of the Gateway |
 | Domain | `edge.sthings.lab` |
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (cilium-cli 0.20.1, Gateway API v1.6.1), no kube-proxy, no flannel, no traefik, no servicelb |
@@ -28,7 +30,7 @@ not from Git.
 | GitOps | Flux Operator, syncing `clusters/edge`; content from `oci://ghcr.io/stuttgart-things/flux/repo` |
 
 ```bash
-export KUBECONFIG=~/.kube/harvester
+export KUBECONFIG=~/.kube/edge-tt-test1
 export SOPS_AGE_KEY=...          # the repo's age key
 export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 ```
@@ -46,85 +48,27 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 
 ## 1. Address and name
 
-**Lab VM:** reserve one address in Clusterbook with the wildcard
-`*.edge.sthings.lab`, exactly as in
-[`../homerun2-dev/README.md`](../homerun2-dev/README.md) step 1. Then put it into
+**Lab VM:** the test node sits in LabDA, so the Gateway VIP comes from that
+network (10.100.136.x), reserved in the LabDA Clusterbook. Put it into
 `CILIUM_LB_IP_START`/`STOP` in `infra-platform.yaml`.
 
 **Edge box:** there is no Clusterbook and no lab router. Pick a free address
 in the edge network for the VIP and change the same two values. See
 [DNS on the edge](#dns-on-the-edge).
 
-## 2. VM credentials (lab VM only)
+## 2. The node: VM + base OS
 
-`vms/edge.params.enc.yaml` holds the same keys as `vms/edge.params.yaml`, plus
-`cloudInitUsername`, `cloudInitPassword` and `cloudInitSshKey`. Create it the
-way `vms/machinery-hv.params.enc.yaml` was created: copy the plaintext file,
-add the three keys, then
-`sops --encrypt --age $AGE_PUB --in-place vms/edge.params.enc.yaml`.
+The lab test node is `edge-tt-test1` (LabDA vSphere, Ubuntu 26.04). It was
+requested through the Backstage `request-vm` template
+(stuttgart-things#3415). The Dapr worker on `cicd-machinery-test5` ran
+`create-terraform-vm`, whose build PR (#3418) did Terraform and
+`sthings.baseos.setup`. Nothing in this repo builds the VM.
 
-## 3. VM, base OS, k3s, Cilium
+## 3. k3s + Cilium
 
-```bash
-export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/edge.params.enc.yaml)
-export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/edge.params.enc.yaml)
-
-# DRY RUN FIRST
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
-  render-harvester-vm --kcl-parameters-file ./vms/edge.params.yaml contents
-
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
-  bake-harvester \
-  --kube-config file://$HOME/.kube/harvester \
-  --vm-name edge \
-  --namespace default \
-  --encrypted-file ./vms/edge.params.enc.yaml \
-  --sops-key env:SOPS_AGE_KEY \
-  --ansible-playbooks "sthings.baseos.setup,sthings.rke.k3s_cluster" \
-  --ansible-parameters "manage_filesystem=false install_k3s=true k3s_state=present k3s_k8s_version=1.35.9 k3s_release_kind=k3s1 k3s_cluster_init=false cluster_setup=singlenode cluster_name=edge install_cilium=true cilium_version=0.20.1 cilium_chart_version=1.20.2 cilium_gateway_api_crds_version=v1.6.1 prepare_rancher_ha_nodes=true install_helm_diff=false fetched_kubeconfig_path=/tmp/kubeconfig" \
-  --requirements-data https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/vms/edge.requirements-data.yaml \
-  --inventory-type cluster \
-  --ansible-user env:ANSIBLE_USER \
-  --ansible-password env:ANSIBLE_PASSWORD \
-  --progress plain -vv \
-  export --path /tmp/edge
-```
-
-**`--requirements-data` is not optional.** Without it, `bake-harvester` installs
-the collections pinned in stuttgart-things/ansible `templates/requirements-data.yaml`.
-That file does not read this repo's `requirements.yaml`, and as of 2026-10-03
-it still points at sthings-rke 26.730.1176. That collection silently ignores
-`cilium_chart_version` and `k3s_cluster_init`: the run goes green with the
-cli-default Cilium and embedded etcd.
-[`vms/edge.requirements-data.yaml`](../../vms/edge.requirements-data.yaml) pins
-sthings-rke 26.1003.1399 (deploy-configure-rke 2026.10.03-1). It is read from
-`main`, so it only takes effect once this directory is merged.
-
-The traps from homerun2-dev step 2 apply unchanged: `--inventory-type cluster`
-is required, playbooks are comma-separated and parameters space-separated,
-`manage_filesystem=false`, and a green run is not proof (require a
-`PLAY RECAP`). Two things are different on k3s:
-
-- There is no `rke2_cni=none` / `disableKubeProxy`. The role's `k3s_config`
-  defaults already disable flannel, kube-proxy, network policy, servicelb and
-  traefik, and `install_cilium=true` installs Cilium with Gateway API, L2
-  announcements and externalIPs.
-- Cilium's `k8sServiceHost` is the node's **default IPv4 at install time**. On
-  the edge box that address must not change afterwards (static address or DHCP
-  reservation), or Cilium loses the API server.
-
-Verify, from the exported kubeconfig (see homerun2-dev step 3 for getting it
-off the node):
-
-```bash
-kubectl get nodes -o wide                     # one node, v1.35.9+k3s1
-kubectl -n kube-system get ds                 # cilium, cilium-envoy; no kube-proxy
-cilium version                                # cilium image (running): v1.20.2
-kubectl get crd gateways.gateway.networking.k8s.io \
-  -o jsonpath='{.metadata.annotations.gateway\.networking\.k8s\.io/bundle-version}'   # v1.6.1
-ssh <node> sudo ls /var/lib/rancher/k3s/server/db   # state.db (sqlite), no etcd/
-kubectl get storageclass                      # local-path (default)
-```
+Ansible, not Flux: [`k3s/`](./k3s/) holds the inventory, the vars and
+the runbook (CLI first, then Dagger). Flux never reads that folder
+([`.sourceignore`](./.sourceignore)).
 
 ## 4. The flux artifact
 
@@ -153,10 +97,45 @@ cert-manager-selfsigned, cnpg-operator, reloader), all
 
 ## 5. Bootstrap Flux
 
-The same call as [homerun2-dev step 4](../homerun2-dev/README.md#4-bootstrap-flux),
-with `--kube-config` pointing at this cluster,
-`--destination-path "clusters/edge"`, and `--branch-name` set while this
-directory exists only on a branch. Afterwards:
+blueprints/flux **v3.6.1** or newer: its defaults are flux-operator **0.61.0**
+and Flux **2.9.6** (blueprints#209). Older module versions default to
+operator 0.47.0, which overrides the 0.61.0 in the helm repo's
+`cicd/flux-operator.yaml.gotmpl` (helm#167).
+
+**Merge this directory to `main` first.** The FluxInstance syncs
+`refs/heads/main`, and a path that exists only on a branch leaves
+`kustomization/flux-system` failing with `path not found`
+(homerun2-dev step 4 has the whole story).
+
+```bash
+export SOPS_AGE_KEY=...  AGE_PUB=...  GITHUB_USER=...  GITHUB_TOKEN=...
+
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.6.1 \
+  bootstrap \
+  --kube-config file://$HOME/.kube/edge-tt-test1 \
+  --deploy-operator=true \
+  --commit-to-git=true \
+  --repository stuttgart-things/harvester \
+  --destination-path "clusters/edge" \
+  --git-username env:GITHUB_USER \
+  --git-password env:GITHUB_TOKEN \
+  --git-token env:GITHUB_TOKEN \
+  --sops-age-key env:SOPS_AGE_KEY \
+  --age-public-key env:AGE_PUB \
+  --render-secrets=true \
+  --apply-secrets=true \
+  --apply-config=true \
+  --encrypt-secrets=true \
+  --helmfile-ref "git::https://github.com/stuttgart-things/helm.git@cicd/flux-operator.yaml.gotmpl" \
+  --wait-for-reconciliation=true \
+  --progress plain
+```
+
+`env -u SSH_AUTH_SOCK`: a stale agent socket (e.g. a closed VS Code remote
+session) makes Dagger fail while loading the module with `failed to list SSH
+agent identities`.
+
+Afterwards:
 
 - Pull the committed `config.yaml` and `secrets.yaml`, and add the two
   `# pragma: allowlist secret` hand-edits (homerun2-dev step 4).
@@ -201,10 +180,9 @@ above, on 8Gi. **Measure it on the VM** (`kubectl top pods -A`,
 
 Same directory, same artifact. What changes:
 
-- **OS:** install Ubuntu on the eMMC by hand (the golden image is
-  Harvester-only). Then run the same two playbooks, using `execute-ansible`
-  against the box's address instead of `bake-harvester`, with the same
-  `--requirements-data` and `--parameters-file ./vms/edge.k3s.ansible-vars.yaml`.
+- **OS:** install Ubuntu on the eMMC by hand, then run `sthings.baseos.setup`
+  against it (the VM got that from its request). After that, follow
+  [`k3s/`](./k3s/) with the box's address in `inventory.ini`.
 - **Address:** a static address or DHCP reservation for the node (Cilium
   `k8sServiceHost`, see step 3), and one more free address for the LB VIP in
   `infra-platform.yaml`.

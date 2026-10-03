@@ -1,0 +1,4 @@
+# Flux never reads ./k3s: inventory, vars and runbook for the k3s install
+# (run by hand / by dagger, not by a controller). kustomization.yaml already
+# lists only the Flux objects; this keeps it that way even if that file goes.
+k3s/
