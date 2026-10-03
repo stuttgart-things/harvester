@@ -1,0 +1,31 @@
+---
+# KCL parameters for the harvester-vm module: the lab stand-in for the edge box
+# (LattePanda Mu, Intel N100, 8GB LPDDR5, 64GB eMMC). Rendered and applied by
+# blueprints' bake-harvester. See vms/README.md, section "edge", and
+# clusters/edge/README.md for the whole build.
+#
+# The shape copies the hardware rather than the other lab VMs: 4 cores (the
+# N100 has four), 8Gi and a 64Gi disk. Whatever runs here has to fit there.
+#
+# Image and storage class are machinery-hv's (the newest golden sthings-u26).
+# The storage class is per-image and per-cluster; look it up as described in
+# homerun2-dev.params.yaml.
+
+vmName: edge
+namespace: default
+
+imageId: sthings-u26-26.924.1008
+imageNamespace: default
+storage: 64Gi
+storageClassName: lh-fdd94630-26a5-4a13-8eed-d905fb9ddfdd
+
+cpuCores: 4
+memory: 8Gi
+description: edge singlenode k3s, lab stand-in for the LattePanda Mu
+
+networkName: vms
+networkNamespace: default
+
+# Credentials are deliberately absent -- see the note at the bottom of
+# homerun2-dev.params.yaml. They come from edge.params.enc.yaml, which does not
+# exist yet (clusters/edge/README.md, step 2).
