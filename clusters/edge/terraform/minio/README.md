@@ -22,17 +22,35 @@ umask 077
 sops -d --output-type json clusters/edge/apps/edge-secrets-subst.enc.yaml \
   | jq '.stringData | {minio_user: .MINIO_ADMIN_USER, minio_password: .MINIO_ADMIN_PASSWORD, cnpg_secret_key: .MINIO_CNPG_PASSWORD}' \
   > /tmp/edge-minio.tfvars.json
+# the host's resolvers: *.4sthings.tiab.ssc.sva.de resolves only through
+# them (split DNS), not through the Dagger engine's own resolver
+printf 'nameserver 10.100.136.115\nnameserver 10.100.101.5\n' > /tmp/edge-resolv.conf
 
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.134.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.135.0 \
   execute \
   --terraform-dir clusters/edge/terraform/minio \
   --operation apply \
+  --refuse-destroy \
   --secret-json-variables file:///tmp/edge-minio.tfvars.json \
   --kube-config file://$HOME/.kube/edge-tt-test1 \
+  --resolv-conf /tmp/edge-resolv.conf \
   --progress plain
 
 shred -u /tmp/edge-minio.tfvars.json
 ```
+
+- `--refuse-destroy`: the plan is applied only if it deletes or replaces
+  nothing. That matters for a bucket with backups in it.
+- `--resolv-conf` (module v0.135.0, stuttgart-things/dagger#398). Without
+  it the engine cannot resolve the MinIO host on a workstation with split DNS
+  (systemd-resolved `~4sthings.tiab.ssc.sva.de` → 10.100.136.115). The first
+  dagger run hung for 2 minutes on the import and failed with `could not read
+  minio bucket`. The alternative for a single name is `--bind-service
+  tcp://10.100.136.223:443 --bind-service-alias minio.<domain>`; the two
+  options are exclusive.
+- Dagger caches the exec: an unchanged rerun prints the result of the previous
+  one without running Terraform. To force a real run, change an argument, e.g.
+  `--variables cnpg_bucket=schmetterpause-cnpg`.
 
 The module has no `plan` operation. To look first, run Terraform locally
 against the same state:
@@ -48,15 +66,12 @@ the repo anyway, and shred it.
 
 ## Last run
 
-2026-10-03: `Apply complete! Resources: 1 imported, 3 added, 0 changed, 0
-destroyed.` (bucket imported; user, policy and attachment created). A second
-`plan` showed no changes.
+2026-10-03, two runs:
 
-**Run with local Terraform, not dagger.** On this workstation the Dagger engine
-cannot resolve `*.4sthings.tiab.ssc.sva.de`. The host resolves it through
-split DNS (systemd-resolved: `~4sthings.tiab.ssc.sva.de` → 10.100.136.115),
-but the engine's own resolver (10.87.0.1) does not know about the split. The
-dagger run waited 2 minutes on the import, then failed with `could not read
-minio bucket`. Going by IP does not help, because the Gateway routes by SNI.
-Until the engine resolves the zone (engine DNS config, or running on a host
-without split DNS), use the local `terraform` commands above with `apply`.
+1. **First apply, local Terraform 1.14.8.** The Dagger engine could not
+   resolve the host yet. Result: `Apply complete! Resources: 1 imported, 3
+   added, 0 changed, 0 destroyed.` (bucket imported; user, policy and
+   attachment created).
+2. **Rerun, dagger/terraform v0.135.0 (Terraform 1.16.5) with `--resolv-conf`
+   and `--refuse-destroy`.** All four resources refreshed live: `No changes.
+   ... Apply complete! Resources: 0 added, 0 changed, 0 destroyed.`
