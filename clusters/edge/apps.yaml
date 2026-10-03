@@ -28,3 +28,12 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./clusters/edge/apps
+  # ./apps carries edge-secrets-subst.enc.yaml. The FluxInstance's sops patch
+  # (config.yaml, kustomize.patches) only reaches the Kustomization the
+  # instance itself creates -- flux-system -- not the ones applied from git,
+  # so this layer needs its own decryption block. Without it the Secret is
+  # applied still encrypted and the dry-run fails on kind "ENC[AES256_GCM...]".
+  decryption:
+    provider: sops
+    secretRef:
+      name: sops-age # pragma: allowlist secret
