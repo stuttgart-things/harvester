@@ -12,20 +12,19 @@ The chain: VM + base OS (Backstage request) → k3s + Cilium ([`k3s/`](./k3s/))
 artifact** of `stuttgart-things/flux` ([`flux-sources.yaml`](./flux-sources.yaml)),
 not from Git.
 
-> **Status: in progress.** The test VM exists with its base OS. k3s + Cilium
-> come next ([`k3s/`](./k3s/)). The LB address in
-> [`infra-platform.yaml`](./infra-platform.yaml) is still a placeholder.
+> **Status: in progress.** Test VM with base OS, k3s + Cilium done
+> ([`k3s/`](./k3s/)); LB address and DNS reserved. Flux bootstrap is next.
 
 | | |
 |---|---|
 | Cluster | `edge` |
 | Test node | `edge-tt-test1` / 10.100.136.89 (LabDA vSphere, 8 vCPU / 15Gi / 128Gi) |
 | Target | LattePanda Mu: N100 / 8GB / 64GB eMMC |
-| LB address | **TODO**: one address, the Cilium VIP of the Gateway |
-| Domain | `edge.sthings.lab` |
+| LB address | `10.100.136.223` (LabDA Clusterbook, `edge-tt-test1`), the Cilium VIP of the Gateway |
+| Domain | `edge-tt-test1.4sthings.tiab.ssc.sva.de` (Clusterbook DNS wildcard) for the lab test; changes on the hardware |
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (cilium-cli 0.20.1, Gateway API v1.6.1), no kube-proxy, no flannel, no traefik, no servicelb |
 | Storage | k3s `local-path` (the default class). Nothing here is meant to survive the box. |
-| Certificates | cert-manager, self-signed root → `cluster-ca` → `*.edge.sthings.lab` |
+| Certificates | cert-manager, self-signed root → `cluster-ca` → `*.<INFRA_DOMAIN>` |
 | Secrets | SOPS only: [`edge-secrets-subst.enc.yaml`](./edge-secrets-subst.enc.yaml), decrypted by Flux |
 | GitOps | Flux Operator, syncing `clusters/edge`; content from `oci://ghcr.io/stuttgart-things/flux/repo` |
 
@@ -49,8 +48,19 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 ## 1. Address and name
 
 **Lab VM:** the test node sits in LabDA, so the Gateway VIP comes from that
-network (10.100.136.x), reserved in the LabDA Clusterbook. Put it into
-`CILIUM_LB_IP_START`/`STOP` in `infra-platform.yaml`.
+network. Reserved on 2026-10-03:
+
+```bash
+curl -s -X POST http://clusterbook.sthings-infra.4sthings.tiab.ssc.sva.de/api/v1/networks/10.100.136/reserve \
+  -H 'Content-Type: application/json' \
+  -d '{"cluster":"edge-tt-test1","status":"ASSIGNED","create_dns":true,"ip":"223"}'
+# {"cluster":"edge-tt-test1","digit":"223","dns":"ok","ip":"10.100.136.223",...,"status":"ASSIGNED:DNS"}
+dig +short schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de   # 10.100.136.223
+```
+
+The address is in `CILIUM_LB_IP_START`/`STOP`, and the domain in
+`INFRA_DOMAIN` (infra-platform.yaml) and `DOMAIN` (homerun2.yaml,
+tabletennis.yaml).
 
 **Edge box:** there is no Clusterbook and no lab router. Pick a free address
 in the edge network for the VIP and change the same two values. See
@@ -156,7 +166,7 @@ kubectl get gateway -A                        # edge-gateway PROGRAMMED, address
 kubectl -n default get certificate wildcard-tls
 kubectl -n homerun2 get pods
 kubectl -n schmetterpause get cluster,pods    # CNPG schmetterpause-db, 1 instance
-curl -k https://schmetterpause.edge.sthings.lab/
+curl -k https://schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de/
 ```
 
 Expected order: redis-stack takes about 70s before it answers. homerun2 waits
@@ -192,7 +202,7 @@ Same directory, same artifact. What changes:
 
 ### DNS on the edge
 
-`*.edge.sthings.lab` has to resolve to the LB VIP on every client. With no
+On the hardware, `*.<domain>` has to resolve to the LB VIP on every client. With no
 router of our own, the options in order of effort: `/etc/hosts` entries on the
 few clients, a dnsmasq on the uplink router if there is one, or nip.io
 (`INFRA_DOMAIN: <vip>.nip.io`, which needs internet on the client). The

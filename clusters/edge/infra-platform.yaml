@@ -74,15 +74,16 @@ spec:
 
       # Keep identical to homerun2.yaml and tabletennis.yaml (DOMAIN /
       # GATEWAY_*).
-      INFRA_DOMAIN: edge.sthings.lab
+      INFRA_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
       INFRA_GATEWAY_NAME: edge-gateway
       INFRA_GATEWAY_NAMESPACE: default
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
 
       # ---- cilium-lb ------------------------------------------------------
-      # ONE address on the node's LAN, the Gateway's VIP. On the lab VM, reserve
-      # it in Clusterbook (README, step 1). On the edge box, pick a free address
-      # in that network and change it here. Quoted: substitute is
-      # map[string]string.
-      CILIUM_LB_IP_START: "TODO-reserve-in-clusterbook"
-      CILIUM_LB_IP_STOP: "TODO-reserve-in-clusterbook"
+      # ONE address on the node's LAN, the Gateway's VIP. Lab test node
+      # edge-tt-test1 (LabDA): 10.100.136.223, reserved in the LabDA Clusterbook
+      # on 2026-10-03 with DNS *.edge-tt-test1.4sthings.tiab.ssc.sva.de -- the
+      # INFRA_DOMAIN above. On the LattePanda both change (README, "Moving to
+      # the hardware"). Quoted: substitute is map[string]string.
+      CILIUM_LB_IP_START: "10.100.136.223"
+      CILIUM_LB_IP_STOP: "10.100.136.223"
