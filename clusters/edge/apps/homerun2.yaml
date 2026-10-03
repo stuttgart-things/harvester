@@ -1,6 +1,6 @@
 ---
 # homerun2 on the edge box -- the same `sops` profiles as
-# ../homerun2-dev/homerun2.yaml, read from the flux-repo OCI artifact.
+# ../../homerun2-dev/homerun2.yaml, read from the flux-repo OCI artifact.
 #
 # These are the full profiles, deliberately. They are the combination that
 # already runs on homerun2-dev. Trimming (no scout / config-viewer /
@@ -32,8 +32,8 @@ spec:
   prune: true
   suspend: false
   wait: true
-  dependsOn:
-    - name: infra-platform
+  # No dependsOn on infra: edge-apps (../apps.yaml) only runs once edge-infra
+  # is Ready, i.e. the whole infra bundle is.
   sourceRef:
     kind: OCIRepository
     name: flux-repo

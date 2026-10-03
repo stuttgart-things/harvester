@@ -9,7 +9,7 @@ on the hardware.
 The chain: VM + base OS (Backstage request) → k3s + Cilium ([`k3s/`](./k3s/))
 → Flux Operator → the infra bundle
 → homerun2 → tabletennis. Everything Flux reconciles comes from **one OCI
-artifact** of `stuttgart-things/flux` ([`flux-sources.yaml`](./flux-sources.yaml)),
+artifact** of `stuttgart-things/flux` ([`sources.yaml`](./sources.yaml)),
 not from Git.
 
 > **Status: in progress.** Test VM with base OS, k3s + Cilium done
@@ -25,7 +25,7 @@ not from Git.
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (cilium-cli 0.20.1, Gateway API v1.6.1), no kube-proxy, no flannel, no traefik, no servicelb |
 | Storage | k3s `local-path` (the default class). Nothing here is meant to survive the box. |
 | Certificates | cert-manager, self-signed root → `cluster-ca` → `*.<INFRA_DOMAIN>` |
-| Secrets | SOPS only: [`edge-secrets-subst.enc.yaml`](./edge-secrets-subst.enc.yaml), decrypted by Flux |
+| Secrets | SOPS only: [`apps/edge-secrets-subst.enc.yaml`](./apps/edge-secrets-subst.enc.yaml), decrypted by Flux |
 | GitOps | Flux Operator, syncing `clusters/edge`; content from `oci://ghcr.io/stuttgart-things/flux/repo` |
 
 ```bash
@@ -36,12 +36,30 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 
 ---
 
+## Layout
+
+```
+clusters/edge/
+├── kustomization.yaml   flux-system applies only: config, secrets, sources, infra.yaml, apps.yaml
+├── config.yaml  secrets.yaml        FluxInstance + git/sops secrets (committed by the bootstrap)
+├── sources.yaml         OCIRepository flux-repo -> ghcr.io/stuttgart-things/flux/repo
+├── infra.yaml           Kustomization edge-infra -> ./infra   (wait: true)
+├── apps.yaml            Kustomization edge-apps  -> ./apps    (dependsOn edge-infra)
+├── infra/               infra-platform.yaml: the flux infra bundle
+├── apps/                homerun2, tabletennis, edge-secrets-subst (SOPS),
+│   └── homerun2-notify/   the notification-catcher ConfigMap (own Kustomization)
+└── k3s/                 Ansible for k3s + Cilium -- never read by Flux (.sourceignore)
+```
+
+Two layers, so the apps start only once the whole infra bundle is Ready, and
+can be stopped or removed without touching it (`flux suspend ks edge-apps`).
+
 ## What runs here, and what deliberately does not
 
 | Layer | Selected | Left out, and why |
 |---|---|---|
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (installs no Cilium, so the node would have no CNI) |
-| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cnpg-operator`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager, openebs, headlamp, flux-web. Each is explained in `infra-platform.yaml` |
+| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cnpg-operator`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager, openebs, headlamp, flux-web. Each is explained in `infra/infra-platform.yaml` |
 | homerun2 | `profiles/sops` + `sops-routes`, as on homerun2-dev | `redis-lb` (nothing off the node reads Redis); the Teams webhook (notification-catcher stays in dry run) |
 | tabletennis | `profiles/sops` + `zaehlwerk-panel-homerun2` | DB backup (no S3); scoreboard + handover (would need the self-signed CA in zaehlwerk's trust) |
 
@@ -59,8 +77,8 @@ dig +short schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de   # 10.100.136.
 ```
 
 The address is in `CILIUM_LB_IP_START`/`STOP`, and the domain in
-`INFRA_DOMAIN` (infra-platform.yaml) and `DOMAIN` (homerun2.yaml,
-tabletennis.yaml).
+`INFRA_DOMAIN` (infra/infra-platform.yaml) and `DOMAIN` (apps/homerun2.yaml,
+apps/tabletennis.yaml).
 
 **Edge box:** there is no Clusterbook and no lab router. Pick a free address
 in the edge network for the VIP and change the same two values. See
@@ -82,7 +100,7 @@ the runbook (CLI first, then Dagger). Flux never reads that folder
 
 ## 4. The flux artifact
 
-[`flux-sources.yaml`](./flux-sources.yaml) reads
+[`sources.yaml`](./sources.yaml) reads
 `oci://ghcr.io/stuttgart-things/flux/repo:v1.111.0`. The flux Release
 workflow pushes that artifact on every release, starting with v1.111.0
 ([flux#621](https://github.com/stuttgart-things/flux/issues/621),
@@ -97,7 +115,7 @@ this cluster renders, and an anonymous manifest fetch returns 200.
 root (`./infra/cert-manager/...`, and `./apps/cnpg-operator` from an infra
 component). The per-component artifacts `flux/infra/<name>` do not contain
 them. The bundle's children also hard-code `sourceRef.kind: GitRepository`.
-`infra-platform.yaml` patches that to `OCIRepository`; flux#621 proposes a
+`infra/infra-platform.yaml` patches that to `OCIRepository`; flux#621 proposes a
 `FLUX_SOURCE_KIND` so the patch can go.
 
 Rendered locally at v1.110.3 (identical for these paths in v1.111.0) with the same components and the same patch:
@@ -161,7 +179,7 @@ Afterwards:
 
 ```bash
 flux get sources oci -A                       # flux-repo READY, v1.111.0@sha256:...
-flux get ks -A                                # infra-platform, its 6 children, homerun2(-routes), tabletennis + inner ones
+flux get ks -A                                # edge-infra -> infra-platform + 6 children; edge-apps -> homerun2(-routes), homerun2-notify, tabletennis + inner ones
 kubectl get gateway -A                        # edge-gateway PROGRAMMED, address = the LB VIP
 kubectl -n default get certificate wildcard-tls
 kubectl -n homerun2 get pods
@@ -195,7 +213,7 @@ Same directory, same artifact. What changes:
   [`k3s/`](./k3s/) with the box's address in `inventory.ini`.
 - **Address:** a static address or DHCP reservation for the node (Cilium
   `k8sServiceHost`, see step 3), and one more free address for the LB VIP in
-  `infra-platform.yaml`.
+  `infra/infra-platform.yaml`.
 - **Lab CA:** `sthings.baseos.setup` installs the lab Vault CAs only from
   instances it can reach. On the edge it finds none and skips them; that is
   not an error.

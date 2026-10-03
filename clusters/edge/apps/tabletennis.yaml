@@ -2,7 +2,7 @@
 # tabletennis (schmetterpause + zaehlwerk) on the edge box -- flux
 # apps/tabletennis/profiles/sops, read from the flux-repo OCI artifact.
 #
-# Differences from ../homerun2-dev/tabletennis.yaml:
+# Differences from ../../homerun2-dev/tabletennis.yaml:
 #   - no schmetterpause-db-backup-sops. There is no S3 on the edge, and a
 #     same-node backup would not survive losing the node. The data is
 #     disposable here.
@@ -29,8 +29,9 @@ spec:
   timeout: 10m
   prune: true
   wait: true
+  # cnpg-operator is infra (edge-infra, Ready before edge-apps starts); kept
+  # by name anyway because the Cluster CRD must exist at dry-run time.
   dependsOn:
-    - name: infra-platform
     - name: cnpg-operator
     - name: homerun2
   sourceRef:

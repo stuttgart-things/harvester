@@ -1,9 +1,9 @@
 ---
 # The infra BUNDLE for this cluster -- stuttgart-things/flux → ./infra/platform,
-# read from the flux-repo OCI artifact (./flux-sources.yaml) instead of a
+# read from the flux-repo OCI artifact (../sources.yaml) instead of a
 # GitRepository.
 #
-# Modelled on ../machinery-hv/infra-platform.yaml. The difference is that
+# Modelled on ../../machinery-hv/infra-platform.yaml. The difference is that
 # nothing here reaches a lab service. Not selected, compared with machinery-hv
 # and homerun2-dev:
 #
@@ -72,7 +72,7 @@ spec:
     substitute:
       FLUX_SOURCE: flux-repo
 
-      # Keep identical to homerun2.yaml and tabletennis.yaml (DOMAIN /
+      # Keep identical to ../apps/homerun2.yaml and ../apps/tabletennis.yaml (DOMAIN /
       # GATEWAY_*).
       INFRA_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
       INFRA_GATEWAY_NAME: edge-gateway
