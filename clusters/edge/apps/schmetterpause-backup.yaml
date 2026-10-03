@@ -1,0 +1,32 @@
+---
+# Applies ./schmetterpause-backup (the backup credentials Secret) in a
+# Kustomization of its own -- same reason as homerun2-notify.yaml: the Secret
+# lives in namespace schmetterpause, which only the tabletennis Kustomization
+# creates. In the edge-apps apply it would fail on a fresh cluster before
+# tabletennis exists. On its own it retries until the namespace is there.
+#
+# The first attempt fails with `namespaces "schmetterpause" not found` on a
+# fresh rollout -- expected, not an error.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: schmetterpause-backup
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/apps/schmetterpause-backup
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: edge-secrets-subst
+        optional: false

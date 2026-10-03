@@ -16,7 +16,6 @@
 #   openebs -- k3s ships local-path as the default StorageClass. Adding
 #     openebs-hostpath would make two defaults. The storage is not meant to
 #     survive the box.
-#   cnpg-barman-cloud -- no S3 to back up to.
 #   trust-manager -- its Bundles always list a vault-pki-ca source.
 #   headlamp, flux-web -- RAM is 8Gi on the target.
 #
@@ -53,6 +52,9 @@ spec:
     - ../components/cert-manager-selfsigned
     # schmetterpause's database (tabletennis.yaml)
     - ../components/cnpg-operator
+    # its Barman Cloud plugin: WAL archiving + base backups into MinIO
+    # (../apps/minio.yaml, ../apps/schmetterpause-backup.yaml)
+    - ../components/cnpg-barman-cloud
     # the homerun2 catchers read their config only at start
     - ../components/reloader
   # Every child the bundle renders has `sourceRef.kind: GitRepository` hard-coded
