@@ -1,7 +1,9 @@
 ---
 # MinIO on the node: the S3 target for schmetterpause's CNPG backups
 # (./schmetterpause-backup.yaml, tabletennis.yaml). flux apps/minio from the
-# flux-repo OCI artifact, plus its HTTPRoute component.
+# flux-repo OCI artifact. Its HTTPRoutes are a separate Kustomization
+# (minio-httproute below), applied only after this one is Ready -- the same
+# split as clusters/platform/apps/minio(-httproute).yaml.
 #
 # SAME-NODE BACKUP. The bucket sits on the same eMMC as the database. It
 # protects against a bad migration or a deleted table (WAL archive + daily base
@@ -36,8 +38,6 @@ spec:
     kind: OCIRepository
     name: flux-repo
   path: ./apps/minio
-  components:
-    - ./components/httproute
   patches:
     - target:
         group: helm.toolkit.fluxcd.io
@@ -61,6 +61,38 @@ spec:
       # pre-release.yaml renders two Certificates from it (unused with the
       # Gateway, but they must resolve): cert-manager-selfsigned's CA issuer
       CLUSTER_ISSUER: cluster-ca
+      INGRESS_HOSTNAME_API: minio
+      INGRESS_HOSTNAME_CONSOLE: minio-console
+      INGRESS_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+---
+# The routes, only after the Service exists. A route applied before its
+# backend Service makes Cilium answer 500 for good (flux apps/homerun2/README;
+# the reason homerun2-routes is split too). In one Kustomization with the
+# HelmRelease, the route is applied at once and the Service only when
+# helm-controller installs the chart.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: minio-httproute
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: minio
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./apps/minio/components/httproute
+  postBuild:
+    substitute:
+      MINIO_NAMESPACE: minio
       INGRESS_HOSTNAME_API: minio
       INGRESS_HOSTNAME_CONSOLE: minio-console
       INGRESS_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
