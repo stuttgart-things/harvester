@@ -1,0 +1,51 @@
+---
+# tabletennis (schmetterpause + zaehlwerk) on the edge box -- flux
+# apps/tabletennis/profiles/sops, read from the flux-repo OCI artifact.
+#
+# Differences from ../homerun2-dev/tabletennis.yaml:
+#   - no schmetterpause-db-backup-sops. There is no S3 on the edge, and a
+#     same-node backup would not survive losing the node. The data is
+#     disposable here.
+#   - no scoreboard / handover. The handover reaches schmetterpause over the
+#     HTTPRoute, so zaehlwerk would need the self-signed CA in a trust bundle.
+#     Add both together later if wanted (flux apps/tabletennis/README).
+#   - zaehlwerk-panel-homerun2 instead of a hand-patched OMNI_PITCHER_URL. It
+#     talks to omni-pitcher and led-catcher over in-cluster http, with no CA
+#     involved.
+#
+# zaehlwerk has no authentication of its own. The route is the only access
+# control, so the Gateway must stay on the edge network.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: tabletennis
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: infra-platform
+    - name: cnpg-operator
+    - name: homerun2
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./apps/tabletennis/profiles/sops
+  components:
+    - ../../components/zaehlwerk-panel-homerun2
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: edge-secrets-subst
+        optional: false
+    substitute:
+      DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+      GATEWAY_NAME: edge-gateway
+      GATEWAY_NAMESPACE: default
+      SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi

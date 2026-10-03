@@ -1,0 +1,89 @@
+---
+# The infra BUNDLE for this cluster -- stuttgart-things/flux → ./infra/platform,
+# read from the flux-repo OCI artifact (./flux-sources.yaml) instead of a
+# GitRepository.
+#
+# Modelled on ../machinery-hv/infra-platform.yaml. The difference is that
+# nothing here reaches a lab service. Not selected, compared with machinery-hv
+# and homerun2-dev:
+#
+#   cert-manager-vault-issuer -- no OpenBao. cert-manager-selfsigned builds its
+#     own chain: selfsigned → cluster-ca (CA issuer) → *.INFRA_DOMAIN.
+#     CERT_MANAGER_SELFSIGNED_ISSUER is therefore left at its default
+#     (cluster-ca).
+#   coredns-lab-zone -- forwards to the lab router. On the edge, clients resolve
+#     *.INFRA_DOMAIN themselves (README, "DNS on the edge").
+#   openebs -- k3s ships local-path as the default StorageClass. Adding
+#     openebs-hostpath would make two defaults. The storage is not meant to
+#     survive the box.
+#   cnpg-barman-cloud -- no S3 to back up to.
+#   trust-manager -- its Bundles always list a vault-pki-ca source.
+#   headlamp, flux-web -- RAM is 8Gi on the target.
+#
+# Cilium itself is NOT here. The Ansible role installs it as the CNI, with
+# L2 announcements, externalIPs and Gateway API enabled (README, step 2).
+#
+# `components:` must never be empty -- see the note in homerun2-dev's file.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infra-platform
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./infra/platform/root
+  components:
+    # networking
+    - ../components/cilium-lb
+    - ../components/cilium-gateway
+    # pki, fully local
+    - ../components/cert-manager-install
+    - ../components/cert-manager-selfsigned
+    # schmetterpause's database (tabletennis.yaml)
+    - ../components/cnpg-operator
+    # the homerun2 catchers read their config only at start
+    - ../components/reloader
+  # Every child the bundle renders has `sourceRef.kind: GitRepository` hard-coded
+  # (infra/platform/components/*/ks-*.yaml). Here it becomes OCIRepository, and
+  # FLUX_SOURCE below names it. This is safe as a blanket patch: every
+  # Kustomization in the bundle's output is one of those children, and all of
+  # them read ${FLUX_SOURCE}. Dropped once flux#621's FLUX_SOURCE_KIND exists.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+      patch: |
+        - op: replace
+          path: /spec/sourceRef/kind
+          value: OCIRepository
+  postBuild:
+    substitute:
+      FLUX_SOURCE: flux-repo
+
+      # Keep identical to homerun2.yaml and tabletennis.yaml (DOMAIN /
+      # GATEWAY_*).
+      INFRA_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+      INFRA_GATEWAY_NAME: edge-gateway
+      INFRA_GATEWAY_NAMESPACE: default
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+
+      # ---- cilium-lb ------------------------------------------------------
+      # ONE address on the node's LAN, the Gateway's VIP. Lab test node
+      # edge-tt-test1 (LabDA): 10.100.136.223, reserved in the LabDA Clusterbook
+      # on 2026-10-03 with DNS *.edge-tt-test1.4sthings.tiab.ssc.sva.de -- the
+      # INFRA_DOMAIN above. On the LattePanda both change (README, "Moving to
+      # the hardware"). Quoted: substitute is map[string]string.
+      CILIUM_LB_IP_START: "10.100.136.223"
+      CILIUM_LB_IP_STOP: "10.100.136.223"

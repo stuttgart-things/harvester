@@ -1,0 +1,28 @@
+---
+# The one source every Kustomization on this cluster pulls from: the whole
+# stuttgart-things/flux repo as a single OCI artifact, not two GitRepositories.
+#
+# WHY ONE OCI ARTIFACT. This cluster is meant for the edge box (LattePanda Mu,
+# N100), which runs only occasionally and must not depend on lab services.
+#   - One immutable digest pins infra and apps together.
+#   - The artifact can be mirrored into a registry on the node later, so the box
+#     can run offline. GitHub would then no longer be needed at reconcile time.
+#
+# WHY NOT THE PER-COMPONENT ARTIFACTS (flux/infra/<name>). The infra bundle's
+# children use paths from the repo root (./infra/cert-manager/..., and
+# ./apps/cnpg-operator from an INFRA component). A per-component artifact does
+# not contain them. Only a whole-repo artifact does.
+#
+# CI pushes flux/repo:<version> (and `latest`) on every flux release since
+# v1.111.0 (stuttgart-things/flux#621, #622). Moving this cluster forward means
+# bumping the tag here. The artifact is public, so no secretRef is needed.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: flux-repo
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/flux/repo
+  ref:
+    tag: v1.111.0

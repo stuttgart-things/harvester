@@ -1,4 +1,14 @@
 ---
+# Collections for the k3s install on the edge node -- used by both runs in
+# ./README.md (ansible-galaxy for the CLI run, --requirements for Dagger).
+#
+# sthings.rke must be >= 26.1003.1399 (deploy-configure-rke 2026.10.03-1):
+# older collections silently ignore cilium_chart_version and k3s_cluster_init
+# from ./k3s-vars.yaml. Install with --upgrade, or an older sthings.rke already
+# in ~/.ansible/collections wins.
+#
+# Same versions as ../../../requirements.yaml on 2026-10-03; pinned here on
+# purpose so the edge run does not move when the repo-wide file does.
 collections:
   - name: community.crypto
     version: 3.4.0
