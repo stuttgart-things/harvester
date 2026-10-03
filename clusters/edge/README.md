@@ -12,8 +12,9 @@ The chain: VM + base OS (Backstage request) → k3s + Cilium ([`k3s/`](./k3s/))
 artifact** of `stuttgart-things/flux` ([`sources.yaml`](./sources.yaml)),
 not from Git.
 
-> **Status: in progress.** Test VM with base OS, k3s + Cilium done
-> ([`k3s/`](./k3s/)); LB address and DNS reserved. Flux bootstrap is next.
+> **Status: running on the lab test node since 2026-10-03 11:30 UTC.** All 25
+> Kustomizations Ready, apps reachable through the Gateway VIP. See
+> [First rollout](#first-rollout-2026-10-03). Next: the LattePanda.
 
 | | |
 |---|---|
@@ -224,16 +225,58 @@ does. `homerun2-notify` fails once with `namespaces "homerun2" not found`, then
 applies (see [Layout](#layout)). The routes wait for homerun2, and tabletennis
 waits for homerun2 and cnpg-operator.
 
+## First rollout: 2026-10-03
+
+On `edge-tt-test1` (LabDA, 8 vCPU / 15Gi), with flux/repo v1.111.0,
+blueprints/flux v3.6.1 (flux-operator 0.61.0, Flux 2.9.6), k3s v1.35.9+k3s1,
+and Cilium 1.20.2.
+
+| Time (UTC) | |
+|---|---|
+| 10:27 to 10:33 | k3s + Cilium (Ansible CLI, [`k3s/`](./k3s/)) |
+| 10:59 | Flux bootstrap (3m52s), commit `6348f3d` |
+| 11:13 | infra/apps split merged (#359); the moved Kustomizations are pruned and rebuilt |
+| 11:21 | sops decryption on `edge-apps` (#360) |
+| **11:30** | **all 25 Kustomizations Ready** |
+
+| Check | Result |
+|---|---|
+| Gateway | `edge-gateway` PROGRAMMED, address `10.100.136.223` (Cilium L2) |
+| TLS | `wildcard-tls` Ready, `CN=*.edge-tt-test1.4sthings.tiab.ssc.sva.de`, issuer `cluster-ca` |
+| Routes | 11 HTTPRoutes (8 homerun2, 2 schmetterpause, 1 zaehlwerk) |
+| schmetterpause | https **200**, http **301** → https |
+| zaehlwerk | https 302 |
+| omni-pitcher | `/health` **200** |
+| Postgres | CNPG `schmetterpause-db` 1/1, "Cluster in healthy state" |
+| Pods | 31/31 Running |
+| Versions | schmetterpause v0.14.0, zaehlwerk v0.9.0, light-catcher v1.5.0, notification-catcher v3.0.2, redis chart 17.1.4 |
+
+**UFW does not get in the way.** baseos leaves UFW active without 80/tcp, but
+the Gateway is reachable on 80 and 443. Cilium's eBPF kube-proxy replacement
+handles the VIP traffic before netfilter's INPUT chain sees it.
+
+**Redis is the slow start.** redis-stack takes 3-4 minutes to 2/2 (Sentinel last).
+core-catcher, omni-pitcher and scout restart until it answers. homerun2 is
+Ready about 7 minutes after `edge-apps` starts.
+
 ## Footprint
 
-This is an estimate, not a measurement: about 2.5-4Gi in use for everything
-above, on 8Gi. **Measure it on the VM** (`kubectl top pods -A`,
-`free -m` on the node) before trimming anything. Likely trims, in order:
+Measured 2026-10-03 after the rollout, everything above running:
+
+| | |
+|---|---|
+| Node memory used (`free -m`, OS included) | **~3.0 GiB** (12.5 GiB available on the 15 GiB VM) |
+| Workloads (`kubectl top node`) | 2.1 GiB, 383m CPU (4%) |
+| Largest pods | cilium 171Mi, flux-operator 86Mi, kustomize-controller 70Mi, cilium-operator 58Mi, Postgres 53Mi, led-catcher 50Mi |
+| `/var/lib/rancher/k3s` | 6.1 GB (images + sqlite + local-path) |
+
+**That fits the LattePanda's 8 GB RAM / 64 GB eMMC without trimming.** The
+earlier estimate was 2.5-4 GiB. Trims stay available if the box gets more
+apps:
 
 1. redis-stack: replica + sentinel off. This needs a values patch on the
-   HelmRelease (the profile has no variable for it), and the clients' Redis
-   address has to be checked, because the service name changes without
-   sentinel.
+   HelmRelease, because the profile has no variable for it, and the clients'
+   Redis address changes without sentinel.
 2. homerun2 `profiles/base` + add-ons instead of `profiles/sops`: drop scout,
    config-viewer and demo-pitcher.
 
