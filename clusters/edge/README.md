@@ -2,7 +2,7 @@
 
 A single-node **k3s** cluster for the edge box, a LattePanda Mu (Intel N100,
 8GB LPDDR5, 64GB eMMC). It runs only occasionally, and when it runs it has to
-manage with **only that one node**: no OpenBao, no NFS, no lab DNS, no S3, no
+manage with **only that one node**: no central OpenBao, NFS, lab DNS, S3 or
 Rancher. It is tested on a lab VM first (`edge-tt-test1`, LabDA), then built
 on the hardware.
 
@@ -48,7 +48,9 @@ clusters/edge/
 ├── apps.yaml            Kustomization edge-apps  -> ./apps    (dependsOn edge-infra)
 ├── infra/               infra-platform.yaml: the flux infra bundle
 ├── apps/                homerun2, tabletennis, edge-secrets-subst (SOPS),
-│   └── homerun2-notify/   the notification-catcher ConfigMap (own Kustomization)
+│   ├── homerun2-notify/   the notification-catcher ConfigMap (own Kustomization)
+│   ├── minio.yaml         MinIO on the node: S3 for the schmetterpause backups
+│   └── schmetterpause-backup/  the backup credentials Secret (own Kustomization)
 └── k3s/                 Ansible for k3s + Cilium -- never read by Flux (.sourceignore)
 ```
 
@@ -91,9 +93,10 @@ can be stopped or removed without touching it (`flux suspend ks edge-apps`).
 | Layer | Selected | Left out, and why |
 |---|---|---|
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (installs no Cilium, so the node would have no CNI) |
-| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cnpg-operator`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager, openebs, headlamp, flux-web. Each is explained in `infra/infra-platform.yaml` |
+| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager, openebs, headlamp, flux-web. Each is explained in `infra/infra-platform.yaml` |
 | homerun2 | `profiles/sops` + `sops-routes`, as on homerun2-dev | `redis-lb` (nothing off the node reads Redis); the Teams webhook (notification-catcher stays in dry run) |
-| tabletennis | `profiles/sops` + `zaehlwerk-panel-homerun2` | DB backup (no S3); scoreboard + handover (would need the self-signed CA in zaehlwerk's trust) |
+| tabletennis | `profiles/sops` + `zaehlwerk-panel-homerun2` + `schmetterpause-db-backup-sops` (WAL archive + daily base backup, 7d, into MinIO on the node) | scoreboard + handover (would need the self-signed CA in zaehlwerk's trust) |
+| MinIO | `apps/minio` (chart 16.0.10) + HTTPRoute, bucket `schmetterpause-cnpg` via `defaultBuckets`, 5Gi local-path | an off-box copy: the backup protects against DB mistakes, **not** against losing the node (harvester#364) |
 
 ## 1. Address and name
 

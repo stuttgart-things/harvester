@@ -1,0 +1,68 @@
+---
+# MinIO on the node: the S3 target for schmetterpause's CNPG backups
+# (./schmetterpause-backup.yaml, tabletennis.yaml). flux apps/minio from the
+# flux-repo OCI artifact, plus its HTTPRoute component.
+#
+# SAME-NODE BACKUP. The bucket sits on the same eMMC as the database. It
+# protects against a bad migration or a deleted table (WAL archive + daily base
+# backup, point-in-time recovery), NOT against losing the box. An off-box copy
+# (mc mirror to the lab when online, or USB) is a later step (harvester#364).
+#
+# Chart 16.0.10, not the base default 17.x: 17 adds a console image
+# (ghcr.io/bitnami/minio-object-browser) that cannot be pulled
+# (flux apps/platform/components/minio/ks-minio.yaml).
+#
+# The bucket comes from `defaultBuckets` -- the MinIO container creates it at
+# start. The chart's provisioning Job is NOT used: its client image
+# (bitnami/minio-client) is gone from Docker Hub, and the release's
+# global.imageRegistry would redirect it to ghcr anyway. CNPG therefore uses the
+# root credentials (one consumer on this node); a dedicated user is a later
+# refinement.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: minio
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./apps/minio
+  components:
+    - ./components/httproute
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+        name: minio-deployment
+      patch: |
+        - op: add
+          path: /spec/values/defaultBuckets
+          value: schmetterpause-cnpg
+  postBuild:
+    substituteFrom:
+      # MINIO_ADMIN_USER / MINIO_ADMIN_PASSWORD
+      - kind: Secret
+        name: edge-secrets-subst
+        optional: false
+    substitute:
+      MINIO_VERSION: 16.0.10
+      STORAGE_CLASS: local-path
+      MINIO_STORAGE_SIZE: 5Gi
+      MINIO_INGRESS_ENABLED: "false"
+      # pre-release.yaml renders two Certificates from it (unused with the
+      # Gateway, but they must resolve): cert-manager-selfsigned's CA issuer
+      CLUSTER_ISSUER: cluster-ca
+      INGRESS_HOSTNAME_API: minio
+      INGRESS_HOSTNAME_CONSOLE: minio-console
+      INGRESS_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+      GATEWAY_NAME: edge-gateway
+      GATEWAY_NAMESPACE: default

@@ -33,6 +33,9 @@ spec:
   # by name anyway because the Cluster CRD must exist at dry-run time.
   dependsOn:
     - name: cnpg-operator
+    # the ObjectStore CRD (barmancloud.cnpg.io) must exist at dry-run time
+    - name: cnpg-barman-cloud
+    - name: minio
     - name: homerun2
   sourceRef:
     kind: OCIRepository
@@ -40,6 +43,9 @@ spec:
   path: ./apps/tabletennis/profiles/sops
   components:
     - ../../components/zaehlwerk-panel-homerun2
+    # WAL archiving + daily base backup into MinIO on the node (./minio.yaml);
+    # credentials from ./schmetterpause-backup
+    - ../../components/schmetterpause-db-backup-sops
   postBuild:
     substituteFrom:
       - kind: Secret
@@ -50,3 +56,8 @@ spec:
       GATEWAY_NAME: edge-gateway
       GATEWAY_NAMESPACE: default
       SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
+      SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
+      SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
+      SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
+      # same eMMC as the database -- keep the bucket small
+      SCHMETTERPAUSE_BACKUP_RETENTION: 7d

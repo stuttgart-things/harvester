@@ -1,6 +1,7 @@
 ---
-# What edge-apps (../apps.yaml) applies. ./homerun2-notify is NOT listed: it is
-# applied by its own Kustomization (homerun2-notify.yaml), see there.
+# What edge-apps (../apps.yaml) applies. ./homerun2-notify and
+# ./schmetterpause-backup are NOT listed: each is applied by its own
+# Kustomization (homerun2-notify.yaml, schmetterpause-backup.yaml), see there.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -8,4 +9,6 @@ resources:
   - edge-secrets-subst.enc.yaml
   - homerun2.yaml
   - homerun2-notify.yaml
+  - minio.yaml
+  - schmetterpause-backup.yaml
   - tabletennis.yaml
