@@ -1,0 +1,44 @@
+---
+# HTTP-01: OpenBao resolves piezo-a.<EDGE_DOMAIN> -- in the lab the Clusterbook
+# wildcard, i.e. the Gateway VIP -- and fetches
+# /.well-known/acme-challenge/<token> on port 80. This route sends that path
+# to the pod, where lego answers on 8080. On the edge the name is the ESP's
+# own DHCP lease (OpenWrt), and OpenBao reaches the device directly.
+#
+# publishNotReadyAddresses: lego runs as an INIT container, so the pod is not
+# Ready during the challenge. Without this the Service has no endpoints and
+# the validation fails.
+apiVersion: v1
+kind: Service
+metadata:
+  name: piezo-a-acme
+  namespace: esp-mock
+spec:
+  publishNotReadyAddresses: true
+  selector:
+    app.kubernetes.io/name: piezo-a
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: piezo-a-acme
+  namespace: esp-mock
+spec:
+  parentRefs:
+    - name: ${EDGE_GATEWAY_NAME}
+      namespace: default
+      sectionName: http
+  hostnames:
+    - piezo-a.${EDGE_DOMAIN}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /.well-known/acme-challenge/
+      backendRefs:
+        - name: piezo-a-acme
+          port: 80

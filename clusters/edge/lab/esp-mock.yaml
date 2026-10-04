@@ -1,0 +1,31 @@
+---
+# LAB ONLY: an emulated ESP32 -- the zaehlwerk piezo board mock with a device
+# certificate from OpenBao via ACME, the way the real firmware will enrol
+# (harvester#364, phase 3). Its own Kustomization: it needs OpenBao (ACME)
+# and zaehlwerk (the API it talks to).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: esp-mock
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: openbao-httproute
+    - name: tabletennis
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/lab/esp-mock
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: false

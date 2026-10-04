@@ -1,0 +1,16 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yaml
+  - challenge.yaml
+  - piezo-a.yaml
+# The edge root CA the "device" trusts -- a copy of ../../edge-root-ca.crt
+# (kustomize does not load files outside this directory). Public.
+configMapGenerator:
+  - name: edge-root-ca
+    namespace: esp-mock
+    files:
+      - root.crt=edge-root-ca.crt
+generatorOptions:
+  disableNameSuffixHash: true
