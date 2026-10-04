@@ -6,12 +6,12 @@
 # compared with the hand-written ones (see the PR); the cluster still applies
 # sources.yaml, infra.yaml, apps.yaml, lab.yaml and infra/infra-platform.yaml.
 #
-# Render (from the repo root; needs blueprints#212 and kcl#338 released --
-# until then add --bundle-source <kcl checkout>/flux/claim-flux-kustomizations
-# and use the blueprints branch). The infra components' AppProfiles are in
-# ./profiles until they move into the flux catalog:
+# Render (from the repo root) with blueprints/flux v3.7.0 or newer
+# (blueprints#212; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
+# The infra components' AppProfiles are in ./profiles until they move into
+# the flux catalog:
 #
-#   dagger call -m github.com/stuttgart-things/blueprints/flux@<release> \
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.7.0 \
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
 #     --extra-profile-dir clusters/edge/profiles \
