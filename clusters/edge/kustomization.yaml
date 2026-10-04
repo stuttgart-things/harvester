@@ -16,6 +16,8 @@ resources:
   # the FluxInstance and its sops key (committed by the Flux bootstrap)
   - config.yaml
   - secrets.yaml
+  # the environment's values (lab vs. LattePanda), read by both layers
+  - cluster-vars.yaml
   # OCIRepository flux-repo: what every layer's content comes from
   - sources.yaml
   - infra.yaml

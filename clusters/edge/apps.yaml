@@ -28,6 +28,14 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./clusters/edge/apps
+  # ${EDGE_*} in the files of this layer: the environment's values
+  # (../cluster-vars.yaml). Nothing in this layer's objects may carry any other
+  # ${...} -- this substitution would empty it (README, Layout).
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: false
   # ./apps carries edge-secrets-subst.enc.yaml. The FluxInstance's sops patch
   # (config.yaml, kustomize.patches) only reaches the Kustomization the
   # instance itself creates -- flux-system -- not the ones applied from git,

@@ -75,8 +75,8 @@ spec:
 
       # Keep identical to ../apps/homerun2.yaml and ../apps/tabletennis.yaml (DOMAIN /
       # GATEWAY_*).
-      INFRA_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
-      INFRA_GATEWAY_NAME: edge-gateway
+      INFRA_DOMAIN: ${EDGE_DOMAIN}
+      INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       INFRA_GATEWAY_NAMESPACE: default
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
       # The wildcard is issued by the persistent edge CA (./ca, ClusterIssuer
@@ -86,10 +86,9 @@ spec:
       CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
 
       # ---- cilium-lb ------------------------------------------------------
-      # ONE address on the node's LAN, the Gateway's VIP. Lab test node
-      # edge-tt-test1 (LabDA): 10.100.136.223, reserved in the LabDA Clusterbook
-      # on 2026-10-03 with DNS *.edge-tt-test1.4sthings.tiab.ssc.sva.de -- the
-      # INFRA_DOMAIN above. On the LattePanda both change (README, "Moving to
-      # the hardware"). Quoted: substitute is map[string]string.
-      CILIUM_LB_IP_START: "10.100.136.223"
-      CILIUM_LB_IP_STOP: "10.100.136.223"
+      # ONE address on the node's LAN, the Gateway's VIP. EDGE_LB_IP and
+      # EDGE_DOMAIN come from ../cluster-vars.yaml (substituted by edge-infra
+      # when it applies this file) -- the lab and the LattePanda differ there,
+      # not here. Quoted: substitute is map[string]string.
+      CILIUM_LB_IP_START: "${EDGE_LB_IP}"
+      CILIUM_LB_IP_STOP: "${EDGE_LB_IP}"

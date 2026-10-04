@@ -41,7 +41,8 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 
 ```
 clusters/edge/
-├── kustomization.yaml   flux-system applies only: config, secrets, sources, infra.yaml, apps.yaml
+├── kustomization.yaml   flux-system applies only: config, secrets, cluster-vars, sources, infra.yaml, apps.yaml
+├── cluster-vars.yaml    ConfigMap: what differs between lab and LattePanda (EDGE_DOMAIN, EDGE_LB_IP, EDGE_GATEWAY_NAME, EDGE_CLUSTER_NAME)
 ├── config.yaml  secrets.yaml        FluxInstance + git/sops secrets (committed by the bootstrap)
 ├── sources.yaml         OCIRepository flux-repo -> ghcr.io/stuttgart-things/flux/repo
 ├── infra.yaml           Kustomization edge-infra -> ./infra   (wait: true)
@@ -56,6 +57,14 @@ clusters/edge/
 
 Two layers, so the apps start only once the whole infra bundle is Ready, and
 can be stopped or removed without touching it (`flux suspend ks edge-apps`).
+
+**Lab vs. LattePanda: one file.** `infra/` and `apps/` carry `${EDGE_*}`
+placeholders, not values. Both layers substitute them from the ConfigMap
+`cluster-vars` ([`cluster-vars.yaml`](./cluster-vars.yaml)), so the
+environments differ only in that file. Consequence: no object these two layers
+apply may carry any other `${...}`, because the layer's substitution would
+replace it with an empty string. Values meant for a child Kustomization stay in
+that child's own `postBuild` (they are plain strings in this repo).
 
 ### Three things the layers need, learned on 2026-10-03
 
