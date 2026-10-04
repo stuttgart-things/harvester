@@ -314,7 +314,7 @@ Afterwards:
 ## 6. Verify
 
 ```bash
-flux get sources oci -A                       # flux-repo READY, v1.116.0@sha256:...
+flux get sources oci -A                       # flux-repo READY, v1.117.1@sha256:...
 flux get ks -A                                # edge-infra -> infra-platform + 6 children; edge-apps -> homerun2(-routes), minio(-httproute), openbao(-prereqs, -httproute), tabletennis + inner ones
 kubectl get gateway -A                        # edge-gateway PROGRAMMED, address = the LB VIP
 kubectl -n default get certificate wildcard-tls
