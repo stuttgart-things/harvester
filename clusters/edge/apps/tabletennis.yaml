@@ -52,8 +52,8 @@ spec:
         name: edge-secrets-subst
         optional: false
     substitute:
-      DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
-      GATEWAY_NAME: edge-gateway
+      DOMAIN: ${EDGE_DOMAIN}
+      GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       GATEWAY_NAMESPACE: default
       SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
       SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg

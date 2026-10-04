@@ -1,0 +1,22 @@
+---
+# Everything that differs between the lab test node and the LattePanda, in ONE
+# place. edge-infra and edge-apps substitute these into the Kustomizations
+# they apply (postBuild.substituteFrom), so infra/ and apps/ carry
+# ${EDGE_*} placeholders instead of values.
+#
+# THIS FILE: the lab -- edge-tt-test1 in LabDA vSphere. Address and DNS
+# wildcard reserved in the LabDA Clusterbook (README, step 1). On the
+# LattePanda: EDGE_DOMAIN edge.sthings.lab, the VIP from the OpenWrt LAN
+# (harvester#364, "Design decided").
+#
+# Only plain strings here, no secrets (those are SOPS, apps/edge-secrets-subst).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-vars
+  namespace: flux-system
+data:
+  EDGE_CLUSTER_NAME: edge-tt-test1
+  EDGE_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+  EDGE_LB_IP: 10.100.136.223
+  EDGE_GATEWAY_NAME: edge-gateway

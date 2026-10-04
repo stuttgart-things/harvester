@@ -54,7 +54,7 @@ spec:
       CLUSTER_ISSUER: cluster-ca
       INGRESS_HOSTNAME_API: minio
       INGRESS_HOSTNAME_CONSOLE: minio-console
-      INGRESS_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
+      INGRESS_DOMAIN: ${EDGE_DOMAIN}
 ---
 # The routes, only after the Service exists. A route applied before its
 # backend Service makes Cilium answer 500 for good (flux apps/homerun2/README;
@@ -86,6 +86,6 @@ spec:
       MINIO_NAMESPACE: minio
       INGRESS_HOSTNAME_API: minio
       INGRESS_HOSTNAME_CONSOLE: minio-console
-      INGRESS_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
-      GATEWAY_NAME: edge-gateway
+      INGRESS_DOMAIN: ${EDGE_DOMAIN}
+      GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       GATEWAY_NAMESPACE: default
