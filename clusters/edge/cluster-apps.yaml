@@ -1,0 +1,142 @@
+---
+# ClusterApps for clusters/edge (harvester#364, phase 4b): the input from which
+# blueprints `render-cluster-apps` generates this folder's source, layers and
+# bundle Kustomizations. NOT a Kubernetes object -- Flux never reads it
+# (.sourceignore). Nothing here is live yet: the generated files are only
+# compared with the hand-written ones (see the PR); the cluster still applies
+# sources.yaml, infra.yaml, apps.yaml, lab.yaml and infra/infra-platform.yaml.
+#
+# Render (from the repo root; needs blueprints#212 and kcl#338 released --
+# until then add --bundle-source <kcl checkout>/flux/claim-flux-kustomizations
+# and use the blueprints branch). The infra components' AppProfiles are in
+# ./profiles until they move into the flux catalog:
+#
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@<release> \
+#     render-cluster-apps \
+#     --cluster-apps clusters/edge/cluster-apps.yaml \
+#     --extra-profile-dir clusters/edge/profiles \
+#     --master-age-key env:SOPS_AGE_KEY \
+#     --escrow-recipients "$(age-keygen -y <<<"$SOPS_AGE_KEY")" \
+#     --sops-ref-dir . \
+#     export --path /tmp/edge-gen
+#
+# Output: flux/apps.yaml (OCIRepository flux-repo + the layers edge-infra,
+# edge-apps, edge-lab), flux/infra/infra-platform.yaml,
+# flux/apps/apps-platform.yaml (minio), flux/cluster-secrets/ (minio-secrets).
+# Once live, export flux/ into clusters/edge and pass
+# --existing-secrets clusters/edge/cluster-secrets on every later run.
+#
+# --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
+# the master key), not with a cluster key of its own, so the generated secrets
+# must be encrypted for it too. Drop it once the edge gets its own key.
+#
+# LAB vs LATTEPANDA. The values that differ stay in cluster-vars.yaml: every
+# value below that is ${EDGE_*} is substituted by the layer that applies the
+# generated file, exactly as with the hand-written ones. The only structural
+# difference is the layer edge-lab (lab only): remove it for the LattePanda.
+kind: ClusterApps
+metadata:
+  name: edge
+spec:
+  # The whole stuttgart-things/flux repo as one OCI artifact (sources.yaml).
+  # Generated as the OCIRepository flux-repo; the bundles read it with
+  # sourceRef.kind OCIRepository plus a kind patch for their children.
+  # v1.117.1, one ahead of sources.yaml: from there on the catalog's minio
+  # component carries the minio-httproute child (flux#632) that
+  # apps/minio.yaml has by hand.
+  source:
+    kind: OCIRepository
+    name: flux-repo
+    url: oci://ghcr.io/stuttgart-things/flux/repo
+    tag: v1.117.1
+    interval: 1h
+  path: ./clusters/edge
+  # The secrets the generator makes go to ./cluster-secrets and are applied
+  # by flux-system (kustomization.yaml would list cluster-secrets/secrets).
+  secrets:
+    mode: inline
+  layers:
+    edge-infra:
+      dir: infra
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+      timeout: 15m
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+    edge-apps:
+      dir: apps
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: apps
+      dependsOn: [edge-infra]
+      wait: false
+      # ./apps carries edge-secrets-subst.enc.yaml (README, Layout)
+      decryptionSecret: sops-age # pragma: allowlist secret
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+    # LAB ONLY: Vault issuer + the players' Gateway (hand-written, ./lab)
+    edge-lab:
+      dir: lab
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+      dependsOn: [edge-infra]
+      timeout: 10m
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+  bundles:
+    infra-platform:
+      layer: edge-infra
+    apps-platform:
+      layer: edge-apps
+  # Every bundle gets these.
+  vars:
+    INFRA_DOMAIN: ${EDGE_DOMAIN}
+    INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
+    INFRA_GATEWAY_NAMESPACE: default
+    INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+  apps:
+    # ---- infra-platform (profiles: ./profiles) ---------------------------
+    # Cilium itself is the CNI from k3s/ (Ansible); these are its LB pool and
+    # the Gateway. ONE address, the Gateway's VIP.
+    cilium-lb:
+      vars:
+        CILIUM_LB_IP_START: ${EDGE_LB_IP}
+        CILIUM_LB_IP_STOP: ${EDGE_LB_IP}
+    cilium-gateway: {}
+    cert-manager-install: {}
+    # The wildcard comes from the persistent edge CA (ClusterIssuer edge-ca),
+    # not from the self-signed cluster-ca, which is new on every install.
+    cert-manager-selfsigned:
+      vars:
+        CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
+    # ClusterIssuer edge-ca from the SOPS Secret in infra/ca (hand-written: the
+    # intermediate is a manual offline artifact).
+    cert-manager-ca-from-secret:
+      vars:
+        CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
+        CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
+    cnpg-operator: {}
+    cnpg-barman-cloud: {}
+    reloader: {}
+    # ---- apps-platform (profile: flux catalog) ---------------------------
+    # The S3 target for schmetterpause's backups. Chart 16.0.10 (17 needs an
+    # image that cannot be pulled).
+    minio:
+      vars:
+        MINIO_STORAGE_CLASS: local-path
+        MINIO_STORAGE_SIZE: 5Gi
+        MINIO_VERSION: 16.0.10
+      # The admin credentials Terraform (../terraform/minio) already uses:
+      # taken from edge-secrets-subst, not generated, so nothing rotates.
+      secrets:
+        minio-secrets:
+          MINIO_ADMIN_USER: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_USER
+          MINIO_ADMIN_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_PASSWORD # pragma: allowlist secret

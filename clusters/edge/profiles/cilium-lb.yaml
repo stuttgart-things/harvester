@@ -1,0 +1,17 @@
+---
+# AppProfile for the flux catalog's infra-platform component cilium-lb.
+# Derived from its ks-*.yaml (flux hack/check-app-profiles.py contract); kept
+# here until it moves into the catalog (<bundle>/components/<app>/profile.yaml).
+kind: AppProfile
+metadata:
+  name: cilium-lb
+spec:
+  bundle: infra-platform
+  component: ../components/cilium-lb
+  vars:
+    CILIUM_L2_POLICY_NAME: {}
+    CILIUM_LB_IP_START: {}
+    CILIUM_LB_IP_STOP: {}
+    CILIUM_LB_POOL_NAME: {}
+    CILIUM_LB_SUSPEND: {}
+    CILIUM_NAMESPACE: {}
