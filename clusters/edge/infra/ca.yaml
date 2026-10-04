@@ -1,6 +1,8 @@
 ---
-# Applies ./ca (the persistent edge intermediate + ClusterIssuer edge-ca) in a
-# Kustomization of its own:
+# Applies ./ca (the persistent edge intermediate, Secret cert-manager/edge-ca)
+# in a Kustomization of its own. The ClusterIssuer edge-ca that reads it comes
+# from the bundle component cert-manager-ca-from-secret (infra-platform.yaml,
+# flux #629). This one:
 #   - the Secret lives in namespace cert-manager, which cert-manager-install
 #     creates -- dependsOn it instead of failing the edge-infra apply on a fresh
 #     cluster;

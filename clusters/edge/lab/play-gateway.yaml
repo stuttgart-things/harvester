@@ -1,60 +1,43 @@
 ---
-# The "public" Gateway for players, lab version: its own VIP (EDGE_PLAY_LB_IP,
-# a Clusterbook reservation with DNS *.EDGE_PLAY_DOMAIN), its own wildcard from
-# the LabDA Vault. Separate from edge-gateway (edge-ca, internal names) on
-# purpose: nothing here patches the shared infra.
+# The "public" Gateway for players, lab version -- flux
+# infra/cilium/components/gateway-extra (flux #630) instead of the hand-written
+# pool + Certificate + Gateway: its own VIP (EDGE_PLAY_LB_IP, Clusterbook
+# edge-tt-test1-play with DNS), its own wildcard from the LabDA Vault issuer.
+# Same names as before (edge-play-gateway, edge-play-pool, play-wildcard-tls),
+# so the objects carry over.
 #
-# The VIP: a pool that holds exactly that address and only serves this
-# Gateway's Service (Cilium labels it io.cilium.gateway/owning-gateway), and
-# the Gateway asks for the address through spec.infrastructure.
-apiVersion: cilium.io/v2
-kind: CiliumLoadBalancerIPPool
+# NOT the bundle component (cilium-gateway-extra in infra-platform): its
+# issuer vault-pki-4sthings comes from this lab layer, which depends on
+# edge-infra -- inside infra-platform the Certificate would wait for an issuer
+# that only exists after it: deadlock (flux #630 README).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
 metadata:
-  name: edge-play-pool
+  name: play-gateway
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
 spec:
-  blocks:
-    - start: "${EDGE_PLAY_LB_IP}"
-      stop: "${EDGE_PLAY_LB_IP}"
-  serviceSelector:
-    matchLabels:
-      io.cilium.gateway/owning-gateway: edge-play-gateway
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: play-wildcard-tls
-  namespace: default
-spec:
-  secretName: play-wildcard-tls # pragma: allowlist secret
-  issuerRef:
-    name: vault-pki-4sthings
-    kind: ClusterIssuer
-  commonName: "*.${EDGE_PLAY_DOMAIN}"
-  dnsNames:
-    - "*.${EDGE_PLAY_DOMAIN}"
-  duration: 2160h
-  renewBefore: 360h
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: edge-play-gateway
-  namespace: default
-spec:
-  gatewayClassName: cilium
-  infrastructure:
-    annotations:
-      lbipam.cilium.io/ips: "${EDGE_PLAY_LB_IP}"
-  listeners:
-    - name: https
-      protocol: HTTPS
-      port: 443
-      hostname: "*.${EDGE_PLAY_DOMAIN}"
-      tls:
-        mode: Terminate
-        certificateRefs:
-          - kind: Secret
-            name: play-wildcard-tls
-      allowedRoutes:
-        namespaces:
-          from: All
+  dependsOn:
+    - name: cilium-lb
+    - name: cert-manager-vault-issuer
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./infra/cilium/components/gateway-extra
+  postBuild:
+    substitute:
+      CILIUM_GATEWAY_EXTRA_NAME: edge-play-gateway
+      CILIUM_GATEWAY_EXTRA_NAMESPACE: default
+      CILIUM_GATEWAY_EXTRA_POOL_NAME: edge-play-pool
+      CILIUM_GATEWAY_EXTRA_IP: "${EDGE_PLAY_LB_IP}"
+      CILIUM_GATEWAY_EXTRA_DOMAIN: ${EDGE_PLAY_DOMAIN}
+      CILIUM_GATEWAY_EXTRA_ISSUER: vault-pki-4sthings
+      CILIUM_GATEWAY_EXTRA_ISSUER_KIND: ClusterIssuer
+      CILIUM_GATEWAY_EXTRA_TLS_SECRET: play-wildcard-tls # pragma: allowlist secret

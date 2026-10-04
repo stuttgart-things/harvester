@@ -1,6 +1,6 @@
 ---
 # MinIO on the node: the S3 target for schmetterpause's CNPG backups
-# (./schmetterpause-backup.yaml, tabletennis.yaml). flux apps/minio from the
+# (tabletennis.yaml, component schmetterpause-db-backup-subst). flux apps/minio from the
 # flux-repo OCI artifact. Its HTTPRoutes are a separate Kustomization
 # (minio-httproute below), applied only after this one is Ready -- the same
 # split as clusters/platform/apps/minio(-httproute).yaml.
