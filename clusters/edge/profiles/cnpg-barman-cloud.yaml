@@ -1,0 +1,14 @@
+---
+# AppProfile for the flux catalog's infra-platform component cnpg-barman-cloud.
+# Derived from its ks-*.yaml (flux hack/check-app-profiles.py contract); kept
+# here until it moves into the catalog (<bundle>/components/<app>/profile.yaml).
+kind: AppProfile
+metadata:
+  name: cnpg-barman-cloud
+spec:
+  bundle: infra-platform
+  component: ../components/cnpg-barman-cloud
+  vars:
+    CNPG_BARMAN_CLOUD_SUSPEND: {}
+    CNPG_BARMAN_CLOUD_VERSION: {}
+    CNPG_NAMESPACE: {}

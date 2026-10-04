@@ -1,0 +1,16 @@
+---
+# AppProfile for the flux catalog's infra-platform component cilium-gateway.
+# Derived from its ks-*.yaml (flux hack/check-app-profiles.py contract); kept
+# here until it moves into the catalog (<bundle>/components/<app>/profile.yaml).
+kind: AppProfile
+metadata:
+  name: cilium-gateway
+spec:
+  bundle: infra-platform
+  component: ../components/cilium-gateway
+  vars:
+    CILIUM_GATEWAY_SUSPEND: {}
+    INFRA_DOMAIN: { required: true }
+    INFRA_GATEWAY_NAME: {}
+    INFRA_GATEWAY_NAMESPACE: {}
+    INFRA_TLS_SECRET: {}

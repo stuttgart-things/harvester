@@ -1,0 +1,19 @@
+---
+# AppProfile for the flux catalog's infra-platform component cert-manager-selfsigned.
+# Derived from its ks-*.yaml (flux hack/check-app-profiles.py contract); kept
+# here until it moves into the catalog (<bundle>/components/<app>/profile.yaml).
+kind: AppProfile
+metadata:
+  name: cert-manager-selfsigned
+spec:
+  bundle: infra-platform
+  component: ../components/cert-manager-selfsigned
+  vars:
+    CERT_MANAGER_CA_NAME: {}
+    CERT_MANAGER_CA_SECRET: {}
+    CERT_MANAGER_NAMESPACE: {}
+    CERT_MANAGER_SELFSIGNED_ISSUER: {}
+    CERT_MANAGER_SELFSIGNED_SUSPEND: {}
+    INFRA_DOMAIN: { required: true }
+    INFRA_GATEWAY_NAMESPACE: {}
+    INFRA_TLS_SECRET: {}

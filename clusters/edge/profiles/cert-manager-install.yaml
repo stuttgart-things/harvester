@@ -1,0 +1,14 @@
+---
+# AppProfile for the flux catalog's infra-platform component cert-manager-install.
+# Derived from its ks-*.yaml (flux hack/check-app-profiles.py contract); kept
+# here until it moves into the catalog (<bundle>/components/<app>/profile.yaml).
+kind: AppProfile
+metadata:
+  name: cert-manager-install
+spec:
+  bundle: infra-platform
+  component: ../components/cert-manager-install
+  vars:
+    CERT_MANAGER_INSTALL_SUSPEND: {}
+    CERT_MANAGER_NAMESPACE: {}
+    CERT_MANAGER_VERSION: {}

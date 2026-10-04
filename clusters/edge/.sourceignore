@@ -5,3 +5,7 @@
 # way even if that file goes.
 k3s/
 terraform/
+#   ./cluster-apps.yaml + ./profiles  input of blueprints render-cluster-apps
+#                (ClusterApps / AppProfile), no Kubernetes objects
+cluster-apps.yaml
+profiles/
