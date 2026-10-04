@@ -7,3 +7,5 @@ resources:
   - vault-issuer.yaml
   - play-gateway.yaml
   - play-routes.yaml
+  # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao)
+  - esp-mock.yaml

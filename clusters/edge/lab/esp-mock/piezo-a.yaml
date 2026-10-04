@@ -1,0 +1,91 @@
+---
+# The emulated board "piezo-a":
+#   1. init container lego: ACME HTTP-01 against OpenBao (role devices) for
+#      piezo-a.<EDGE_DOMAIN>, EC P-256 -- what the ESP firmware does at boot.
+#      Certificate + key land in /certs (emptyDir): the device identity, kept
+#      for mutual TLS later. lego trusts only the edge root (the OpenBao
+#      Gateway's certificate chains to it).
+#   2. the piezo board mock (zaehlwerk-piezo): plays matches against zaehlwerk
+#      over HTTPS through the Gateway, trusting only the edge root
+#      (SSL_CERT_FILE) -- like a device that knows nothing but that root.
+#
+# A new certificate per pod start (90 days). A real device renews before
+# expiry; the mock simply gets a fresh one when it restarts.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: piezo-a
+  namespace: esp-mock
+  labels:
+    app.kubernetes.io/name: piezo-a
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: piezo-a
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: piezo-a
+    spec:
+      automountServiceAccountToken: false
+      initContainers:
+        - name: enrol
+          image: goacme/lego:v4.35.2
+          env:
+            - name: LEGO_CA_CERTIFICATES
+              value: /ca/root.crt
+          args:
+            - --server=https://openbao.${EDGE_DOMAIN}/v1/pki/acme/directory
+            - --email=piezo-a@esp-mock.invalid
+            - --accept-tos
+            - --domains=piezo-a.${EDGE_DOMAIN}
+            - --key-type=ec256
+            - --path=/certs
+            - --http
+            - --http.port=:8080
+            - run
+          volumeMounts:
+            - {name: certs, mountPath: /certs}
+            - {name: ca, mountPath: /ca, readOnly: true}
+          resources:
+            requests: {cpu: 10m, memory: 32Mi}
+            limits: {memory: 128Mi}
+      containers:
+        - name: piezo
+          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.9.0
+          env:
+            - name: ZAEHLWERK_URL
+              value: https://zaehlwerk.${EDGE_DOMAIN}
+            - name: SSL_CERT_FILE
+              value: /ca/root.crt
+            - name: PIEZO_SOURCE
+              value: piezo-a
+            - name: PIEZO_JOIN
+              value: "false"
+            - name: PIEZO_MATCHES
+              value: "0"
+            - name: PIEZO_BEST_OF
+              value: "3"
+            - name: PIEZO_PACE
+              value: 3s
+          volumeMounts:
+            - {name: certs, mountPath: /certs, readOnly: true}
+            - {name: ca, mountPath: /ca, readOnly: true}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+      volumes:
+        - name: certs
+          emptyDir: {}
+        - name: ca
+          configMap:
+            name: edge-root-ca
