@@ -1,0 +1,42 @@
+---
+# ClusterIssuer vault-pki-4sthings: the LabDA Vault, as on sthings-platform,
+# labda-dev-a and the other LabDA clusters -- flux
+# infra/cert-manager/components/vault-issuer + ca-bundle.
+#
+# Its two non-Flux prerequisites were created once with
+# blueprints/argocd create-vault-kubernetes-auth (README, "Lab: the Vault
+# issuer"): the Vault k8s auth mount edge-tt-test1-certmanager (role
+# certmanager -> policy pki-issue-4sthings, bound to cert-manager/cert-manager)
+# and the Secret cert-manager/vault-pki-ca (the Vault's PKI CA).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager-vault-issuer
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  dependsOn:
+    - name: cert-manager-install
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  path: ./infra/cert-manager/components/vault-issuer
+  components:
+    - ./components/ca-bundle
+  postBuild:
+    substitute:
+      VAULT_ISSUER_NAME: vault-pki-4sthings
+      VAULT_ISSUER_SERVER: https://vault-vsphere.tiab.labda.sva.de:8200
+      VAULT_ISSUER_PKI_PATH: pki/sign/4sthings.tiab.ssc.sva.de
+      VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/${EDGE_CLUSTER_NAME}-certmanager
+      VAULT_ISSUER_AUTH_ROLE: certmanager
+      VAULT_ISSUER_SERVICE_ACCOUNT: cert-manager
+      VAULT_ISSUER_CA_SECRET: vault-pki-ca # pragma: allowlist secret
+      VAULT_ISSUER_CA_KEY: ca.crt

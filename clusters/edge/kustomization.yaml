@@ -22,3 +22,5 @@ resources:
   - sources.yaml
   - infra.yaml
   - apps.yaml
+  # LAB ONLY: Vault issuer + the players' Gateway (not on the LattePanda)
+  - lab.yaml

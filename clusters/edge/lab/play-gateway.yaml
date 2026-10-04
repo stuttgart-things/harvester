@@ -1,0 +1,60 @@
+---
+# The "public" Gateway for players, lab version: its own VIP (EDGE_PLAY_LB_IP,
+# a Clusterbook reservation with DNS *.EDGE_PLAY_DOMAIN), its own wildcard from
+# the LabDA Vault. Separate from edge-gateway (edge-ca, internal names) on
+# purpose: nothing here patches the shared infra.
+#
+# The VIP: a pool that holds exactly that address and only serves this
+# Gateway's Service (Cilium labels it io.cilium.gateway/owning-gateway), and
+# the Gateway asks for the address through spec.infrastructure.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: edge-play-pool
+spec:
+  blocks:
+    - start: "${EDGE_PLAY_LB_IP}"
+      stop: "${EDGE_PLAY_LB_IP}"
+  serviceSelector:
+    matchLabels:
+      io.cilium.gateway/owning-gateway: edge-play-gateway
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: play-wildcard-tls
+  namespace: default
+spec:
+  secretName: play-wildcard-tls # pragma: allowlist secret
+  issuerRef:
+    name: vault-pki-4sthings
+    kind: ClusterIssuer
+  commonName: "*.${EDGE_PLAY_DOMAIN}"
+  dnsNames:
+    - "*.${EDGE_PLAY_DOMAIN}"
+  duration: 2160h
+  renewBefore: 360h
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: edge-play-gateway
+  namespace: default
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    annotations:
+      lbipam.cilium.io/ips: "${EDGE_PLAY_LB_IP}"
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.${EDGE_PLAY_DOMAIN}"
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: play-wildcard-tls
+      allowedRoutes:
+        namespaces:
+          from: All

@@ -1,0 +1,20 @@
+---
+# schmetterpause for players: https://schmetterpause.<EDGE_PLAY_DOMAIN>, the
+# same Service as the internal route (apps/tabletennis), through
+# edge-play-gateway.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: schmetterpause-play
+  namespace: schmetterpause
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - schmetterpause.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: schmetterpause
+          port: 80
