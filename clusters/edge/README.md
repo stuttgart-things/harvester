@@ -174,6 +174,21 @@ from the Vault on 2026-10-04. `vault-pki-ca` and the reviewer SA
 `cert-manager/certmanager` are not Flux objects. If the cert-manager namespace
 is ever rebuilt, run the call again.
 
+**The emulated ESP** ([`lab/esp-mock`](./lab/esp-mock/), #375) is the zaehlwerk
+piezo board mock with a device certificate from OpenBao. A lego init container
+enrols via ACME HTTP-01 for `piezo-a.<EDGE_DOMAIN>`. The board then plays
+matches against `https://zaehlwerk.<EDGE_DOMAIN>` and trusts only the edge
+root. Checked on 2026-10-04: "The server validated our request … Server
+responded with a certificate", then `rally … points` every 3 s.
+
+**The LabDA zone needs its own forward in CoreDNS**
+([`lab/coredns-lab-zone.yaml`](./lab/coredns-lab-zone.yaml), k3s
+`coredns-custom`). The node lists two resolvers, and only 10.100.136.115 knows
+`4sthings.tiab.ssc.sva.de`. CoreDNS picked one at random, so names under the
+Clusterbook wildcard SERVFAILed from pods every other time. The mock's first
+HTTPS call timed out, and the ACME validation took 2 minutes. With the forward:
+20/20 lookups OK.
+
 ## What runs here, and what deliberately does not
 
 | Layer | Selected | Left out, and why |

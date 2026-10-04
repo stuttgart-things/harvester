@@ -1,0 +1,26 @@
+---
+# LAB ONLY: send the LabDA Clusterbook zone to the one resolver that knows it.
+#
+# k3s' CoreDNS forwards `.` to the node's /etc/resolv.conf, and on the LabDA
+# VM that lists TWO servers: 10.100.136.115 (answers 4sthings.tiab.ssc.sva.de)
+# and 10.100.101.5 (does not). CoreDNS picks between them at random, so from a
+# pod `zaehlwerk.edge-tt-test1.4sthings…` resolves sometimes and SERVFAILs
+# other times. The ESP mock's first HTTPS call ran into its 5 s client timeout
+# on the slow path (2026-10-04, #375). The workstation does not see this:
+# systemd-resolved routes the zone to .115 only.
+#
+# k3s imports /etc/coredns/custom/*.server from this ConfigMap
+# (https://docs.k3s.io/advanced#coredns-custom-configuration-imports). The edge
+# has OpenWrt as its single resolver and does not need it.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+data:
+  4sthings.server: |
+    4sthings.tiab.ssc.sva.de:53 {
+        errors
+        cache 30
+        forward . 10.100.136.115
+    }
