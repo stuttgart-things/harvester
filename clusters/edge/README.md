@@ -122,7 +122,7 @@ trust.
 | Root CA, public | [`edge-root-ca.crt`](./edge-root-ca.crt) | `O=stuttgart-things, CN=stuttgart-things edge root CA`, EC P-384, valid until 2046-10-03. **This is what clients and devices trust.** |
 | Root key + all intermediate keys | `secrets/edge-root-ca.enc.yaml` (repo root, SOPS) | **offline**: outside every Flux path, never in the cluster. Only needed to sign a new intermediate. |
 | Intermediate "(cert-manager)" | [`infra/ca/edge-ca.enc.yaml`](./infra/ca/edge-ca.enc.yaml) (SOPS) | EC P-256, 5 years (until 2031-10-03), `pathlen:0`. Secret `cert-manager/edge-ca`: `tls.crt` = intermediate + root, `ca.crt` = root. |
-| Issuer | flux component `cert-manager-ca-from-secret` in [`infra/infra-platform.yaml`](./infra/infra-platform.yaml) | ClusterIssuer `edge-ca` reading Secret `cert-manager/edge-ca`; `CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca` makes the gateway wildcard come from it |
+| Issuer | flux component `cert-manager-ca-from-secret` in [`infra/infra-platform.yaml`](./infra/infra-platform.yaml) | ClusterIssuer `edge-ca` reading Secret `cert-manager/edge-ca`; `CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca` makes the gateway wildcard come from it | <!-- pragma: allowlist secret -->
 
 The self-signed `cluster-ca` from `cert-manager-selfsigned` still exists. It is
 regenerated per install, and nothing that clients see uses it any more.

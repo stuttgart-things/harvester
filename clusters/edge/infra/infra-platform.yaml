@@ -88,7 +88,7 @@ spec:
       # regenerated on every install. cluster-ca stays (MinIO's unused
       # pre-release Certificates still name it).
       CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
-      CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca
+      CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
       CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
 
       # ---- cilium-lb ------------------------------------------------------
