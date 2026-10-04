@@ -7,7 +7,10 @@
 #   openbao-prereqs    namespace + static seal key (SOPS)
 #   openbao            flux apps/openbao + components/seal-static (raft on
 #                      local-path, static seal: unseals itself on every restart)
-#   openbao-httproute  the HTTPRoute, only after openbao is Ready
+#                      + components/single-node
+#   openbao-httproute  flux apps/openbao/components/httproute, only after
+#                      openbao is Ready (a route before its Service = 500 for
+#                      good under Cilium)
 #
 # THE FIRST ROLLOUT STOPS AT "openbao not Ready", by design: the pod is not
 # ready until `bao operator init` has run once (README, OpenBao). The static
@@ -57,49 +60,11 @@ spec:
   path: ./apps/openbao
   components:
     - ./components/seal-static
-  # Patches run BEFORE postBuild substitution: the base's namespace is still the
-  # literal ${OPENBAO_NAMESPACE:-openbao} then, so they select by kind + name
-  # (target), never by namespace.
-  patches:
-    # The route goes to openbao-httproute below (after the Service exists:
-    # a route first makes Cilium answer 500 for good).
-    - target:
-        kind: HTTPRoute
-        name: openbao
-      patch: |
-        $patch: delete
-        apiVersion: gateway.networking.k8s.io/v1
-        kind: HTTPRoute
-        metadata:
-          name: openbao
-    - target:
-        kind: HelmRelease
-        name: openbao
-      patch: |
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: openbao
-        spec:
-          # Helm must not wait for the pod: it is not ready before
-          # `bao operator init`, and an install that waits for it fails.
-          install:
-            disableWait: true
-          upgrade:
-            disableWait: true
-          values:
-            # No agent injector: nothing on this node uses sidecar injection,
-            # and its hard self anti-affinity blocks upgrades on one node
-            # (clusters/platform/apps-platform.yaml).
-            injector:
-              enabled: false
-            server:
-              resources:
-                requests:
-                  cpu: 50m
-                  memory: 128Mi
-                limits:
-                  memory: 512Mi
+    # flux #631: install/upgrade disableWait (the pod is not ready before
+    # `bao operator init`), injector off (nothing here uses sidecar injection;
+    # its hard self anti-affinity blocks upgrades on one node), small server
+    # resources -- what this file used to patch by hand.
+    - ./components/single-node
   postBuild:
     substitute:
       OPENBAO_STORAGE_CLASS: local-path
@@ -129,38 +94,9 @@ spec:
   sourceRef:
     kind: OCIRepository
     name: flux-repo
-  # The same base, reduced to its HTTPRoute -- so the route stays the flux
-  # repo's, only applied later.
-  path: ./apps/openbao
-  patches:
-    # by kind only: its name is still the literal ${OPENBAO_NAMESPACE:-openbao}
-    # at patch time
-    - target:
-        kind: Namespace
-      patch: |
-        $patch: delete
-        apiVersion: v1
-        kind: Namespace
-        metadata:
-          name: openbao
-    - target:
-        kind: HelmRepository
-        name: openbao
-      patch: |
-        $patch: delete
-        apiVersion: source.toolkit.fluxcd.io/v1
-        kind: HelmRepository
-        metadata:
-          name: openbao
-    - target:
-        kind: HelmRelease
-        name: openbao
-      patch: |
-        $patch: delete
-        apiVersion: helm.toolkit.fluxcd.io/v2
-        kind: HelmRelease
-        metadata:
-          name: openbao
+  # flux #631: the route is its own component; as a path it renders just the
+  # HTTPRoute (it used to be the base reduced by delete patches).
+  path: ./apps/openbao/components/httproute
   postBuild:
     substitute:
       HOSTNAME: openbao
