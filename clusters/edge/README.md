@@ -97,6 +97,18 @@ that child's own `postBuild` (they are plain strings in this repo).
    about 8 minutes later. On a node that matters, set
    `kustomize.toolkit.fluxcd.io/prune: disabled` on the moving objects first.
 
+4. **Never introduce a layer's substitution and its placeholders in the same
+   merge.** With cluster-vars (#373), `edge-infra` reconciled the new
+   `infra-platform.yaml` (with `${EDGE_*}`) **before** `flux-system` had applied
+   its new spec with `substituteFrom`. infra-platform received the literal
+   `${EDGE_DOMAIN}`. cert-manager re-issued the wildcard as `*.${EDGE_DOMAIN}`,
+   and cilium-gateway tried a Gateway named `${EDGE_GATEWAY_NAME}`, which the
+   dry-run rejected. HTTPS failed until the values were patched back by hand.
+   Next time: first add `substituteFrom` to the layer, merge, then the
+   placeholders. Or suspend the layer during the merge. A **new**
+   Kustomization that carries `substituteFrom` from its first apply (like
+   `edge-lab`) is not affected.
+
 ## The edge CA
 
 One root for everything on the box: the gateway wildcard now, and the OpenBao
@@ -126,6 +138,41 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 root from `secrets/edge-root-ca.enc.yaml`. Decrypt it only locally, into a
 scratch directory, and shred it afterwards. The new intermediate key goes
 SOPS-encrypted next to the existing ones; the root key never leaves that file.
+
+## Lab only: the Vault issuer and the players' Gateway
+
+The edge's public side (deSEC name + Let's Encrypt, harvester#364) does not
+exist in the lab. [`lab.yaml`](./lab.yaml) → [`lab/`](./lab/) stands in for it,
+and the LattePanda does not get it:
+
+| | |
+|---|---|
+| ClusterIssuer `vault-pki-4sthings` | the LabDA Vault (`https://vault-vsphere.tiab.labda.sva.de:8200`, `pki/sign/4sthings.tiab.ssc.sva.de`), via k8s auth, as on sthings-platform and the other LabDA clusters |
+| Gateway `edge-play-gateway` | its own VIP `EDGE_PLAY_LB_IP` (10.100.136.226, Clusterbook `edge-tt-test1-play` with DNS), wildcard `*.EDGE_PLAY_DOMAIN` from that Vault |
+| HTTPRoute `schmetterpause-play` | `https://schmetterpause.edge-tt-test1-play.4sthings.tiab.ssc.sva.de` → the same Service |
+
+The Vault side was created once, imperatively, as for every LabDA cluster:
+
+```bash
+# the k8s auth mount edge-tt-test1-certmanager on the LabDA Vault + the Secret
+# cert-manager/vault-pki-ca (the Vault's PKI CA). The kubeconfig and the Vault
+# env are SOPS files (the env: stuttgart-things secrets/envs/vault-labda.enc.yaml).
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/argocd@v3.6.2 \
+  create-vault-kubernetes-auth \
+  --cluster-name edge-tt-test1 \
+  --kubeconfig-source-file <kubeconfig.enc.yaml> \
+  --vault-env-file <vault-labda.enc.yaml> --sops-key env:SOPS_AGE_KEY \
+  --auth-name certmanager --namespace cert-manager \
+  --bound-service-account-names cert-manager --bound-service-account-namespaces cert-manager \
+  --token-policies pki-issue-4sthings --token-ttl 3600 \
+  --ca-secret-name vault-pki-ca
+```
+
+`pki-issue-4sthings` is the policy that the other LabDA mounts
+(`sthings-platform-certmanager`, `labda-dev-a-certmanager`, ...) bind; read
+from the Vault on 2026-10-04. `vault-pki-ca` and the reviewer SA
+`cert-manager/certmanager` are not Flux objects. If the cert-manager namespace
+is ever rebuilt, run the call again.
 
 ## What runs here, and what deliberately does not
 

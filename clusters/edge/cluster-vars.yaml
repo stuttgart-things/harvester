@@ -20,3 +20,9 @@ data:
   EDGE_DOMAIN: edge-tt-test1.4sthings.tiab.ssc.sva.de
   EDGE_LB_IP: 10.100.136.223
   EDGE_GATEWAY_NAME: edge-gateway
+  # The "public" side for players (./lab/, lab only): its own Gateway on its
+  # own VIP. On the edge this becomes the deSEC name with Let's Encrypt; in
+  # the lab a Clusterbook name with a certificate from the LabDA Vault.
+  # Reserved 2026-10-04 as edge-tt-test1-play (ASSIGNED:DNS).
+  EDGE_PLAY_DOMAIN: edge-tt-test1-play.4sthings.tiab.ssc.sva.de
+  EDGE_PLAY_LB_IP: 10.100.136.226
