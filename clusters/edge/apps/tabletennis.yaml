@@ -43,9 +43,13 @@ spec:
   path: ./apps/tabletennis/profiles/sops
   components:
     - ../../components/zaehlwerk-panel-homerun2
-    # WAL archiving + daily base backup into MinIO on the node (./minio.yaml);
-    # credentials from ./schmetterpause-backup
-    - ../../components/schmetterpause-db-backup-sops
+    # WAL archiving + daily base backup into MinIO on the node (./minio.yaml).
+    # -subst renders the credentials Secret in this build from
+    # SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID / _SECRET_ACCESS_KEY (edge-secrets-subst,
+    # the schmetterpause-cnpg user from ../terraform/minio) -- flux #628; the
+    # separate schmetterpause-backup Kustomization is gone. The endpoint is
+    # in-cluster HTTP, so the CA default (a placeholder) is never read.
+    - ../../components/schmetterpause-db-backup-subst
   postBuild:
     substituteFrom:
       - kind: Secret

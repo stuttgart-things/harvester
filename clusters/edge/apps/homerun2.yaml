@@ -38,6 +38,11 @@ spec:
     kind: OCIRepository
     name: flux-repo
   path: ./apps/homerun2/profiles/sops
+  components:
+    # the notification-catcher's routing file with no outputs: nothing leaves
+    # the edge node (flux #627). It renders in THIS build, next to its
+    # namespace -- the separate homerun2-notify Kustomization is gone.
+    - ../../components/notification-catcher/notify-none
   postBuild:
     substituteFrom:
       - kind: Secret

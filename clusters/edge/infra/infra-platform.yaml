@@ -9,7 +9,8 @@
 #
 #   cert-manager-vault-issuer -- no OpenBao (yet: harvester#364 phase 3). The
 #     gateway wildcard comes from the persistent edge CA instead
-#     (CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca, ./ca).
+#     (cert-manager-ca-from-secret: ClusterIssuer edge-ca from the SOPS
+#     Secret in ./ca; CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca).
 #   coredns-lab-zone -- forwards to the lab router. On the edge, clients resolve
 #     *.INFRA_DOMAIN themselves (README, "DNS on the edge").
 #   openebs -- k3s ships local-path as the default StorageClass. Adding
@@ -49,10 +50,13 @@ spec:
     # pki, fully local
     - ../components/cert-manager-install
     - ../components/cert-manager-selfsigned
+    # ClusterIssuer edge-ca from the persistent edge intermediate (flux #629).
+    # The Secret itself still comes from ./ca (SOPS); only the issuer moved.
+    - ../components/cert-manager-ca-from-secret
     # schmetterpause's database (tabletennis.yaml)
     - ../components/cnpg-operator
     # its Barman Cloud plugin: WAL archiving + base backups into MinIO
-    # (../apps/minio.yaml, ../apps/schmetterpause-backup.yaml)
+    # (../apps/minio.yaml, ../apps/tabletennis.yaml)
     - ../components/cnpg-barman-cloud
     # the homerun2 catchers read their config only at start
     - ../components/reloader
@@ -84,6 +88,8 @@ spec:
       # regenerated on every install. cluster-ca stays (MinIO's unused
       # pre-release Certificates still name it).
       CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
+      CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
+      CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
 
       # ---- cilium-lb ------------------------------------------------------
       # ONE address on the node's LAN, the Gateway's VIP. EDGE_LB_IP and

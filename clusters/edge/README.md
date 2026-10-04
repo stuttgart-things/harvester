@@ -49,9 +49,7 @@ clusters/edge/
 ├── apps.yaml            Kustomization edge-apps  -> ./apps    (dependsOn edge-infra)
 ├── infra/               infra-platform.yaml: the flux infra bundle
 ├── apps/                homerun2, tabletennis, edge-secrets-subst (SOPS),
-│   ├── homerun2-notify/   the notification-catcher ConfigMap (own Kustomization)
-│   ├── minio.yaml         MinIO on the node: S3 for the schmetterpause backups
-│   └── schmetterpause-backup/  the backup credentials Secret (own Kustomization)
+│   └── minio.yaml         MinIO on the node: S3 for the schmetterpause backups
 └── k3s/                 Ansible for k3s + Cilium -- never read by Flux (.sourceignore)
 ```
 
@@ -83,10 +81,12 @@ that child's own `postBuild` (they are plain strings in this repo).
    which only exists after the `homerun2` Kustomization has run. Listed in
    `apps/kustomization.yaml`, it would fail the `edge-apps` apply on a fresh
    cluster, and with it the `homerun2` Kustomization it is supposed to
-   create: a deadlock. It has its own Kustomization (`homerun2-notify`,
-   `retryInterval: 30s`). **Its first attempt fails on purpose** with
-   `namespaces "homerun2" not found`; the retry applies it once homerun2 is
-   there. That message right after a fresh rollout is not an error.
+   create: a deadlock. The fix is to render it **inside the app's own build**,
+   next to its namespace: homerun2 selects the flux component `notify-none`,
+   and tabletennis selects `schmetterpause-db-backup-subst` for its backup
+   Secret (flux #627, #628). Until 2026-10-04 both were separate
+   Kustomizations with a retry; the openbao seal Secret still is one
+   (`openbao-prereqs`), because it must exist before the HelmRelease.
 
 3. **Moving Kustomizations between layers rebuilds them.** When `#359` moved
    `infra-platform`, `homerun2` and `tabletennis` from `flux-system` into
@@ -122,7 +122,7 @@ trust.
 | Root CA, public | [`edge-root-ca.crt`](./edge-root-ca.crt) | `O=stuttgart-things, CN=stuttgart-things edge root CA`, EC P-384, valid until 2046-10-03. **This is what clients and devices trust.** |
 | Root key + all intermediate keys | `secrets/edge-root-ca.enc.yaml` (repo root, SOPS) | **offline**: outside every Flux path, never in the cluster. Only needed to sign a new intermediate. |
 | Intermediate "(cert-manager)" | [`infra/ca/edge-ca.enc.yaml`](./infra/ca/edge-ca.enc.yaml) (SOPS) | EC P-256, 5 years (until 2031-10-03), `pathlen:0`. Secret `cert-manager/edge-ca`: `tls.crt` = intermediate + root, `ca.crt` = root. |
-| Issuer | [`infra/ca/clusterissuer.yaml`](./infra/ca/clusterissuer.yaml) | ClusterIssuer `edge-ca`; `CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca` makes the gateway wildcard come from it |
+| Issuer | flux component `cert-manager-ca-from-secret` in [`infra/infra-platform.yaml`](./infra/infra-platform.yaml) | ClusterIssuer `edge-ca` reading Secret `cert-manager/edge-ca`; `CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca` makes the gateway wildcard come from it | <!-- pragma: allowlist secret -->
 
 The self-signed `cluster-ca` from `cert-manager-selfsigned` still exists. It is
 regenerated per install, and nothing that clients see uses it any more.
@@ -314,8 +314,8 @@ Afterwards:
 ## 6. Verify
 
 ```bash
-flux get sources oci -A                       # flux-repo READY, v1.111.0@sha256:...
-flux get ks -A                                # edge-infra -> infra-platform + 6 children; edge-apps -> homerun2(-routes), homerun2-notify, tabletennis + inner ones
+flux get sources oci -A                       # flux-repo READY, v1.116.0@sha256:...
+flux get ks -A                                # edge-infra -> infra-platform + 6 children; edge-apps -> homerun2(-routes), minio(-httproute), openbao(-prereqs, -httproute), tabletennis + inner ones
 kubectl get gateway -A                        # edge-gateway PROGRAMMED, address = the LB VIP
 kubectl -n default get certificate wildcard-tls
 kubectl -n homerun2 get pods
@@ -325,8 +325,7 @@ curl -k https://schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de/
 
 Expected order: `edge-infra` (the whole bundle) → `edge-apps` → homerun2.
 redis-stack takes about 70s before it answers, and the catchers restart until it
-does. `homerun2-notify` fails once with `namespaces "homerun2" not found`, then
-applies (see [Layout](#layout)). The routes wait for homerun2, and tabletennis
+does. The routes wait for homerun2, and tabletennis
 waits for homerun2 and cnpg-operator.
 
 ### Backups (schmetterpause → MinIO on the node)
