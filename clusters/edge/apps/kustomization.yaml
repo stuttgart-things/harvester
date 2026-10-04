@@ -1,7 +1,8 @@
 ---
 # What edge-apps (../apps.yaml) applies. ./homerun2-notify and
-# ./schmetterpause-backup are NOT listed: each is applied by its own
-# Kustomization (homerun2-notify.yaml, schmetterpause-backup.yaml), see there.
+# ./schmetterpause-backup and ./openbao-prereqs are NOT listed: each is applied
+# by its own Kustomization (homerun2-notify.yaml, schmetterpause-backup.yaml,
+# openbao.yaml), see there.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
@@ -10,5 +11,7 @@ resources:
   - homerun2.yaml
   - homerun2-notify.yaml
   - minio.yaml
+  # OpenBao (PKI/ACME): openbao-prereqs, openbao, openbao-httproute
+  - openbao.yaml
   - schmetterpause-backup.yaml
   - tabletennis.yaml
