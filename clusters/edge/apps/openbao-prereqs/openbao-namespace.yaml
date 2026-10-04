@@ -1,0 +1,13 @@
+---
+# Created here, before the openbao Kustomization runs, so the seal Secret has
+# its namespace. The openbao base (flux apps/openbao/requirements.yaml) renders
+# the same Namespace; `ssa: merge` lets both apply it without fighting over
+# fields (same as clusters/platform/apps/openbao-namespace.yaml).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: openbao
+  annotations:
+    kustomize.toolkit.fluxcd.io/ssa: merge
+  labels:
+    toolkit.fluxcd.io/tenant: sthings-team
