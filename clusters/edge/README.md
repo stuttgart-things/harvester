@@ -390,7 +390,7 @@ once) and device names only from static leases.
 | `wled-mock` | the emulated light. Two catchers drive it: `light-catcher` (stream `messages`, homerun2 messages -- send one via `demo-pitcher`) and the table's own `light-catcher-tabletennis` (stream `tabletennis`): point for side a **blue**, side b **red** (1 s), set won rainbow (4 s), match won fireworks (10 s), an undo nothing |
 | `light-catcher-tabletennis` | the table's light-catcher (namespace `homerun2-tabletennis`, AppProfile `homerun2-light-catcher-tabletennis-sops`); on the box its `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT` points at the real strip |
 | `demo-pitcher`, `config-viewer` | send test messages; the homerun2 configuration |
-| `schmetterpause` | the players' app -- matches started on `zaehlwerk` with its players end up here (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
+| `schmetterpause` | the players' app -- matches started on `zaehlwerk` with its players end up here. Admin: `timoboll` (`SP_BOOTSTRAP_ADMIN` from `cluster-apps.yaml`), an observer -- it counts at zaehlwerk and never appears in the ranking. Setup order (schmetterpause `docs/admin-and-observers.md`): join on the page with its own PIN and never play, merge/restart so the flag is granted, then `/admin` → **Beobachter** on its own row (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
 
 ## Moving to the hardware
 
