@@ -7,9 +7,6 @@ resources:
   # the LabDA zone to the resolver that knows it (k3s coredns-custom)
   - coredns-lab-zone.yaml
   - vault-issuer.yaml
-  - play-gateway.yaml
   - play-routes.yaml
   # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao)
   - esp-mock.yaml
-  # Let's Encrypt via DNS-01 at Hetzner DNS (the players' public side)
-  - letsencrypt.yaml

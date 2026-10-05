@@ -47,7 +47,7 @@ clusters/edge/
 ├── apps/
 │   ├── kustomization.yaml  GEN  wiring
 │   └── apps-platform.yaml  GEN  the apps bundle
-├── lab/                  DEV    LAB ONLY: Vault issuer, players' Gateway, ESP mock, CoreDNS forward (own kustomization.yaml)
+├── lab/                  DEV    LAB ONLY: Vault issuer, the players' route, ESP mock, CoreDNS forward (own kustomization.yaml)
 ├── edge-root-ca.crt      DEV    the public root (made once)
 ├── k3s/                  DEV    Ansible inventory + vars + requirements -- not Flux
 └── terraform/            DEV    MinIO + OpenBao config + env/{lab,box}.auto.tfvars.json (dagger/terraform, state in the cluster) -- not Flux
@@ -114,7 +114,7 @@ dig +short schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de   # 10.100.136.
 The players' name is not from Clusterbook (only its address): the Hetzner DNS
 zone `sthings-edge.com` holds `*.sthings-edge.com` → the players' VIP, and
 cert-manager gets the wildcard from Let's Encrypt via DNS-01 (token: Hetzner
-project `edge-dns`, `lab/letsencrypt/issuers/hetzner-dns.enc.yaml`).
+project `edge-dns`, `HETZNER_DNS_TOKEN` in `secrets/edge/app-values.enc.yaml`, AppProfile `cert-manager-letsencrypt-hetzner`).
 
 Write the values into [`cluster-vars.yaml`](./cluster-vars.yaml)
 (`EDGE_CLUSTER_NAME`, `EDGE_DOMAIN`, `EDGE_LB_IP`, `EDGE_GATEWAY_NAME`,
@@ -299,9 +299,9 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 | | Selected | Left out, and why |
 |---|---|---|
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (no Cilium, so no CNI) |
-| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `trust-manager` (Bundle `cluster-trust-bundle` in every namespace: public CAs + cluster CA + the edge root via `TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca`), `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
+| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `trust-manager` (Bundle `cluster-trust-bundle` in every namespace: public CAs + cluster CA + the edge root via `TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca`), `cert-manager-letsencrypt-hetzner` (Let's Encrypt via DNS-01 at Hetzner DNS, zone `sthings-edge.com`), `cilium-gateway-extra` (the players' Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP`, wildcard `*.EDGE_PLAY_DOMAIN` from Let's Encrypt), `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
 | apps bundle | `homerun2-sops`, `homerun2-light-catcher-tabletennis-sops` (the light at the table), `tabletennis-sops-backup` (with scoreboard + handover: zaehlwerk offers schmetterpause's players and scorers and reports won matches back, over HTTPS through the Gateway), `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run) |
-| `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` with the public name `*.sthings-edge.com` and a Let's Encrypt wildcard, ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone, Let's Encrypt via DNS-01 at Hetzner DNS (`cert-manager-webhook-hetzner`, ClusterIssuers `letsencrypt-staging-hetzner` / `letsencrypt-hetzner`; the public players' side, tested here first) | -- (details in [NOTES.md](./NOTES.md)) |
+| `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, the players' HTTPRoute for schmetterpause on `edge-play-gateway`, ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone | -- (details in [NOTES.md](./NOTES.md)) |
 
 ## Lab: test the device path and watch the apps
 
