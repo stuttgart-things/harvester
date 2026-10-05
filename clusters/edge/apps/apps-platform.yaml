@@ -1,0 +1,61 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  annotations:
+    managed-by: kcl-flux-kustomizations
+    template: bundle
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: bundle
+  name: apps-platform
+  namespace: flux-system
+spec:
+  components:
+  - '../components/homerun2-sops'
+  - '../components/minio'
+  - '../components/openbao-sops'
+  - '../components/tabletennis-sops-backup'
+  force: false
+  interval: '1h'
+  patches:
+  - patch: |
+      - op: replace
+        path: /spec/sourceRef/kind
+        value: OCIRepository
+    target:
+      group: kustomize.toolkit.fluxcd.io
+      kind: Kustomization
+  path: './apps/platform/root'
+  postBuild:
+    substitute:
+      APPS_SOURCE: flux-repo
+      HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+      HOMERUN2_NAMESPACE: homerun2
+      HOMERUN2_REDIS_STORAGE_CLASS: local-path
+      HOMERUN2_REDIS_STORAGE_SIZE: '1Gi'
+      INFRA_DOMAIN: ${EDGE_DOMAIN}
+      INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
+      INFRA_GATEWAY_NAMESPACE: default
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+      MINIO_STORAGE_CLASS: local-path
+      MINIO_STORAGE_SIZE: '5Gi'
+      MINIO_VERSION: '16.0.10'
+      OPENBAO_SEAL_KEY_ID: edge-20261004
+      OPENBAO_STORAGE_CLASS: local-path
+      OPENBAO_STORAGE_SIZE: '2Gi'
+      OPENBAO_TOPOLOGY: single-node
+      TABLETENNIS_SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
+      TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: '7d'
+      TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
+      TABLETENNIS_SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
+      TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: '1Gi'
+      TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: OCIRepository
+    name: flux-repo
+  suspend: false
+  timeout: '15m'
+  wait: true
