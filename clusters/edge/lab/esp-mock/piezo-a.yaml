@@ -25,7 +25,9 @@ metadata:
   labels:
     app.kubernetes.io/name: piezo-a
 spec:
-  replicas: 1
+  # cluster-vars EDGE_ESP_MOCK_REPLICAS: "0" while real boards play (README,
+  # "Mock or real boards"). Default 1 if the key is missing.
+  replicas: ${EDGE_ESP_MOCK_REPLICAS:=1}
   strategy:
     type: Recreate
   selector:
