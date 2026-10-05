@@ -11,3 +11,5 @@ resources:
   - play-routes.yaml
   # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao)
   - esp-mock.yaml
+  # Let's Encrypt via DNS-01 at Hetzner DNS (the players' public side)
+  - letsencrypt.yaml
