@@ -309,13 +309,16 @@ does: at start an init container (`enrol`, lego) gets a certificate from
 OpenBao via ACME HTTP-01 for `piezo-a.<EDGE_DOMAIN>` (role `devices`, the
 challenge reaches the pod through an HTTPRoute on the `http` listener and a
 Service with `publishNotReadyAddresses`), then the board (`piezo`,
-zaehlwerk-piezo) plays best-of-3 matches against zaehlwerk over HTTPS, a
-rally every 3 s, trusting only the edge root.
+zaehlwerk-piezo, `PIEZO_JOIN=true`) waits for a match started on the zaehlwerk
+page, joins it and scores it to the end over HTTPS, a rally every 3 s
+(including some ambiguous, resent and taken-back events), trusting only the
+edge root; then it waits for the next match.
 
-1. **Does the board play?**
+1. **Does the board play?** Start a match on `https://zaehlwerk.<EDGE_DOMAIN>`
+   (two players and a scorer from schmetterpause), then:
 
    ```bash
-   kubectl -n esp-mock logs -f deploy/piezo-a -c piezo     # "rally" every 3 s, "match over"
+   kubectl -n esp-mock logs -f deploy/piezo-a -c piezo     # "waiting for one to be started on the page" -> "joined" -> "rally" every 3 s -> "match over"
    kubectl -n zaehlwerk logs -f deploy/zaehlwerk            # "event ingested ... source: piezo-a, outcome: applied"
    ```
 
