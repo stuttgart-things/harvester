@@ -35,8 +35,10 @@ kubectl -n openbao exec openbao-0 -- bao operator init -recovery-shares=1 -recov
 umask 077
 jq -n --arg t "$(sops -d --extract '["root_token"]' secrets/edge/openbao-init.enc.yaml)" '{openbao_token: $t}' > /tmp/edge-openbao.tfvars.json
 printf 'nameserver 10.100.136.115\nnameserver 10.100.101.5\n' > /tmp/edge-resolv.conf
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.135.0 \
+ENV=lab   # or box: env/<ENV>.auto.tfvars.json -- address, ACME domains, DNS resolver
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.136.0 \
   execute --terraform-dir clusters/edge/terraform/openbao --operation apply --refuse-destroy \
+  --extra-files clusters/edge/edge-root-ca.crt,clusters/edge/terraform/openbao/env/$ENV.auto.tfvars.json \
   --secret-json-variables file:///tmp/edge-openbao.tfvars.json \
   --kube-config file://$HOME/.kube/edge-tt-test1 --resolv-conf /tmp/edge-resolv.conf --progress plain
 
@@ -50,6 +52,18 @@ shred -u /tmp/edge-openbao.tfvars.json
 ACME directory: `https://openbao.<domain>/v1/pki/acme/directory` (or
 `…/v1/pki/roles/devices/acme/directory`). Clients must trust
 `clusters/edge/edge-root-ca.crt`.
+
+## Per environment
+
+| | `env/lab.auto.tfvars.json` | `env/box.auto.tfvars.json` |
+|---|---|---|
+| `openbao_addr` | `https://openbao.edge-tt-test1.4sthings.tiab.ssc.sva.de` | `https://openbao.edge.sthings.lab` |
+| `acme_allowed_domains` | `edge-tt-test1.4sthings.tiab.ssc.sva.de` (Clusterbook wildcard) | `edge.sthings.lab` (OpenWrt names the devices) |
+| `acme_dns_resolver` | empty: the cluster DNS (with the lab zone forward) | the OpenWrt router, `<ip>:53` -- **`OPENWRT_LAN_IP` is a placeholder** until the router exists; OpenBao rejects it, so the box run fails loudly instead of validating against the wrong DNS |
+
+Passed with `--extra-files`; there are no defaults, so a run without an
+environment file fails. Checked 2026-10-05 on the lab with v0.136.0: `No
+changes` (the file reproduces exactly what was applied before).
 
 ## Device validation (open)
 

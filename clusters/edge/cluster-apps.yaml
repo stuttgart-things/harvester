@@ -5,11 +5,11 @@
 # (.sourceignore). LIVE since harvester#364 phase 4b step 2: the files listed
 # under Output are generated -- change this file and re-render, never edit them.
 #
-# Re-render (from the repo root) with blueprints/flux v3.9.0 or newer
-# (blueprints#212-#214; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
+# Re-render (from the repo root) with blueprints/flux v3.10.0 or newer
+# (blueprints#212-#216; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
 # Every AppProfile comes from the flux catalog in flux-repo (flux#634, #635):
 #
-#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.9.0 \
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
 #     --master-age-key env:SOPS_AGE_KEY \
@@ -19,7 +19,8 @@
 #     export --path /tmp/edge-gen
 #   cp -r /tmp/edge-gen/flux/. clusters/edge/
 #
-# Output (relative to clusters/edge): apps.yaml (OCIRepository flux-repo + the
+# Output (relative to clusters/edge): kustomization.yaml, infra/ and
+# apps/kustomization.yaml (the wiring), apps.yaml (OCIRepository flux-repo + the
 # layers edge-infra, edge-apps, edge-lab), infra/infra-platform.yaml,
 # apps/apps-platform.yaml (homerun2-sops, minio, openbao-sops,
 # tabletennis-sops-backup), cluster-secrets/ (their secrets; sops-age.enc.yaml
@@ -55,12 +56,22 @@ spec:
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
-  # by flux-system (kustomization.yaml would list cluster-secrets/secrets).
+  # by flux-system (the generated kustomization.yaml lists cluster-secrets/secrets).
   secrets:
     mode: inline
+  # The wiring is generated too (blueprints v3.10.0, #215): kustomization.yaml
+  # (config.yaml + secrets.yaml from the bootstrap, the extras below, apps.yaml,
+  # cluster-secrets/secrets) and one per layer dir with a bundle or extras.
+  # lab/ keeps its hand-written kustomization.yaml (no bundle, no extras).
+  wiring:
+    generate: true
+    # hand-written: the environment's values
+    extraResources: [cluster-vars.yaml]
   layers:
     edge-infra:
       dir: infra
+      # hand-written: Kustomization edge-ca (the SOPS intermediate, ./ca)
+      extraResources: [ca.yaml]
       labels:
         app.kubernetes.io/managed-by: flux
         kustomization.stuttgart-things.com/type: infrastructure
