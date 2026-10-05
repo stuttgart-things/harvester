@@ -75,7 +75,8 @@ spec:
         kustomization.stuttgart-things.com/type: apps
       dependsOn: [edge-infra]
       wait: false
-      # ./apps carries edge-secrets-subst.enc.yaml (README, Layout)
+      # ./apps applies no SOPS file any more (edge-secrets-subst is only the
+      # ref+sops source); kept so a hand-added *.enc.yaml there just works.
       decryptionSecret: sops-age # pragma: allowlist secret
       substituteFrom:
         - kind: ConfigMap
