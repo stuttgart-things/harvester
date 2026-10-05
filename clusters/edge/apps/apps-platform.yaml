@@ -51,6 +51,7 @@ spec:
       TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
       TABLETENNIS_SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
       TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: '1Gi'
+      TABLETENNIS_SCOREBOARD_HANDOVER: sops
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
   prune: true
   retryInterval: '1m'

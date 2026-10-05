@@ -48,12 +48,14 @@ spec:
   # sourceRef.kind OCIRepository plus a kind patch for their children.
   # v1.120.0: the infra AppProfiles (flux#634), the SOPS alternatives
   # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635) and
-  # homerun2-light-catcher-tabletennis-sops (flux#639).
+  # homerun2-light-catcher-tabletennis-sops (flux#639); v1.121.0/v1.122.0:
+  # the trust-manager AppProfile (flux#641) and the scoreboard + handover
+  # switch of tabletennis-sops(-backup) (flux#642).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.120.0
+    tag: v1.122.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -141,6 +143,15 @@ spec:
       vars:
         CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
         CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
+    # One CA distribution for the cluster: trust-manager's Bundle
+    # cluster-trust-bundle (ConfigMap in every namespace, key trust-bundle.pem)
+    # = the default public CAs + the self-signed cluster CA + the persistent
+    # edge root. Its Vault source slot points at edge-ca (ca.crt = the edge
+    # root) -- there is no Vault on the edge. zaehlwerk reads exactly this
+    # ConfigMap, so it can call schmetterpause over the Gateway (HTTPS).
+    trust-manager:
+      vars:
+        TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca # pragma: allowlist secret
     cnpg-operator: {}
     cnpg-barman-cloud: {}
     reloader: {}
@@ -183,6 +194,11 @@ spec:
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: 7d
+        # scoreboard + handover (flux#642): players and scorers from
+        # schmetterpause on the zaehlwerk page, won matches reported back.
+        # zaehlwerk calls https://schmetterpause.<EDGE_DOMAIN> (the default),
+        # trusting the edge root through trust-manager's bundle.
+        TABLETENNIS_SCOREBOARD_HANDOVER: sops
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -191,6 +207,8 @@ spec:
           ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
           SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
           SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
+          # one token, read by both sides (schmetterpause /api, zaehlwerk)
+          SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
