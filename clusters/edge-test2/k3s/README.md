@@ -25,10 +25,13 @@ cd ~/projects/harvester
 install -m 600 /dev/null ~/.edge-tt-test2.pass
 nano ~/.edge-tt-test2.pass
 
-# 2. k3s + Cilium
+# 2. k3s + Cilium -- execute-ansible-WITH-EXPORT: the role fetches the
+#    kubeconfig (server rewritten to the node's address) to
+#    fetched_kubeconfig_path on the Ansible controller, which is the Dagger
+#    container; --export-paths copies it out (by its file name)
 export SSH_USER=sthings
 env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
-  execute-ansible \
+  execute-ansible-with-export \
   --src ./clusters/edge-test2/k3s \
   --playbooks sthings.rke.k3s_cluster \
   --inventory ./clusters/edge-test2/k3s/inventory.ini \
@@ -36,18 +39,29 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3
   --requirements ./clusters/edge-test2/k3s/requirements.yaml \
   --ssh-user env:SSH_USER \
   --ssh-password file:$HOME/.edge-tt-test2.pass \
-  --progress plain 2>&1 | tee /tmp/k3s-edge-test2.log
+  --export-paths /tmp/kubeconfig-edge-test2.yaml \
+  export --path /tmp/edge-test2-k3s 2>&1 | tee /tmp/k3s-edge-test2.log
 
 shred -u ~/.edge-tt-test2.pass
 grep -A2 'PLAY RECAP' /tmp/k3s-edge-test2.log     # failed=0
 
-# 3. the kubeconfig (k3s writes 127.0.0.1 -> the node's address)
-ssh sthings@10.31.102.144 sudo cat /etc/rancher/k3s/k3s.yaml \
-  | sed 's/127.0.0.1/10.31.102.144/' > ~/.kube/edge-tt-test2 && chmod 600 ~/.kube/edge-tt-test2
+# 3. the kubeconfig
+install -m 600 /tmp/edge-test2-k3s/kubeconfig-edge-test2.yaml ~/.kube/edge-tt-test2 && rm -rf /tmp/edge-test2-k3s
+grep server: ~/.kube/edge-tt-test2                # https://10.31.102.144:6443
 ```
 
 `env -u SSH_AUTH_SOCK`: a stale agent socket makes Dagger fail with
 `failed to list SSH agent identities`.
+
+**Plain `execute-ansible` loses the kubeconfig**: the fetch task reports
+*changed*, but into the container's `/tmp`, which is gone afterwards (the first
+run on 2026-10-05 used it). Then take it from the node instead -- k3s writes
+`127.0.0.1`, so replace the address:
+
+```bash
+ssh sthings@10.31.102.144 sudo cat /etc/rancher/k3s/k3s.yaml \
+  | sed 's/127.0.0.1/10.31.102.144/' > ~/.kube/edge-tt-test2 && chmod 600 ~/.kube/edge-tt-test2
+```
 
 ## Verify
 
