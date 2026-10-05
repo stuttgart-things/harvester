@@ -52,12 +52,13 @@ spec:
   # the trust-manager AppProfile (flux#641) and the scoreboard + handover
   # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
   # self-init with a terraform and a break-glass admin user (flux#640);
-  # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643).
+  # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643);
+  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.124.0
+    tag: v1.125.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -154,6 +155,28 @@ spec:
     trust-manager:
       vars:
         TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca # pragma: allowlist secret
+    # The public players' side (since 2026-10-05, before: hand-written in
+    # ./lab): Let's Encrypt via DNS-01 at Hetzner DNS -- webhook, ClusterIssuers
+    # letsencrypt-staging-hetzner / letsencrypt-hetzner, the token Secret
+    # cert-manager/hetzner-dns. Token of the Hetzner project edge-dns (only the
+    # zone sthings-edge.com).
+    cert-manager-letsencrypt-hetzner:
+      secrets:
+        cert-manager-letsencrypt-hetzner-secrets:
+          HETZNER_DNS_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HETZNER_DNS_TOKEN # pragma: allowlist secret
+    # ... and its own Gateway on its own VIP: *.EDGE_PLAY_DOMAIN with the Let's
+    # Encrypt wildcard. Waits for the issuer (ISSUER_KUSTOMIZATION).
+    cilium-gateway-extra:
+      vars:
+        CILIUM_GATEWAY_EXTRA_NAME: edge-play-gateway
+        CILIUM_GATEWAY_EXTRA_NAMESPACE: default
+        CILIUM_GATEWAY_EXTRA_POOL_NAME: edge-play-pool
+        CILIUM_GATEWAY_EXTRA_IP: ${EDGE_PLAY_LB_IP}
+        CILIUM_GATEWAY_EXTRA_DOMAIN: ${EDGE_PLAY_DOMAIN}
+        CILIUM_GATEWAY_EXTRA_ISSUER: letsencrypt-hetzner
+        CILIUM_GATEWAY_EXTRA_ISSUER_KIND: ClusterIssuer
+        CILIUM_GATEWAY_EXTRA_TLS_SECRET: play-wildcard-tls # pragma: allowlist secret
+        CILIUM_GATEWAY_EXTRA_ISSUER_KUSTOMIZATION: cert-manager-letsencrypt-hetzner
     cnpg-operator: {}
     cnpg-barman-cloud: {}
     reloader: {}
