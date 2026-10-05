@@ -299,6 +299,73 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 | apps bundle | `homerun2-sops`, `tabletennis-sops-backup`, `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run); scoreboard + handover |
 | `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` (stand-in for deSEC + Let's Encrypt), ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone, Let's Encrypt via DNS-01 at Hetzner DNS (`cert-manager-webhook-hetzner`, ClusterIssuers `letsencrypt-staging-hetzner` / `letsencrypt-hetzner`; the public players' side, tested here first) | -- (details in [NOTES.md](./NOTES.md)) |
 
+## Lab: test the device path and watch the apps
+
+`export KUBECONFIG=~/.kube/edge-tt-test1`. The browser needs
+[`edge-root-ca.crt`](./edge-root-ca.crt) as a trusted CA, otherwise it warns.
+
+**The emulated ESP** (`lab/esp-mock`, deployment `piezo-a`) does what a device
+does: at start an init container (`enrol`, lego) gets a certificate from
+OpenBao via ACME HTTP-01 for `piezo-a.<EDGE_DOMAIN>` (role `devices`, the
+challenge reaches the pod through an HTTPRoute on the `http` listener and a
+Service with `publishNotReadyAddresses`), then the board (`piezo`,
+zaehlwerk-piezo) plays best-of-3 matches against zaehlwerk over HTTPS, a
+rally every 3 s, trusting only the edge root.
+
+1. **Does the board play?**
+
+   ```bash
+   kubectl -n esp-mock logs -f deploy/piezo-a -c piezo     # "rally" every 3 s, "match over"
+   kubectl -n zaehlwerk logs -f deploy/zaehlwerk            # "event ingested ... source: piezo-a, outcome: applied"
+   ```
+
+2. **Enrol again** (the device reboots):
+
+   ```bash
+   kubectl -n esp-mock rollout restart deploy/piezo-a
+   kubectl -n esp-mock logs -f deploy/piezo-a -c enrol      # Trying to solve HTTP-01 -> validated -> Server responded with a certificate
+   ```
+
+3. **The device certificate** (the image has no shell, so a debug container
+   reads the pod's filesystem):
+
+   ```bash
+   P=$(kubectl -n esp-mock get pod -l app.kubernetes.io/name=piezo-a -o name)
+   kubectl -n esp-mock debug $P --image=alpine/openssl --target=piezo --profile=general -it -- sh -c \
+     'openssl x509 -in $(ls /proc/1/root/certs/certificates/*.crt | grep -v issuer) -noout -subject -issuer -dates -ext extendedKeyUsage'
+   ```
+
+   Expect `CN=piezo-a.<EDGE_DOMAIN>`, issuer `stuttgart-things edge intermediate
+   CA (openbao)`, 90 days. Note: the extended key usage is only `TLS Web Server
+   Authentication`, although role `devices` sets `client_flag` -- for mutual TLS
+   from the device this still has to be solved (OpenBao's ACME issuance).
+
+4. **A name outside the allowed domain is refused:**
+
+   ```bash
+   D=<EDGE_DOMAIN>
+   kubectl -n esp-mock run lego-neg --rm -i --restart=Never --image=goacme/lego:v4.35.2 --overrides='{"spec":{"volumes":[{"name":"ca","configMap":{"name":"edge-root-ca"}}],"containers":[{"name":"l","image":"goacme/lego:v4.35.2","env":[{"name":"LEGO_CA_CERTIFICATES","value":"/ca/root.crt"}],"args":["--server=https://openbao.'$D'/v1/pki/acme/directory","--email=neg@esp-mock.invalid","--accept-tos","--domains=evil.example.com","--http","--path=/tmp/l","run"],"volumeMounts":[{"name":"ca","mountPath":"/ca"}]}]}}'
+   ```
+
+   Expect `rejectedIdentifier ... role (devices) will not issue certificate for name evil.example.com`.
+
+**Who may enrol:** `acme_eab_policy = "not-required"` -- any client that
+passes the challenge for a name under `acme_allowed_domains` gets a
+certificate, so the network is the gate (on the box: whoever gets a name from
+the router). Stricter, when needed: EAB per device
+(`new-account-required`, a key from `bao write -f pki/acme/new-eab` flashed
+once) and device names only from static leases.
+
+**Watching the apps** (all `https://<name>.<EDGE_DOMAIN>`):
+
+| UI | What you see |
+|---|---|
+| `zaehlwerk` | the live match the mock plays |
+| `led-catcher` | the LED matrix: it reads the `tabletennis` stream, so the score shows up (log: `caught: 1:4`) |
+| `wled-mock` | the emulated light. `light-catcher` reads only the `messages` stream: it reacts to homerun2 messages (send one via `demo-pitcher`), not to table tennis |
+| `demo-pitcher`, `config-viewer` | send test messages; the homerun2 configuration |
+| `schmetterpause` | the players' app (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
+
 ## Moving to the hardware
 
 Same directory, same artifact, same persistent secrets. What changes:
