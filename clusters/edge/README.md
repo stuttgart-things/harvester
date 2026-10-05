@@ -295,8 +295,8 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 | | Selected | Left out, and why |
 |---|---|---|
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (no Cilium, so no CNI) |
-| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager (its Bundles want a vault CA), openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
-| apps bundle | `homerun2-sops`, `homerun2-light-catcher-tabletennis-sops` (the light at the table), `tabletennis-sops-backup`, `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run); scoreboard + handover |
+| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `trust-manager` (Bundle `cluster-trust-bundle` in every namespace: public CAs + cluster CA + the edge root via `TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca`), `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
+| apps bundle | `homerun2-sops`, `homerun2-light-catcher-tabletennis-sops` (the light at the table), `tabletennis-sops-backup` (with scoreboard + handover: zaehlwerk offers schmetterpause's players and scorers and reports won matches back, over HTTPS through the Gateway), `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run) |
 | `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` (stand-in for deSEC + Let's Encrypt), ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone, Let's Encrypt via DNS-01 at Hetzner DNS (`cert-manager-webhook-hetzner`, ClusterIssuers `letsencrypt-staging-hetzner` / `letsencrypt-hetzner`; the public players' side, tested here first) | -- (details in [NOTES.md](./NOTES.md)) |
 
 ## Lab: test the device path and watch the apps
@@ -391,7 +391,7 @@ once) and device names only from static leases.
 | `wled-mock` | the emulated light. Two catchers drive it: `light-catcher` (stream `messages`, homerun2 messages -- send one via `demo-pitcher`) and the table's own `light-catcher-tabletennis` (stream `tabletennis`): point for side a **blue**, side b **red** (1 s), set won rainbow (4 s), match won fireworks (10 s), an undo nothing |
 | `light-catcher-tabletennis` | the table's light-catcher (namespace `homerun2-tabletennis`, AppProfile `homerun2-light-catcher-tabletennis-sops`); on the box its `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT` points at the real strip |
 | `demo-pitcher`, `config-viewer` | send test messages; the homerun2 configuration |
-| `schmetterpause` | the players' app (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
+| `schmetterpause` | the players' app -- matches started on `zaehlwerk` with its players end up here (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
 
 ## Moving to the hardware
 

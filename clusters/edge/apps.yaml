@@ -7,7 +7,7 @@ metadata:
 spec:
     interval: 1h
     ref:
-        tag: v1.120.0
+        tag: v1.122.0
     url: oci://ghcr.io/stuttgart-things/flux/repo
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

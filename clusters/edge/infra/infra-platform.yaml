@@ -20,6 +20,7 @@ spec:
   - '../components/cnpg-barman-cloud'
   - '../components/cnpg-operator'
   - '../components/reloader'
+  - '../components/trust-manager'
   force: false
   interval: '1h'
   patches:
@@ -43,6 +44,7 @@ spec:
       INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       INFRA_GATEWAY_NAMESPACE: default
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+      TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca # pragma: allowlist secret
   prune: true
   retryInterval: '1m'
   sourceRef:
