@@ -6,6 +6,10 @@ step 3. The same playbook, vars and collections as
 configures); only the inventory, `cluster_name` (`edge-test2`) and the fetched
 kubeconfig path differ. **Flux never reads this folder.**
 
+The same procedure in general (with `$CLUSTER`): [runbook, step
+3](../../../docs/edge/runbook.md#3-k3s--cilium). Below: this cluster's
+concrete commands.
+
 | File | |
 |---|---|
 | [`inventory.ini`](./inventory.ini) | the node, `10.31.102.144` |
