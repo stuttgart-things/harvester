@@ -50,12 +50,13 @@ spec:
   # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635) and
   # homerun2-light-catcher-tabletennis-sops (flux#639); v1.121.0/v1.122.0:
   # the trust-manager AppProfile (flux#641) and the scoreboard + handover
-  # switch of tabletennis-sops(-backup) (flux#642).
+  # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
+  # self-init with a terraform and a break-glass admin user (flux#640).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.122.0
+    tag: v1.123.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -228,6 +229,15 @@ spec:
         OPENBAO_STORAGE_CLASS: local-path
         OPENBAO_STORAGE_SIZE: 2Gi
         OPENBAO_SEAL_KEY_ID: edge-20261004
+        # Self-init (flux#640): on EMPTY storage OpenBao initialises itself --
+        # userpass with `terraform` (PKI only, used by terraform/openbao and
+        # sign-intermediate.sh) and `admin` (break-glass, by hand only). No
+        # root token, no recovery keys. On an already initialised instance
+        # (edge-tt-test1, initialised by hand 2026-10-04) this does nothing; the
+        # same users were created there once by hand.
+        OPENBAO_INIT: self-init-userpass
       secrets:
         openbao-sops-secrets:
           OPENBAO_SEAL_STATIC_KEY: ref+sops://secrets/edge/openbao-seal.enc.yaml#/stringData/key # pragma: allowlist secret
+          OPENBAO_TERRAFORM_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/OPENBAO_TERRAFORM_PASSWORD # pragma: allowlist secret
+          OPENBAO_ADMIN_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/OPENBAO_ADMIN_PASSWORD # pragma: allowlist secret

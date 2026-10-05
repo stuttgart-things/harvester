@@ -42,6 +42,7 @@ spec:
       MINIO_STORAGE_CLASS: local-path
       MINIO_STORAGE_SIZE: '5Gi'
       MINIO_VERSION: '16.0.10'
+      OPENBAO_INIT: self-init-userpass
       OPENBAO_SEAL_KEY_ID: edge-20261004
       OPENBAO_STORAGE_CLASS: local-path
       OPENBAO_STORAGE_SIZE: '2Gi'

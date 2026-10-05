@@ -53,10 +53,10 @@ clusters/edge/
 └── terraform/            DEV    MinIO + OpenBao config + env/{lab,box}.auto.tfvars.json (dagger/terraform, state in the cluster) -- not Flux
 
 secrets/edge/ (repo root, never read by Flux)
-├── app-values.enc.yaml   DEV    the apps' secret values -- ref+sops source for cluster-apps.yaml, input of terraform/minio
+├── app-values.enc.yaml   DEV    the apps' secret values (incl. the OpenBao users' passwords) -- ref+sops source for cluster-apps.yaml, input of terraform/*
 ├── openbao-seal.enc.yaml DEV    OpenBao's static seal key -- MUST NEVER CHANGE (the raft data is sealed with it)
 ├── root-ca.enc.yaml      DEV    root key + all intermediate keys, offline
-└── openbao-init.enc.yaml DEV    root token + recovery key from `bao operator init`
+└── openbao-init.enc.yaml DEV    root token + recovery key -- only of the current lab instance (initialised by hand); gone with the rebuild
 ```
 
 **GEN** = `render-cluster-apps` output, never edited by hand: change
@@ -92,7 +92,7 @@ export GITHUB_USER=... GITHUB_TOKEN=...
 | 4 | Persistent secrets (**once ever**) | openssl, sops | `secrets/edge/*`, `edge-root-ca.crt`, `infra/ca/edge-ca.enc.yaml` | -- |
 | 5 | Flux files | blueprints/flux `render-cluster-apps` | `cluster-apps.yaml`, `infra/ca.yaml`, `lab/` | `apps.yaml`, `*-platform.yaml`, `cluster-secrets/`, the `kustomization.yaml` wiring |
 | 6 | Flux | blueprints/flux `bootstrap` | 2 `pragma` comments | `config.yaml`, `secrets.yaml` (committed) |
-| 7 | OpenBao init (**once per install**) | `bao operator init`, sops | -- | `secrets/edge/openbao-init.enc.yaml` |
+| 7 | OpenBao init | **nothing to do**: self-init on first start | -- | userpass users `terraform` + `admin` |
 | 8 | OpenBao + MinIO config | dagger/terraform, `sign-intermediate.sh` | -- | PKI/ACME, bucket + user |
 | 9 | Lab only: Vault issuer | blueprints/argocd `create-vault-kubernetes-auth` | -- | k8s auth mount, `vault-pki-ca` |
 | 10 | Verify | kubectl, curl | -- | -- |
@@ -206,17 +206,16 @@ SSH_AUTH_SOCK`: a stale agent socket makes Dagger fail with `failed to list SSH
 agent identities`. `edge-infra` is Ready after about 8 minutes; homerun2 takes
 about 7 more (redis-stack).
 
-### 7. OpenBao init -- once per install
+### 7. OpenBao init -- nothing to do
 
-```bash
-umask 077
-kubectl -n openbao exec openbao-0 -- bao operator init -recovery-shares=1 -recovery-threshold=1 -format=json \
-  > /tmp/openbao-init.json
-sops --encrypt --age "$AGE_PUB" --input-type json --output-type yaml /tmp/openbao-init.json \
-  > secrets/edge/openbao-init.enc.yaml && shred -u /tmp/openbao-init.json
-```
-
-The static seal unseals every restart after that.
+OpenBao initialises itself on its first start (`OPENBAO_INIT:
+self-init-userpass`, flux#640): userpass with `terraform` (PKI only, for
+step 8) and `admin` (break-glass, by hand only), passwords from
+`secrets/edge/app-values.enc.yaml` (`OPENBAO_TERRAFORM_PASSWORD`,
+`OPENBAO_ADMIN_PASSWORD`). No root token, no recovery keys; the static seal
+unseals every start. If self-init fails (e.g. a password missing), the server
+refuses to unseal: fix the secret, then delete PVC `data-openbao-0` and the
+pod. Details: [terraform/openbao](./terraform/openbao/README.md).
 
 ### 8. OpenBao + MinIO configuration
 
