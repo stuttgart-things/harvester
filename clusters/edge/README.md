@@ -247,7 +247,7 @@ the runbook (CLI first, then Dagger). Flux never reads that folder
 ## 4. The flux artifact
 
 The OCIRepository `flux-repo` ([`apps.yaml`](./apps.yaml), set in `cluster-apps.yaml` → `spec.source`) reads
-`oci://ghcr.io/stuttgart-things/flux/repo:<tag>` (v1.119.0 as of 2026-10-05). The flux Release
+`oci://ghcr.io/stuttgart-things/flux/repo:<tag>` (v1.119.1 as of 2026-10-05). The flux Release
 workflow pushes that artifact on every release, starting with v1.111.0
 ([flux#621](https://github.com/stuttgart-things/flux/issues/621),
 [#622](https://github.com/stuttgart-things/flux/pull/622)). It is public, so

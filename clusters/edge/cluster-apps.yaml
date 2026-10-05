@@ -44,13 +44,13 @@ spec:
   # The whole stuttgart-things/flux repo as one OCI artifact (sources.yaml).
   # Generated as the OCIRepository flux-repo; the bundles read it with
   # sourceRef.kind OCIRepository plus a kind patch for their children.
-  # v1.119.0: the infra AppProfiles (flux#634) and the SOPS alternatives
+  # v1.119.1: the infra AppProfiles (flux#634) and the SOPS alternatives
   # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.119.0
+    tag: v1.119.1
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
