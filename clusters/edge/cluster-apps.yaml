@@ -2,29 +2,32 @@
 # ClusterApps for clusters/edge (harvester#364, phase 4b): the input from which
 # blueprints `render-cluster-apps` generates this folder's source, layers and
 # bundle Kustomizations. NOT a Kubernetes object -- Flux never reads it
-# (.sourceignore). Nothing here is live yet: the generated files are only
-# compared with the hand-written ones (see the PR); the cluster still applies
-# sources.yaml, infra.yaml, apps.yaml, lab.yaml and infra/infra-platform.yaml.
+# (.sourceignore). LIVE since harvester#364 phase 4b step 2: the files listed
+# under Output are generated -- change this file and re-render, never edit them.
 #
-# Render (from the repo root) with blueprints/flux v3.8.0 or newer
+# Re-render (from the repo root) with blueprints/flux v3.8.0 or newer
 # (blueprints#212, #213; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
-# The infra components' AppProfiles are in ./profiles until they move into
-# the flux catalog:
+# Every AppProfile comes from the flux catalog in flux-repo (flux#634, #635):
 #
 #   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.8.0 \
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
-#     --extra-profile-dir clusters/edge/profiles \
 #     --master-age-key env:SOPS_AGE_KEY \
 #     --escrow-recipients "$(age-keygen -y <<<"$SOPS_AGE_KEY")" \
 #     --sops-ref-dir . \
+#     --existing-secrets clusters/edge/cluster-secrets \
 #     export --path /tmp/edge-gen
+#   cp -r /tmp/edge-gen/flux/. clusters/edge/
 #
-# Output: flux/apps.yaml (OCIRepository flux-repo + the layers edge-infra,
-# edge-apps, edge-lab), flux/infra/infra-platform.yaml,
-# flux/apps/apps-platform.yaml (minio), flux/cluster-secrets/ (minio-secrets).
-# Once live, export flux/ into clusters/edge and pass
-# --existing-secrets clusters/edge/cluster-secrets on every later run.
+# Output (relative to clusters/edge): apps.yaml (OCIRepository flux-repo + the
+# layers edge-infra, edge-apps, edge-lab), infra/infra-platform.yaml,
+# apps/apps-platform.yaml (homerun2-sops, minio, openbao-sops,
+# tabletennis-sops-backup), cluster-secrets/ (their secrets; sops-age.enc.yaml
+# there is the escrowed cluster key, never applied: .sourceignore).
+#
+# --existing-secrets keeps what is already encrypted there. Every secret value
+# below is a ref+sops into a hand-kept SOPS file anyway, so nothing rotates --
+# above all the OpenBao seal key, which must never change.
 #
 # --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
 # the master key), not with a cluster key of its own, so the generated secrets
@@ -41,14 +44,13 @@ spec:
   # The whole stuttgart-things/flux repo as one OCI artifact (sources.yaml).
   # Generated as the OCIRepository flux-repo; the bundles read it with
   # sourceRef.kind OCIRepository plus a kind patch for their children.
-  # v1.117.1, one ahead of sources.yaml: from there on the catalog's minio
-  # component carries the minio-httproute child (flux#632) that
-  # apps/minio.yaml has by hand.
+  # v1.119.0: the infra AppProfiles (flux#634) and the SOPS alternatives
+  # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.117.1
+    tag: v1.119.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -105,7 +107,7 @@ spec:
     INFRA_GATEWAY_NAMESPACE: default
     INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
   apps:
-    # ---- infra-platform (profiles: ./profiles) ---------------------------
+    # ---- infra-platform ---------------------------------------------------
     # Cilium itself is the CNI from k3s/ (Ansible); these are its LB pool and
     # the Gateway. ONE address, the Gateway's VIP.
     cilium-lb:
@@ -142,3 +144,48 @@ spec:
         minio-secrets:
           MINIO_ADMIN_USER: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_USER
           MINIO_ADMIN_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_PASSWORD # pragma: allowlist secret
+    # homerun2 without ESO: secrets from SOPS, no notification catcher
+    # (homerun2-sops). Its values are the ones edge-secrets-subst has always
+    # had, so nothing rotates.
+    homerun2-sops:
+      vars:
+        HOMERUN2_NAMESPACE: homerun2
+        HOMERUN2_REDIS_STORAGE_CLASS: local-path
+        HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
+        HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+      secrets:
+        homerun2-sops-secrets:
+          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
+          TEAMS_WEBHOOK_URL: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/TEAMS_WEBHOOK_URL
+          HOMERUN2_OMNI_PITCHER_AUTH_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_OMNI_PITCHER_AUTH_TOKEN # pragma: allowlist secret
+          HOMERUN2_SCOUT_AUTH_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_SCOUT_AUTH_TOKEN # pragma: allowlist secret
+    # schmetterpause + zaehlwerk (panel: homerun2), CNPG backups into MinIO
+    # with the schmetterpause-cnpg user (../terraform/minio).
+    tabletennis-sops-backup:
+      vars:
+        TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+        TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: 7d
+      secrets:
+        tabletennis-sops-secrets:
+          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_SESSION_KEY: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
+          ZAEHLWERK_OMNI_PITCHER_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/ZAEHLWERK_OMNI_PITCHER_TOKEN # pragma: allowlist secret
+          ZAEHLWERK_REDIS_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
+    # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
+    # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
+    # SOPS file, never generated.
+    openbao-sops:
+      vars:
+        OPENBAO_TOPOLOGY: single-node
+        OPENBAO_STORAGE_CLASS: local-path
+        OPENBAO_STORAGE_SIZE: 2Gi
+        OPENBAO_SEAL_KEY_ID: edge-20261004
+      secrets:
+        openbao-sops-secrets:
+          OPENBAO_SEAL_STATIC_KEY: ref+sops://clusters/edge/apps/openbao-prereqs/openbao-static-seal.enc.yaml#/stringData/key # pragma: allowlist secret

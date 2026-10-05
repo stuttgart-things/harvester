@@ -9,7 +9,7 @@ on the hardware.
 The chain: VM + base OS (Backstage request) → k3s + Cilium ([`k3s/`](./k3s/))
 → Flux Operator → the infra bundle
 → homerun2 → tabletennis. Everything Flux reconciles comes from **one OCI
-artifact** of `stuttgart-things/flux` ([`sources.yaml`](./sources.yaml)),
+artifact** of `stuttgart-things/flux` (OCIRepository `flux-repo` in [`apps.yaml`](./apps.yaml)),
 not from Git.
 
 > **Status: running on the lab test node since 2026-10-03 11:30 UTC.** All 25
@@ -41,17 +41,28 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 
 ```
 clusters/edge/
-├── kustomization.yaml   flux-system applies only: config, secrets, cluster-vars, sources, infra.yaml, apps.yaml
+├── kustomization.yaml   flux-system applies only: config, secrets, cluster-vars, apps.yaml, cluster-secrets/secrets
+├── cluster-apps.yaml    INPUT of render-cluster-apps (ClusterApps) -- never read by Flux
 ├── cluster-vars.yaml    ConfigMap: what differs between lab and LattePanda (EDGE_DOMAIN, EDGE_LB_IP, EDGE_GATEWAY_NAME, EDGE_CLUSTER_NAME)
 ├── config.yaml  secrets.yaml        FluxInstance + git/sops secrets (committed by the bootstrap)
-├── sources.yaml         OCIRepository flux-repo -> ghcr.io/stuttgart-things/flux/repo
-├── infra.yaml           Kustomization edge-infra -> ./infra   (wait: true)
-├── apps.yaml            Kustomization edge-apps  -> ./apps    (dependsOn edge-infra)
-├── infra/               infra-platform.yaml: the flux infra bundle
-├── apps/                homerun2, tabletennis, edge-secrets-subst (SOPS),
-│   └── minio.yaml         MinIO on the node: S3 for the schmetterpause backups
-└── k3s/                 Ansible for k3s + Cilium -- never read by Flux (.sourceignore)
+├── apps.yaml            GENERATED: OCIRepository flux-repo + Kustomizations edge-infra (./infra, wait),
+│                          edge-apps (./apps, dependsOn edge-infra), edge-lab (./lab, LAB ONLY)
+├── cluster-secrets/     GENERATED: the bundle apps' secrets (SOPS, flux-system)
+├── infra/               infra-platform.yaml (GENERATED: the flux infra bundle) + ca/ (the edge CA, by hand)
+├── apps/                apps-platform.yaml (GENERATED: homerun2-sops, minio, openbao-sops,
+│                          tabletennis-sops-backup) + edge-secrets-subst (SOPS, source of the values)
+├── lab/                 LAB ONLY, by hand: Vault issuer, players' Gateway, ESP mock
+├── k3s/  terraform/     Ansible for k3s + Cilium, Terraform for MinIO/OpenBao -- never read by Flux
 ```
+
+**Generated, not edited.** Everything marked GENERATED comes from
+[`cluster-apps.yaml`](./cluster-apps.yaml) via blueprints/flux
+`render-cluster-apps` (the command is in its header). Change that file,
+re-render with `--existing-secrets clusters/edge/cluster-secrets` and commit the
+result -- a re-render without changes reproduces the files exactly. Every secret
+value there is a `ref+sops` into `apps/edge-secrets-subst.enc.yaml` or
+`apps/openbao-prereqs/openbao-static-seal.enc.yaml`, so re-rendering never
+rotates anything (harvester#364 phase 4b).
 
 Two layers, so the apps start only once the whole infra bundle is Ready, and
 can be stopped or removed without touching it (`flux suspend ks edge-apps`).
@@ -142,7 +153,7 @@ SOPS-encrypted next to the existing ones; the root key never leaves that file.
 ## Lab only: the Vault issuer and the players' Gateway
 
 The edge's public side (deSEC name + Let's Encrypt, harvester#364) does not
-exist in the lab. [`lab.yaml`](./lab.yaml) → [`lab/`](./lab/) stands in for it,
+exist in the lab. The layer `edge-lab` → [`lab/`](./lab/) stands in for it,
 and the LattePanda does not get it:
 
 | | |
@@ -213,8 +224,7 @@ dig +short schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de   # 10.100.136.
 ```
 
 The address is in `CILIUM_LB_IP_START`/`STOP`, and the domain in
-`INFRA_DOMAIN` (infra/infra-platform.yaml) and `DOMAIN` (apps/homerun2.yaml,
-apps/tabletennis.yaml).
+`INFRA_DOMAIN` -- both as `${EDGE_*}` from `cluster-vars.yaml`.
 
 **Edge box:** there is no Clusterbook and no lab router. Pick a free address
 in the edge network for the VIP and change the same two values. See
@@ -236,13 +246,13 @@ the runbook (CLI first, then Dagger). Flux never reads that folder
 
 ## 4. The flux artifact
 
-[`sources.yaml`](./sources.yaml) reads
-`oci://ghcr.io/stuttgart-things/flux/repo:v1.111.0`. The flux Release
+The OCIRepository `flux-repo` ([`apps.yaml`](./apps.yaml), set in `cluster-apps.yaml` → `spec.source`) reads
+`oci://ghcr.io/stuttgart-things/flux/repo:<tag>` (v1.119.0 as of 2026-10-05). The flux Release
 workflow pushes that artifact on every release, starting with v1.111.0
 ([flux#621](https://github.com/stuttgart-things/flux/issues/621),
 [#622](https://github.com/stuttgart-things/flux/pull/622)). It is public, so
 there is nothing to push by hand and no pull secret is needed. To move forward,
-bump the tag.
+bump `spec.source.tag` in `cluster-apps.yaml` and re-render.
 
 Checked on 2026-10-03: `flux pull artifact` of v1.111.0 contains every path
 this cluster renders, and an anonymous manifest fetch returns 200.

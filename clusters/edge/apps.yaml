@@ -1,47 +1,91 @@
 ---
-# Layer 2: the applications -- ./apps (homerun2, tabletennis, their SOPS
-# substitutions and the notification-catcher's routing ConfigMap).
-#
-# Starts only once edge-infra is Ready (the whole infra bundle). To stop all
-# apps and keep the infra running: `flux suspend ks edge-apps`; deleting it
-# removes the apps (prune) and leaves the infra alone.
-#
-# wait: false -- homerun2 and tabletennis report their own readiness, and a
-# slow app should not hold this layer's apply.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+    name: flux-repo
+    namespace: flux-system
+spec:
+    interval: 1h
+    ref:
+        tag: v1.119.0
+    url: oci://ghcr.io/stuttgart-things/flux/repo
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: edge-apps
-  namespace: flux-system
-  labels:
-    app.kubernetes.io/managed-by: flux
-    kustomization.stuttgart-things.com/type: apps
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: apps
+    name: edge-apps
+    namespace: flux-system
 spec:
-  dependsOn:
-    - name: edge-infra
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  prune: true
-  wait: false
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./clusters/edge/apps
-  # ${EDGE_*} in the files of this layer: the environment's values
-  # (../cluster-vars.yaml). Nothing in this layer's objects may carry any other
-  # ${...} -- this substitution would empty it (README, Layout).
-  postBuild:
-    substituteFrom:
-      - kind: ConfigMap
-        name: cluster-vars
-        optional: false
-  # ./apps carries edge-secrets-subst.enc.yaml. The FluxInstance's sops patch
-  # (config.yaml, kustomize.patches) only reaches the Kustomization the
-  # instance itself creates -- flux-system -- not the ones applied from git,
-  # so this layer needs its own decryption block. Without it the Secret is
-  # applied still encrypted and the dry-run fails on kind "ENC[AES256_GCM...]".
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age # pragma: allowlist secret
+    decryption:
+        provider: sops
+        secretRef:
+            name: sops-age
+    dependsOn:
+        - name: edge-infra
+    interval: 1h
+    path: ./clusters/edge/apps
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 5m
+    wait: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+    name: edge-infra
+    namespace: flux-system
+spec:
+    interval: 1h
+    path: ./clusters/edge/infra
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 15m
+    wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+    name: edge-lab
+    namespace: flux-system
+spec:
+    dependsOn:
+        - name: edge-infra
+    interval: 1h
+    path: ./clusters/edge/lab
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 10m
+    wait: true
