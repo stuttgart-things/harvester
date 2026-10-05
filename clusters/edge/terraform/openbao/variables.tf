@@ -5,7 +5,7 @@ variable "openbao_addr" {
 }
 
 // The root token from `bao operator init`, from
-// secrets/openbao-edge-init.enc.yaml (SOPS) -- passed as
+// secrets/edge/openbao-init.enc.yaml (SOPS) -- passed as
 // terraform.tfvars.json, never in a *.tf file (README.md).
 variable "openbao_token" {
   type      = string

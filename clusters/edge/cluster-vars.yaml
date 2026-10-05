@@ -9,7 +9,7 @@
 # LattePanda: EDGE_DOMAIN edge.sthings.lab, the VIP from the OpenWrt LAN
 # (harvester#364, "Design decided").
 #
-# Only plain strings here, no secrets (those are SOPS, apps/edge-secrets-subst).
+# Only plain strings here, no secrets (those are SOPS, in secrets/edge/ at the repo root).
 apiVersion: v1
 kind: ConfigMap
 metadata:

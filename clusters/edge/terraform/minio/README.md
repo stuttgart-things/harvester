@@ -11,7 +11,7 @@ directory ([`../../.sourceignore`](../../.sourceignore)).
 | Provider | `aminueza/minio` ~> 3.44 |
 | Endpoint | `minio.edge-tt-test1.4sthings.tiab.ssc.sva.de:443`, through the Gateway, TLS verified against the edge root CA ([`edge-root-ca.crt`](./edge-root-ca.crt), a copy of `../../edge-root-ca.crt`) |
 | State | `backend "kubernetes"`, Secret `minio/tfstate-default-minio-edge` on the node |
-| Inputs | `minio_user`, `minio_password` (root), `cnpg_secret_key`, all from `../../apps/edge-secrets-subst.enc.yaml` (`MINIO_ADMIN_USER`, `MINIO_ADMIN_PASSWORD`, `MINIO_CNPG_PASSWORD`) |
+| Inputs | `minio_user`, `minio_password` (root), `cnpg_secret_key`, all from `secrets/edge/app-values.enc.yaml` (repo root) (`MINIO_ADMIN_USER`, `MINIO_ADMIN_PASSWORD`, `MINIO_CNPG_PASSWORD`) |
 | Bucket | adopted from the chart's `defaultBuckets` with an `import` block; Terraform is its only owner afterwards |
 
 ## Run (dagger, the default)
@@ -19,7 +19,7 @@ directory ([`../../.sourceignore`](../../.sourceignore)).
 ```bash
 cd ~/projects/harvester
 umask 077
-sops -d --output-type json clusters/edge/apps/edge-secrets-subst.enc.yaml \
+sops -d --output-type json secrets/edge/app-values.enc.yaml \
   | jq '.stringData | {minio_user: .MINIO_ADMIN_USER, minio_password: .MINIO_ADMIN_PASSWORD, cnpg_secret_key: .MINIO_CNPG_PASSWORD}' \
   > /tmp/edge-minio.tfvars.json
 # the host's resolvers: *.4sthings.tiab.ssc.sva.de resolves only through

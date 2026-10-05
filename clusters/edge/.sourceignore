@@ -7,7 +7,4 @@ k3s/
 terraform/
 #   ./cluster-apps.yaml  input of blueprints render-cluster-apps (ClusterApps),
 #                no Kubernetes object
-#   ./apps/openbao-prereqs  only the seal key's SOPS source for cluster-apps.yaml
-#                (ref+sops); the bundle builds the seal Secret from openbao-sops-secrets
 cluster-apps.yaml
-apps/openbao-prereqs/
