@@ -25,4 +25,4 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/flux/repo
   ref:
-    tag: v1.117.1
+    tag: v1.119.0
