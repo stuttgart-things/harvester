@@ -51,12 +51,13 @@ spec:
   # homerun2-light-catcher-tabletennis-sops (flux#639); v1.121.0/v1.122.0:
   # the trust-manager AppProfile (flux#641) and the scoreboard + handover
   # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
-  # self-init with a terraform and a break-glass admin user (flux#640).
+  # self-init with a terraform and a break-glass admin user (flux#640);
+  # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.123.0
+    tag: v1.124.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -200,6 +201,13 @@ spec:
         # zaehlwerk calls https://schmetterpause.<EDGE_DOMAIN> (the default),
         # trusting the edge root through trust-manager's bundle.
         TABLETENNIS_SCOREBOARD_HANDOVER: sops
+        # The office's admin who never plays (schmetterpause
+        # docs/admin-and-observers.md): `timoboll` joins on the page with its
+        # own PIN, gets the admin flag here at every start, then marks itself
+        # as observer under /admin -- counts at zaehlwerk, never in the ranking.
+        # 'on' QUOTED: a bare on is YAML 1.1 true.
+        TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
+        TABLETENNIS_SCHMETTERPAUSE_BOOTSTRAP_ADMIN: timoboll
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
