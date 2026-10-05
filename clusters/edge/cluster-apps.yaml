@@ -26,7 +26,8 @@
 # there is the escrowed cluster key, never applied: .sourceignore).
 #
 # --existing-secrets keeps what is already encrypted there. Every secret value
-# below is a ref+sops into a hand-kept SOPS file anyway, so nothing rotates --
+# below is a ref+sops into a hand-kept SOPS file in secrets/edge/ (repo root,
+# never read by Flux), so nothing rotates --
 # above all the OpenBao seal key, which must never change.
 #
 # --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
@@ -75,8 +76,8 @@ spec:
         kustomization.stuttgart-things.com/type: apps
       dependsOn: [edge-infra]
       wait: false
-      # ./apps applies no SOPS file any more (edge-secrets-subst is only the
-      # ref+sops source); kept so a hand-added *.enc.yaml there just works.
+      # ./apps holds no SOPS file (the values are in secrets/edge/ and reach
+      # the cluster via cluster-secrets); kept so a hand-added *.enc.yaml works.
       decryptionSecret: sops-age # pragma: allowlist secret
       substituteFrom:
         - kind: ConfigMap
@@ -140,13 +141,13 @@ spec:
         MINIO_STORAGE_SIZE: 5Gi
         MINIO_VERSION: 16.0.10
       # The admin credentials Terraform (../terraform/minio) already uses:
-      # taken from edge-secrets-subst, not generated, so nothing rotates.
+      # taken from secrets/edge/app-values, not generated, so nothing rotates.
       secrets:
         minio-secrets:
-          MINIO_ADMIN_USER: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_USER
-          MINIO_ADMIN_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/MINIO_ADMIN_PASSWORD # pragma: allowlist secret
+          MINIO_ADMIN_USER: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/MINIO_ADMIN_USER
+          MINIO_ADMIN_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/MINIO_ADMIN_PASSWORD # pragma: allowlist secret
     # homerun2 without ESO: secrets from SOPS, no notification catcher
-    # (homerun2-sops). Its values are the ones edge-secrets-subst has always
+    # (homerun2-sops). Its values are the ones secrets/edge/app-values has always
     # had, so nothing rotates.
     homerun2-sops:
       vars:
@@ -156,10 +157,10 @@ spec:
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
       secrets:
         homerun2-sops-secrets:
-          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
-          TEAMS_WEBHOOK_URL: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/TEAMS_WEBHOOK_URL
-          HOMERUN2_OMNI_PITCHER_AUTH_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_OMNI_PITCHER_AUTH_TOKEN # pragma: allowlist secret
-          HOMERUN2_SCOUT_AUTH_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/HOMERUN2_SCOUT_AUTH_TOKEN # pragma: allowlist secret
+          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
+          TEAMS_WEBHOOK_URL: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/TEAMS_WEBHOOK_URL
+          HOMERUN2_OMNI_PITCHER_AUTH_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_OMNI_PITCHER_AUTH_TOKEN # pragma: allowlist secret
+          HOMERUN2_SCOUT_AUTH_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_SCOUT_AUTH_TOKEN # pragma: allowlist secret
     # schmetterpause + zaehlwerk (panel: homerun2), CNPG backups into MinIO
     # with the schmetterpause-cnpg user (../terraform/minio).
     tabletennis-sops-backup:
@@ -172,12 +173,12 @@ spec:
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: 7d
       secrets:
         tabletennis-sops-secrets:
-          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
-          SCHMETTERPAUSE_SESSION_KEY: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
-          ZAEHLWERK_OMNI_PITCHER_TOKEN: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/ZAEHLWERK_OMNI_PITCHER_TOKEN # pragma: allowlist secret
-          ZAEHLWERK_REDIS_PASSWORD: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
-          SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
-          SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://clusters/edge/apps/edge-secrets-subst.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
+          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_SESSION_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
+          ZAEHLWERK_OMNI_PITCHER_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_OMNI_PITCHER_TOKEN # pragma: allowlist secret
+          ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
     # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
     # SOPS file, never generated.
@@ -189,4 +190,4 @@ spec:
         OPENBAO_SEAL_KEY_ID: edge-20261004
       secrets:
         openbao-sops-secrets:
-          OPENBAO_SEAL_STATIC_KEY: ref+sops://clusters/edge/apps/openbao-prereqs/openbao-static-seal.enc.yaml#/stringData/key # pragma: allowlist secret
+          OPENBAO_SEAL_STATIC_KEY: ref+sops://secrets/edge/openbao-seal.enc.yaml#/stringData/key # pragma: allowlist secret

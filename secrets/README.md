@@ -30,3 +30,16 @@ dagger call -m github.com/stuttgart-things/dagger/sops@v0.85.0 decrypt \
   --encrypted-file ../secrets/homerun2-dev.yaml \
   export --path=/home/sthings/.kube/homerun2-dev
 ```
+
+## edge/
+
+The SOPS sources of `clusters/edge` (single-node edge k3s). Never read by Flux;
+`clusters/edge/README.md` ("Layout: who creates what", step 4) says what each
+holds and how it is made:
+
+- `app-values.enc.yaml` -- the apps' secret values (`ref+sops` source of
+  `clusters/edge/cluster-apps.yaml`, input of `clusters/edge/terraform/minio`)
+- `openbao-seal.enc.yaml` -- OpenBao's static seal key. **Never change it**: the
+  raft data is sealed with it.
+- `root-ca.enc.yaml` -- the edge root key + all intermediate keys (offline)
+- `openbao-init.enc.yaml` -- root token + recovery key from `bao operator init`

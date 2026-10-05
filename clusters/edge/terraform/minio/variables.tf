@@ -6,7 +6,7 @@ variable "minio_server" {
   default     = "minio.edge-tt-test1.4sthings.tiab.ssc.sva.de:443"
 }
 
-// The three below come from ../../apps/edge-secrets-subst.enc.yaml (SOPS),
+// The three below come from secrets/edge/app-values.enc.yaml (SOPS, repo root),
 // passed as terraform.tfvars.json -- see README.md. Never in a *.tf file.
 variable "minio_user" {
   type      = string

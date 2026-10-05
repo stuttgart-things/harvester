@@ -3,7 +3,7 @@
 #   1. OpenBao generates the key and a CSR (generate/internal: the key never
 #      leaves OpenBao),
 #   2. the CSR is signed HERE with the root key from
-#      secrets/edge-root-ca.enc.yaml (decrypted into a 0700 temp dir, shredded),
+#      secrets/edge/root-ca.enc.yaml (decrypted into a 0700 temp dir, shredded),
 #   3. the signed certificate + root are imported (intermediate/set-signed).
 #
 # Run once per install, after `terraform apply` has created the pki mount.
@@ -17,7 +17,7 @@ set -euo pipefail
 : "${OPENBAO_TOKEN:?set OPENBAO_TOKEN}"
 REPO=$(git rev-parse --show-toplevel)
 CA="${REPO}/clusters/edge/edge-root-ca.crt"
-ROOT_BUNDLE="${REPO}/secrets/edge-root-ca.enc.yaml"
+ROOT_BUNDLE="${REPO}/secrets/edge/root-ca.enc.yaml"
 MOUNT=${MOUNT:-pki}
 DAYS=${DAYS:-1826}  # 5 years, the mount's max_lease_ttl
 
