@@ -38,6 +38,8 @@ spec:
       CILIUM_GATEWAY_EXTRA_POOL_NAME: edge-play-pool
       CILIUM_GATEWAY_EXTRA_IP: "${EDGE_PLAY_LB_IP}"
       CILIUM_GATEWAY_EXTRA_DOMAIN: ${EDGE_PLAY_DOMAIN}
-      CILIUM_GATEWAY_EXTRA_ISSUER: vault-pki-4sthings
+      # Let's Encrypt (production) via DNS-01 at Hetzner DNS (./letsencrypt).
+      # Staging (letsencrypt-staging-hetzner) for experiments: rate limits.
+      CILIUM_GATEWAY_EXTRA_ISSUER: letsencrypt-hetzner
       CILIUM_GATEWAY_EXTRA_ISSUER_KIND: ClusterIssuer
       CILIUM_GATEWAY_EXTRA_TLS_SECRET: play-wildcard-tls # pragma: allowlist secret
