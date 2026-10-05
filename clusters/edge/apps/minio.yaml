@@ -25,6 +25,11 @@ kind: Kustomization
 metadata:
   name: minio
   namespace: flux-system
+  annotations:
+    # HANDOVER to the generated apps-platform bundle (harvester#364 phase 4b):
+    # edge-apps must not delete this object when it leaves this file -- the
+    # bundle takes it over under the same name. Removed by that takeover.
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     app.kubernetes.io/managed-by: flux
     kustomization.stuttgart-things.com/type: apps
@@ -66,6 +71,11 @@ kind: Kustomization
 metadata:
   name: minio-httproute
   namespace: flux-system
+  annotations:
+    # HANDOVER to the generated apps-platform bundle (harvester#364 phase 4b):
+    # edge-apps must not delete this object when it leaves this file -- the
+    # bundle takes it over under the same name. Removed by that takeover.
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     app.kubernetes.io/managed-by: flux
     kustomization.stuttgart-things.com/type: apps
