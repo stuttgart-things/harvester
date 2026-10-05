@@ -297,7 +297,7 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (no Cilium, so no CNI) |
 | infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager (its Bundles want a vault CA), openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
 | apps bundle | `homerun2-sops`, `tabletennis-sops-backup`, `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run); scoreboard + handover |
-| `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` (stand-in for deSEC + Let's Encrypt), ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone | -- (details in [NOTES.md](./NOTES.md)) |
+| `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` (stand-in for deSEC + Let's Encrypt), ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone, Let's Encrypt via DNS-01 at Hetzner DNS (`cert-manager-webhook-hetzner`, ClusterIssuers `letsencrypt-staging-hetzner` / `letsencrypt-hetzner`; the public players' side, tested here first) | -- (details in [NOTES.md](./NOTES.md)) |
 
 ## Moving to the hardware
 
