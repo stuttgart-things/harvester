@@ -2,8 +2,7 @@
 // Terraform runs on the workstation.
 variable "minio_server" {
   type        = string
-  description = "MinIO S3 API host:port"
-  default     = "minio.edge-tt-test1.4sthings.tiab.ssc.sva.de:443"
+  description = "MinIO S3 API host:port; per environment, env/*.auto.tfvars.json"
 }
 
 // The three below come from secrets/edge/app-values.enc.yaml (SOPS, repo root),

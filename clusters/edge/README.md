@@ -33,24 +33,24 @@ directory are **generated** from [`cluster-apps.yaml`](./cluster-apps.yaml).
 clusters/edge/
 ├── cluster-apps.yaml     DEV    what the cluster is: source, layers, apps + their vars/secret refs
 ├── cluster-vars.yaml     DEV    what differs between lab and LattePanda (EDGE_* values)
-├── kustomization.yaml    DEV    what flux-system applies (wiring, rarely changes)
+├── kustomization.yaml    GEN    what flux-system applies (wiring)
 ├── .sourceignore         DEV    keeps k3s/, terraform/, cluster-apps.yaml away from Flux
 ├── config.yaml           BOOT   FluxInstance            (committed by the Flux bootstrap)
 ├── secrets.yaml          BOOT   git + sops-age secrets  (committed by the Flux bootstrap)
 ├── apps.yaml             GEN    OCIRepository flux-repo + layers edge-infra / edge-apps / edge-lab
 ├── cluster-secrets/      GEN    the apps' secrets (SOPS, flux-system) + escrowed cluster key
 ├── infra/
-│   ├── kustomization.yaml  DEV  wiring
+│   ├── kustomization.yaml  GEN  wiring (+ ca.yaml from spec.layers.edge-infra.extraResources)
 │   ├── infra-platform.yaml GEN  the infra bundle
 │   ├── ca.yaml             DEV  Kustomization edge-ca -> ./ca
 │   └── ca/edge-ca.enc.yaml DEV  the intermediate (SOPS, made once -- see The edge CA)
 ├── apps/
-│   ├── kustomization.yaml  DEV  wiring
+│   ├── kustomization.yaml  GEN  wiring
 │   └── apps-platform.yaml  GEN  the apps bundle
-├── lab/                  DEV    LAB ONLY: Vault issuer, players' Gateway, ESP mock, CoreDNS forward
+├── lab/                  DEV    LAB ONLY: Vault issuer, players' Gateway, ESP mock, CoreDNS forward (own kustomization.yaml)
 ├── edge-root-ca.crt      DEV    the public root (made once)
 ├── k3s/                  DEV    Ansible inventory + vars + requirements -- not Flux
-└── terraform/            DEV    MinIO + OpenBao config (dagger/terraform, state in the cluster) -- not Flux
+└── terraform/            DEV    MinIO + OpenBao config + env/{lab,box}.auto.tfvars.json (dagger/terraform, state in the cluster) -- not Flux
 
 secrets/edge/ (repo root, never read by Flux)
 ├── app-values.enc.yaml   DEV    the apps' secret values -- ref+sops source for cluster-apps.yaml, input of terraform/minio
@@ -62,10 +62,10 @@ secrets/edge/ (repo root, never read by Flux)
 **GEN** = `render-cluster-apps` output, never edited by hand: change
 `cluster-apps.yaml`, re-render ([step 5](#5-flux-files)) and commit. A
 re-render without changes reproduces the files byte for byte, and every secret
-value is a `ref+sops` into `secrets/edge/`, so nothing rotates. The copies of
-the root in `terraform/*/` and `lab/esp-mock/` exist because dagger/terraform
-and kustomize only see their own directory; keep them identical to
-`edge-root-ca.crt`.
+value is a `ref+sops` into `secrets/edge/`, so nothing rotates. The one copy of
+the root, in `lab/esp-mock/`, exists because kustomize only reads its own
+directory; keep it identical to `edge-root-ca.crt`. Terraform gets the
+original via dagger/terraform `--extra-files`.
 
 Three layers: `edge-infra` (wait) → `edge-apps` and `edge-lab`. Every layer
 substitutes `${EDGE_*}` from the ConfigMap `cluster-vars`, so lab and
@@ -90,7 +90,7 @@ export GITHUB_USER=... GITHUB_TOKEN=...
 | 2 | VM + base OS | Backstage `request-vm` | -- | VM with `sthings.baseos.setup` |
 | 3 | k3s + Cilium | blueprints/vm `execute-ansible` | `k3s/*` | node, kubeconfig |
 | 4 | Persistent secrets (**once ever**) | openssl, sops | `secrets/edge/*`, `edge-root-ca.crt`, `infra/ca/edge-ca.enc.yaml` | -- |
-| 5 | Flux files | blueprints/flux `render-cluster-apps` | `cluster-apps.yaml`, wiring, `infra/ca.yaml`, `lab/` | `apps.yaml`, `*-platform.yaml`, `cluster-secrets/` |
+| 5 | Flux files | blueprints/flux `render-cluster-apps` | `cluster-apps.yaml`, `infra/ca.yaml`, `lab/` | `apps.yaml`, `*-platform.yaml`, `cluster-secrets/`, the `kustomization.yaml` wiring |
 | 6 | Flux | blueprints/flux `bootstrap` | 2 `pragma` comments | `config.yaml`, `secrets.yaml` (committed) |
 | 7 | OpenBao init (**once per install**) | `bao operator init`, sops | -- | `secrets/edge/openbao-init.enc.yaml` |
 | 8 | OpenBao + MinIO config | dagger/terraform, `sign-intermediate.sh` | -- | PKI/ACME, bucket + user |
@@ -138,7 +138,7 @@ same app passwords. Plaintext only in a `umask 077` scratch directory,
 | File | Content | Made with |
 |---|---|---|
 | `secrets/edge/root-ca.enc.yaml` | Secret-shaped, `stringData`: `root.key`, `root.crt` + every intermediate key | `openssl ecparam -name secp384r1 -genkey`, self-signed root, `CA:TRUE`, 20 years |
-| `edge-root-ca.crt` (+ the 3 copies) | the public `root.crt` | -- |
+| `edge-root-ca.crt` (+ the copy in `lab/esp-mock/`) | the public `root.crt` | -- |
 | `infra/ca/edge-ca.enc.yaml` | Secret `cert-manager/edge-ca`: `tls.crt` = intermediate + root, `tls.key`, `ca.crt` = root | P-256 key, signed by the root, `pathlen:0`, 5 years |
 | `secrets/edge/app-values.enc.yaml` | Secret-shaped, `stringData`: every key `cluster-apps.yaml` refers to (`HOMERUN2_*`, `ZAEHLWERK_*`, `SCHMETTERPAUSE_*`, `MINIO_*`, `TEAMS_WEBHOOK_URL`) | `openssl rand` per value |
 | `secrets/edge/openbao-seal.enc.yaml` | `stringData.key`: 32 random bytes, base64 | `openssl rand -base64 32` |
@@ -152,7 +152,7 @@ Write [`cluster-apps.yaml`](./cluster-apps.yaml) (the edge's is the template:
 source tag, layers, bundles, apps with vars and `ref+sops` secrets), then:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.9.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
   render-cluster-apps \
   --cluster-apps clusters/edge/cluster-apps.yaml \
   --master-age-key env:SOPS_AGE_KEY \
@@ -163,11 +163,11 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@
 cp -r /tmp/edge-gen/flux/. clusters/edge/ && rm -rf /tmp/edge-gen
 ```
 
-Leave out `--existing-secrets` only on the very first run. By hand: the three
-`kustomization.yaml` (the root lists `config.yaml`, `secrets.yaml`,
-`cluster-vars.yaml`, `apps.yaml`, `cluster-secrets/secrets`; `infra/` lists
-`infra-platform.yaml` + `ca.yaml`; `apps/` lists `apps-platform.yaml`),
-`infra/ca.yaml`, `lab/`. **Merge to `main`**: the FluxInstance syncs
+Leave out `--existing-secrets` only on the very first run. The wiring
+(`kustomization.yaml` at the root, in `infra/` and `apps/`) is generated too
+(`spec.wiring`); hand-written files are listed there as `extraResources`
+(`cluster-vars.yaml` at the root, `ca.yaml` in `edge-infra`). By hand stay
+`infra/ca.yaml` and `lab/` (with its own `kustomization.yaml`). **Merge to `main`**: the FluxInstance syncs
 `refs/heads/main`, and a path that only exists on a branch leaves
 `flux-system` at `path not found`.
 
@@ -179,7 +179,7 @@ Later, to move to a newer flux release: bump `spec.source.tag` in
 blueprints/flux v3.6.1 or newer (flux-operator 0.61.0, Flux 2.9.6):
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.9.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
   bootstrap \
   --kube-config file://$HOME/.kube/edge-tt-test1 \
   --deploy-operator=true \
@@ -220,7 +220,10 @@ The static seal unseals every restart after that.
 
 ### 8. OpenBao + MinIO configuration
 
-Both with dagger/terraform, state in the cluster (`kubernetes` backend):
+Both with dagger/terraform v0.136.0+, state in the cluster (`kubernetes`
+backend), `--extra-files clusters/edge/edge-root-ca.crt,<root>/env/<lab|box>.auto.tfvars.json`
+-- the environment file holds the addresses (and, for OpenBao, the ACME domains
+and DNS resolver); there are no defaults:
 [terraform/openbao](./terraform/openbao/README.md) (PKI mount, role `devices`,
 ACME), then `terraform/openbao/sign-intermediate.sh` (key generated inside
 OpenBao, CSR signed with the offline root), and

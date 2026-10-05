@@ -9,7 +9,7 @@ directory ([`../../.sourceignore`](../../.sourceignore)).
 | | |
 |---|---|
 | Provider | `aminueza/minio` ~> 3.44 |
-| Endpoint | `minio.edge-tt-test1.4sthings.tiab.ssc.sva.de:443`, through the Gateway, TLS verified against the edge root CA ([`edge-root-ca.crt`](./edge-root-ca.crt), a copy of `../../edge-root-ca.crt`) |
+| Endpoint | `minio.edge-tt-test1.4sthings.tiab.ssc.sva.de:443`, through the Gateway, TLS verified against the edge root CA ([`../../edge-root-ca.crt`](../../edge-root-ca.crt), passed with `--extra-files`) |
 | State | `backend "kubernetes"`, Secret `minio/tfstate-default-minio-edge` on the node |
 | Inputs | `minio_user`, `minio_password` (root), `cnpg_secret_key`, all from `secrets/edge/app-values.enc.yaml` (repo root) (`MINIO_ADMIN_USER`, `MINIO_ADMIN_PASSWORD`, `MINIO_CNPG_PASSWORD`) |
 | Bucket | adopted from the chart's `defaultBuckets` with an `import` block; Terraform is its only owner afterwards |
@@ -26,9 +26,11 @@ sops -d --output-type json secrets/edge/app-values.enc.yaml \
 # them (split DNS), not through the Dagger engine's own resolver
 printf 'nameserver 10.100.136.115\nnameserver 10.100.101.5\n' > /tmp/edge-resolv.conf
 
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.135.0 \
+ENV=lab   # or box: env/<ENV>.auto.tfvars.json holds the endpoint
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.136.0 \
   execute \
   --terraform-dir clusters/edge/terraform/minio \
+  --extra-files clusters/edge/edge-root-ca.crt,clusters/edge/terraform/minio/env/$ENV.auto.tfvars.json \
   --operation apply \
   --refuse-destroy \
   --secret-json-variables file:///tmp/edge-minio.tfvars.json \
@@ -39,6 +41,11 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform
 shred -u /tmp/edge-minio.tfvars.json
 ```
 
+- `--extra-files` (module v0.136.0, stuttgart-things/dagger#399): the edge
+  root CA (the provider wants a file) and the environment's
+  `env/<ENV>.auto.tfvars.json` (`minio_server`), placed next to the code;
+  Terraform loads `*.auto.tfvars.json` by itself. There is no default
+  endpoint: without the env file the run fails instead of hitting the wrong one.
 - `--refuse-destroy`: the plan is applied only if it deletes or replaces
   nothing. That matters for a bucket with backups in it.
 - `--resolv-conf` (module v0.135.0, stuttgart-things/dagger#398). Without
