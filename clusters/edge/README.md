@@ -21,7 +21,7 @@ directory are **generated** from [`cluster-apps.yaml`](./cluster-apps.yaml).
 | Target | LattePanda Mu: N100 / 8GB / 64GB eMMC |
 | LB address / domain | `10.100.136.223`, `*.edge-tt-test1.4sthings.tiab.ssc.sva.de` (LabDA Clusterbook) -- both from [`cluster-vars.yaml`](./cluster-vars.yaml) |
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (Gateway API v1.6.1, L2 announcements), no kube-proxy/flannel/traefik/servicelb |
-| Content | `oci://ghcr.io/stuttgart-things/flux/repo` (v1.119.1), bundles `infra-platform` + `apps-platform` |
+| Content | `oci://ghcr.io/stuttgart-things/flux/repo` (v1.120.0), bundles `infra-platform` + `apps-platform` |
 | Apps | homerun2 (SOPS profile), tabletennis (schmetterpause + zaehlwerk, CNPG with backups), MinIO (backup target), OpenBao (device PKI / ACME) |
 | Storage | k3s `local-path`. Nothing is meant to survive the box (backups: see [Verify](#10-verify)). |
 | Certificates | persistent edge root → intermediate → ClusterIssuer `edge-ca` ([The edge CA](#the-edge-ca)) |
@@ -296,7 +296,7 @@ openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcer
 |---|---|---|
 | Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (no Cilium, so no CNI) |
 | infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, trust-manager (its Bundles want a vault CA), openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
-| apps bundle | `homerun2-sops`, `tabletennis-sops-backup`, `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run); scoreboard + handover |
+| apps bundle | `homerun2-sops`, `homerun2-light-catcher-tabletennis-sops` (the light at the table), `tabletennis-sops-backup`, `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run); scoreboard + handover |
 | `edge-lab` (lab only) | Vault issuer `vault-pki-4sthings`, Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP` (stand-in for deSEC + Let's Encrypt), ESP mock (zaehlwerk piezo with an ACME device certificate), CoreDNS forward for the LabDA zone, Let's Encrypt via DNS-01 at Hetzner DNS (`cert-manager-webhook-hetzner`, ClusterIssuers `letsencrypt-staging-hetzner` / `letsencrypt-hetzner`; the public players' side, tested here first) | -- (details in [NOTES.md](./NOTES.md)) |
 
 ## Lab: test the device path and watch the apps
@@ -352,6 +352,29 @@ edge root; then it waits for the next match.
 
    Expect `rejectedIdentifier ... role (devices) will not issue certificate for name evil.example.com`.
 
+**Mock or real boards.** Every board sends its own `source` with each event:
+the mock is `piezo-a` (`PIEZO_SOURCE`), a real board the name its firmware
+carries; the certificates differ too (`piezo-a.<EDGE_DOMAIN>` vs. the name the
+board gets on its network). Watch who scores:
+
+```bash
+kubectl -n zaehlwerk logs -f deploy/zaehlwerk | grep -o '"source":"[^"]*"'
+```
+
+**Never both at once.** zaehlwerk has one running match and every board in
+join mode scores into it -- mock and real board together count each rally
+twice. While real boards are at the table, switch the mock off in
+[`cluster-vars.yaml`](./cluster-vars.yaml) and merge:
+
+```yaml
+EDGE_ESP_MOCK_REPLICAS: "0"   # "1" = mock on (default when the key is missing)
+```
+
+For a quick test without a commit: `flux suspend ks esp-mock -n flux-system`
+and `kubectl -n esp-mock scale deploy/piezo-a --replicas=0`; `flux resume ks
+esp-mock -n flux-system` brings it back to the value in `cluster-vars`. On the
+LattePanda there is no mock at all (no `edge-lab` layer).
+
 **Who may enrol:** `acme_eab_policy = "not-required"` -- any client that
 passes the challenge for a name under `acme_allowed_domains` gets a
 certificate, so the network is the gate (on the box: whoever gets a name from
@@ -365,7 +388,8 @@ once) and device names only from static leases.
 |---|---|
 | `zaehlwerk` | the live match the mock plays |
 | `led-catcher` | the LED matrix: it reads the `tabletennis` stream, so the score shows up (log: `caught: 1:4`) |
-| `wled-mock` | the emulated light. `light-catcher` reads only the `messages` stream: it reacts to homerun2 messages (send one via `demo-pitcher`), not to table tennis |
+| `wled-mock` | the emulated light. Two catchers drive it: `light-catcher` (stream `messages`, homerun2 messages -- send one via `demo-pitcher`) and the table's own `light-catcher-tabletennis` (stream `tabletennis`): point for side a **blue**, side b **red** (1 s), set won rainbow (4 s), match won fireworks (10 s), an undo nothing |
+| `light-catcher-tabletennis` | the table's light-catcher (namespace `homerun2-tabletennis`, AppProfile `homerun2-light-catcher-tabletennis-sops`); on the box its `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT` points at the real strip |
 | `demo-pitcher`, `config-viewer` | send test messages; the homerun2 configuration |
 | `schmetterpause` | the players' app (also `schmetterpause.<EDGE_PLAY_DOMAIN>` on the players' Gateway) |
 

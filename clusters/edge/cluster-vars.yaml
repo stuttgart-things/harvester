@@ -21,8 +21,14 @@ data:
   EDGE_LB_IP: 10.100.136.223
   EDGE_GATEWAY_NAME: edge-gateway
   # The "public" side for players (./lab/, lab only): its own Gateway on its
-  # own VIP. On the edge this becomes the deSEC name with Let's Encrypt; in
-  # the lab a Clusterbook name with a certificate from the LabDA Vault.
+  # own VIP. On the edge this becomes a public name (Hetzner DNS) with Let's
+  # Encrypt; in the lab a Clusterbook name with a certificate from the LabDA
+  # Vault until the Hetzner zone exists.
   # Reserved 2026-10-04 as edge-tt-test1-play (ASSIGNED:DNS).
   EDGE_PLAY_DOMAIN: edge-tt-test1-play.4sthings.tiab.ssc.sva.de
   EDGE_PLAY_LB_IP: 10.100.136.226
+  # LAB ONLY: the emulated ESP (lab/esp-mock, deployment piezo-a). "1" = on,
+  # "0" = off. TURN IT OFF WHILE REAL BOARDS ARE AT THE TABLE: zaehlwerk has
+  # one running match and every board in join mode scores into it, so mock
+  # and real board together count each rally twice.
+  EDGE_ESP_MOCK_REPLICAS: "1"

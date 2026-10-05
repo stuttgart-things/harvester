@@ -46,13 +46,14 @@ spec:
   # The whole stuttgart-things/flux repo as one OCI artifact (sources.yaml).
   # Generated as the OCIRepository flux-repo; the bundles read it with
   # sourceRef.kind OCIRepository plus a kind patch for their children.
-  # v1.119.1: the infra AppProfiles (flux#634) and the SOPS alternatives
-  # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635).
+  # v1.120.0: the infra AppProfiles (flux#634), the SOPS alternatives
+  # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635) and
+  # homerun2-light-catcher-tabletennis-sops (flux#639).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.119.1
+    tag: v1.120.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -190,6 +191,16 @@ spec:
           ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
           SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
           SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
+    # The light at the table: a second light-catcher on zaehlwerk's
+    # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
+    # for side a: blue, side b: red (1 s); set won: rainbow; match won:
+    # fireworks. Sends to the wled-mock that homerun2-sops brings; on the box
+    # set HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT to the real strip.
+    # Same redis password as homerun2-sops (same ref).
+    homerun2-light-catcher-tabletennis-sops:
+      secrets:
+        homerun2-light-catcher-tabletennis-sops-secrets:
+          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
     # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
     # SOPS file, never generated.

@@ -12,6 +12,7 @@ metadata:
   namespace: flux-system
 spec:
   components:
+  - '../components/homerun2-light-catcher-tabletennis-sops'
   - '../components/homerun2-sops'
   - '../components/minio'
   - '../components/openbao-sops'
