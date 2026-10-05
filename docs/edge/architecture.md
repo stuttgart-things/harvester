@@ -4,8 +4,9 @@ How the single-node edge cluster fits together: the box, the router, k3s and
 Cilium, the services on the cluster, and the **two name worlds** -- the
 internal one with the edge's own CA (and OpenBao for the devices), and the
 public one at Hetzner DNS with Let's Encrypt. The how-to is in
-[README.md](./README.md) (layout, *Recreate from scratch*); history in
-[NOTES.md](./NOTES.md); tracking issue harvester#364.
+[runbook.md](./runbook.md) (layout, *Recreate from scratch*), every hand-written
+file in [from-scratch.md](./from-scratch.md); history in [notes.md](./notes.md);
+tracking issue harvester#364.
 
 ## The site
 
@@ -75,8 +76,7 @@ flowchart TB
 ```
 
 Everything Flux applies is **generated** from
-[`cluster-apps.yaml`](./cluster-apps.yaml) (README, *Layout: who creates
-what*); secrets are SOPS, their values in `secrets/edge/`.
+`clusters/<cluster>/cluster-apps.yaml` ([runbook](./runbook.md), *Layout*); secrets are SOPS, their values in `secrets/edge/`.
 
 **The game, end to end:**
 
@@ -169,7 +169,7 @@ sequenceDiagram
 ### Lab: Clusterbook
 
 Names and VIPs of the lab VMs. Details and the Dagger variant:
-[`../edge-test2/README.md`](../edge-test2/README.md) (step 1).
+[runbook.md](./runbook.md) (step 1).
 
 ```bash
 C=http://clusterbook.infra.sthings-vsphere.labul.sva.de      # labul (LabDA: clusterbook.sthings-infra.4sthings.tiab.ssc.sva.de)
@@ -245,3 +245,33 @@ Check from a client on the edge Wi-Fi: `dig +short zaehlwerk.edge.sthings.lab`
 → `192.168.8.20`, `dig +short schmetterpause.sthings-edge.com` →
 `192.168.8.21`, `dig +short piezo-a.edge.sthings.lab` → the board. In the GL
 UI, "Override DNS Settings for All Clients" must not bypass dnsmasq.
+
+## The edge CA -- files
+
+One root for everything on the box: the gateway wildcard, and OpenBao's ACME
+issuer for the ESP32 devices. **Persistent**: generated once (2026-10-03) and
+kept in git, so a reinstall, or the move to the LattePanda, does not change
+what clients and devices trust.
+
+| | Where | |
+|---|---|---|
+| Root, public | `clusters/<cluster>/edge-root-ca.crt` | `CN=stuttgart-things edge root CA`, EC P-384, until 2046-10-03. **What clients and devices trust.** |
+| Root key + intermediate keys | `secrets/edge/root-ca.enc.yaml` | **offline**: never in the cluster or a Terraform state |
+| Intermediate "(cert-manager)" | `clusters/<cluster>/infra/ca/edge-ca.enc.yaml` | EC P-256, until 2031-10-03, `pathlen:0`. ClusterIssuer `edge-ca` (flux component `cert-manager-ca-from-secret`) issues `*.<EDGE_DOMAIN>` | <!-- pragma: allowlist secret -->
+| Intermediate "(openbao)" | inside OpenBao | key generated there, signed offline by `sign-intermediate.sh`; ACME for the devices |
+
+```bash
+# trust it on a client
+sudo cp clusters/<cluster>/edge-root-ca.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+# the chain the gateway serves
+openssl s_client -connect <VIP>:443 -servername schmetterpause.<domain> -showcerts </dev/null | grep -E "s:|i:"
+```
+
+## What runs here, and what deliberately does not
+
+| | Selected | Left out, and why |
+|---|---|---|
+| Ansible | `sthings.baseos.setup`, `sthings.rke.k3s_cluster` | the `k3s` play (ingress-nginx + a cert-manager that wants `root-ca`); `k3s_arm` (no Cilium, so no CNI) |
+| infra bundle | `cilium-lb`, `cilium-gateway`, `cert-manager-install`, `cert-manager-selfsigned`, `cert-manager-ca-from-secret`, `trust-manager` (Bundle `cluster-trust-bundle` in every namespace: public CAs + cluster CA + the edge root via `TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca`), `cert-manager-letsencrypt-hetzner` (Let's Encrypt via DNS-01 at Hetzner DNS, zone `sthings-edge.com`), `cilium-gateway-extra` (the players' Gateway `edge-play-gateway` on `EDGE_PLAY_LB_IP`, wildcard `*.EDGE_PLAY_DOMAIN` from Let's Encrypt), `cnpg-operator`, `cnpg-barman-cloud`, `reloader` | vault issuer, ESO, sops-git, nfs-csi, coredns-lab-zone, velero, openebs (k3s has local-path), headlamp/flux-web (8 GB RAM) |
+| apps bundle | `homerun2-sops`, `homerun2-light-catcher-tabletennis-sops` (the light at the table), `tabletennis-sops-backup` (with scoreboard + handover: zaehlwerk offers schmetterpause's players and scorers and reports won matches back, over HTTPS through the Gateway), `minio` (chart 16.0.10), `openbao-sops` (static seal, single node) | `redis-lb`; the Teams webhook (notification-catcher in dry run) |
+| `edge-lab` (lab only) | the players' HTTPRoute for schmetterpause on `edge-play-gateway`, ESP mock (zaehlwerk piezo with an ACME device certificate), plus lab-specific parts (e.g. `edge-tt-test1`: LabDA Vault issuer, CoreDNS forward for the LabDA zone) | -- (details in [notes.md](./notes.md)) |

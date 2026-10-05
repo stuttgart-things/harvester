@@ -4,8 +4,8 @@ For a repo **without** an existing edge cluster or its secrets: what to create,
 where, under which name, with which content -- as `cat <<'EOF'` blocks to
 copy. Everything not listed here is either **generated** (blueprints/flux
 `render-cluster-apps`) or **committed by the Flux bootstrap**; see the
-runbook in [README.md](./README.md) (*Recreate from scratch*) for the order,
-[ARCHITECTURE.md](./ARCHITECTURE.md) for the picture.
+runbook in [runbook.md](./runbook.md) (*Recreate from scratch*) for the order,
+[architecture.md](./architecture.md) for the picture.
 
 | Part | Files | Made with | Once per |
 |---|---|---|---|
@@ -288,7 +288,7 @@ secrets, `ref+sops://` into section 1. Drop the `edge-lab` layer for the box.
 cat > clusters/$CLUSTER/cluster-apps.yaml <<'EOF'
 ---
 # Input of blueprints/flux render-cluster-apps -- NOT a Kubernetes object
-# (.sourceignore). See clusters/edge/FROM-SCRATCH.md and the README runbook.
+# (.sourceignore). See docs/edge/from-scratch.md and docs/edge/runbook.md.
 kind: ClusterApps
 metadata:
   name: __CLUSTER__
@@ -574,7 +574,7 @@ sed -i "s|./clusters/edge/lab/|./clusters/$CLUSTER/lab/|" clusters/$CLUSTER/lab/
 
 ### Then
 
-Render (README step 5: `render-cluster-apps` with
+Render ([runbook](./runbook.md) step 5: `render-cluster-apps` with
 `--cluster-apps clusters/$CLUSTER/cluster-apps.yaml`; the **first** render
 without `--existing-secrets`), merge, bootstrap Flux with
 `--destination-path clusters/$CLUSTER` (step 6). Generated:
@@ -586,7 +586,7 @@ bootstrap: `config.yaml`, `secrets.yaml`.
 
 The Terraform roots are shared (`clusters/edge/terraform/{openbao,minio}`);
 each environment has its own address file, passed with `--extra-files`
-(README step 8). No defaults: without the file a run fails.
+([runbook](./runbook.md) step 8). No defaults: without the file a run fails.
 
 ```bash
 ENV=lab-test2
