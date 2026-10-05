@@ -5,11 +5,11 @@
 # (.sourceignore). LIVE since harvester#364 phase 4b step 2: the files listed
 # under Output are generated -- change this file and re-render, never edit them.
 #
-# Re-render (from the repo root) with blueprints/flux v3.8.0 or newer
-# (blueprints#212, #213; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
+# Re-render (from the repo root) with blueprints/flux v3.9.0 or newer
+# (blueprints#212-#214; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
 # Every AppProfile comes from the flux catalog in flux-repo (flux#634, #635):
 #
-#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.8.0 \
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.9.0 \
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
 #     --master-age-key env:SOPS_AGE_KEY \

@@ -37,7 +37,7 @@ spec:
       INFRA_DOMAIN: ${EDGE_DOMAIN}
       INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       INFRA_GATEWAY_NAMESPACE: default
-      INFRA_TLS_SECRET: wildcard-tls
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
       MINIO_STORAGE_CLASS: local-path
       MINIO_STORAGE_SIZE: '5Gi'
       MINIO_VERSION: '16.0.10'

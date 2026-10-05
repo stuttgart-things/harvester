@@ -33,8 +33,8 @@ spec:
   path: './infra/platform/root'
   postBuild:
     substitute:
-      CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca
-      CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca
+      CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
+      CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
       CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
       CILIUM_LB_IP_START: ${EDGE_LB_IP}
       CILIUM_LB_IP_STOP: ${EDGE_LB_IP}
@@ -42,7 +42,7 @@ spec:
       INFRA_DOMAIN: ${EDGE_DOMAIN}
       INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       INFRA_GATEWAY_NAMESPACE: default
-      INFRA_TLS_SECRET: wildcard-tls
+      INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
   prune: true
   retryInterval: '1m'
   sourceRef:
