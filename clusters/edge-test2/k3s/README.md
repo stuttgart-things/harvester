@@ -26,7 +26,8 @@ install -m 600 /dev/null ~/.edge-tt-test2.pass
 nano ~/.edge-tt-test2.pass
 
 # 2. k3s + Cilium
-SSH_USER=sthings env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
+export SSH_USER=sthings
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
   execute-ansible \
   --src ./clusters/edge-test2/k3s \
   --playbooks sthings.rke.k3s_cluster \
