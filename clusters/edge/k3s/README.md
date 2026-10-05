@@ -96,11 +96,16 @@ The same playbook, vars, inventory and requirements, through
 blueprints/vm `execute-ansible`. It runs the Ansible container instead of the
 local venv. That module authenticates with **username + password**, not a key.
 
+The password comes from a file (mode 600, created by hand, never in a command,
+the environment or a log). Dagger reads it with `file:` and masks it in the
+output -- and every other occurrence of a secret's value too: the user
+`sthings` shows up as `***` (`***.rke.install_requirements`).
+
 ```bash
 cd ~/projects/harvester
-export SSH_USER=sthings SSH_PASSWORD=...        # the node's sthings password
+install -m 600 /dev/null ~/.edge-tt-test1.pass   # then write the node's sthings password into it
 
-dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+SSH_USER=sthings dagger call -m github.com/stuttgart-things/blueprints/vm@v3.9.0 \
   execute-ansible \
   --src ./clusters/edge/k3s \
   --playbooks sthings.rke.k3s_cluster \
@@ -108,8 +113,10 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --parameters-file ./clusters/edge/k3s/k3s-vars.yaml \
   --requirements ./clusters/edge/k3s/requirements.yaml \
   --ssh-user env:SSH_USER \
-  --ssh-password env:SSH_PASSWORD \
+  --ssh-password file:$HOME/.edge-tt-test1.pass \
   --progress plain
+
+shred -u ~/.edge-tt-test1.pass
 ```
 
 `--requirements` is not optional here. Without it, the module renders the
@@ -120,7 +127,23 @@ run pinned to what this repo says).
 Against a node that run 1 already set up, this is the idempotency test through
 a second toolchain. Expect the same result.
 
-## Last run: 2026-10-03, CLI
+## Last run: 2026-10-05, Dagger (run 2)
+
+blueprints/vm v3.9.0 `execute-ansible` (ansible-core 2.21.4 in the container),
+collections from `requirements.yaml` (sthings.rke **26.1003.1401**, with the
+deploy-configure-rke#44 fix; baseos 26.1003.1399), against the running
+`edge-tt-test1` -- Flux and all 38 Kustomizations on it.
+
+| | Result |
+|---|---|
+| Run | 05:42 → 05:49 UTC, `ok=107 changed=5 failed=0` |
+| changed | apt cache update (2x), `sysctl fs.inotify.max_user_watches` (a command), `cilium upgrade` (same 1.20.2 and values: Helm revision 4, no pod restarted), kubeconfig fetch into the container -- all tasks that always report changed |
+| After | node Ready v1.35.9+k3s1, Cilium v1.20.2, kube-system 6/6 Running, 38/38 Kustomizations Ready |
+
+So run 1 (CLI) and run 2 (Dagger) converge on the same node: the
+idempotency test through a second toolchain passed.
+
+## Run 1: 2026-10-03, CLI
 
 `~/ansible-venv` ansible 14.4.0 / core 2.21.4, collections from
 `requirements.yaml` (sthings.rke 26.1003.1399), against `edge-tt-test1` after the
