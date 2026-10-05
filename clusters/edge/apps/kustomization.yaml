@@ -1,13 +1,13 @@
 ---
 # What edge-apps (../apps.yaml) applies.
+#
+# edge-secrets-subst.enc.yaml in this directory is NOT applied (since
+# harvester#364 phase 4b): it is only the SOPS source that ../cluster-apps.yaml
+# (ref+sops) and ../terraform/minio read their values from. Flux gets those
+# values from the generated ../cluster-secrets.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   # GENERATED: the apps bundle -- homerun2-sops, minio, openbao-sops,
   # tabletennis-sops-backup (../cluster-apps.yaml)
   - apps-platform.yaml
-  # SOPS. No Kustomization reads it any more since the bundle took over
-  # (harvester#364 phase 4b); kept applied for that handover, removed in a
-  # follow-up. The FILE stays: cluster-apps.yaml (ref+sops) and
-  # ../terraform/minio read their values from it.
-  - edge-secrets-subst.enc.yaml

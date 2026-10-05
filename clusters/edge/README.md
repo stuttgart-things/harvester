@@ -26,7 +26,7 @@ not from Git.
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite/kine, Cilium 1.20.2 (cilium-cli 0.20.1, Gateway API v1.6.1), no kube-proxy, no flannel, no traefik, no servicelb |
 | Storage | k3s `local-path` (the default class). Nothing here is meant to survive the box. |
 | Certificates | cert-manager, ClusterIssuer `edge-ca`: the **persistent** edge root → intermediate → `*.<INFRA_DOMAIN>` ([The edge CA](#the-edge-ca)) |
-| Secrets | SOPS only: [`apps/edge-secrets-subst.enc.yaml`](./apps/edge-secrets-subst.enc.yaml), decrypted by Flux |
+| Secrets | SOPS only: generated [`cluster-secrets/`](./cluster-secrets/) (decrypted by Flux), values `ref+sops` from [`apps/edge-secrets-subst.enc.yaml`](./apps/edge-secrets-subst.enc.yaml) (not applied) |
 | GitOps | Flux Operator, syncing `clusters/edge`; content from `oci://ghcr.io/stuttgart-things/flux/repo` |
 
 ```bash
@@ -50,7 +50,7 @@ clusters/edge/
 ├── cluster-secrets/     GENERATED: the bundle apps' secrets (SOPS, flux-system)
 ├── infra/               infra-platform.yaml (GENERATED: the flux infra bundle) + ca/ (the edge CA, by hand)
 ├── apps/                apps-platform.yaml (GENERATED: homerun2-sops, minio, openbao-sops,
-│                          tabletennis-sops-backup) + edge-secrets-subst (SOPS, source of the values)
+│                          tabletennis-sops-backup) + edge-secrets-subst.enc.yaml (SOPS, NOT applied: only the source of the values)
 ├── lab/                 LAB ONLY, by hand: Vault issuer, players' Gateway, ESP mock
 ├── k3s/  terraform/     Ansible for k3s + Cilium, Terraform for MinIO/OpenBao -- never read by Flux
 ```
