@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: hetzner-dns
+    namespace: cert-manager
+type: Opaque
+stringData:
+    token: ENC[AES256_GCM,data:uSQd1/5G68u1CQ89cAy2knc/gNEPPlH0ctx+cApLqeiijhz4dERizPjCXa505P2LyUVwnIxqvXL2VkEJP3EkDA==,iv:1dA5e8TbWbgJmq7NFDJeg91LrLwFp5fX/FO2poQn21A=,tag:+aLsX7eeChzU5OsKAERnAg==,type:str]
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBVNk1YdFA5ZkRwL2pCSU04
+            N2xNVVl5MlpZYk9YQlZnRUtoWkZ1RUFTc0ZvCnY4MTBqMlJFc0Q0MFVwc3hGQys0
+            NjZIcktxYWlkSUVNaVRYVzZ2NWZuUjAKLS0tIGEwaytKMFJsdS9hVTBoNWtPbmU5
+            cmRwNDlzQjJlRFJPTkJENDNEM2Z4V1kKipWJOn6FsR8KTYq81TH1kgkjwIl169IX
+            dVDV8ULLC+8heQmpKx2cc+Q6BXozzWok+Njs2CjfztAm59zIdeXfVQ==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-10-05T16:15:35Z"
+    mac: ENC[AES256_GCM,data:1Yfc7X2rJRt7fbTGV3lzk88j8s4CoHNqHD/OKpKXCvyKCxX6JCiU6huIUqTchB0Rg65jWzxgO+w26+flUIG41PR7/JqRrs6/xRMgojW2CERwj9reidrAn3bJ+TmqlVoFuYMs3BlPkM3y71m7tKl0/3gFdxrmbOf1USBqQMKDeVk=,iv:WeZlsGelWwfcK3AuWFbOg0gg2vpUP8bb529lOlnfMNQ=,tag:oWWCIGtbAb4RE527BlgJGA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.12.1
