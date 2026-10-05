@@ -34,10 +34,10 @@ dagger call -m github.com/stuttgart-things/dagger/sops@v0.85.0 decrypt \
 ## edge/
 
 How to create each of them (content, value generators, SOPS):
-`clusters/edge/FROM-SCRATCH.md`, section 1.
+`docs/edge/from-scratch.md`, section 1.
 
 The SOPS sources of `clusters/edge` (single-node edge k3s). Never read by Flux;
-`clusters/edge/README.md` ("Layout: who creates what", step 4) says what each
+`docs/edge/runbook.md` ("Layout of a cluster folder", step 4) says what each
 holds and how it is made:
 
 - `app-values.enc.yaml` -- the apps' secret values (`ref+sops` source of

@@ -1,6 +1,6 @@
-# clusters/edge -- notes
+# Edge cluster -- notes
 
-Background and history for [README.md](./README.md): why things are the way
+Background and history for the [runbook](./runbook.md) and the first lab cluster `edge-tt-test1` (`clusters/edge`): why things are the way
 they are, and what was measured. Nothing here is needed to run or recreate the
 cluster.
 
@@ -65,7 +65,7 @@ cert-manager-selfsigned, cnpg-operator, reloader), all
 
 ## Lab: the emulated ESP and the CoreDNS forward
 
-**The emulated ESP** ([`lab/esp-mock`](./lab/esp-mock/), #375) is the zaehlwerk
+**The emulated ESP** ([`lab/esp-mock`](../../clusters/edge/lab/esp-mock/), #375) is the zaehlwerk
 piezo board mock with a device certificate from OpenBao. A lego init container
 enrols via ACME HTTP-01 for `piezo-a.<EDGE_DOMAIN>`. The board then plays
 matches against `https://zaehlwerk.<EDGE_DOMAIN>` and trusts only the edge
@@ -73,7 +73,7 @@ root. Checked on 2026-10-04: "The server validated our request … Server
 responded with a certificate", then `rally … points` every 3 s.
 
 **The LabDA zone needs its own forward in CoreDNS**
-([`lab/coredns-lab-zone.yaml`](./lab/coredns-lab-zone.yaml), k3s
+([`lab/coredns-lab-zone.yaml`](../../clusters/edge/lab/coredns-lab-zone.yaml), k3s
 `coredns-custom`). The node lists two resolvers, and only 10.100.136.115 knows
 `4sthings.tiab.ssc.sva.de`. CoreDNS picked one at random, so names under the
 Clusterbook wildcard SERVFAILed from pods every other time. The mock's first
@@ -112,7 +112,7 @@ and Cilium 1.20.2.
 
 | Time (UTC) | |
 |---|---|
-| 10:27 to 10:33 | k3s + Cilium (Ansible CLI, [`k3s/`](./k3s/)) |
+| 10:27 to 10:33 | k3s + Cilium (Ansible CLI, [`k3s/`](../../clusters/edge/k3s/)) |
 | 10:59 | Flux bootstrap (3m52s), commit `6348f3d` |
 | 11:13 | infra/apps split merged (#359); the moved Kustomizations are pruned and rebuilt |
 | 11:21 | sops decryption on `edge-apps` (#360) |
