@@ -3,10 +3,10 @@ variable "openbao_addr" {
   description = "OpenBao through the Gateway (TLS from the edge CA); per environment, env/*.auto.tfvars.json"
 }
 
-// The root token from `bao operator init`, from
-// secrets/edge/openbao-init.enc.yaml (SOPS) -- passed as
-// terraform.tfvars.json, never in a *.tf file (README.md).
-variable "openbao_token" {
+// The password of the userpass user `terraform` (policy: PKI at pki/ only),
+// from secrets/edge/app-values.enc.yaml OPENBAO_TERRAFORM_PASSWORD (SOPS) --
+// passed as terraform.tfvars.json, never in a *.tf file (README.md).
+variable "openbao_password" {
   type      = string
   sensitive = true
 }

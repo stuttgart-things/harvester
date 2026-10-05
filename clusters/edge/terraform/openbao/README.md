@@ -18,22 +18,22 @@ stuttgart-things edge root CA            clusters/edge/edge-root-ca.crt (key off
 | Terraform | mount `pki` (ACME headers), cluster/AIA URLs, role `devices` (subdomains of `acme_allowed_domains`, `key_type any`, server+client auth, 90d / max 1y), ACME config (`eab_policy`, `dns_resolver`) |
 | [`sign-intermediate.sh`](./sign-intermediate.sh) | the intermediate: OpenBao generates key + CSR, the CSR is signed **offline** with the root, the certificate is imported. Refuses to run if the mount already has an issuer. |
 | State | `backend "kubernetes"`, Secret `openbao/tfstate-default-openbao-edge`. **No private key in it.** |
-| Token | the root token from `bao operator init`, kept SOPS-encrypted in `secrets/edge/openbao-init.enc.yaml` (outside every Flux path) |
+| Login | userpass user `terraform` (policy: PKI at `pki/` only), password `OPENBAO_TERRAFORM_PASSWORD` in `secrets/edge/app-values.enc.yaml`. OpenBao creates the user itself on first start (self-init, flux `components/self-init-userpass`); no root token exists. Break-glass: user `admin`, `OPENBAO_ADMIN_PASSWORD`, by hand only. |
 
 ## Order, once per install
+
+OpenBao initialises **itself** on its first start (self-init: userpass with
+`terraform` and `admin`, no root token, no recovery keys) and unseals itself
+with the static seal on every start. There is no `bao operator init` step.
 
 ```bash
 cd ~/projects/harvester
 export KUBECONFIG=~/.kube/edge-tt-test1
 
-# 1. init -- once; the static seal unseals every restart after that
-kubectl -n openbao exec openbao-0 -- bao operator init -recovery-shares=1 -recovery-threshold=1 -format=json \
-  > /tmp/openbao-edge-init.json            # root_token + recovery key: SOPS it at once
-# -> secrets/edge/openbao-init.enc.yaml (sops --encrypt), shred the plaintext
-
-# 2. Terraform: mount, URLs, role, ACME
+# 1. Terraform: mount, URLs, role, ACME -- logged in as `terraform`
 umask 077
-jq -n --arg t "$(sops -d --extract '["root_token"]' secrets/edge/openbao-init.enc.yaml)" '{openbao_token: $t}' > /tmp/edge-openbao.tfvars.json
+sops -d --extract '["stringData"]["OPENBAO_TERRAFORM_PASSWORD"]' secrets/edge/app-values.enc.yaml \
+  | jq -Rs '{openbao_password: rtrimstr("\n")}' > /tmp/edge-openbao.tfvars.json
 printf 'nameserver 10.100.136.115\nnameserver 10.100.101.5\n' > /tmp/edge-resolv.conf
 ENV=lab   # or box: env/<ENV>.auto.tfvars.json -- address, ACME domains, DNS resolver
 env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform@v0.136.0 \
@@ -42,9 +42,9 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/terraform
   --secret-json-variables file:///tmp/edge-openbao.tfvars.json \
   --kube-config file://$HOME/.kube/edge-tt-test1 --resolv-conf /tmp/edge-resolv.conf --progress plain
 
-# 3. the intermediate
+# 2. the intermediate -- logs in as `terraform` by itself; refuses (fail
+#    closed) when the mount already has an issuer
 OPENBAO_ADDR=https://openbao.edge-tt-test1.4sthings.tiab.ssc.sva.de \
-OPENBAO_TOKEN=$(sops -d --extract '["root_token"]' secrets/edge/openbao-init.enc.yaml) \
   clusters/edge/terraform/openbao/sign-intermediate.sh
 shred -u /tmp/edge-openbao.tfvars.json
 ```
@@ -89,3 +89,35 @@ validate.
 `pki/issue/devices` without `key_type` fails with `role key type "any" not
 allowed … without providing key_type`. That is expected: `issue` generates
 the key server-side and needs a type. ACME sends a CSR and is not affected.
+
+## Self-init and the lab instance (2026-10-05)
+
+`edge-tt-test1`'s OpenBao was initialised by hand on 2026-10-04, before
+self-init existed; self-init only runs on empty storage, so there the same
+userpass users and policies (`terraform`, `admin`, texts from flux
+`self-init.hcl`) were created once with the old root token. Terraform as
+`terraform` then planned **No changes**. `secrets/edge/openbao-init.enc.yaml`
+(root token + recovery key) belongs to that instance only and goes away with
+the lab rebuild.
+
+**`sign-intermediate.sh` guard, fixed 2026-10-05:** the first version checked
+for an existing issuer with a GET on `pki/issuers`, which OpenBao answers with
+405 -- read as "no issuer", so a rerun created a **second** intermediate next
+to the working one (not made default). It was deleted (issuer + key, default
+unchanged, ACME re-enrolment checked); the check now uses LIST and fails
+closed on anything but 200/404.
+
+## Break-glass admin
+
+```bash
+umask 077
+sops -d --extract '["stringData"]["OPENBAO_ADMIN_PASSWORD"]' secrets/edge/app-values.enc.yaml \
+  | jq -Rs '{password: rtrimstr("\n")}' \
+  | curl -sS --cacert clusters/edge/edge-root-ca.crt -X POST -H 'Content-Type: application/json' --data @- \
+      https://openbao.<domain>/v1/auth/userpass/login/admin | jq -r .auth.client_token   # 30 min token, policy `admin` (everything)
+```
+
+For the exceptional operation only (enable another auth method, extend a
+policy, rotate a password via `auth/userpass/users/<user>/password`, then update <!-- pragma: allowlist secret -->
+SOPS). Never in automation. Audit devices cannot be enabled over the API in
+OpenBao (config only).

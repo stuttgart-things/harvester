@@ -10,13 +10,23 @@
 # On a reinstall OpenBao's raft data is gone: run it again. The new intermediate
 # chains to the SAME root, so devices keep trusting it.
 #
-#   OPENBAO_ADDR=https://openbao.<domain> OPENBAO_TOKEN=<root token> ./sign-intermediate.sh
+#   OPENBAO_ADDR=https://openbao.<domain> ./sign-intermediate.sh
+#
+# Logs in as the userpass user `terraform` (PKI only) with the password from
+# secrets/edge/app-values.enc.yaml (OPENBAO_TERRAFORM_PASSWORD). OPENBAO_TOKEN,
+# if set, is used instead (e.g. an admin token).
 set -euo pipefail
 
 : "${OPENBAO_ADDR:?set OPENBAO_ADDR}"
-: "${OPENBAO_TOKEN:?set OPENBAO_TOKEN}"
 REPO=$(git rev-parse --show-toplevel)
 CA="${REPO}/clusters/edge/edge-root-ca.crt"
+if [ -z "${OPENBAO_TOKEN:-}" ]; then
+  OPENBAO_TOKEN=$(sops -d --extract '["stringData"]["OPENBAO_TERRAFORM_PASSWORD"]' "${REPO}/secrets/edge/app-values.enc.yaml" \
+    | jq -Rs '{password: rtrimstr("\n")}' \
+    | curl -sS --fail-with-body --cacert "${CA}" -X POST -H 'Content-Type: application/json' --data @- \
+        "${OPENBAO_ADDR}/v1/auth/userpass/login/terraform" \
+    | jq -r '.auth.client_token')
+fi
 ROOT_BUNDLE="${REPO}/secrets/edge/root-ca.enc.yaml"
 MOUNT=${MOUNT:-pki}
 DAYS=${DAYS:-1826}  # 5 years, the mount's max_lease_ttl
@@ -32,12 +42,23 @@ api() { # method path [json]
     ${3:+--data "$3"} "${OPENBAO_ADDR}/v1/$2"
 }
 
-# REFUSE TO REPLACE A WORKING INTERMEDIATE
-if api GET "${MOUNT}/issuers" 2>/dev/null | jq -e '.data.keys | length > 0' >/dev/null; then
-  echo "${MOUNT} already has an issuer -- not creating a second one." >&2
-  echo "Rotate on purpose: read the README, then delete the old issuer first." >&2
-  exit 1
-fi
+# REFUSE TO REPLACE A WORKING INTERMEDIATE -- fail closed. LIST, not GET: a
+# GET on pki/issuers is "405 unsupported operation", which the first version
+# of this check read as "no issuers" and went on (2026-10-05: a second
+# intermediate was created next to the working one). An empty mount answers
+# LIST with 404 and {"errors":[]}; anything else that is not a list aborts.
+issuers=$(curl -sS --cacert "${CA}" -X LIST -H "X-Vault-Token: ${OPENBAO_TOKEN}" \
+  -w '\n%{http_code}' "${OPENBAO_ADDR}/v1/${MOUNT}/issuers")
+case "${issuers##*$'\n'}" in
+  200)
+    echo "${MOUNT} already has an issuer -- not creating a second one." >&2
+    echo "Rotate on purpose: read the README, then delete the old issuer first." >&2
+    exit 1 ;;
+  404) ;;  # no issuer yet
+  *)
+    echo "cannot list ${MOUNT}/issuers (HTTP ${issuers##*$'\n'}) -- refusing to go on" >&2
+    exit 1 ;;
+esac
 
 echo "1/3 CSR from OpenBao (key generated inside, EC P-256)"
 api POST "${MOUNT}/intermediate/generate/internal" \
