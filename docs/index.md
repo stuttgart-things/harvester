@@ -2,6 +2,19 @@
 
 GitOps repository for Crossplane claims and infrastructure resources managed by the stuttgart-things platform team.
 
+## Sections
+
+| Section | |
+|---|---|
+| **[Edge cluster](edge/index.md)** | single-node k3s for the table-tennis stack: [architecture](edge/architecture.md), [runbook](edge/runbook.md), [k3s + Cilium](edge/k3s.md), [from scratch](edge/from-scratch.md), [lab testing](edge/lab-testing.md), [notes](edge/notes.md) |
+| **Architecture** | [overview](architecture/overview.md), [claim lifecycle](architecture/claim-lifecycle.md), [claim registry](architecture/claim-registry.md), [dev image chain](architecture/dev-image-chain.md) |
+| **Services** | [claims CLI](services/claims-cli.md), [claim registry API](services/claim-registry-api.md), [claim status collector](services/claim-status-collector.md) |
+| **Runbooks** | [Harvester reinstall](install.md) |
+| **Demo** | [self-service on bare metal](demo/bare-metal-self-service.md) |
+| **[Roadmap](roadmap.md)** | |
+
+The system inventory (lab address book): [stuttgart-things.github.io/harvester/inventory](https://stuttgart-things.github.io/harvester/inventory/).
+
 ## What is Harvester?
 
 Harvester is the **central GitOps repository** where all Crossplane claim manifests, Flux kustomizations, and Backstage catalog metadata live. It serves as the single source of truth for infrastructure resources provisioned through the claim-machinery platform.

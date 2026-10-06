@@ -1,0 +1,127 @@
+<!doctype html>
+<!-- The landing page of https://stuttgart-things.github.io/harvester/ --
+     copied to / by .github/workflows/system-inventory.yml, next to /docs/
+     (mkdocs, the repo's TechDocs) and /inventory/ (the system inventory). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>harvester</title>
+  <meta name="description" content="stuttgart-things harvester: docs, edge cluster, system inventory">
+  <style>
+    :root {
+      --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5b6475;
+      --line: #dde1e8; --accent: #2f6fdb; --accent-soft: #e8effc;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #9aa3b2;
+        --line: #2b3240; --accent: #7aa7ff; --accent-soft: #1f2a40;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 960px; margin: 0 auto; padding: 48px 16px 64px; }
+    header h1 { margin: 0 0 4px; font-size: 2rem; letter-spacing: -0.01em; }
+    header p { margin: 0; color: var(--muted); }
+    h2 { margin: 40px 0 12px; font-size: 1.05rem; color: var(--muted);
+         text-transform: uppercase; letter-spacing: 0.06em; }
+    .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+    a.card {
+      display: block; padding: 16px 18px; background: var(--card);
+      border: 1px solid var(--line); border-radius: 10px;
+      color: inherit; text-decoration: none;
+    }
+    a.card:hover, a.card:focus-visible { border-color: var(--accent); outline: none; }
+    a.card strong { display: block; color: var(--accent); margin-bottom: 4px; }
+    a.card span { color: var(--muted); font-size: 0.93rem; }
+    a.card.primary { background: var(--accent-soft); }
+    footer { margin-top: 48px; color: var(--muted); font-size: 0.9rem; }
+    footer a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>harvester</h1>
+    <p>GitOps repository of stuttgart-things: Crossplane claims, cluster folders and their docs.</p>
+  </header>
+
+  <h2>Start here</h2>
+  <div class="grid">
+    <a class="card primary" href="docs/">
+      <strong>Docs</strong>
+      <span>Everything: architecture, services, runbooks, the edge cluster.</span>
+    </a>
+    <a class="card primary" href="inventory/">
+      <strong>System inventory</strong>
+      <span>The lab address book: hosts, networks, topology (also as PDF).</span>
+    </a>
+  </div>
+
+  <h2>Edge cluster</h2>
+  <div class="grid">
+    <a class="card" href="docs/edge/">
+      <strong>Overview</strong>
+      <span>Single-node k3s on a LattePanda for the table-tennis stack; the cluster folders.</span>
+    </a>
+    <a class="card" href="docs/edge/architecture/">
+      <strong>Architecture</strong>
+      <span>Box, router, k3s, services, internal vs. public names, the edge CA, DNS commands.</span>
+    </a>
+    <a class="card" href="docs/edge/runbook/">
+      <strong>Runbook</strong>
+      <span>Recreate an edge cluster from scratch in ten steps; moving to the hardware.</span>
+    </a>
+    <a class="card" href="docs/edge/k3s/">
+      <strong>k3s + Cilium</strong>
+      <span>All files and commands: Ansible CLI or Dagger, verify, idempotency.</span>
+    </a>
+    <a class="card" href="docs/edge/from-scratch/">
+      <strong>From scratch</strong>
+      <span>Every hand-written file, secrets included, as copy-paste blocks.</span>
+    </a>
+    <a class="card" href="docs/edge/lab-testing/">
+      <strong>Lab testing</strong>
+      <span>The device path with the ESP mock; mock vs. real boards; the apps.</span>
+    </a>
+    <a class="card" href="docs/edge/notes/">
+      <strong>Notes</strong>
+      <span>Lessons learned and history of the first lab cluster.</span>
+    </a>
+  </div>
+
+  <h2>Claims platform</h2>
+  <div class="grid">
+    <a class="card" href="docs/architecture/overview/">
+      <strong>Architecture</strong>
+      <span>Overview, claim lifecycle, claim registry, dev image chain.</span>
+    </a>
+    <a class="card" href="docs/services/claims-cli/">
+      <strong>Services</strong>
+      <span>Claims CLI, claim registry API, claim status collector.</span>
+    </a>
+    <a class="card" href="docs/install/">
+      <strong>Harvester reinstall</strong>
+      <span>Runbook for reinstalling the Harvester cluster.</span>
+    </a>
+    <a class="card" href="docs/demo/bare-metal-self-service/">
+      <strong>Demo</strong>
+      <span>Self-service on bare metal.</span>
+    </a>
+    <a class="card" href="docs/roadmap/">
+      <strong>Roadmap</strong>
+      <span>What comes next.</span>
+    </a>
+  </div>
+
+  <footer>
+    Source: <a href="https://github.com/stuttgart-things/harvester">github.com/stuttgart-things/harvester</a>
+    · the docs are also in Backstage TechDocs.
+  </footer>
+</main>
+</body>
+</html>

@@ -8,12 +8,14 @@ on:
       - 'system-inventory/**'
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'pages/**'
       - '.github/workflows/system-inventory.yml'
   pull_request:
     paths:
       - 'system-inventory/**'
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'pages/**'
       - '.github/workflows/system-inventory.yml'
   workflow_dispatch:
 
@@ -83,18 +85,25 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # The repo's TechDocs (mkdocs.yml, docs/) on the same Pages site, under
-      # /docs/: one Pages site per repo, and the inventory owns /. Same plugin
-      # as Backstage (techdocs-core), so the pages look and link the same.
-      - name: Build the docs into site/docs
+      # One Pages site per repo, three parts:
+      #   /            the landing page (pages/index.html)
+      #   /inventory/  the system inventory built above (page + PDF; its
+      #                links are relative, so it moves as a whole)
+      #   /docs/       the repo's TechDocs (mkdocs.yml, docs/) -- same plugin
+      #                as Backstage (techdocs-core)
+      - name: Assemble the Pages site (landing page, inventory, docs)
         working-directory: .
         run: |
+          mkdir -p _site
+          cp pages/index.html _site/index.html
+          cp -r system-inventory/site _site/inventory
           pip install "mkdocs-techdocs-core==1.7.1"
-          mkdocs build --site-dir system-inventory/site/docs
+          mkdocs build --site-dir _site/docs
+          test -s _site/index.html && test -s _site/inventory/index.html && test -s _site/docs/index.html
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: system-inventory/site
+          path: _site
 
   # The interactive page runs entirely in the browser - Pages only has to serve
   # it. Deploy from main only.
