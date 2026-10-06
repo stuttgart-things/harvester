@@ -30,6 +30,7 @@ and a rebuild uses exactly what is committed.
 | Cilium | 1.20.2 (the first line tested with k8s 1.35), installed by cilium-cli 0.20.1: kube-proxy replacement, Gateway API (+ ALPN, appProtocol), L2 announcements, cluster pool `10.42.0.0/16`, `k8sServiceHost` = the node's default IPv4 |
 | Gateway API | CRDs v1.6.1 (standard), applied server-side; GatewayClass `cilium`. Moving to v1.6.x is one-way |
 | Kubeconfig | fetched by the role to `fetched_kubeconfig_path` on the **Ansible controller**, server already the node's address |
+| CLIs on the node | from the k3s run: `kubectl`, `helm`, `cilium`; from the tools run ([below](#tools-on-the-node)): `k9s`, `flux`, `sops`, `age`, `age-keygen` |
 
 ## The files
 
@@ -148,6 +149,14 @@ Newer releases: [stuttgart-things/ansible releases](https://github.com/stuttgart
   final kernel: `ssh sthings@$NODE_IP sudo reboot`.
 - **Access.** `sthings` with NOPASSWD sudo (the VM templates set it): a key for
   the CLI run, the password for the Dagger run.
+- **SSH: offer only the right key.** Ubuntu 26.04's OpenSSH penalises a source
+  after failed logins (`PerSourcePenalties`) and then answers with
+  `Connection closed` -- which happens when your agent offers other keys
+  first, Ansible opening several connections. Pin the key:
+  `export ANSIBLE_SSH_ARGS='-o IdentitiesOnly=yes -o ControlMaster=auto -o ControlPersist=60s'`
+  (and `ssh -o IdentitiesOnly=yes …`). Seen on 2026-10-06 on `edge-tt-test1`:
+  the play failed with `UNREACHABLE … Connection closed`, with the option it
+  ran.
 
 ## Deployment -- two options
 
@@ -263,6 +272,137 @@ grep server: ~/.kube/$CLUSTER                 # https://<node>:6443
   ssh sthings@$NODE_IP sudo cat /etc/rancher/k3s/k3s.yaml \
     | sed "s/127.0.0.1/$NODE_IP/" > ~/.kube/$CLUSTER && chmod 600 ~/.kube/$CLUSTER
   ```
+
+## Tools on the node
+
+So the cluster can be worked with **on the box** too -- at the table there is
+no workstation: `k9s`, the `flux` CLI, `sops` and `age`, from our collection's
+tools playbook **`sthings.container.tools`** (role `download_install_binary`).
+The playbook installs every entry of the `bin` dict; passed as extra vars, the
+cluster's own `tools.yaml` replaces the collection's full list (kind, argocd,
+velero, …) with exactly these. Each entry checks the installed version first
+and downloads only on a mismatch, so a rerun changes nothing. `kubectl`,
+`helm` and `cilium` are not in it: the k3s run installs them, and listing them
+again would make the two plays overwrite each other's versions.
+`sthings.container` is already in `requirements.yaml`.
+
+### `clusters/$CLUSTER/k3s/tools.yaml`
+
+```bash
+cat > clusters/$CLUSTER/k3s/tools.yaml <<'EOF'
+---
+# The CLIs on the edge node, so the cluster can be worked with ON the box
+# (no workstation at the table): sthings.container.tools with THIS selection.
+# The playbook installs every entry of `bin` -- passed as extra vars, this
+# dict replaces the collection's full tool list (kind, argocd, velero, ...).
+# Each entry: version check first (`<bin> <version_cmd>` must contain
+# bin_version), download only on a mismatch -- a rerun changes nothing.
+# docs/edge/k3s.md, "Tools on the node". NOT here: kubectl, helm and
+# cilium-cli -- the k3s run (sthings.rke) already installs them; listing them
+# again would make the two plays overwrite each other's versions.
+k9s_version: 0.51.0        # datasource=github-tags depName=derailed/k9s
+flux_version: 2.9.6        # datasource=github-tags depName=fluxcd/flux2 -- = the cluster's Flux
+sops_version: 3.12.1       # datasource=github-tags depName=getsops/sops
+age_version: 1.2.1         # datasource=github-tags depName=FiloSottile/age
+
+bin:
+  k9s:
+    bin_name: k9s
+    bin_version: "{{ k9s_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/derailed/k9s/releases/download/v{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+    bin_to_copy: k9s
+    to_remove: ""
+    bin_dir: /usr/local/bin
+    version_cmd: " version --short"
+    target_version: "{{ k9s_version }}"
+  flux:
+    bin_name: flux
+    bin_version: "{{ flux_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/fluxcd/flux2/releases/download/v{{ flux_version }}/flux_{{ flux_version }}_linux_amd64.tar.gz"
+    bin_to_copy: flux
+    to_remove: ""
+    bin_dir: /usr/local/bin
+    version_cmd: " version --client"
+    target_version: "{{ flux_version }}"
+  sops:
+    bin_name: sops
+    bin_version: "{{ sops_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/getsops/sops/releases/download/v{{ sops_version }}/sops-v{{ sops_version }}.linux.amd64"
+    bin_to_copy: "sops-v{{ sops_version }}.linux.amd64"
+    to_remove: ""
+    bin_dir: /usr/local/bin/sops         # a file path: renames the download to sops
+    version_cmd: " --version --disable-version-check"
+    target_version: "{{ sops_version }}"
+  age:
+    bin_name: age
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"
+  age-keygen:
+    bin_name: age-keygen
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age-keygen
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"
+EOF
+```
+
+### Run
+
+```bash
+# Deployment option 1: Ansible CLI
+ANSIBLE_BECOME_ASK_PASS=False ~/ansible-venv/bin/ansible-playbook \
+  -i clusters/$CLUSTER/k3s/inventory.ini --private-key $EDGE_KEY \
+  sthings.container.tools -e @clusters/$CLUSTER/k3s/tools.yaml
+
+# Deployment option 2: Dagger (not run yet -- edge-tt-test2 will)
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
+  execute-ansible \
+  --src ./clusters/$CLUSTER/k3s \
+  --playbooks sthings.container.tools \
+  --inventory ./clusters/$CLUSTER/k3s/inventory.ini \
+  --parameters-file ./clusters/$CLUSTER/k3s/tools.yaml \
+  --requirements ./clusters/$CLUSTER/k3s/requirements.yaml \
+  --ssh-user env:SSH_USER \
+  --ssh-password file:$HOME/.$CLUSTER.pass \
+  --progress plain
+```
+
+### A kubeconfig on the node
+
+k3s writes `/etc/rancher/k3s/k3s.yaml` readable by root only. For `k9s`,
+`flux` and `kubectl` as `sthings` on the node:
+
+```bash
+ssh -o IdentitiesOnly=yes sthings@$NODE_IP \
+  'mkdir -p ~/.kube && sudo install -o "$(id -u)" -g "$(id -g)" -m 600 /etc/rancher/k3s/k3s.yaml ~/.kube/config'
+# then on the node: k9s · flux get ks -A · kubectl get pods -A
+```
+
+It points at `127.0.0.1:6443` -- right on the node itself.
+
+### Check the tools
+
+```bash
+ssh -o IdentitiesOnly=yes sthings@$NODE_IP \
+  'k9s version --short | head -1; flux version --client; sops --version --disable-version-check | head -1; age --version'
+```
+
+`edge-tt-test1` (2026-10-06, option 1): `ok=71 changed=19`, then a second run
+`ok=46 changed=0`; k9s v0.51.0, flux v2.9.6, sops 3.12.1, age v1.2.1;
+`flux get ks -A` as `sthings` on the node.
 
 ## Keep the kubeconfig in the repo
 

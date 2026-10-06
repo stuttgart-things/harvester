@@ -16,12 +16,23 @@ export KUBECONFIG=~/.kube/edge-tt-test1     # this cluster's kubeconfig name (in
 | [`inventory.ini`](./inventory.ini) | the node, `10.100.136.89` |
 | [`k3s-vars.yaml`](./k3s-vars.yaml) | k3s 1.35.9 on sqlite, Cilium 1.20.2 (cilium-cli 0.20.1), Gateway API v1.6.1; `cluster_name: edge`, `fetched_kubeconfig_path: /tmp/kubeconfig-edge.yaml` |
 | [`requirements.yaml`](./requirements.yaml) | collections, sthings.rke 26.1003.1401 |
+| [`tools.yaml`](./tools.yaml) | the CLIs on the node (`sthings.container.tools`): k9s, flux, sops, age |
 
 | The node | |
 |---|---|
 | VM | `edge-tt-test1` / `10.100.136.89`, LabDA vSphere, Ubuntu 26.04 (`sthings-u26`), 8 vCPU / 15Gi / 128Gi |
 | Built by | Backstage `request-vm` (stuttgart-things#3415) → Dapr worker on `cicd-machinery-test5` → `create-terraform-vm` build PR (#3418): Terraform + `sthings.baseos.setup` |
 | Access | key `~/.ssh/id_ed25519_edge` (CLI), user + password (Dagger) |
+
+## Tools run: 2026-10-06, CLI
+
+`sthings.container.tools -e @tools.yaml` (option 1, sthings.container
+26.1002.1398): the first attempt failed `UNREACHABLE ... Connection closed`
+(OpenSSH `PerSourcePenalties` after the agent offered other keys) -- with
+`ANSIBLE_SSH_ARGS='-o IdentitiesOnly=yes ...'` `ok=71 changed=19 failed=0`, a
+second run `ok=46 changed=0`. On the node: k9s v0.51.0, flux v2.9.6, sops
+3.12.1, age/age-keygen v1.2.1 (next to kubectl v1.36.5, helm v4.2.4, cilium
+v0.20.1 from the k3s run); `~/.kube/config` for `sthings`, `flux get ks -A` works.
 
 ## Last run: 2026-10-05, Dagger (run 2)
 
