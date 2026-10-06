@@ -41,7 +41,10 @@ sudo install -m 755 /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
 sops --version; age --version
 ```
 
-**Option 2:** [install Dagger](https://docs.dagger.io/install); the modules:
+Or all of it as Ansible code -- sops, age and the Dagger CLI, plus Docker:
+[Workstation setup](workstation.md).
+
+**Option 2:** Docker and the Dagger CLI ([Workstation setup](workstation.md)); the modules:
 `github.com/stuttgart-things/dagger/sops` (encrypt, decrypt, generate an age
 key or a `.sops.yaml`) and `github.com/stuttgart-things/blueprints/secrets`
 (encrypt-file, decrypt, cluster keys, rendering secrets).

@@ -230,7 +230,8 @@ node's `sthings` password (the module authenticates with **user +
 password**). The password comes from a file (mode 600, created by
 hand, never in a command, the environment or a log); Dagger masks it in the
 output -- and every other secret value too, so the user `sthings` shows up as
-`***` (`***.rke.install_requirements`).
+`***` (`***.rke.install_requirements`). Docker and the Dagger CLI as
+Ansible code: [Workstation setup](../workstation.md).
 
 ```bash
 # 1. the node's sthings password into a file
