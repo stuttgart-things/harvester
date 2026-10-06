@@ -11,7 +11,7 @@
 # purpose so the edge run does not move when the repo-wide file does.
 collections:
   - name: community.crypto
-    version: 3.4.0
+    version: 3.5.0
   - name: community.general
     version: 13.4.0
   - name: ansible.posix
