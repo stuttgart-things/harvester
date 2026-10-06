@@ -23,6 +23,8 @@ nav:
       - From scratch: edge/from-scratch.md
       - Lab testing: edge/lab-testing.md
       - Notes: edge/notes.md
+  - Guides:
+      - SOPS + age: sops.md
   - Runbooks:
       - Harvester Reinstall: install.md
   - Demo:

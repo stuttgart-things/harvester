@@ -264,6 +264,25 @@ grep server: ~/.kube/$CLUSTER                 # https://<node>:6443
     | sed "s/127.0.0.1/$NODE_IP/" > ~/.kube/$CLUSTER && chmod 600 ~/.kube/$CLUSTER
   ```
 
+## Keep the kubeconfig in the repo
+
+Encrypted, so the team (and later steps such as Terraform) get cluster access
+from git -- the k3s kubeconfig holds a cluster-admin certificate, so never in
+plaintext. SOPS, the age key and both ways (CLI or Dagger):
+[SOPS + age](../sops.md).
+
+```bash
+AGE_PUB=$(age-keygen -y <<<"$SOPS_AGE_KEY")
+sops --encrypt --age "$AGE_PUB" --input-type yaml --output-type yaml \
+  ~/.kube/$CLUSTER > secrets/edge/kubeconfig-$CLUSTER.enc.yaml
+sops -d secrets/edge/kubeconfig-$CLUSTER.enc.yaml | KUBECONFIG=/dev/stdin kubectl get nodes   # check
+# restore on another machine:
+#   (umask 077; sops -d secrets/edge/kubeconfig-$CLUSTER.enc.yaml > ~/.kube/$CLUSTER)
+```
+
+Name it after the node (`kubeconfig-edge-tt-test1.enc.yaml`) when the
+kubeconfig file is named that way.
+
 ## Verify
 
 ```bash

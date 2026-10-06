@@ -36,7 +36,8 @@ clusters/edge/terraform/  DEV    MinIO + OpenBao config, shared; env/<env>.auto.
 secrets/edge/ (repo root, never read by Flux; shared by every edge cluster)
 ├── app-values.enc.yaml   DEV    the apps' secret values -- ref+sops source for cluster-apps.yaml, input of terraform/*
 ├── openbao-seal.enc.yaml DEV    OpenBao's static seal key -- MUST NEVER CHANGE once used
-└── root-ca.enc.yaml      DEV    root key + all intermediate keys, offline
+├── root-ca.enc.yaml      DEV    root key + all intermediate keys, offline
+└── kubeconfig-<node>.enc.yaml  DEV  each cluster's admin kubeconfig (step 3; whole file encrypted)
 ```
 
 **DEV** = written by hand ([from-scratch.md](./from-scratch.md)).
@@ -144,7 +145,8 @@ both deployment options (1: Ansible CLI, the kubeconfig lands on your machine; 2
 `execute-ansible-with-export`, the kubeconfig is exported from the container),
 the checks and what a second run changes. Result: node Ready
 (v1.35.9+k3s1, sqlite), Cilium 1.20.2 with Gateway API v1.6.1,
-`local-path`, the kubeconfig in `$KUBECONFIG`.
+`local-path`, the kubeconfig in `$KUBECONFIG` -- and encrypted in
+`secrets/edge/kubeconfig-<node>.enc.yaml` ([SOPS + age](../sops.md)).
 
 ### 4. Persistent secrets -- once ever
 

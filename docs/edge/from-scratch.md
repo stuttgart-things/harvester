@@ -20,6 +20,9 @@ secret into a terminal or a log.
 
 ## 0. The age key
 
+SOPS, age, the key and both ways to encrypt (CLI or Dagger) in general:
+[SOPS + age](../sops.md).
+
 SOPS encrypts for an age public key. If the team has one, use it (it is the
 "master key": every SOPS file in the repo is readable with it):
 
