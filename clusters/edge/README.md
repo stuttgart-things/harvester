@@ -28,6 +28,7 @@ and how to build one is general and lives in [`docs/edge`](../../docs/edge/index
 | Secrets | `secrets/edge/` (shared by every edge cluster) → generated [`cluster-secrets/`](./cluster-secrets/) |
 | OpenBao | initialised **by hand** on 2026-10-04 (before self-init existed); the self-init users were created once via the API -- see [terraform/openbao](./terraform/openbao/README.md) |
 | Values | [`cluster-vars.yaml`](./cluster-vars.yaml) |
+| Kubeconfig | `secrets/edge/kubeconfig-edge-tt-test1.enc.yaml` (SOPS; restore: `(umask 077; sops -d secrets/edge/kubeconfig-edge-tt-test1.enc.yaml > ~/.kube/edge-tt-test1)`) |
 
 Also here, shared by every edge cluster: [`terraform/`](./terraform/) (the
 OpenBao and MinIO roots, one `env/<env>.auto.tfvars.json` per environment --

@@ -46,3 +46,9 @@ holds and how it is made:
   raft data is sealed with it.
 - `root-ca.enc.yaml` -- the edge root key + all intermediate keys (offline)
 - `openbao-init.enc.yaml` -- root token + recovery key from `bao operator init`
+  (only `edge-tt-test1`, initialised by hand)
+- `kubeconfig-<node>.enc.yaml` -- each edge cluster's admin kubeconfig (whole
+  file encrypted): `edge-tt-test1`, `edge-tt-test2`
+
+SOPS, the age key and encrypting/decrypting (CLI or Dagger): `docs/sops.md`
+(https://stuttgart-things.github.io/harvester/docs/sops/).

@@ -9,6 +9,7 @@ GitOps repository for Crossplane claims and infrastructure resources managed by 
 | **[Edge cluster](edge/index.md)** | single-node k3s for the table-tennis stack: [architecture](edge/architecture.md), [runbook](edge/runbook.md), [k3s + Cilium](edge/k3s.md), [from scratch](edge/from-scratch.md), [lab testing](edge/lab-testing.md), [notes](edge/notes.md) |
 | **Architecture** | [overview](architecture/overview.md), [claim lifecycle](architecture/claim-lifecycle.md), [claim registry](architecture/claim-registry.md), [dev image chain](architecture/dev-image-chain.md) |
 | **Services** | [claims CLI](services/claims-cli.md), [claim registry API](services/claim-registry-api.md), [claim status collector](services/claim-status-collector.md) |
+| **Guides** | [SOPS + age](sops.md) -- secrets in git: what you need, the age key, encrypt/decrypt with the CLI or our Dagger modules, kubeconfigs |
 | **Runbooks** | [Harvester reinstall](install.md) |
 | **Demo** | [self-service on bare metal](demo/bare-metal-self-service.md) |
 | **[Roadmap](roadmap.md)** | |
