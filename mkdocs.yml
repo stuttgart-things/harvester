@@ -24,6 +24,7 @@ nav:
       - Lab testing: edge/lab-testing.md
       - Notes: edge/notes.md
   - Guides:
+      - Workstation setup: workstation.md
       - SOPS + age: sops.md
   - Runbooks:
       - Harvester Reinstall: install.md
