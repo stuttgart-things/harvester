@@ -65,7 +65,7 @@ export GITHUB_USER=... GITHUB_TOKEN=...
 |---|---|---|---|---|
 | 1 | Address + DNS | Clusterbook (lab) / router (box), Hetzner DNS | `cluster-vars.yaml` | reservations, DNS records |
 | 2 | VM + base OS | Backstage `create-vm` / `request-vm` | -- | VM with `sthings.baseos.setup` |
-| 3 | k3s + Cilium | Ansible CLI or blueprints/vm `execute-ansible-with-export` | `k3s/*` | node, kubeconfig |
+| 3 | k3s + Cilium ([k3s.md](./k3s.md)) | Ansible CLI or blueprints/vm `execute-ansible-with-export` | `k3s/*` | node, kubeconfig |
 | 4 | Persistent secrets (**once ever**) | openssl, sops | `secrets/edge/*`, `edge-root-ca.crt`, `infra/ca/edge-ca.enc.yaml` | -- |
 | 5 | Flux files | blueprints/flux `render-cluster-apps` | `cluster-apps.yaml`, `infra/ca.yaml`, `.sourceignore`, `lab/` | `apps.yaml`, `*-platform.yaml`, `cluster-secrets/`, the `kustomization.yaml` wiring |
 | 6 | Flux | blueprints/flux `bootstrap` | 2 `pragma` comments | `config.yaml`, `secrets.yaml` (committed) |
@@ -138,64 +138,13 @@ compare the new host key with the console.
 
 ### 3. k3s + Cilium
 
-`clusters/$CLUSTER/k3s/`: inventory, vars, collections
-([from-scratch.md](./from-scratch.md), 2.5). The role fetches the kubeconfig,
-with the server already the node's address, to `fetched_kubeconfig_path` on
-the **Ansible controller** -- your machine with the CLI, the container with
-Dagger (hence `-with-export`). Pick one:
-
-**A) Ansible CLI** -- once per workstation (ansible-core >= 2.19; the node runs
-Python 3.14):
-
-```bash
-~/ansible-venv/bin/pip install --upgrade "ansible==14.4.0"
-~/ansible-venv/bin/ansible-galaxy collection install -r clusters/$CLUSTER/k3s/requirements.yaml --upgrade
-```
-
-`--upgrade` matters: an older `sthings.rke` would silently ignore
-`cilium_chart_version` and `k3s_cluster_init`. Then (key-based SSH, NOPASSWD
-sudo; the repo's `ansible.cfg` asks for a become password, the run turns that
-off):
-
-```bash
-export EDGE_KEY=~/.ssh/id_ed25519
-~/ansible-venv/bin/ansible -i clusters/$CLUSTER/k3s/inventory.ini all \
-  --private-key $EDGE_KEY -m ansible.builtin.setup -a 'filter=ansible_distribution*'
-ANSIBLE_BECOME_ASK_PASS=False ~/ansible-venv/bin/ansible-playbook \
-  -i clusters/$CLUSTER/k3s/inventory.ini --private-key $EDGE_KEY \
-  sthings.rke.k3s_cluster -e @clusters/$CLUSTER/k3s/k3s-vars.yaml
-install -m 600 /tmp/kubeconfig-$CLUSTER.yaml $KUBECONFIG
-```
-
-**B) Dagger** -- user + password (from a file, mode 600, never in a command or
-log):
-
-```bash
-install -m 600 /dev/null ~/.$CLUSTER.pass && nano ~/.$CLUSTER.pass
-export SSH_USER=sthings
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
-  execute-ansible-with-export \
-  --src ./clusters/$CLUSTER/k3s \
-  --playbooks sthings.rke.k3s_cluster \
-  --inventory ./clusters/$CLUSTER/k3s/inventory.ini \
-  --parameters-file ./clusters/$CLUSTER/k3s/k3s-vars.yaml \
-  --requirements ./clusters/$CLUSTER/k3s/requirements.yaml \
-  --ssh-user env:SSH_USER \
-  --ssh-password file:$HOME/.$CLUSTER.pass \
-  --export-paths /tmp/kubeconfig-$CLUSTER.yaml \
-  export --path /tmp/$CLUSTER-k3s 2>&1 | tee /tmp/k3s-$CLUSTER.log
-shred -u ~/.$CLUSTER.pass
-install -m 600 /tmp/$CLUSTER-k3s/kubeconfig-$CLUSTER.yaml $KUBECONFIG && rm -rf /tmp/$CLUSTER-k3s
-```
-
-Plain `execute-ansible` (no `-with-export`) loses the kubeconfig with the
-container; take it from the node then:
-`ssh sthings@<node> sudo cat /etc/rancher/k3s/k3s.yaml | sed 's/127.0.0.1/<node>/' > $KUBECONFIG`.
-
-Verify: node Ready (v1.35.9+k3s1); kube-system all Running (cilium,
-cilium-envoy, cilium-operator, coredns, local-path-provisioner,
-metrics-server); `kubectl get gatewayclass cilium` Accepted; 10 Gateway API
-CRDs (v1.6.1); `local-path` the default StorageClass.
+**[k3s.md](./k3s.md)** -- the three files of `clusters/$CLUSTER/k3s/`
+(inventory, vars, collections) as `cat <<EOF` blocks, what the role sets up,
+both runs (A: Ansible CLI, the kubeconfig lands on your machine; B: Dagger
+`execute-ansible-with-export`, the kubeconfig is exported from the container),
+the checks and what a second run changes. Result: node Ready
+(v1.35.9+k3s1, sqlite), Cilium 1.20.2 with Gateway API v1.6.1,
+`local-path`, the kubeconfig in `$KUBECONFIG`.
 
 ### 4. Persistent secrets -- once ever
 
