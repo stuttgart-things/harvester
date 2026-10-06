@@ -11,7 +11,7 @@ runbook in [runbook.md](./runbook.md) (*Recreate from scratch*) for the order,
 |---|---|---|---|
 | [0. The age key](#0-the-age-key) | outside the repo | `age-keygen` | repo / team |
 | [1. Persistent secrets](#1-persistent-secrets) | `secrets/edge/*.enc.yaml`, `edge-root-ca.crt`, `infra/ca/edge-ca.enc.yaml` | openssl, sops | **ever** (shared by every edge cluster: lab VMs and box) |
-| [2. Cluster files](#2-cluster-files) | `clusters/<cluster>/…` | `cat <<'EOF'` | cluster |
+| [2. Cluster files](#2-cluster-files) | `clusters/<cluster>/…` (k3s files: [k3s.md](./k3s.md)) | `cat <<'EOF'` | cluster |
 | [3. Terraform env files](#3-terraform-env-files) | `clusters/edge/terraform/*/env/<env>.auto.tfvars.json` | `cat <<'EOF'` | environment |
 
 Conventions in every block below: run from the repo root; plaintext only under
@@ -512,43 +512,8 @@ EOF
 
 ### 2.5 `clusters/$CLUSTER/k3s/` -- inventory, vars, collections
 
-```bash
-cat > clusters/$CLUSTER/k3s/inventory.ini <<'EOF'
-# The node. Cluster layout, not [all]: sthings.rke's role branches on these groups.
-[initial_master_node]
-10.31.102.144
-
-[additional_master_nodes]
-
-[all:vars]
-ansible_user=sthings
-EOF
-sed -e "s/^cluster_name: edge$/cluster_name: $CLUSTER/" \
-    -e "s|^fetched_kubeconfig_path: .*|fetched_kubeconfig_path: /tmp/kubeconfig-$CLUSTER.yaml|" \
-    clusters/edge/k3s/k3s-vars.yaml > clusters/$CLUSTER/k3s/k3s-vars.yaml
-cp clusters/edge/k3s/requirements.yaml clusters/$CLUSTER/k3s/
-```
-
-`k3s-vars.yaml` in full (what the `sed` produces):
-
-```yaml
----
-manage_filesystem: false
-install_k3s: true
-k3s_state: present
-k3s_k8s_version: 1.35.9
-k3s_release_kind: k3s1
-k3s_cluster_init: false          # sqlite/kine, no embedded etcd
-cluster_setup: singlenode
-cluster_name: edge-test2
-install_cilium: true
-cilium_version: 0.20.1           # cilium-cli
-cilium_chart_version: "1.20.2"
-cilium_gateway_api_crds_version: v1.6.1
-prepare_rancher_ha_nodes: true
-install_helm_diff: false
-fetched_kubeconfig_path: /tmp/kubeconfig-edge-test2.yaml
-```
+The three files with their content, and both runs: [k3s.md](./k3s.md),
+*The files*.
 
 ### 2.6 `clusters/$CLUSTER/lab/` -- lab VMs only
 

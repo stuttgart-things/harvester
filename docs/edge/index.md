@@ -12,6 +12,7 @@ OpenBao as the devices' PKI. Built and tested on lab VMs first
 |---|---|
 | [Architecture](./architecture.md) | the box, the router, k3s and Cilium, the services, the two name worlds (edge CA / OpenBao vs. Hetzner DNS / Let's Encrypt), the edge CA, what runs and what does not, DNS commands |
 | [Runbook](./runbook.md) | who creates which file in a cluster folder; *Recreate from scratch* in ten steps (with the commands); moving to the hardware |
+| [k3s + Cilium](./k3s.md) | runbook step 3 in full: the three files (`cat <<EOF`), what the role sets up, Ansible CLI and Dagger runs, verify, idempotency |
 | [From scratch](./from-scratch.md) | every file you write by hand, as `cat <<'EOF'` blocks -- the persistent secrets (with value generators and SOPS) and a new cluster folder |
 | [Lab testing](./lab-testing.md) | the device path with the ESP mock, mock vs. real boards, watching the apps |
 | [Notes](./notes.md) | lessons (the layers, the CNPG backup), first rollout, footprint |
