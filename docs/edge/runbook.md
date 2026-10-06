@@ -145,7 +145,8 @@ both deployment options (1: Ansible CLI, the kubeconfig lands on your machine; 2
 `execute-ansible-with-export`, the kubeconfig is exported from the container),
 the checks and what a second run changes. Result: node Ready
 (v1.35.9+k3s1, sqlite), Cilium 1.20.2 with Gateway API v1.6.1,
-`local-path`, the kubeconfig in `$KUBECONFIG` -- and encrypted in
+`local-path`, the CLIs on the node (k9s, flux, sops, age -- [Tools on the
+node](./k3s.md#tools-on-the-node)), the kubeconfig in `$KUBECONFIG` -- and encrypted in
 `secrets/edge/kubeconfig-<node>.enc.yaml` ([SOPS + age](../sops.md)).
 
 ### 4. Persistent secrets -- once ever
