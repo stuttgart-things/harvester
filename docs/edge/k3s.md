@@ -268,5 +268,5 @@ root CA appeared on every run (deploy-configure-rke#44, fixed).
 - **Fully offline** is a separate step: the role's air-gap vars
   (`k3s_airgapped_*`, `cilium_airgapped_*`) and a registry on the node
   ([runbook](./runbook.md), *Still online*).
-- Runs so far: [`clusters/edge/k3s`](../../clusters/edge/k3s/README.md)
+- Runs so far: [`clusters/edge/k3s`](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/k3s/README.md)
   (`edge-tt-test1`: CLI, then Dagger -- both green, idempotent).

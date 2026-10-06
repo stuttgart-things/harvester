@@ -6,10 +6,14 @@ on:
     branches: [main]
     paths:
       - 'system-inventory/**'
+      - 'docs/**'
+      - 'mkdocs.yml'
       - '.github/workflows/system-inventory.yml'
   pull_request:
     paths:
       - 'system-inventory/**'
+      - 'docs/**'
+      - 'mkdocs.yml'
       - '.github/workflows/system-inventory.yml'
   workflow_dispatch:
 
@@ -78,6 +82,15 @@ jobs:
           path: system-inventory/site/inventory.pdf
           if-no-files-found: error
           retention-days: 30
+
+      # The repo's TechDocs (mkdocs.yml, docs/) on the same Pages site, under
+      # /docs/: one Pages site per repo, and the inventory owns /. Same plugin
+      # as Backstage (techdocs-core), so the pages look and link the same.
+      - name: Build the docs into site/docs
+        working-directory: .
+        run: |
+          pip install "mkdocs-techdocs-core==1.7.1"
+          mkdocs build --site-dir system-inventory/site/docs
 
       - uses: actions/upload-pages-artifact@v5
         with:
