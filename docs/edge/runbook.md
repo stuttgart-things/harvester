@@ -221,7 +221,7 @@ step 8) and `admin` (break-glass, by hand only), passwords from
 static seal unseals every start. If self-init fails (e.g. a password
 missing), the server refuses to unseal: fix the secret, then delete PVC
 `data-openbao-0` and the pod. Details:
-[`clusters/edge/terraform/openbao`](../../clusters/edge/terraform/openbao/README.md).
+[`clusters/edge/terraform/openbao`](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/terraform/openbao/README.md).
 
 ### 8. OpenBao + MinIO configuration
 
@@ -230,11 +230,11 @@ backend), `--extra-files <cluster>/edge-root-ca.crt,<root>/env/<env>.auto.tfvars
 -- the environment file holds the addresses (and, for OpenBao, the ACME
 domains and DNS resolver; [from-scratch.md](./from-scratch.md), section 3);
 there are no defaults:
-[terraform/openbao](../../clusters/edge/terraform/openbao/README.md) (PKI
+[terraform/openbao](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/terraform/openbao/README.md) (PKI
 mount, role `devices`, ACME), then `terraform/openbao/sign-intermediate.sh`
 (key generated inside OpenBao, CSR signed with the offline root; refuses if
 the mount already has an issuer), and
-[terraform/minio](../../clusters/edge/terraform/minio/README.md) (bucket
+[terraform/minio](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/terraform/minio/README.md) (bucket
 `schmetterpause-cnpg`, user + policy for the backups). Until MinIO is
 configured, schmetterpause's WAL archiving retries.
 
@@ -242,7 +242,7 @@ configured, schmetterpause's WAL archiving retries.
 
 Whatever only one lab needs, documented in that cluster's README -- e.g.
 `edge-tt-test1`'s Vault issuer on the LabDA Vault and its CoreDNS forward for
-the LabDA zone ([`clusters/edge/README.md`](../../clusters/edge/README.md)).
+the LabDA zone ([`clusters/edge/README.md`](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/README.md)).
 
 ### 10. Verify
 

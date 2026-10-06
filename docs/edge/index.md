@@ -6,7 +6,9 @@ and has to manage with **only that one node** -- no central OpenBao/ESO, NFS,
 lab DNS, S3 or Rancher. It runs the table-tennis stack (zaehlwerk,
 schmetterpause, homerun2 with LED matrix and light), MinIO for the backups and
 OpenBao as the devices' PKI. Built and tested on lab VMs first
-(harvester#364).
+(harvester#364). Published at
+[stuttgart-things.github.io/harvester/docs/edge](https://stuttgart-things.github.io/harvester/docs/edge/)
+and in Backstage TechDocs.
 
 | Doc | |
 |---|---|
@@ -21,7 +23,7 @@ OpenBao as the devices' PKI. Built and tested on lab VMs first
 
 | Folder | Node | Lab | |
 |---|---|---|---|
-| [`clusters/edge`](../../clusters/edge/README.md) | `edge-tt-test1`, `10.100.136.89` | LabDA (vSphere) | the first lab cluster, reference |
+| [`clusters/edge`](https://github.com/stuttgart-things/harvester/blob/main/clusters/edge/README.md) | `edge-tt-test1`, `10.100.136.89` | LabDA (vSphere) | the first lab cluster, reference |
 | `clusters/edge-test2` | `edge-tt-test2`, `10.31.102.144` | labul (Proxmox) | the rebuild test: built from scratch with these docs |
 | (box) | LattePanda Mu | edge LAN `192.168.8.0/24` | next |
 

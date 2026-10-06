@@ -1,5 +1,7 @@
 # harvester
 
+Docs: [stuttgart-things.github.io/harvester/docs](https://stuttgart-things.github.io/harvester/docs/) (also in Backstage TechDocs) · system inventory: [stuttgart-things.github.io/harvester](https://stuttgart-things.github.io/harvester/)
+
 ## Clusters
 
 | Cluster | | Docs |

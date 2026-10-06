@@ -31,3 +31,13 @@ nav:
 
 plugins:
   - techdocs-core
+
+# Mermaid diagrams (docs/edge): rendered in the browser by mkdocs-material on
+# GitHub Pages (system-inventory workflow builds this site into /docs/);
+# Backstage TechDocs renders the same <pre class="mermaid"> blocks.
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
