@@ -8,6 +8,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>harvester</title>
   <meta name="description" content="stuttgart-things harvester: docs, edge cluster, system inventory">
+  <script>
+    // Until 2026-10-06 the system inventory was served at / -- old links such
+    // as /#topology now land here. This page has no anchors of its own, so
+    // any fragment belongs to the inventory: send it on, keeping the anchor.
+    if (location.hash.length > 1) location.replace("inventory/" + location.hash);
+  </script>
   <style>
     :root {
       --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5b6475;
