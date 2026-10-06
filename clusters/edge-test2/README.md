@@ -38,7 +38,7 @@ Steps as in the [runbook](../../docs/edge/runbook.md#recreate-from-scratch).
 |---|---|---|
 | [1](../../docs/edge/runbook.md#1-address-and-dns) | Address + DNS | done 2026-10-05: labul Clusterbook `10.31.102.7` (`edge-tt-test2`, wildcard DNS) and `.8` (`edge-tt-test2-play`, no DNS); Hetzner `*.test2.sthings-edge.com` → `.8` still to do |
 | [2](../../docs/edge/runbook.md#2-vm--base-os) | VM + base OS | done 2026-10-05: Backstage create-vm, stuttgart-things#3474 (merged 17:30, VM Ready 17:39 UTC) |
-| [3](../../docs/edge/runbook.md#3-k3s--cilium) | k3s + Cilium | done 2026-10-05: [`k3s/`](./k3s/README.md) -- node Ready 19:27 UTC, verified |
+| [3](../../docs/edge/runbook.md#3-k3s--cilium) | k3s + Cilium | done 2026-10-05: [`k3s/`](./k3s/README.md) -- node Ready 19:27 UTC, verified; 2026-10-06: kubeconfig encrypted into [`secrets/edge/kubeconfig-edge-tt-test2.enc.yaml`](../../secrets/edge/kubeconfig-edge-tt-test2.enc.yaml) (Dagger `sops`), CLIs on the node via Dagger |
 | [4](../../docs/edge/runbook.md#4-persistent-secrets----once-ever) | Persistent secrets | nothing to create -- reused from `secrets/edge/` |
 | [5](../../docs/edge/runbook.md#5-flux-files) | Flux files | following [from-scratch.md](../../docs/edge/from-scratch.md) section 2 |
 | [6](../../docs/edge/runbook.md#6-flux) | Flux bootstrap | |
