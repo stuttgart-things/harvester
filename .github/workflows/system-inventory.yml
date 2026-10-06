@@ -96,6 +96,7 @@ jobs:
         run: |
           mkdir -p _site
           cp pages/index.html _site/index.html
+          cp system-inventory/logo.png _site/logo.png
           cp -r system-inventory/site _site/inventory
           pip install "mkdocs-techdocs-core==1.7.1"
           mkdocs build --site-dir _site/docs

@@ -140,7 +140,7 @@ compare the new host key with the console.
 
 **[k3s.md](./k3s.md)** -- the three files of `clusters/$CLUSTER/k3s/`
 (inventory, vars, collections) as `cat <<EOF` blocks, what the role sets up,
-both runs (A: Ansible CLI, the kubeconfig lands on your machine; B: Dagger
+both deployment options (1: Ansible CLI, the kubeconfig lands on your machine; 2: Dagger
 `execute-ansible-with-export`, the kubeconfig is exported from the container),
 the checks and what a second run changes. Result: node Ready
 (v1.35.9+k3s1, sqlite), Cilium 1.20.2 with Gateway API v1.6.1,

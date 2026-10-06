@@ -2,9 +2,23 @@
 
 Runbook step 3 in full: how an edge node gets its Kubernetes -- every file and
 every command. `sthings.rke.k3s_cluster` (role deploy-configure-rke) against a
-host whose base OS is done (`sthings.baseos.setup`). The files live in the
-cluster folder, `clusters/<cluster>/k3s/`, and **Flux never reads them**
-(`.sourceignore`). Back to the [runbook](./runbook.md).
+host whose base OS is done (`sthings.baseos.setup`). Back to the
+[runbook](./runbook.md).
+
+**Built for Flux.** This k3s is only the foundation: right after it, Flux is
+bootstrapped onto it (runbook step 6) and from then on runs everything on the
+cluster -- Cilium's LB pool and Gateways, cert-manager, the apps -- from this
+git repo. So the k3s install sets up exactly what Flux builds on (Cilium with
+Gateway API and L2 announcements, `local-path`, no traefik/servicelb), nothing
+more.
+
+**One folder per cluster, in git.** The same cluster folder,
+`clusters/<cluster>/`, holds both: the **k3s part** in `k3s/` (inventory, vars,
+collections -- input for Ansible, not for Flux: `.sourceignore` keeps Flux
+away from it) and, after step 5, the **Flux part** (`cluster-apps.yaml`,
+`cluster-vars.yaml`, the generated files) that Flux syncs. One place to see,
+review and rebuild a cluster; the k3s files are versioned like everything else
+and a rebuild uses exactly what is committed.
 
 ## What you get
 
@@ -135,18 +149,34 @@ Newer releases: [stuttgart-things/ansible releases](https://github.com/stuttgart
 - **Access.** `sthings` with NOPASSWD sudo (the VM templates set it): a key for
   the CLI run, the password for the Dagger run.
 
-## Run -- pick one
+## Deployment -- two options
 
-| | A) Ansible CLI | B) Dagger |
+Both run the same playbook with the same three files and end in the same
+cluster; pick by what is installed where you work.
+
+| | Option 1: Ansible CLI | Option 2: Dagger |
 |---|---|---|
-| Runs on | your workstation's venv | a container (`blueprints/vm`) |
-| SSH | your key | user + password from a file |
-| Kubeconfig | lands on your machine | exported out of the container |
+| Runs on | your workstation, a Python venv | a container (`blueprints/vm` `execute-ansible-with-export`) |
+| You install | Python 3, Ansible 14.4.0 (ansible-core >= 2.19), the collections | the Dagger CLI and a container runtime (Docker) -- nothing else |
+| SSH to the node | your key | user + password, read from a file |
+| Kubeconfig | lands on your machine directly | exported out of the container (`--export-paths`) |
+| Good for | iterating on the role or vars, debugging (`-vvv`, `--check`, `--start-at-task`) | a reproducible run with a pinned toolchain, the same way a pipeline runs it; no local Ansible to keep up to date |
 
-### A) Ansible CLI
+### Deployment option 1: Ansible CLI
 
-Once per workstation. ansible-core >= 2.19: the node runs Python 3.14 (Ubuntu
-26.04), which 2.17 does not support.
+The playbook runs from your own machine. **Advantages:** the fastest loop when
+you change the role or the vars, the full Ansible toolbox for debugging, and
+key-based SSH; the kubeconfig is fetched straight to your machine.
+**Requirements:** Python 3 with `venv`, Ansible 14.4.0 (ansible-core >= 2.19 --
+the node runs Python 3.14 on Ubuntu 26.04, which 2.17 does not support), the
+collections from `requirements.yaml`, and your SSH key on the node
+(`sthings`, NOPASSWD sudo).
+
+Once per workstation:
+
+```bash
+python3 -m venv ~/ansible-venv                                  # if not there yet
+```
 
 ```bash
 ~/ansible-venv/bin/pip install --upgrade "ansible==14.4.0"      # -> ansible-core 2.21.4
@@ -179,11 +209,16 @@ install -m 600 /tmp/kubeconfig-$CLUSTER.yaml ~/.kube/$CLUSTER && rm /tmp/kubecon
 grep server: ~/.kube/$CLUSTER                 # https://<node>:6443
 ```
 
-### B) Dagger
+### Deployment option 2: Dagger
 
 `blueprints/vm` `execute-ansible-with-export`: the same playbook, vars,
-inventory and requirements in the Ansible container. It authenticates with
-**user + password**. The password comes from a file (mode 600, created by
+inventory and requirements in an Ansible container. **Advantages:** nothing
+but Dagger on your machine -- Ansible, ansible-core and the collections come
+pinned in the container, so every run (yours, a colleague's, a pipeline's) uses
+the same toolchain; no venv to maintain. **Requirements:** the Dagger CLI
+(tested with v0.21.10) and a container runtime for its engine (Docker), the
+node's `sthings` password (the module authenticates with **user +
+password**). The password comes from a file (mode 600, created by
 hand, never in a command, the environment or a log); Dagger masks it in the
 output -- and every other secret value too, so the user `sthings` shows up as
 `***` (`***.rke.install_requirements`).
