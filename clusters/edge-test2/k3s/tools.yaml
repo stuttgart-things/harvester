@@ -1,0 +1,66 @@
+---
+# The CLIs on the edge node, so the cluster can be worked with ON the box
+# (no workstation at the table): sthings.container.tools with THIS selection.
+# The playbook installs every entry of `bin` -- passed as extra vars, this
+# dict replaces the collection's full tool list (kind, argocd, velero, ...).
+# Each entry: version check first (`<bin> <version_cmd>` must contain
+# bin_version), download only on a mismatch -- a rerun changes nothing.
+# docs/edge/k3s.md, "Tools on the node". NOT here: kubectl, helm and
+# cilium-cli -- the k3s run (sthings.rke) already installs them; listing them
+# again would make the two plays overwrite each other's versions.
+k9s_version: 0.51.0        # datasource=github-tags depName=derailed/k9s
+flux_version: 2.9.6        # datasource=github-tags depName=fluxcd/flux2 -- = the cluster's Flux
+sops_version: 3.12.1       # datasource=github-tags depName=getsops/sops
+age_version: 1.2.1         # datasource=github-tags depName=FiloSottile/age
+
+bin:
+  k9s:
+    bin_name: k9s
+    bin_version: "{{ k9s_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/derailed/k9s/releases/download/v{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+    bin_to_copy: k9s
+    to_remove: ""
+    bin_dir: /usr/local/bin
+    version_cmd: " version --short"
+    target_version: "{{ k9s_version }}"
+  flux:
+    bin_name: flux
+    bin_version: "{{ flux_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/fluxcd/flux2/releases/download/v{{ flux_version }}/flux_{{ flux_version }}_linux_amd64.tar.gz"
+    bin_to_copy: flux
+    to_remove: ""
+    bin_dir: /usr/local/bin
+    version_cmd: " version --client"
+    target_version: "{{ flux_version }}"
+  sops:
+    bin_name: sops
+    bin_version: "{{ sops_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/getsops/sops/releases/download/v{{ sops_version }}/sops-v{{ sops_version }}.linux.amd64"
+    bin_to_copy: "sops-v{{ sops_version }}.linux.amd64"
+    to_remove: ""
+    bin_dir: /usr/local/bin/sops         # a file path: renames the download to sops
+    version_cmd: " --version --disable-version-check"
+    target_version: "{{ sops_version }}"
+  age:
+    bin_name: age
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"
+  age-keygen:
+    bin_name: age-keygen
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age-keygen
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"

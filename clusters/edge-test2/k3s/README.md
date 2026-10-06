@@ -17,6 +17,7 @@ export KUBECONFIG=~/.kube/edge-tt-test2     # this cluster's kubeconfig name (in
 | [`inventory.ini`](./inventory.ini) | the node, `10.31.102.144` |
 | [`k3s-vars.yaml`](./k3s-vars.yaml) | as in `docs/edge/k3s.md`: `cluster_name: edge-test2`, `fetched_kubeconfig_path: /tmp/kubeconfig-edge-test2.yaml` |
 | [`requirements.yaml`](./requirements.yaml) | collections, sthings.rke 26.1003.1401 |
+| [`tools.yaml`](./tools.yaml) | the CLIs on the node (`sthings.container.tools`): k9s, flux, sops, age -- [Tools on the node](../../../docs/edge/k3s.md#tools-on-the-node) |
 
 | The node | |
 |---|---|
