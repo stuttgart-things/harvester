@@ -368,18 +368,25 @@ ANSIBLE_BECOME_ASK_PASS=False ~/ansible-venv/bin/ansible-playbook \
   -i clusters/$CLUSTER/k3s/inventory.ini --private-key $EDGE_KEY \
   sthings.container.tools -e @clusters/$CLUSTER/k3s/tools.yaml
 
-# Deployment option 2: Dagger (not run yet -- edge-tt-test2 will)
+# Deployment option 2: Dagger -- one command, no inventory file
 env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
   execute-ansible \
+  --hosts $NODE_IP \
   --src ./clusters/$CLUSTER/k3s \
   --playbooks sthings.container.tools \
-  --inventory ./clusters/$CLUSTER/k3s/inventory.ini \
-  --parameters-file ./clusters/$CLUSTER/k3s/tools.yaml \
-  --requirements ./clusters/$CLUSTER/k3s/requirements.yaml \
+  --parameters profile=/src/tools \
   --ssh-user env:SSH_USER \
   --ssh-password file:$HOME/.$CLUSTER.pass \
   --progress plain
 ```
+
+Option 2 **cannot** take the file as `--parameters-file`: blueprints/vm
+turns every dict in it into a string, and the play fails with `the 'dict'
+lookup plugin expects a dictionary` (blueprints#217). Instead `--src` mounts
+the cluster's `k3s/` folder at `/src`, and `profile=/src/tools` makes the
+playbook load `/src/tools.yaml` itself -- its `vars_files` is
+`"{{ profile }}.yaml"`. Without `--requirements` the module takes the
+collections from the ansible repo's `main`; for this play that is fine.
 
 ### A kubeconfig on the node
 
@@ -404,6 +411,8 @@ ssh -o IdentitiesOnly=yes sthings@$NODE_IP \
 `edge-tt-test1` (2026-10-06, option 1): `ok=71 changed=19`, then a second run
 `ok=46 changed=0`; k9s v0.51.0, flux v2.9.6, sops 3.12.1, age v1.2.1;
 `flux get ks -A` as `sthings` on the node.
+`edge-tt-test2` (2026-10-06, option 2, the command above): `ok=71 changed=19
+failed=0`; the same versions.
 
 ## Keep the kubeconfig in the repo
 
