@@ -1,7 +1,9 @@
 # Edge cluster -- runbook
 
-How to build an edge cluster -- a lab VM or the box -- in order, and who
-creates which file. General: the values of a concrete cluster live in its
+How to build an edge cluster -- a lab VM or the box -- **all in one**: every
+step in order, and who creates which file. New to it? Use [step by
+step](./step-by-step.md), which splits the same work into phases with a commit
+and a check after each. General: the values of a concrete cluster live in its
 folder (`clusters/edge` = `edge-tt-test1`, LabDA; `clusters/edge-test2` =
 `edge-tt-test2`, labul). Every hand-written file with its content:
 [from-scratch.md](./from-scratch.md); the picture:
@@ -106,7 +108,7 @@ curl -s -X POST http://$CB/api/v1/networks/$NET/reserve -H 'Content-Type: applic
 #    (leave out "ip" to get the next free one)
 
 # b) Dagger (github.com/stuttgart-things/dagger/clusterbook)
-M=github.com/stuttgart-things/dagger/clusterbook@v0.136.0
+M=github.com/stuttgart-things/dagger/clusterbook@v0.137.0
 env -u SSH_AUTH_SOCK dagger call -m $M get-network-ips --server $CB:80 --network-key $NET \
   | jq -r '.[] | [.ip, (if .status=="" then "free" else .status end), .cluster] | @tsv'
 env -u SSH_AUTH_SOCK dagger call -m $M reserve-ip --server $CB:80 --network-key $NET --cluster $NAME --create-dns   # next free
@@ -162,7 +164,7 @@ same seal key, same passwords.
 The hand-written files ([from-scratch.md](./from-scratch.md), section 2), then:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
   render-cluster-apps \
   --cluster-apps clusters/$CLUSTER/cluster-apps.yaml \
   --master-age-key env:SOPS_AGE_KEY \
@@ -172,6 +174,9 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@
   export --path /tmp/$CLUSTER-gen
 cp -r /tmp/$CLUSTER-gen/flux/. clusters/$CLUSTER/ && rm -rf /tmp/$CLUSTER-gen
 ```
+
+Without Dagger: write the same files by hand ([from-scratch.md,
+2B](./from-scratch.md#2b-flux-files-by-hand)) instead of `cluster-apps.yaml`.
 
 **Leave out `--existing-secrets` on the very first render** (there is no
 `cluster-secrets/` yet). The wiring (`kustomization.yaml` at the root, in
@@ -188,7 +193,7 @@ Later, to move to a newer flux release: bump `spec.source.tag` in
 blueprints/flux v3.6.1 or newer (flux-operator 0.61.0, Flux 2.9.6):
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
   bootstrap \
   --kube-config file://$KUBECONFIG \
   --deploy-operator=true \

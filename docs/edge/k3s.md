@@ -230,7 +230,8 @@ node's `sthings` password (the module authenticates with **user +
 password**). The password comes from a file (mode 600, created by
 hand, never in a command, the environment or a log); Dagger masks it in the
 output -- and every other secret value too, so the user `sthings` shows up as
-`***` (`***.rke.install_requirements`).
+`***` (`***.rke.install_requirements`). Docker and the Dagger CLI as
+Ansible code: [Workstation setup](../workstation.md).
 
 ```bash
 # 1. the node's sthings password into a file
@@ -240,7 +241,7 @@ nano ~/.$CLUSTER.pass
 # 2. k3s + Cilium; --export-paths copies the fetched kubeconfig out of the
 #    container (by file name), `export --path` writes it to the host
 export SSH_USER=sthings
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.11.0 \
   execute-ansible-with-export \
   --src ./clusters/$CLUSTER/k3s \
   --playbooks sthings.rke.k3s_cluster \
@@ -367,18 +368,24 @@ ANSIBLE_BECOME_ASK_PASS=False ~/ansible-venv/bin/ansible-playbook \
   -i clusters/$CLUSTER/k3s/inventory.ini --private-key $EDGE_KEY \
   sthings.container.tools -e @clusters/$CLUSTER/k3s/tools.yaml
 
-# Deployment option 2: Dagger (not run yet -- edge-tt-test2 will)
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.10.0 \
+# Deployment option 2: Dagger -- one command, no inventory file
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/vm@v3.11.0 \
   execute-ansible \
-  --src ./clusters/$CLUSTER/k3s \
+  --hosts $NODE_IP \
   --playbooks sthings.container.tools \
-  --inventory ./clusters/$CLUSTER/k3s/inventory.ini \
   --parameters-file ./clusters/$CLUSTER/k3s/tools.yaml \
-  --requirements ./clusters/$CLUSTER/k3s/requirements.yaml \
   --ssh-user env:SSH_USER \
   --ssh-password file:$HOME/.$CLUSTER.pass \
   --progress plain
 ```
+
+`--parameters-file` needs blueprints/vm **v3.11.0** or newer. Older versions
+turn every dict into a string, and the play fails with `the 'dict' lookup
+plugin expects a dictionary` (blueprints#217). On an older version, use
+`--src ./clusters/$CLUSTER/k3s --parameters profile=/src/tools` instead: the
+playbook then loads `/src/tools.yaml` through its own `vars_files`. Without
+`--requirements`, the module takes the collections from the ansible repo's
+`main`; that is fine for this play.
 
 ### A kubeconfig on the node
 
@@ -403,6 +410,9 @@ ssh -o IdentitiesOnly=yes sthings@$NODE_IP \
 `edge-tt-test1` (2026-10-06, option 1): `ok=71 changed=19`, then a second run
 `ok=46 changed=0`; k9s v0.51.0, flux v2.9.6, sops 3.12.1, age v1.2.1;
 `flux get ks -A` as `sthings` on the node.
+`edge-tt-test2` (option 2): on 2026-10-06 with v3.10.0 and the `profile`
+workaround, `ok=71 changed=19 failed=0` and the same versions. On 2026-10-07 with v3.11.0
+and `--parameters-file` (the command above), `ok=46 changed=0`.
 
 ## Keep the kubeconfig in the repo
 

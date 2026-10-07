@@ -230,3 +230,31 @@ spec:
       VAULT_ISSUER_AUTH_MOUNT_PATH: /v1/auth/platform-sthings-certmanager
       VAULT_ISSUER_AUTH_ROLE: certmanager
       VAULT_ISSUER_SERVICE_ACCOUNT: certmanager
+---
+# Stakater Reloader: rolls a workload when a ConfigMap/Secret it references
+# changes, for workloads that opt in with reloader.stakater.com/auto: "true".
+#
+# Here for Backstage first (harvester#349): the chart mounts the catalog config
+# with subPath, so Backstage reads it only at startup, and a catalog switch did
+# nothing until someone restarted the pod by hand. The flux app's Deployment
+# already carries the annotation; without the controller it was a no-op.
+# Anything else on this cluster that carries the annotation is rolled on a
+# config change from now on as well.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: reloader
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/reloader
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      RELOADER_NAMESPACE: reloader

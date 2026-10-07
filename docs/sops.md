@@ -27,8 +27,9 @@ Pick one -- the result is the same file.
 | | Option 1: sops + age CLI | Option 2: Dagger modules |
 |---|---|---|
 | Install | `sops` (3.12+) and `age` (1.2+) | the Dagger CLI (0.21+) and Docker -- nothing else |
-| Good for | everything: partial encryption (`--encrypted-regex`), `sops set`, `updatekeys`, editing in place | whole-file encryption without installing sops/age (kubeconfigs, value files), pipelines |
-| Limit | -- | encrypts the **whole** file: not for Secrets Flux applies (see below) |
+| Good for | interactive work: editing in place (`sops file.enc.yaml` opens `$EDITOR`) | nothing to install but Dagger; pinned sops 3.13.3 / age 1.3.2 in the container; pipelines |
+| Both | encrypt (whole file or `data`/`stringData` only), decrypt (whole file or one value), change one value, change the recipients, derive the public key | the same |
+| Limit | -- | no in-place editing; every call starts a container (slower in loops) |
 
 **Install option 1** (Linux, amd64):
 
@@ -41,9 +42,13 @@ sudo install -m 755 /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
 sops --version; age --version
 ```
 
-**Option 2:** [install Dagger](https://docs.dagger.io/install); the modules:
-`github.com/stuttgart-things/dagger/sops` (encrypt, decrypt, generate an age
-key or a `.sops.yaml`) and `github.com/stuttgart-things/blueprints/secrets`
+Or all of it as Ansible code -- sops, age and the Dagger CLI, plus Docker:
+[Workstation setup](workstation.md).
+
+**Option 2:** Docker and the Dagger CLI ([Workstation setup](workstation.md)); the modules:
+`github.com/stuttgart-things/dagger/sops` v0.137.0+ (`encrypt` with optional
+`--encrypted-regex`, `decrypt` with optional `--extract`, `set`,
+`update-keys`, `age-public-key`, `generate-age-key`, `generate-sops-config`) and `github.com/stuttgart-things/blueprints/secrets`
 (encrypt-file, decrypt, cluster keys, rendering secrets).
 
 ## The age key
@@ -60,10 +65,11 @@ mkdir -p ~/.config/sops/age && chmod 700 ~/.config/sops/age
 export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt          # sops reads it from here (also the default path)
 export SOPS_AGE_KEY=$(cat ~/.config/sops/age/keys.txt)         # the Dagger modules and Flux bootstraps take it like this
 export AGE_PUB=$(age-keygen -y ~/.config/sops/age/keys.txt)    # the public key: age1...
+#   Dagger: export AGE_PUB=$(dagger call -s -m github.com/stuttgart-things/dagger/sops@v0.137.0 age-public-key --age-key env:SOPS_AGE_KEY)
 
 # none yet -- a new key pair
 age-keygen -o ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt
-#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.136.0 generate-age-key
+#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 generate-age-key
 ```
 
 **Cluster keys.** A cluster can decrypt with its own key instead of the master
@@ -72,7 +78,7 @@ key (the edge box does): `render-cluster-apps` generates it
 *escrow*) and encrypts the cluster's secrets for **both** keys
 (`--escrow-recipients`). Flux on that cluster gets only the cluster key; the
 team still reads everything with the master key. Its private key:
-`dagger call -m github.com/stuttgart-things/blueprints/secrets@v3.10.0 cluster-age-key --existing <cluster-secrets dir> --master-age-key env:SOPS_AGE_KEY plaintext`.
+`dagger call -m github.com/stuttgart-things/blueprints/secrets@v3.11.0 cluster-age-key --existing <cluster-secrets dir> --master-age-key env:SOPS_AGE_KEY plaintext`.
 
 **In the cluster** the private key is the Secret `flux-system/sops-age` (key
 `age.agekey`), created by the Flux bootstrap (`--sops-age-key`).
@@ -91,7 +97,9 @@ creation_rules:
     encrypted_regex: ^(data|stringData)$
     age: $AGE_PUB
 EOF
-#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.136.0 generate-sops-config ...
+#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 generate-sops-config \
+#     --age-public-key "$AGE_PUB" --path-regex '.*\.enc\.yaml$' \
+#     --encrypted-regex '^(data|stringData)$' export --path .sops.yaml
 ```
 
 `render-cluster-apps` writes one into each `cluster-secrets/` (the cluster key
@@ -133,30 +141,64 @@ sops updatekeys secret.enc.yaml                                          # after
 
 ### Option 2: Dagger
 
-Both modules encrypt the **whole** file (they pass the key directly, so a
-`.sops.yaml`'s `encrypted_regex` is not applied) -- right for kubeconfigs and
-value files, not for Secrets Flux applies.
+The same operations, with `dagger/sops` v0.137.0+. Each function returns a
+file (`export --path` writes it, `contents` prints it) or, for
+`age-public-key`, a string.
 
 ```bash
-M=github.com/stuttgart-things/dagger/sops@v0.136.0
+M=github.com/stuttgart-things/dagger/sops@v0.137.0
 
-# encrypt (returns a file)
+# a Kubernetes Secret (Flux applies it): only data/stringData
+env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
+  --age-key env:AGE_PUB --encrypted-regex '^(data|stringData)$' \
+  --plaintext-file secret.yaml export --path secret.enc.yaml && shred -u secret.yaml
+
+# a whole file (kubeconfig, value file)
 env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
   --age-key env:AGE_PUB --plaintext-file ~/.kube/edge-tt-test2 \
   export --path secrets/edge/kubeconfig-edge-tt-test2.enc.yaml
 
-# decrypt (returns a file: `contents` to stdout, or `export --path`)
-env -u SSH_AUTH_SOCK dagger call -m $M decrypt \
-  --age-key env:SOPS_AGE_KEY --encrypted-file secrets/edge/kubeconfig-edge-tt-test2.enc.yaml \
-  export --path ~/.kube/edge-tt-test2
+# or let a .sops.yaml decide (creation_rules incl. encrypted_regex)
+env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
+  --age-key env:AGE_PUB --sops-config .sops.yaml \
+  --plaintext-file secret.yaml export --path secret.enc.yaml
 
-# the same with blueprints/secrets (encrypt-file returns the text)
-B=github.com/stuttgart-things/blueprints/secrets@v3.10.0
+# decrypt -- to stdout, to a file, one value
+env -u SSH_AUTH_SOCK dagger call -s -m $M decrypt --age-key env:SOPS_AGE_KEY \
+  --encrypted-file secret.enc.yaml contents
+(umask 077; env -u SSH_AUTH_SOCK dagger call -m $M decrypt --age-key env:SOPS_AGE_KEY \
+  --encrypted-file secrets/edge/kubeconfig-edge-tt-test2.enc.yaml export --path ~/.kube/edge-tt-test2)
+env -u SSH_AUTH_SOCK dagger call -s -m $M decrypt --age-key env:SOPS_AGE_KEY \
+  --encrypted-file secrets/edge/app-values.enc.yaml --extract '["stringData"]["HETZNER_DNS_TOKEN"]' contents
+
+# change one value -- the new value as a Dagger secret (env: or file:), never on the command line
+NEW_VALUE=$(openssl rand -hex 32) env -u SSH_AUTH_SOCK dagger call -m $M set \
+  --age-key env:SOPS_AGE_KEY --encrypted-file secrets/edge/app-values.enc.yaml \
+  --path '["stringData"]["NEW_KEY"]' --value env:NEW_VALUE \
+  export --path secrets/edge/app-values.enc.yaml
+
+# change the recipients (after editing .sops.yaml)
+env -u SSH_AUTH_SOCK dagger call -m $M update-keys \
+  --age-key env:SOPS_AGE_KEY --encrypted-file secret.enc.yaml --sops-config .sops.yaml \
+  export --path secret.enc.yaml
+```
+
+`blueprints/secrets` (v3.11.0+) adds helpers on top: it builds a Kubernetes
+Secret from `key=value` pairs that Flux can apply, and its `encrypt-file`
+returns the text instead of a file:
+
+```bash
+B=github.com/stuttgart-things/blueprints/secrets@v3.11.0
+env -u SSH_AUTH_SOCK dagger call -m $B create-kubernetes-secret --name my-secret \
+  --namespace flux-system --key-values "USER=admin" --age-public-key env:AGE_PUB \
+  export --path my-secret.enc.yaml
 env -u SSH_AUTH_SOCK dagger call -m $B encrypt-file --age-public-key env:AGE_PUB \
   --plaintext-file values.yaml > values.enc.yaml
-env -u SSH_AUTH_SOCK dagger call -m $B decrypt --sops-key env:SOPS_AGE_KEY \
-  --encrypted-file values.enc.yaml
 ```
+
+`--key-values` passes the values on the command line, so use it only for values
+that are not secret. Put secret values in a file and use `encrypt
+--encrypted-regex`.
 
 `env -u SSH_AUTH_SOCK`: a stale agent socket makes Dagger fail with `failed
 to list SSH agent identities`.
