@@ -88,7 +88,7 @@ Encrypt the kubeconfig with the sops CLI or Dagger
 sops --encrypt --age "$AGE_PUB" --input-type yaml --output-type yaml \
   $KUBECONFIG > secrets/edge/kubeconfig-$NODE.enc.yaml
 #   Dagger:
-#   env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 encrypt \
+#   env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.1 encrypt \
 #     --age-key env:AGE_PUB --plaintext-file $KUBECONFIG export --path secrets/edge/kubeconfig-$NODE.enc.yaml
 ```
 

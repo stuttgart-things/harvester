@@ -108,7 +108,7 @@ curl -s -X POST http://$CB/api/v1/networks/$NET/reserve -H 'Content-Type: applic
 #    (leave out "ip" to get the next free one)
 
 # b) Dagger (github.com/stuttgart-things/dagger/clusterbook)
-M=github.com/stuttgart-things/dagger/clusterbook@v0.137.0
+M=github.com/stuttgart-things/dagger/clusterbook@v0.137.1
 env -u SSH_AUTH_SOCK dagger call -m $M get-network-ips --server $CB:80 --network-key $NET \
   | jq -r '.[] | [.ip, (if .status=="" then "free" else .status end), .cluster] | @tsv'
 env -u SSH_AUTH_SOCK dagger call -m $M reserve-ip --server $CB:80 --network-key $NET --cluster $NAME --create-dns   # next free
