@@ -14,7 +14,7 @@ Most steps can be done two ways:
 
 | | CLI | Dagger |
 |---|---|---|
-| Encrypt secrets | `sops` + `age` | `dagger/sops` (whole file -- not for Secrets Flux applies) |
+| Encrypt/decrypt secrets | `sops` + `age` | `dagger/sops` (`encrypt --encrypted-regex`, `decrypt --extract`, `set`, `update-keys`) |
 | k3s + Cilium | `ansible-playbook` | `blueprints/vm execute-ansible-with-export` |
 | Flux files | written by hand (`cat <<EOF`, [option B](#option-b-by-hand)) | `ClusterApps` + `blueprints/flux render-cluster-apps` ([option A](#option-a-clusterapps-render-cluster-apps)) |
 | Flux bootstrap | -- | `blueprints/flux bootstrap` |
@@ -53,8 +53,8 @@ files.
 
 **Write:** the edge CA, the OpenBao seal key and the app values ([from
 scratch, section 1](./from-scratch.md#1-persistent-secrets)). Encrypt them with the
-`enc` helper (sops CLI) or `enc_dagger` (Dagger), both in [section
-0](./from-scratch.md#0-the-age-key).
+`enc` helper, which comes as a sops CLI version and a Dagger version
+([section 0](./from-scratch.md#0-the-age-key)).
 
 **Commit:**
 
@@ -88,7 +88,7 @@ Encrypt the kubeconfig with the sops CLI or Dagger
 sops --encrypt --age "$AGE_PUB" --input-type yaml --output-type yaml \
   $KUBECONFIG > secrets/edge/kubeconfig-$NODE.enc.yaml
 #   Dagger:
-#   env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/sops@v0.136.0 encrypt \
+#   env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 encrypt \
 #     --age-key env:AGE_PUB --plaintext-file $KUBECONFIG export --path secrets/edge/kubeconfig-$NODE.enc.yaml
 ```
 
@@ -153,7 +153,7 @@ secrets as `ref+sops://` references into `secrets/edge/`. Dagger generates
 everything else from it:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
   render-cluster-apps \
   --cluster-apps clusters/$CLUSTER/cluster-apps.yaml \
   --master-age-key env:SOPS_AGE_KEY \
@@ -171,8 +171,8 @@ and render again.
 
 ### Option B: by hand
 
-The same files, written with `cat <<'EOF'` and encrypted with the sops CLI. You
-don't need Dagger or the `ClusterApps` file, and you can see every object
+The same files, written with `cat <<'EOF'` and encrypted with `enc` (sops CLI
+or Dagger). You don't need the generator or the `ClusterApps` file, and you can see every object
 Flux applies: [from scratch, section 2B](./from-scratch.md#2b-flux-files-by-hand).
 **Good for:** learning what the generator does, and repos without Dagger.
 Then **you** maintain the files: to add an app, add its component, its vars
