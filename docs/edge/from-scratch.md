@@ -54,7 +54,7 @@ getval() {  # getval <file.enc.yaml> <key>: one stringData value, to stdout
 
 ```bash
 # Dagger (github.com/stuttgart-things/dagger/sops) -- nothing to install but Dagger
-SOPS_MOD=github.com/stuttgart-things/dagger/sops@v0.137.0
+SOPS_MOD=github.com/stuttgart-things/dagger/sops@v0.137.1
 enc() {
   env -u SSH_AUTH_SOCK dagger call -s -m $SOPS_MOD encrypt \
     --age-key env:AGE_PUB --encrypted-regex '^(data|stringData)$' \

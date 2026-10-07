@@ -65,11 +65,11 @@ mkdir -p ~/.config/sops/age && chmod 700 ~/.config/sops/age
 export SOPS_AGE_KEY_FILE=~/.config/sops/age/keys.txt          # sops reads it from here (also the default path)
 export SOPS_AGE_KEY=$(cat ~/.config/sops/age/keys.txt)         # the Dagger modules and Flux bootstraps take it like this
 export AGE_PUB=$(age-keygen -y ~/.config/sops/age/keys.txt)    # the public key: age1...
-#   Dagger: export AGE_PUB=$(dagger call -s -m github.com/stuttgart-things/dagger/sops@v0.137.0 age-public-key --age-key env:SOPS_AGE_KEY)
+#   Dagger: export AGE_PUB=$(dagger call -s -m github.com/stuttgart-things/dagger/sops@v0.137.1 age-public-key --age-key env:SOPS_AGE_KEY)
 
 # none yet -- a new key pair
 age-keygen -o ~/.config/sops/age/keys.txt && chmod 600 ~/.config/sops/age/keys.txt
-#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 generate-age-key
+#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.1 generate-age-key
 ```
 
 **Cluster keys.** A cluster can decrypt with its own key instead of the master
@@ -93,14 +93,20 @@ picks recipients and the encrypted fields by path:
 cat > .sops.yaml <<EOF
 creation_rules:
   # Kubernetes Secrets: only data/stringData -- apiVersion, kind, metadata stay readable
-  - path_regex: .*\.enc\.yaml$
+  - path_regex: \.ya?ml$
     encrypted_regex: ^(data|stringData)$
     age: $AGE_PUB
 EOF
-#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.0 generate-sops-config \
-#     --age-public-key "$AGE_PUB" --path-regex '.*\.enc\.yaml$' \
+#   Dagger: dagger call -m github.com/stuttgart-things/dagger/sops@v0.137.1 generate-sops-config \
+#     --age-public-key "$AGE_PUB" --path-regex '\.ya?ml$' \
 #     --encrypted-regex '^(data|stringData)$' export --path .sops.yaml
 ```
+
+`path_regex` is matched against the file **being encrypted**, and that is the
+plaintext file (`secret.yaml`), not the target. A rule for `.*\.enc\.yaml$`
+therefore matches only in-place runs (`sops secret.enc.yaml`, `sops -e -i`). The
+Dagger module matches against its own name for the file, `encrypted.yaml`.
+`\.ya?ml$` fits both.
 
 `render-cluster-apps` writes one into each `cluster-secrets/` (the cluster key
 and the escrow recipient). The repo has none at its root: every command passes
@@ -146,7 +152,7 @@ file (`export --path` writes it, `contents` prints it) or, for
 `age-public-key`, a string.
 
 ```bash
-M=github.com/stuttgart-things/dagger/sops@v0.137.0
+M=github.com/stuttgart-things/dagger/sops@v0.137.1
 
 # a Kubernetes Secret (Flux applies it): only data/stringData
 env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
@@ -158,9 +164,10 @@ env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
   --age-key env:AGE_PUB --plaintext-file ~/.kube/edge-tt-test2 \
   export --path secrets/edge/kubeconfig-edge-tt-test2.enc.yaml
 
-# or let a .sops.yaml decide (creation_rules incl. encrypted_regex)
+# or let a .sops.yaml decide: recipients AND encrypted_regex from its rule
+# (no --age-key -- it would replace the rule's recipients)
 env -u SSH_AUTH_SOCK dagger call -m $M encrypt \
-  --age-key env:AGE_PUB --sops-config .sops.yaml \
+  --sops-config .sops.yaml \
   --plaintext-file secret.yaml export --path secret.enc.yaml
 
 # decrypt -- to stdout, to a file, one value
