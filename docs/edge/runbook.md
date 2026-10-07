@@ -1,7 +1,9 @@
 # Edge cluster -- runbook
 
-How to build an edge cluster -- a lab VM or the box -- in order, and who
-creates which file. General: the values of a concrete cluster live in its
+How to build an edge cluster -- a lab VM or the box -- **all in one**: every
+step in order, and who creates which file. New to it? Use [step by
+step](./step-by-step.md), which splits the same work into phases with a commit
+and a check after each. General: the values of a concrete cluster live in its
 folder (`clusters/edge` = `edge-tt-test1`, LabDA; `clusters/edge-test2` =
 `edge-tt-test2`, labul). Every hand-written file with its content:
 [from-scratch.md](./from-scratch.md); the picture:
@@ -172,6 +174,9 @@ env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@
   export --path /tmp/$CLUSTER-gen
 cp -r /tmp/$CLUSTER-gen/flux/. clusters/$CLUSTER/ && rm -rf /tmp/$CLUSTER-gen
 ```
+
+Without Dagger: write the same files by hand ([from-scratch.md,
+2B](./from-scratch.md#2b-flux-files-by-hand)) instead of `cluster-apps.yaml`.
 
 **Leave out `--existing-secrets` on the very first render** (there is no
 `cluster-secrets/` yet). The wiring (`kustomization.yaml` at the root, in

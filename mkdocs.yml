@@ -18,7 +18,8 @@ nav:
   - Edge cluster:
       - Overview: edge/index.md
       - Architecture: edge/architecture.md
-      - Runbook: edge/runbook.md
+      - Step by step: edge/step-by-step.md
+      - Runbook (all in one): edge/runbook.md
       - k3s + Cilium: edge/k3s.md
       - From scratch: edge/from-scratch.md
       - Lab testing: edge/lab-testing.md
