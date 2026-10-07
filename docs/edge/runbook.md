@@ -108,7 +108,7 @@ curl -s -X POST http://$CB/api/v1/networks/$NET/reserve -H 'Content-Type: applic
 #    (leave out "ip" to get the next free one)
 
 # b) Dagger (github.com/stuttgart-things/dagger/clusterbook)
-M=github.com/stuttgart-things/dagger/clusterbook@v0.136.0
+M=github.com/stuttgart-things/dagger/clusterbook@v0.137.0
 env -u SSH_AUTH_SOCK dagger call -m $M get-network-ips --server $CB:80 --network-key $NET \
   | jq -r '.[] | [.ip, (if .status=="" then "free" else .status end), .cluster] | @tsv'
 env -u SSH_AUTH_SOCK dagger call -m $M reserve-ip --server $CB:80 --network-key $NET --cluster $NAME --create-dns   # next free
@@ -164,7 +164,7 @@ same seal key, same passwords.
 The hand-written files ([from-scratch.md](./from-scratch.md), section 2), then:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
   render-cluster-apps \
   --cluster-apps clusters/$CLUSTER/cluster-apps.yaml \
   --master-age-key env:SOPS_AGE_KEY \
@@ -193,7 +193,7 @@ Later, to move to a newer flux release: bump `spec.source.tag` in
 blueprints/flux v3.6.1 or newer (flux-operator 0.61.0, Flux 2.9.6):
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
   bootstrap \
   --kube-config file://$KUBECONFIG \
   --deploy-operator=true \

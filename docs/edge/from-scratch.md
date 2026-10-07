@@ -38,30 +38,37 @@ export AGE_PUB=$(age-keygen -y <<<"$SOPS_AGE_KEY")
 None yet: `age-keygen -o ~/.config/sops/age/keys.txt` (mode 600), keep a copy
 in the team's password manager. Losing it means losing every secret below.
 
-The helper used in all blocks -- sops CLI:
+The helpers used in all blocks: `enc` encrypts, `getval` reads one value.
+**Pick one set**, with the sops CLI or with Dagger. Both give the same files.
 
 ```bash
-enc() {  # enc <plaintext.yaml> <target.enc.yaml>: encrypt only data/stringData
+# sops CLI
+enc() {     # enc <plaintext.yaml> <target.enc.yaml>: encrypt only data/stringData
   sops --encrypt --age "$AGE_PUB" --encrypted-regex '^(data|stringData)$' \
     --input-type yaml --output-type yaml "$1" > "$2" && shred -u "$1"
 }
-```
-
-Or with Dagger, without installing sops:
-
-```bash
-enc_dagger() {  # enc_dagger <plaintext.yaml> <target.enc.yaml>: encrypts the WHOLE file
-  env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/dagger/sops@v0.136.0 encrypt \
-    --age-key env:AGE_PUB --plaintext-file "$1" export --path "$2" && shred -u "$1"
+getval() {  # getval <file.enc.yaml> <key>: one stringData value, to stdout
+  sops -d --extract "[\"stringData\"][\"$2\"]" "$1"
 }
 ```
 
-`enc_dagger` encrypts the whole file, `kind` and `metadata` included. That is
-fine for the files in `secrets/edge/`, because nothing applies them (they are
-`ref+sops` sources and inputs). It does **not** work for a Secret that Flux
-applies: `infra/ca/edge-ca.enc.yaml` (1.1) and the apps' secrets (2B) need
-`enc`. The plaintext passes through the local Dagger engine. Swap `enc` for
-`enc_dagger` in the `secrets/edge/` blocks below to use it.
+```bash
+# Dagger (github.com/stuttgart-things/dagger/sops) -- nothing to install but Dagger
+SOPS_MOD=github.com/stuttgart-things/dagger/sops@v0.137.0
+enc() {
+  env -u SSH_AUTH_SOCK dagger call -s -m $SOPS_MOD encrypt \
+    --age-key env:AGE_PUB --encrypted-regex '^(data|stringData)$' \
+    --plaintext-file "$1" export --path "$2" >/dev/null && shred -u "$1"
+}
+getval() {
+  env -u SSH_AUTH_SOCK dagger call -s -m $SOPS_MOD decrypt \
+    --age-key env:SOPS_AGE_KEY --encrypted-file "$1" \
+    --extract "[\"stringData\"][\"$2\"]" contents
+}
+```
+
+With Dagger the plaintext passes through the local Dagger engine. Each call
+starts a container, so 2B's secrets take a few minutes this way.
 
 ## 1. Persistent secrets
 
@@ -583,7 +590,7 @@ the secrets here are encrypted for the **master key** only, with no
 per-cluster key and no escrow.
 
 Do **not** write a `cluster-apps.yaml` (2.2) with this option. From now on,
-these files are what you maintain. Uses `enc` from [section 0](#0-the-age-key),
+these files are what you maintain. Uses `enc` and `getval` from [section 0](#0-the-age-key) (sops CLI or Dagger),
 `jq` and `yq`.
 
 ### 2B.1 `clusters/$CLUSTER/apps.yaml` -- the source and the layers
@@ -842,7 +849,7 @@ substitution needs strings.
 
 One Secret `<app>-secrets` in `flux-system` per app that has secrets; the
 app's Flux Kustomization reads it with `substituteFrom`. The values come out of
-`secrets/edge/` with `sops -d --extract`, the result is encrypted for the
+`secrets/edge/` with `getval`, the result is encrypted for the
 master key (`data`/`stringData` only -- Flux applies it). The plaintext never
 touches the disk outside a `umask 077` temp file.
 
@@ -855,7 +862,7 @@ mk_secret() (
   for spec; do
     k=${spec%%=*}; src=secrets/edge/app-values.enc.yaml; field=$k
     [ "$spec" != "$k" ] && { src=${spec#*=}; field=${src#*#}; src=${src%#*}; }
-    printf '  %s: %s\n' "$k" "$(printf %s "$(sops -d --extract "[\"stringData\"][\"$field\"]" "$src")" | jq -Rs .)" >> "$T"
+    printf '  %s: %s\n' "$k" "$(printf %s "$(getval "$src" "$field")" | jq -Rs .)" >> "$T"
   done
   enc "$T" clusters/$CLUSTER/cluster-secrets/secrets/flux-system/$name.enc.yaml
 )
