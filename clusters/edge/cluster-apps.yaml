@@ -231,6 +231,15 @@ spec:
         # 'on' QUOTED: a bare on is YAML 1.1 true.
         TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
         TABLETENNIS_SCHMETTERPAUSE_BOOTSTRAP_ADMIN: timoboll
+        # LAB: zaehlwerk's table mock (flux#666) at https://buttons.<EDGE_DOMAIN>
+        # -- emulated buttons, and a page that pauses and tunes the emulated
+        # board. The board is piezo-a in ./lab/esp-mock (it enrols through
+        # ACME, which the flux piezo-sim does not), so the page points at its
+        # control Service and the piezo-sim stays off. REMOVE ON THE
+        # LATTEPANDA with the edge-lab layer: the page takes points back.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret

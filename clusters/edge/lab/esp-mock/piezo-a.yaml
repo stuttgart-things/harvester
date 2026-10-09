@@ -63,7 +63,7 @@ spec:
             limits: {memory: 128Mi}
       containers:
         - name: piezo
-          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.9.0
+          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.11.0
           env:
             - name: ZAEHLWERK_URL
               value: https://zaehlwerk.${EDGE_DOMAIN}
@@ -79,6 +79,14 @@ spec:
               value: "3"
             - name: PIEZO_PACE
               value: 3s
+            # The control endpoint the table mock (tabletennis
+            # TABLETENNIS_ZAEHLWERK_BUTTONS_SIM) pauses and tunes this board
+            # through, behind piezo-a-control below.
+            - name: PIEZO_CONTROL_ADDR
+              value: ":8081"
+          ports:
+            - name: control
+              containerPort: 8081
           volumeMounts:
             - {name: certs, mountPath: /certs, readOnly: true}
             - {name: ca, mountPath: /ca, readOnly: true}
@@ -97,3 +105,19 @@ spec:
         - name: ca
           configMap:
             name: edge-root-ca
+---
+# For the table mock's page in the zaehlwerk namespace
+# (TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL in ../../cluster-apps.yaml).
+# ClusterIP, no route: pausing the board is not something to publish.
+apiVersion: v1
+kind: Service
+metadata:
+  name: piezo-a-control
+  namespace: esp-mock
+spec:
+  selector:
+    app.kubernetes.io/name: piezo-a
+  ports:
+    - name: control
+      port: 8081
+      targetPort: control
