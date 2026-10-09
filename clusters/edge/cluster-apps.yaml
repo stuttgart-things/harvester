@@ -53,12 +53,15 @@ spec:
   # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
   # self-init with a terraform and a break-glass admin user (flux#640);
   # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643);
-  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645).
+  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645);
+  # v1.128.2: the table mock TABLETENNIS_ZAEHLWERK_BUTTONS_SIM and the
+  # piezo-sim/buttons-sim switches on the sops bundles (flux#666), plus
+  # OpenBao requests/limits (flux#657) and homerun2 catcher bumps.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.125.0
+    tag: v1.128.2
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -231,6 +234,15 @@ spec:
         # 'on' QUOTED: a bare on is YAML 1.1 true.
         TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
         TABLETENNIS_SCHMETTERPAUSE_BOOTSTRAP_ADMIN: timoboll
+        # LAB: zaehlwerk's table mock (flux#666) at https://buttons.<EDGE_DOMAIN>
+        # -- emulated buttons, and a page that pauses and tunes the emulated
+        # board. The board is piezo-a in ./lab/esp-mock (it enrols through
+        # ACME, which the flux piezo-sim does not), so the page points at its
+        # control Service and the piezo-sim stays off. REMOVE ON THE
+        # LATTEPANDA with the edge-lab layer: the page takes points back.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret

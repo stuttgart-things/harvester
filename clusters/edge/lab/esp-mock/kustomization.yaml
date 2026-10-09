@@ -5,7 +5,6 @@ resources:
   - namespace.yaml
   - challenge.yaml
   - piezo-a.yaml
-  - buttons.yaml
 # The edge root CA the "device" trusts -- a copy of ../../edge-root-ca.crt
 # (kustomize does not load files outside this directory). Public.
 configMapGenerator:

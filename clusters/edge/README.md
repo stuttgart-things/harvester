@@ -24,7 +24,7 @@ and how to build one is general and lives in [`docs/edge`](../../docs/edge/index
 | Kubernetes | k3s `v1.35.9+k3s1` on sqlite, Cilium 1.20.2, Gateway API v1.6.1 ([`k3s/`](./k3s/README.md)) |
 | Gateway VIP / internal names | `10.100.136.223` / `*.edge-tt-test1.4sthings.tiab.ssc.sva.de` (LabDA Clusterbook) |
 | Players' VIP / public names | `10.100.136.226` / `*.sthings-edge.com` (Hetzner DNS, Let's Encrypt) |
-| Content | `oci://ghcr.io/stuttgart-things/flux/repo` v1.125.0 |
+| Content | `oci://ghcr.io/stuttgart-things/flux/repo` v1.128.2 |
 | Secrets | `secrets/edge/` (shared by every edge cluster) → generated [`cluster-secrets/`](./cluster-secrets/) |
 | OpenBao | initialised **by hand** on 2026-10-04 (before self-init existed); the self-init users were created once via the API -- see [terraform/openbao](./terraform/openbao/README.md) |
 | Values | [`cluster-vars.yaml`](./cluster-vars.yaml) |
