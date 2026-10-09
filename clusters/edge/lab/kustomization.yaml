@@ -8,5 +8,6 @@ resources:
   - coredns-lab-zone.yaml
   - vault-issuer.yaml
   - play-routes.yaml
-  # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao)
+  # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao),
+  # and the table's buttons with a page to press them on
   - esp-mock.yaml
