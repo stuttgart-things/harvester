@@ -53,12 +53,15 @@ spec:
   # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
   # self-init with a terraform and a break-glass admin user (flux#640);
   # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643);
-  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645).
+  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645);
+  # v1.128.2: the table mock TABLETENNIS_ZAEHLWERK_BUTTONS_SIM and the
+  # piezo-sim/buttons-sim switches on the sops bundles (flux#666), plus
+  # OpenBao requests/limits (flux#657) and homerun2 catcher bumps.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.125.0
+    tag: v1.128.2
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
