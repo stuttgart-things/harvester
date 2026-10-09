@@ -1,0 +1,115 @@
+---
+# LAB ONLY: the table's two wireless buttons and their hub, emulated, with a
+# page to press them on (zaehlwerk tools/chain-mock/buttons, zaehlwerk#67).
+# For trying out the gestures of zaehlwerk-firmware#56 -- short = point,
+# long = take one back, both long -- and the faults the radio and the hub can
+# have, before the buttons exist as hardware.
+#
+#   https://buttons.${EDGE_DOMAIN}  -- start a match on the zaehlwerk page
+#   first; a button never starts one, it scores into the running match.
+#
+# Not tied to EDGE_ESP_MOCK_REPLICAS: unlike piezo-a it sends nothing on its
+# own, only when somebody presses on the page, so it does not double-count
+# next to a real board.
+#
+# No device certificate yet (piezo-a's lego init container): the mock does not
+# use one. Add it when the real buttons enrol that way.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buttons
+  namespace: esp-mock
+  labels:
+    app.kubernetes.io/name: buttons
+spec:
+  # One: the settings and the log live in the pod's memory and are shared by
+  # everyone on the page, which is right for one table and one hub.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: buttons
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: buttons
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: buttons
+          image: ghcr.io/stuttgart-things/zaehlwerk-buttons:v0.10.0
+          env:
+            # The hub calls zaehlwerk through the Gateway like piezo-a,
+            # trusting only the edge root.
+            - name: ZAEHLWERK_URL
+              value: https://zaehlwerk.${EDGE_DOMAIN}
+            - name: ZAEHLWERK_PUBLIC_URL
+              value: https://zaehlwerk.${EDGE_DOMAIN}
+            - name: SSL_CERT_FILE
+              value: /ca/root.crt
+            - name: BUTTONS_ADDR
+              value: ":8084"
+            - name: BUTTONS_SOURCE
+              value: buttons-lab
+            - name: BUTTONS_LONG_PRESS
+              value: 1s
+            - name: BUTTONS_BOTH_WINDOW
+              value: 400ms
+          ports:
+            - name: http
+              containerPort: 8084
+          readinessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /healthz, port: http}
+            periodSeconds: 30
+          volumeMounts:
+            - {name: ca, mountPath: /ca, readOnly: true}
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {memory: 64Mi}
+      volumes:
+        - name: ca
+          configMap:
+            name: edge-root-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buttons
+  namespace: esp-mock
+spec:
+  selector:
+    app.kubernetes.io/name: buttons
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# On the internal Gateway, next to zaehlwerk (same listener, same wildcard
+# certificate). Not on edge-play-gateway: a page that takes points back is not
+# for players.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: buttons
+  namespace: esp-mock
+spec:
+  parentRefs:
+    - name: ${EDGE_GATEWAY_NAME}
+      namespace: default
+      sectionName: https
+  hostnames:
+    - buttons.${EDGE_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: buttons
+          port: 80
