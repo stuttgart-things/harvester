@@ -56,12 +56,14 @@ spec:
   # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645);
   # v1.128.2: the table mock TABLETENNIS_ZAEHLWERK_BUTTONS_SIM and the
   # piezo-sim/buttons-sim switches on the sops bundles (flux#666), plus
-  # OpenBao requests/limits (flux#657) and homerun2 catcher bumps.
+  # OpenBao requests/limits (flux#657) and homerun2 catcher bumps;
+  # v1.128.4: zaehlwerk-buttons v0.12.0, the table mock's display device
+  # (flux#671).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.128.2
+    tag: v1.128.4
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
