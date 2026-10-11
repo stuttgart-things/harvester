@@ -30,7 +30,6 @@ and can be overridden in `/etc/edge-role` (`auto` | `tt` | `kiosk` | `none`).
 | `edge.yaml` | Tool profile: kubectl, helm, k9s, helmfile, flux, cilium-cli, kubectl-slice, sops, age |
 | [`k3s/`](./k3s/README.md) | k3s + Cilium: inventory, vars, collection requirements, run book |
 | `.sourceignore` | Keeps Flux out of this folder (everything here is run by hand) |
-| `.claude/` | Handoff notes; `.claude/kiosk.yaml` is the old standalone kiosk play (fallback until the SthingsNet boot test passed) |
 
 ## 1. Network (Opal)
 
