@@ -1,0 +1,15 @@
+- hosts: "{{ target_host | default('all') }}"
+  become: true
+  vars:
+    download_dir: "/tmp/downloads"
+  vars_files:
+    - "{{ profile | default('tools') }}.yaml"
+  pre_tasks:
+    - name: Limit installation to selected tools
+      ansible.builtin.set_fact:
+        bin: "{{ bin | dict2items | selectattr('key', 'in', tools_list) | items2dict }}"
+      vars:
+        tools_list: "{{ tools.split(',') if tools is string else tools }}"
+      when: tools is defined
+  roles:
+    - role: sthings.container.download_install_binary

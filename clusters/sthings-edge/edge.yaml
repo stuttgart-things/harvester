@@ -1,0 +1,131 @@
+---
+# Slim tool profile for the edge box (sthings-edge)
+# Usage (README, step 6):
+#   ansible-playbook -i inventory tools.yaml -e target_host=edge -e profile=edge
+#
+# Entries copied from collections/container/tools.yaml (stuttgart-things/ansible),
+# reduced to what is needed to operate k3s + Cilium + Flux on the box.
+# kubectl and helm live HERE only: k3s/k3s-vars.yaml sets install_kubectl and
+# install_helm to false, so the k3s run doesn't install other versions.
+# sops/age: same as the lab node (../edge/k3s/tools.yaml), for Flux's SOPS secrets.
+
+kubectl_version: v1.35.0 # datasource=github-tags depName=kubernetes/kubectl
+helm_version: 4.3.0 # datasource=github-tags depName=helm/helm
+k9s_version: 0.51.0 # datasource=github-tags depName=derailed/k9s
+helmfile_version: 1.8.1 # datasource=github-tags depName=helmfile/helmfile
+flux_version: 2.9.6 # datasource=github-tags depName=fluxcd/flux2
+cilium_version: 0.20.1 # datasource=github-tags depName=cilium/cilium-cli
+kubectl_slice_version: 1.4.2 # datasource=github-tags depName=patrickdappollonio/kubectl-slice
+sops_version: 3.12.1 # datasource=github-tags depName=getsops/sops
+age_version: 1.2.1 # datasource=github-tags depName=FiloSottile/age
+
+bin:
+  kubectl:
+    bin_name: "kubectl"
+    bin_version: "{{ kubectl_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://dl.k8s.io/{{ kubectl_version }}/bin/linux/amd64/kubectl"
+    bin_to_copy: "kubectl"
+    to_remove: "kubectl"
+    bin_dir: "/usr/local/bin"
+    version_cmd: " version --client"
+    target_version: "{{ kubectl_version }}"
+
+  helm:
+    bin_name: "helm"
+    bin_version: "{{ helm_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://get.helm.sh/helm-v{{ helm_version }}-linux-amd64.tar.gz"
+    bin_to_copy: "linux-amd64/helm"
+    to_remove: "linux-amd64"
+    bin_dir: "/usr/local/bin"
+    version_cmd: " version"
+    target_version: "{{ helm_version }}"
+
+  k9s:
+    bin_name: "k9s"
+    bin_version: "v{{ k9s_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/derailed/k9s/releases/download/v{{ k9s_version }}/k9s_Linux_amd64.tar.gz"
+    bin_to_copy: "k9s"
+    to_remove: "k9s"
+    bin_dir: "/usr/local/bin"
+    version_cmd: " version --short"
+    target_version: "v{{ k9s_version }}"
+
+  helmfile:
+    bin_name: helmfile
+    bin_version: "v{{ helmfile_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/helmfile/helmfile/releases/download/v{{ helmfile_version }}/helmfile_{{ helmfile_version }}_linux_amd64.tar.gz"
+    bin_to_copy: helmfile
+    to_remove: helmfile
+    bin_dir: "/usr/bin"
+    version_cmd: " --version"
+    target_version: "v{{ helmfile_version }}"
+
+  flux:
+    bin_name: flux
+    bin_version: "{{ flux_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/fluxcd/flux2/releases/download/v{{ flux_version }}/flux_{{ flux_version }}_linux_amd64.tar.gz"
+    bin_to_copy: flux
+    to_remove: ""
+    bin_dir: "/usr/bin"
+    version_cmd: "version"
+    target_version: "{{ flux_version }}"
+
+  cilium:
+    bin_name: cilium
+    bin_version: "{{ cilium_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/cilium/cilium-cli/releases/download/v{{ cilium_version }}/cilium-linux-amd64.tar.gz"
+    bin_to_copy: cilium
+    to_remove: ""
+    bin_dir: "/usr/bin"
+    version_cmd: "version"
+    target_version: "{{ cilium_version }}"
+
+  kubectl_slice:
+    bin_name: kubectl-slice
+    bin_version: "v{{ kubectl_slice_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/patrickdappollonio/kubectl-slice/releases/download/v{{ kubectl_slice_version }}/kubectl-slice_linux_x86_64.tar.gz"
+    bin_to_copy: kubectl-slice
+    to_remove: kubectl-slice
+    bin_dir: "/usr/bin"
+    version_cmd: " --version"
+    target_version: "v{{ kubectl_slice_version }}"
+
+  sops:
+    bin_name: sops
+    bin_version: "{{ sops_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/getsops/sops/releases/download/v{{ sops_version }}/sops-v{{ sops_version }}.linux.amd64"
+    bin_to_copy: "sops-v{{ sops_version }}.linux.amd64"
+    to_remove: ""
+    bin_dir: /usr/local/bin/sops         # a file path: renames the download to sops
+    version_cmd: " --version --disable-version-check"
+    target_version: "{{ sops_version }}"
+
+  age:
+    bin_name: age
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"
+
+  age-keygen:
+    bin_name: age-keygen
+    bin_version: "{{ age_version }}"
+    check_bin_version_before_installing: true
+    source_url: "https://github.com/FiloSottile/age/releases/download/v{{ age_version }}/age-v{{ age_version }}-linux-amd64.tar.gz"
+    bin_to_copy: age/age-keygen
+    to_remove: age
+    bin_dir: /usr/local/bin
+    version_cmd: " --version"
+    target_version: "{{ age_version }}"

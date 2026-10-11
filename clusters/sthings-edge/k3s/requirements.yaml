@@ -1,0 +1,28 @@
+---
+# Collections for sthings-edge (base OS, kiosk, k3s). Same as
+# ../../edge/k3s/requirements.yaml (the lab node's tested k3s run), except
+# sthings.baseos: >= 26.1011.1463 for sthings.baseos.kiosk with the tty1 route
+# wait. Install with --upgrade, or older collections in ~/.ansible/collections win:
+#   ansible-galaxy collection install -r k3s/requirements.yaml --upgrade
+collections:
+  - name: community.crypto
+    version: 3.5.0
+  - name: community.general
+    version: 13.5.0
+  - name: ansible.posix
+    version: 2.2.2
+  - name: kubernetes.core
+    version: 6.6.0
+  - name: community.docker
+    version: 5.4.0
+  - name: community.vmware
+    version: 7.0.0
+  - name: awx.awx
+    version: 24.6.1
+  - name: community.hashi_vault
+    version: 7.1.0
+  - name: ansible.netcommon
+    version: 8.7.1
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-baseos-26.1011.1463/sthings-baseos-26.1011.1463.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-rke-26.1003.1401/sthings-rke-26.1003.1401.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1002.1398/sthings-container-26.1002.1398.tar.gz
