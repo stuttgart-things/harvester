@@ -1,0 +1,2 @@
+[edge]
+sthings-edge ansible_host=192.168.8.10 ansible_user=sthings

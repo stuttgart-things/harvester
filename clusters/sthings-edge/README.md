@@ -1,0 +1,192 @@
+# sthings-edge
+
+Bare-metal edge box (LattePanda Mu, Intel N100, eMMC) for the table tennis setup
+(Schmetterpause, Zählwerk, ESPs). It runs in two networks:
+
+| Network | Router | Gateway | Role | Runs |
+|---|---|---|---|---|
+| Table tennis network | GL.iNet Opal (GL-SFT1200) | `192.168.8.1` | `tt` | k3s + Cilium, no browser |
+| SthingsNet | dd-wrt | `192.168.10.1` | `kiosk` | Firefox kiosk, no k3s |
+
+The role is detected from the default gateway by `/usr/local/bin/edge-role`
+and can be overridden in `/etc/edge-role` (`auto` | `tt` | `kiosk` | `none`).
+
+## Status (2026-10-11)
+
+| Step | State |
+|---|---|
+| 1–5 Network, OS, netplan, control node, base OS | done |
+| 6 Tools (`edge.yaml`) | done, incl. sops/age |
+| 7 Kiosk | done via `sthings.baseos.kiosk`. Reboot with forced role `kiosk` tested. Boot in SthingsNet (`auto`) not tested yet |
+| 8 k3s + Cilium | done 2026-10-11: k3s v1.35.9 + Cilium 1.20.2, reboots in `auto`/`kiosk`/`auto` passed ([`k3s/`](./k3s/README.md)) |
+| 9 Flux | not started (needs this box's own cluster vars) |
+
+## Files
+
+| File | Purpose |
+|---|---|
+| `inventory` | Ansible inventory (`[edge]` → `192.168.8.10`) for base OS, tools and kiosk |
+| `tools.yaml` | Tool install play (wraps `sthings.container.download_install_binary`, supports `-e tools=…`) |
+| `edge.yaml` | Tool profile: kubectl, helm, k9s, helmfile, flux, cilium-cli, kubectl-slice, sops, age |
+| [`k3s/`](./k3s/README.md) | k3s + Cilium: inventory, vars, collection requirements, run book |
+| `.sourceignore` | Keeps Flux out of this folder (everything here is run by hand) |
+| `.claude/` | Handoff notes; `.claude/kiosk.yaml` is the old standalone kiosk play (fallback until the SthingsNet boot test passed) |
+
+## 1. Network (Opal)
+
+- Static lease: MAC `00:e0:4c:0a:f6:ff` (`enp1s0`) → `192.168.8.10`, hostname `sthings-edge`
+  (GL UI: NETWORK → LAN → Address Reservation, or LuCI: DHCP and DNS → Static Leases)
+- Optional: local domain `edge.sthings.lab` (LuCI → DHCP and DNS → General)
+- SthingsNet (dd-wrt) gets its own static lease for the same MAC; the host stays on DHCP.
+
+## 2. OS install
+
+- ISO: Ubuntu Server 26.04 LTS, `ubuntu-26.04.x-live-server-amd64.iso`
+- Storage: use entire disk + LVM, **no LUKS** (headless boot). Logical volumes in `ubuntu-vg`:
+
+  | LV | Mount | Size |
+  |---|---|---|
+  | `root` | `/` | 27G |
+  | `home` | `/home` | 6.8G |
+  | `var` | `/var` | 21G (k3s images, local-path volumes) |
+
+- Check mount points before installing (`home` → `/home`, `var` → `/var`).
+- Install OpenSSH server, import SSH key, no featured snaps.
+
+## 3. Netplan
+
+`/etc/netplan/00-installer-config.yaml` (mode `600`):
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    enp1s0:
+      match:
+        macaddress: 00:e0:4c:0a:f6:ff
+      set-name: enp1s0
+      dhcp4: true
+      dhcp6: true
+    enp2s0:
+      optional: true          # don't block boot without a cable
+      accept-ra: false
+      addresses: [10.99.99.1/24]   # rescue port: laptop 10.99.99.2/24 → ssh sthings@10.99.99.1
+```
+
+Apply with `sudo netplan try`.
+
+## 4. Control node (Mac)
+
+```bash
+brew install ansible
+# remove leftovers that shadow the brew install
+pipx uninstall ansible-core 2>/dev/null
+sed -i '' '/alias ansible=ansible-community/d' ~/.zshrc
+hash -r && ansible --version
+
+# collections (base OS, kiosk, k3s)
+ansible-galaxy collection install -r k3s/requirements.yaml --upgrade
+
+ansible -i inventory edge -m ping
+```
+
+Passwordless sudo on the box (then `-K` is no longer needed):
+
+```bash
+echo "$USER ALL=(ALL) NOPASSWD:ALL" | sudo tee /etc/sudoers.d/$USER
+sudo chmod 0440 /etc/sudoers.d/$USER
+sudo visudo -cf /etc/sudoers.d/$USER
+```
+
+## 5. Base OS
+
+```bash
+ansible-playbook -i inventory sthings.baseos.setup \
+  -e target_host=edge -e manage_filesystem=false -vv
+```
+
+`manage_filesystem=false` is required: the role misdetects bare metal as a KVM
+guest and does not find the eMMC (`mmcblk0`). The VG is fully allocated anyway.
+
+Swap must be off before k3s (already the case on the box):
+
+```bash
+sudo swapoff -a && sudo sed -i '/swap.img/d' /etc/fstab && sudo rm -f /swap.img
+```
+
+## 6. Tools
+
+```bash
+# whole profile
+ansible-playbook -i inventory tools.yaml -e target_host=edge -e profile=edge
+
+# selected tools only (dict keys of the profile, e.g. kubectl_slice with underscore)
+ansible-playbook -i inventory tools.yaml -e target_host=edge -e profile=edge \
+  -e tools=kubectl,helm,k9s
+```
+
+Always pass `-e profile=…`: the default (`tools`) would load `tools.yaml`, i.e. the play itself.
+kubectl and helm are managed here only. The k3s run has `install_kubectl`/`install_helm`
+set to `false`, so the two plays don't overwrite each other's versions.
+
+## 7. Kiosk (role `kiosk`)
+
+Needs `sthings-baseos-26.1011.1463` or later (stuttgart-things/ansible#1367: in `auto`
+mode tty1 waits up to `edge_role_wait_seconds` for a default route; `26.1011.1459` lacks this).
+
+```bash
+ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
+  -e kiosk_url=https://<start-page>
+```
+
+Several pages, one tab each, optionally switching to the next tab every N seconds
+(stuttgart-things/ansible#1370, not released yet; tested on the box from the PR branch):
+
+```bash
+ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
+  -e kiosk_urls=https://<page-1>,https://<page-2> -e kiosk_rotate_seconds=30
+```
+
+How it works:
+
+- `getty@tty1` runs `/usr/local/bin/tty1-getty`, which autologins user `kiosk`
+  only in role `kiosk` (re-evaluated on every respawn), otherwise shows a normal login.
+- `~kiosk/.bash_profile` execs `cage` with `/usr/local/bin/kiosk-session`, which starts
+  Firefox (`.deb` from packages.mozilla.org) with one tab per URL. With rotation on, a loop
+  sends `xdotool key ctrl+Tab`. When Firefox exits, the session ends and getty logs in again.
+- Without rotation, switch tabs with Ctrl+Tab on a keyboard (there is no tab bar in kiosk mode).
+- Logs: `journalctl -t kiosk -b`
+
+Test in the table tennis network:
+
+```bash
+echo kiosk | sudo tee /etc/edge-role && sudo systemctl restart getty@tty1
+# Ctrl+Alt+F2 = console, Ctrl+Alt+F1 = kiosk
+echo auto | sudo tee /etc/edge-role && sudo systemctl restart getty@tty1
+```
+
+Known issues / decisions:
+
+- **Monitor must be connected** (`cat /sys/class/drm/*/status` shows `connected`), otherwise cage aborts.
+- **Firefox runs via Xwayland** (`MOZ_ENABLE_WAYLAND=0`): native Wayland triggers
+  `wlr_xdg_surface_schedule_configure: Assertion 'surface->initialized' failed` in cage 0.2.1.
+  This is also why `xdotool` (XTEST) can drive the tab rotation.
+- A plain systemd service (`PAMName=login`) did not get `seat0` from logind → replaced by tty1 autologin.
+- Harmless log lines:
+  - `Sandbox: CanCreateUserNamespace() … EPERM`: Ubuntu's AppArmor profile `firefox` covers `/usr/lib/firefox/firefox`.
+  - `[xwayland ei] EI setup failed`: XTEST works without libei.
+  - `xkbcomp` keycode warnings.
+
+## 8. k3s + Cilium (role `tt`)
+
+Installed from [`k3s/`](./k3s/README.md) (run book and results): k3s 1.35.9 on sqlite, Cilium 1.20.2,
+Gateway API v1.6.1. Kubeconfig `~/.kube/sthings-edge`. Same stack as the lab node `edge-tt-test1` ([`../edge/k3s`](../edge/k3s/README.md)).
+
+- k3s only starts in role `tt`: `/etc/systemd/system/k3s.service.d/edge-role.conf`
+  (`ExecCondition=/usr/local/bin/edge-role is tt`, installed by `sthings.baseos.kiosk`).
+  Run the install in the table tennis network only. Verified by reboots: in `kiosk` the unit
+  is skipped (`exec-condition`), in `tt` the node comes back Ready.
+- The k3s run enables **UFW** (allow list from baseos/`configure_rke_node`, no 80/tcp).
+- sthings.rke has no hook for k3s `node-ip` or Cilium `devices`. k3s picks `enp1s0` by
+  itself (default route). Keep the rescue port `enp2s0` out of L2 announcements with the
+  L2 policy (`interfaces: ["^enp1s0$"]`) when Flux is set up.

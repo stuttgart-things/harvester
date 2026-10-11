@@ -1,0 +1,52 @@
+---
+# Extra vars for sthings.rke.k3s_cluster on sthings-edge (LattePanda Mu).
+# Same k3s/Cilium stack as the lab node (../../edge/k3s/k3s-vars.yaml, runs of
+# 2026-10-03/05), so the Flux tree in ../../edge applies unchanged later.
+#   ansible-playbook -i k3s/inventory.ini sthings.rke.k3s_cluster -e @k3s/k3s-vars.yaml
+#
+# Run it ONLY in the table tennis network (role `tt`): k3s.service carries the
+# drop-in ExecCondition=/usr/local/bin/edge-role is tt (sthings.baseos.kiosk),
+# so in SthingsNet the unit never starts and the role waits for it in vain.
+#
+# Without being told, the role sets (k3s_config defaults): flannel none,
+# kube-proxy and network policy disabled, servicelb and traefik disabled.
+# local-path stays and is the default StorageClass.
+
+# baseos already ran with manage_filesystem=false (bare metal is misdetected
+# as KVM and mmcblk0 is not found); a k3s run must never touch the disks.
+manage_filesystem: false
+
+install_k3s: true
+k3s_state: present
+k3s_k8s_version: 1.35.9
+k3s_release_kind: k3s1
+# sqlite/kine instead of embedded etcd: one node that never grows, less RAM
+# and fewer writes on the eMMC. Decide before the first install -- switching
+# an existing cluster's datastore is not an in-place change.
+k3s_cluster_init: false
+
+cluster_setup: singlenode
+cluster_name: sthings-edge
+
+# Cilium 1.20.2 (first line tested with k8s 1.35), cilium-cli 0.20.1, Gateway
+# API v1.6.1 (one-way: v1.6 blocks CRD downgrades below v1.5).
+install_cilium: true
+cilium_version: 0.20.1
+cilium_chart_version: "1.20.2"
+cilium_gateway_api_crds_version: v1.6.1
+# The role default is ansible_default_ipv4 -- the same address in role tt;
+# pinned so a run never puts another address into k8sServiceHost.
+cilium_api_server_ip: 192.168.8.10
+# Pod pool 10.42.0.0/16 (role default) overlaps none of 192.168.8.0/24 (tt),
+# 192.168.10.0/24 (SthingsNet) or 10.99.99.0/24 (rescue port enp2s0).
+
+# kubectl (v1.35.0) and helm come from ../edge.yaml (sthings-edge tools play)
+# into /usr/local/bin. The role would add kubectl v1.36.5 in /usr/bin (shadowed)
+# and set helm back to 4.2.4, so the two plays would overwrite each other.
+# The role's tasks call kubectl from PATH. cilium-cli: both install 0.20.1.
+install_kubectl: false
+install_helm: false
+
+prepare_rancher_ha_nodes: true
+install_helm_diff: false
+fetched_kubeconfig_path: /tmp/kubeconfig-sthings-edge.yaml

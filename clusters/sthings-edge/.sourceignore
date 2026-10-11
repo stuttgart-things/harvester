@@ -1,0 +1,13 @@
+# Flux never reads anything in this folder yet: it is all run by hand
+# (Ansible from the Mac), not by a controller. Same idea as ../edge/.sourceignore.
+#   ./k3s          inventory, vars and runbook for the k3s install
+#   ./.claude      handoff notes, old standalone kiosk play
+#   inventory, tools.yaml, edge.yaml   base OS / tools / kiosk runs
+# When this box gets its own Flux tree, add it next to these and keep the
+# entries below.
+k3s/
+.claude/
+inventory
+tools.yaml
+edge.yaml
+*.md
