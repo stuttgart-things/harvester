@@ -219,7 +219,8 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
 ```
 
 Several pages, one tab each, optionally switching to the next tab every N seconds
-(stuttgart-things/ansible#1370, not released yet; tested on the box from the PR branch):
+(stuttgart-things/ansible#1370, in `sthings-baseos-26.1011.1465`; deployed 2026-10-12, `changed=0`
+against the PR version tested on the box):
 
 ```bash
 ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
@@ -464,7 +465,6 @@ kubectl top node
 
 - **SthingsNet:** boot test in `auto` (role `kiosk` by gateway, kiosk after the route wait, k3s skipped),
   then back in the table tennis network.
-- **Multi-tab kiosk:** stuttgart-things/ansible#1370 → new `sthings.baseos` release → bump `k3s/requirements.yaml`.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
 - **WLED:** the light-catcher still sends to `wled-mock`; set `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT`
   once there is a real LED strip.

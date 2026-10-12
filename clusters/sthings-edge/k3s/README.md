@@ -12,7 +12,7 @@ and the same Flux tree runs on top (with this box's own cluster vars, [`../READM
 |---|---|
 | [`inventory.ini`](./inventory.ini) | `[initial_master_node]` → `sthings-edge` / `192.168.8.10` (the role needs these groups) |
 | [`k3s-vars.yaml`](./k3s-vars.yaml) | k3s 1.35.9 on sqlite, Cilium 1.20.2 (cilium-cli 0.20.1), Gateway API v1.6.1, `k8sServiceHost` 192.168.8.10, kubectl/helm left to `../edge.yaml` |
-| [`requirements.yaml`](./requirements.yaml) | lab versions (sthings.rke 26.1003.1401, container 26.1002.1398) + sthings.baseos 26.1011.1463 |
+| [`requirements.yaml`](./requirements.yaml) | lab versions (sthings.rke 26.1003.1401, container 26.1002.1398) + sthings.baseos 26.1011.1465 (kiosk with route wait + multi-tab) |
 
 CLIs on the box come from [`../edge.yaml`](../edge.yaml) (kubectl v1.35.0, helm,
 k9s, flux 2.9.6, helmfile, cilium-cli, kubectl-slice, sops, age). The k3s run
