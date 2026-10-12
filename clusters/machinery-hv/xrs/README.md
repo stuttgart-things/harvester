@@ -26,6 +26,25 @@ The same four rules as the LabDA machinery cluster
    the ServiceAccount becomes that HarvesterConfig's creator -- limited to that
    one object.
 
+## Before an order: two clusterbook addresses
+
+Every `ClusterStack` takes **two** addresses from the clusterbook pool
+`192.168.10`: one for the node, and one for the gateway/DNS reservation
+the clusterbook-operator makes for the Argo CD registration. Check that two
+are free before the order PR goes up:
+
+```bash
+curl -sk https://clusterbook.platform.sthings.lab/api/v1/networks   # "Available" for 192.168.10 must be >= 2
+```
+
+With only one free, the VM still comes up and the order looks fine at
+first, but the reservation fails (`409 no available IPs in network`), and the
+Argo CD cluster secret, and with it every platform app, waits for ever.
+That error only shows in the clusterbook-operator log on platform, not on
+the ClusterStack (harvester#351). demo-hv hit exactly this, see *Stop 2* below.
+More addresses go into the pool in the live `networks-labul` CR, see
+[`../../platform-seeds/networkconfig-networks-labul.yaml`](../../platform-seeds/networkconfig-networks-labul.yaml).
+
 ## Deleting an XR
 
 ```bash
