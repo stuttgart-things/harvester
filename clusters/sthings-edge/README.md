@@ -19,7 +19,8 @@ and can be overridden in `/etc/edge-role` (`auto` | `tt` | `kiosk` | `none`).
 | 6 Tools (`edge.yaml`) | done, incl. sops/age |
 | 7 Kiosk | done via `sthings.baseos.kiosk`. Reboot with forced role `kiosk` tested. Boot in SthingsNet (`auto`) not tested yet |
 | 8 k3s + Cilium | done 2026-10-11: k3s v1.35.9 + Cilium 1.20.2, reboots in `auto`/`kiosk`/`auto` passed ([`k3s/`](./k3s/README.md)) |
-| 9 Flux | files rendered (own SOPS key `age1dpnx…`, escrowed for the master key); router DNS + bootstrap open |
+| 9 Flux | done 2026-10-12: 29/29 Kustomizations Ready, Gateways on `192.168.8.20` / `.21`, OpenBao PKI + ACME, MinIO, CNPG backup |
+| 10 Router (Opal) | done 2026-10-12: uplink `SVA Visitor` (repeater), dnsmasq `edge.sthings.lab` + VIP names |
 
 ## Files
 
@@ -220,6 +221,55 @@ sops -d clusters/sthings-edge/cluster-secrets/sops-age.enc.yaml | yq '.stringDat
 
 Hand-encrypted files the box reads (`infra/ca/edge-ca.enc.yaml`) need both keys:
 `sops -r -i --add-age "$(cat cluster-secrets/age.pub)" <file>`.
+
+### Result 2026-10-12
+
+| | |
+|---|---|
+| Bootstrap | blueprints/flux v3.11.0, `--sops-age-key` = the box key, `--age-public-key` = its public key (`validateAgeKeyPair` refuses a mismatch). Commit `eabf6bf` (`config.yaml`, `secrets.yaml`) |
+| Flux | 2.9.6, 29/29 Kustomizations Ready ~20 min after bootstrap; `edge-infra` Ready after ~3 min |
+| Gateways | `edge-gateway` `192.168.8.20`, `edge-play-gateway` `192.168.8.21`, both PROGRAMMED |
+| Certificates | `wildcard-tls` (edge CA) and `play-wildcard-tls` (Let's Encrypt via Hetzner DNS-01, no Hetzner record needed) |
+| OpenBao | self-initialised; terraform (`env/box`) 5 added; `sign-intermediate.sh` imported the "(openbao)" intermediate (until 2031); ACME directory answers |
+| MinIO | terraform (`env/box`) 4 added (bucket, user, policy, attachment) |
+| CNPG | continuous archiving working; manual backup `schmetterpause-db-manual` completed |
+| Memory | ~3.4 GiB of 7 GiB (48 %) with everything running |
+| Checks (Mac in the Opal LAN) | `https://schmetterpause.edge.sthings.lab/` 200, `zaehlwerk` 302, `openbao …/v1/sys/health` 200 (all `--cacert edge-root-ca.crt`); `https://schmetterpause.sthings-edge.com/` 200 (public CA) |
+
+Hiccups:
+- `HelmRelease homerun2/redis-stack` hit its install timeout while the image came down over the visitor Wi-Fi and stalled (`RetriesExceeded`), though the pod came up right after.
+  Fix: `sudo flux --kubeconfig /etc/rancher/k3s/k3s.yaml reconcile helmrelease redis-stack -n homerun2 --reset` on the box.
+- The MinIO terraform failed on the `import` block for the bucket (it only exists on a MinIO where the chart created it). The block is removed; Terraform now creates the bucket.
+- `sign-intermediate.sh` needed GNU `shred`; it now falls back to `rm -P` on macOS.
+- The first scheduled CNPG backup fails on a fresh rollout (known, docs/edge/notes.md).
+
+Open: the L2 policy of the flux `cilium-lb` component has no `interfaces` field, so Cilium announces the VIPs on every
+interface, including the rescue port `enp2s0` when a cable is in it. Needs a variable in stuttgart-things/flux.
+
+### Router (Opal, GL firmware 4.8.3 / OpenWrt 18.06)
+
+SSH as `root` with the Mac's `~/.ssh/id_rsa` (Dropbear offers only `ssh-rsa`:
+`ssh -o HostKeyAlgorithms=+ssh-rsa -o PubkeyAcceptedAlgorithms=+ssh-rsa root@192.168.8.1`).
+Uplink: repeater to `SVA Visitor` (no password), own Wi-Fi `sthings-edge`, DHCP `.100–.249`.
+Backup before the change: `/etc/config/dhcp.bak-20261012`. Applied (docs/edge/architecture.md, *DNS commands*):
+
+```bash
+uci set dhcp.@dnsmasq[0].domain='edge.sthings.lab'
+uci set dhcp.@dnsmasq[0].local='/edge.sthings.lab/'
+uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
+uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
+for n in schmetterpause zaehlwerk buttons openbao minio minio-console led-catcher light-catcher \
+         light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout; do
+  uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
+done
+uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
+uci set dhcp.@host[0].name='sthings-edge'      # static lease 00:E0:4C:0A:F6:FF -> 192.168.8.10
+uci commit dhcp && /etc/init.d/dnsmasq restart
+```
+
+A new HTTPRoute hostname needs its own `address` line. List what the cluster serves:
+`kubectl get httproute -A -o jsonpath='{range .items[*]}{.spec.hostnames[*]}{"\n"}{end}'`.
+The public record `*.sthings-edge.com` stays on the lab VIP: inside the Opal LAN the router answers it.
 
 kubectl/flux from the Mac go through an SSH tunnel: macOS blocks the Homebrew binaries on the
 LAN, see [k3s/README.md](./k3s/README.md).

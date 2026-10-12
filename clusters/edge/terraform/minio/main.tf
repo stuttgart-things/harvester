@@ -2,14 +2,12 @@
 // policy that allows that user exactly that bucket -- instead of the root
 // credentials (harvester#364, phase 1b).
 
-// The bucket first existed through the chart's `defaultBuckets`
-// (../../apps/minio.yaml, #365). Adopted here; from now on Terraform is its
-// only owner and defaultBuckets is removed.
-import {
-  to = minio_s3_bucket.cnpg
-  id = var.cnpg_bucket
-}
-
+// Terraform is the bucket's only owner. On edge-tt-test1 it first existed
+// through the chart's `defaultBuckets` (#365) and was adopted once with an
+// `import` block; that block is gone because it fails on a fresh MinIO
+// ("cannot import bucket: the bucket does not exist", sthings-edge
+// 2026-10-12) -- there Terraform creates the bucket. The lab state already
+// holds it, so removing the block changes nothing there.
 resource "minio_s3_bucket" "cnpg" {
   bucket = var.cnpg_bucket
   acl    = "private"

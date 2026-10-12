@@ -33,7 +33,9 @@ DAYS=${DAYS:-1826}  # 5 years, the mount's max_lease_ttl
 
 umask 077
 WORK=$(mktemp -d)
-cleanup() { find "${WORK}" -type f -exec shred -u {} + 2>/dev/null || true; rm -rf "${WORK}"; }
+# shred is GNU coreutils; macOS has none, but rm -P overwrites before unlinking
+wipe() { if command -v shred >/dev/null; then shred -u "$@"; else rm -P "$@"; fi; }
+cleanup() { find "${WORK}" -type f -exec sh -c 'for f; do if command -v shred >/dev/null; then shred -u "$f"; else rm -P "$f"; fi; done' _ {} + 2>/dev/null || true; rm -rf "${WORK}"; }
 trap cleanup EXIT
 
 api() { # method path [json]
@@ -83,7 +85,7 @@ openssl x509 -req -in "${WORK}/int.csr" -CA "${WORK}/root.crt" -CAkey "${WORK}/r
   -CAcreateserial -CAserial "${WORK}/root.srl" -sha384 -days "${DAYS}" \
   -extfile "${WORK}/ext.cnf" -extensions v3_int -out "${WORK}/int.crt" 2>/dev/null
 openssl verify -CAfile "${CA}" "${WORK}/int.crt"
-shred -u "${WORK}/root.key"
+wipe "${WORK}/root.key"
 
 echo "3/3 import into OpenBao"
 cat "${WORK}/int.crt" "${CA}" > "${WORK}/chain.pem"

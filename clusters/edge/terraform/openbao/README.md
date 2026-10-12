@@ -59,7 +59,7 @@ ACME directory: `https://openbao.<domain>/v1/pki/acme/directory` (or
 |---|---|---|
 | `openbao_addr` | `https://openbao.edge-tt-test1.4sthings.tiab.ssc.sva.de` | `https://openbao.edge.sthings.lab` |
 | `acme_allowed_domains` | `edge-tt-test1.4sthings.tiab.ssc.sva.de` (Clusterbook wildcard) | `edge.sthings.lab` (OpenWrt names the devices) |
-| `acme_dns_resolver` | empty: the cluster DNS (with the lab zone forward) | the OpenWrt router, `<ip>:53` -- **`OPENWRT_LAN_IP` is a placeholder** until the router exists; OpenBao rejects it, so the box run fails loudly instead of validating against the wrong DNS |
+| `acme_dns_resolver` | empty: the cluster DNS (with the lab zone forward) | the OpenWrt router `192.168.8.1:53` (GL.iNet Opal; applied on sthings-edge 2026-10-12) |
 
 Passed with `--extra-files`; there are no defaults, so a run without an
 environment file fails. Checked 2026-10-05 on the lab with v0.136.0: `No
