@@ -1,11 +1,13 @@
-# Flux never reads anything in this folder yet: it is all run by hand
-# (Ansible from the Mac), not by a controller. Same idea as ../edge/.sourceignore.
-#   ./k3s          inventory, vars and runbook for the k3s install
+# Flux never reads these: they are run by hand (Ansible from the Mac) or are
+# render input, not Kubernetes objects. Same idea as ../edge/.sourceignore.
+#   ./k3s                inventory, vars and runbook for the k3s install
 #   inventory, tools.yaml, edge.yaml   base OS / tools / kiosk runs
-# When this box gets its own Flux tree, add it next to these and keep the
-# entries below.
+#   ./cluster-apps.yaml  input of blueprints render-cluster-apps (ClusterApps)
+# kustomization.yaml (generated) lists only the Flux objects; this keeps it
+# that way even if that file goes.
 k3s/
 inventory
 tools.yaml
 edge.yaml
+cluster-apps.yaml
 *.md

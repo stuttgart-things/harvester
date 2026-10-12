@@ -1,0 +1,8 @@
+---
+creation_rules:
+  - path_regex: (^|/)sops-age\.enc\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+  - path_regex: (^|/)secrets/.*\.enc\.yaml$
+    encrypted_regex: ^(data|stringData)$
+    age: age1dpnxq7tt9fqj7avs0euv69c5jaj70z9t826dhmjy2ll6t93a9gcsm3fx2a,age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
