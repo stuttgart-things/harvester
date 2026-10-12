@@ -486,4 +486,3 @@ Tested 2026-10-12: switch to `led-edge` → `LAN changed to edge` → catcher on
 `homerun2-led-matrix` on the box's Redis, `https://matrix.sthings.lab` 200. Not tested yet: the way back and
 cold boots. Opal changes: static lease `B8:27:EB:D9:33:DB` → `.30` and the `matrix.sthings.lab` address
 (backup `/etc/config/dhcp.bak-20261012-matrix`).
-
