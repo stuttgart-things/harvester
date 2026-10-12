@@ -1,0 +1,29 @@
+---
+# Redis of the box on the LAN (192.168.8.22) for the LED matrix Pi: ../lan/redis-lb.yaml. The
+# Service lives in namespace homerun2, which the homerun2 app creates -- so a Kustomization of
+# its own that waits for it (the namespace pattern of play-routes.yaml).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: redis-lb
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  dependsOn:
+    - name: homerun2
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/sthings-edge/lan
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: false
