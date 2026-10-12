@@ -11,3 +11,4 @@ tools.yaml
 edge.yaml
 cluster-apps.yaml
 *.md
+kiosk.yaml

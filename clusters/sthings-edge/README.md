@@ -40,6 +40,7 @@ This README is the run book for this box, in build order. The general edge docs
 | `infra/ca.yaml`, `infra/ca/edge-ca.enc.yaml` | the persistent edge intermediate (cert-manager), encrypted for the box key + master |
 | `play/` | the players' route of schmetterpause on `edge-play-gateway` |
 | `edge-root-ca.crt` | the public edge root (copy) -- what clients trust |
+| `kiosk.yaml` | what the kiosk shows (tabs, zoom, rotation, reset) -- fetched by the box from GitHub |
 | `sthings-lab-ca.crt` | public CA `C=DE, O=sva, CN=sthings.lab` (until 2036-08-30) of `*.homerun2-dev.sthings.lab` -- for the kiosk Firefox (`kiosk_ca_certs`) |
 | `.sourceignore` | keeps Flux away from the Ansible files and the render input |
 
@@ -228,21 +229,32 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
   -e kiosk_urls=https://<page-1>,https://<page-2> -e kiosk_rotate_seconds=30
 ```
 
-**The kiosk in SthingsNet** (2026-10-12) shows three homerun2-dev pages, rotating every 30 s and holding the
-tab for 60 s after keyboard/mouse input. Their certificates come from the private CA `CN=sthings.lab`
-([`sthings-lab-ca.crt`](./sthings-lab-ca.crt)); Firefox on Linux ignores the system store, so the play installs
-it via policy. `kiosk_ca_certs` is stuttgart-things/ansible#1371, `kiosk_rotate_pause_seconds` #1372 (not
-released yet; tested on the box from the branches):
+**What the kiosk shows is declared in [`kiosk.yaml`](./kiosk.yaml)** -- tabs (URL + zoom), tab rotation,
+pause after input, reset to the start URLs after inactivity. The box fetches it from GitHub (raw URL of
+`main`) at every kiosk start and every 5 minutes; a change restarts the kiosk. **Change the file, merge,
+done** -- no Ansible run, in either network. An invalid file is ignored (the last valid copy stays), see
+`journalctl -t kiosk -b`. GitHub's raw cache adds up to 5 min.
+
+The play is needed only for the box itself and for the private CA of the pages: `*.homerun2-dev.sthings.lab`
+comes from `CN=sthings.lab` ([`sthings-lab-ca.crt`](./sthings-lab-ca.crt)), and Firefox on Linux ignores the
+system store. `kiosk_ca_certs`, `kiosk_rotate_pause_seconds`, `kiosk_reset_idle_seconds`/`kiosk_tab_zoom` and
+`kiosk_config_url` are stuttgart-things/ansible#1371–#1374 (not released yet; tested on the box from the branches):
 
 ```bash
 ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
-  -e kiosk_urls=https://led-catcher.homerun2-dev.sthings.lab/,https://core-catcher.homerun2-dev.sthings.lab/,https://flux.homerun2-dev.sthings.lab/ \
-  -e kiosk_rotate_seconds=30 -e kiosk_rotate_pause_seconds=60 \
+  -e kiosk_config_url=https://raw.githubusercontent.com/stuttgart-things/harvester/main/clusters/sthings-edge/kiosk.yaml \
+  -e kiosk_url=https://www.google.de \
   -e kiosk_ca_certs=$PWD/sthings-lab-ca.crt
 ```
 
-The play can run in either network (in SthingsNet the box has another address, e.g.
-`-i "192.168.10.111," -u sthings -e target_host=all`). The homerun2-dev names resolve only in SthingsNet.
+`kiosk_url` is only the fallback for a first start without network. The play can run in either network
+(in SthingsNet the box has another address, e.g. `-i "192.168.10.111," -u sthings -e target_host=all`).
+The homerun2-dev names resolve only in SthingsNet.
+
+Tested 2026-10-12 in SthingsNet: tabs from `kiosk.yaml`, all three load with the CA; rotation holds the tab
+for the pause after real keyboard/mouse input; reset after inactivity restarts with the start URLs; per-tab
+zoom lands in Firefox's profile (`core-catcher 0.8`, `flux 1.3`); a pushed change of the file was picked
+up after ~2.5 min, an invalid one (`zoom: 9000`) was ignored without a restart.
 
 How it works:
 
@@ -481,12 +493,13 @@ kubectl top node
 | SthingsNet: box not in `arp -an`, or `No route to host` to a homerun2-dev VIP | a loose cable on the dd-wrt side (2026-10-12); the box takes a DHCP address there (`192.168.10.111`) |
 | kiosk: Firefox shows a certificate error | the page's CA is missing in `kiosk_ca_certs` (Firefox on Linux ignores `/etc/ssl/certs`) |
 | kiosk: black screen, monitor plugged in after boot | `sudo systemctl restart getty@tty1` |
+| kiosk ignores a change of `kiosk.yaml` | `journalctl -t kiosk -b`: `invalid kiosk config: …` = the file was rejected; otherwise wait (check interval + raw cache, up to ~10 min) |
 
 ## Open
 
 - **Back in the table tennis network:** check that k3s and Flux come back (29/29 Ready) after the SthingsNet boot.
-- **Kiosk releases:** stuttgart-things/ansible#1371 (`kiosk_ca_certs`) and #1372 (`kiosk_rotate_pause_seconds`)
-  → new `sthings.baseos` release → bump `k3s/requirements.yaml`.
+- **Kiosk releases:** stuttgart-things/ansible#1371 → #1372 → #1373 → #1374 (stacked) → new `sthings.baseos`
+  release → bump `k3s/requirements.yaml` → run the play once with the `main` raw URL.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
 - **WLED:** the light-catcher still sends to `wled-mock`; set `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT`
   once there is a real LED strip.
