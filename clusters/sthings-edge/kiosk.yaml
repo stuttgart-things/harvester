@@ -1,0 +1,17 @@
+---
+# What the sthings-edge kiosk shows (role kiosk, SthingsNet). Read by the box itself:
+# kiosk-session fetches this file from GitHub (raw URL of main) at every start and every
+# 5 minutes; a change restarts the kiosk. Change it here, merge, done -- no Ansible run.
+# Not a Kubernetes object (.sourceignore). Format: stuttgart-things/ansible
+# collections/baseos/kiosk.yaml, kiosk-config. Pages behind a private CA also need the CA in
+# the play's kiosk_ca_certs (README, step 7).
+tabs:
+  - url: https://led-catcher.homerun2-dev.sthings.lab/
+    zoom: 100
+  - url: https://core-catcher.homerun2-dev.sthings.lab/
+    zoom: 80
+  - url: https://flux.homerun2-dev.sthings.lab/
+    zoom: 130
+rotate_seconds: 30          # switch to the next tab every 30 s
+rotate_pause_seconds: 60    # ... but not within 60 s after keyboard/mouse input
+reset_idle_seconds: 300     # 5 min after the last use: all tabs back to these URLs
