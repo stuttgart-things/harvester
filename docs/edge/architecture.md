@@ -216,10 +216,11 @@ dig +short NS sthings-edge.com @a.gtld-servers.net +norec      # delegation: hyd
 kubectl run dnstest --rm -i --restart=Never --image=curlimages/curl -- nslookup schmetterpause.sthings-edge.com
 ```
 
-### Box: the router (dnsmasq) -- planned
+### Box: the router (dnsmasq)
 
-Not applied yet (the router is new). On the GL firmware via SSH (`uci`),
-addresses as planned in harvester#364:
+Applied on sthings-edge 2026-10-12 (the full list of names there:
+[`clusters/sthings-edge/README.md`](../../clusters/sthings-edge/README.md), *Router*).
+On the GL firmware via SSH (`uci`), addresses as planned in harvester#364:
 
 ```bash
 # the edge domain, never forwarded upstream
