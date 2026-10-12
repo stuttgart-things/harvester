@@ -469,3 +469,21 @@ kubectl top node
 - **WLED:** the light-catcher still sends to `wled-mock`; set `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT`
   once there is a real LED strip.
 - **Offline:** images and charts still come from the internet ([runbook.md](../../docs/edge/runbook.md), *Still online*).
+
+## 12. LED matrix (sthings-matrix Pi) in both networks
+
+The matrix Pi ([`../../hosts/matrix`](../../hosts/matrix/README.md)) travels with the box. It joins whichever
+Wi-Fi is there and consumes the Redis of that network (stuttgart-things/ansible#1376, `led_networks`):
+
+| | SthingsNet | Table tennis (Opal) |
+|---|---|---|
+| Wi-Fi | `sthings` (netplan) | `sthings-edge` (NM `led-edge`, priority 10) |
+| Pi | `192.168.10.120` | `192.168.8.30` (static lease on the Opal) |
+| `matrix.sthings.lab` | dd-wrt | Opal: `address=/matrix.sthings.lab/192.168.8.30` |
+| Redis | homerun2-dev `192.168.10.179` | **the box** `192.168.8.22` ([`lan/redis-lb.yaml`](./lan/redis-lb.yaml), Kustomization `redis-lb` in [`play/`](./play/)) |
+
+Tested 2026-10-12: switch to `led-edge` → `LAN changed to edge` → catcher on `192.168.8.22`, consumer group
+`homerun2-led-matrix` on the box's Redis, `https://matrix.sthings.lab` 200. Not tested yet: the way back and
+cold boots. Opal changes: static lease `B8:27:EB:D9:33:DB` → `.30` and the `matrix.sthings.lab` address
+(backup `/etc/config/dhcp.bak-20261012-matrix`).
+

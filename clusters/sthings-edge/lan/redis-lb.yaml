@@ -1,0 +1,45 @@
+---
+# Redis on the LAN, for the LED matrix Pi (hosts/matrix) when it travels with the box: in the
+# table tennis network its led-catcher consumes the `messages` stream from here (led_networks,
+# LAN "edge"); in SthingsNet from homerun2-dev's redis-stack-lb (192.168.10.179). Same pattern
+# as ../../homerun2-dev/redis-lb.yaml:
+#
+# - a Service of our own, not HOMERUN2_REDIS_SERVICE_TYPE=LoadBalancer on the chart's (that
+#   would expose Sentinel's 26379 too);
+# - its own pool with exactly 192.168.8.22 (outside the Opal's DHCP range .100-.249), selecting
+#   only this Service -- the default pool is the Gateway's /32;
+# - only 6379, password-protected (redis-stack-auth); the selector is the master pod.
+#
+# The L2 announcement policy of cilium-lb covers every LoadBalancer IP already.
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: homerun2-redis
+spec:
+  blocks:
+    - start: "192.168.8.22"
+      stop: "192.168.8.22"
+  serviceSelector:
+    matchLabels:
+      homerun2.stuttgart-things.com/lb-pool: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-stack-lb
+  namespace: homerun2
+  labels:
+    homerun2.stuttgart-things.com/lb-pool: redis
+  annotations:
+    lbipam.cilium.io/ips: "192.168.8.22"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/instance: redis-stack
+    app.kubernetes.io/name: redis
+    app.kubernetes.io/component: node
+  ports:
+    - name: tcp-redis
+      port: 6379
+      targetPort: 6379
+      protocol: TCP

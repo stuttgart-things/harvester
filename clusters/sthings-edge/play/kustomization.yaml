@@ -1,8 +1,10 @@
 ---
 # What edge-play (../apps.yaml) applies: the players' routes on
-# edge-play-gateway. ./play-routes is applied by play-routes.yaml (the routes
-# live in the apps' namespaces, which the apps create).
+# edge-play-gateway (./play-routes), and the box's Redis on the LAN for the
+# LED matrix (../lan). Both are applied by Kustomizations of their own, since
+# they live in the apps' namespaces, which the apps create.
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - play-routes.yaml
+  - redis-lb.yaml
