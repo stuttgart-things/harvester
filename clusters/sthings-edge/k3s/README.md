@@ -3,10 +3,10 @@
 Single-node k3s + Cilium on `sthings-edge` (`192.168.8.10`, role `tt`). Same
 stack as the lab node `edge-tt-test1` ([`../../edge/k3s`](../../edge/k3s/README.md),
 background and every option: [`docs/edge/k3s.md`](../../../docs/edge/k3s.md)),
-so the Flux tree in [`../../edge`](../../edge) can be applied later with its
-own cluster vars.
+and the same Flux tree runs on top (with this box's own cluster vars, [`../README.md`](../README.md), step 9).
 
-**Status: installed 2026-10-11** ([run 1](#run-1-2026-10-11-cli) below). Kubeconfig: `~/.kube/sthings-edge`.
+**Status: installed 2026-10-11** ([run 1](#run-1-2026-10-11-cli) below), second run 2026-10-12
+(`ok=86 changed=7`, only always-changed tasks, k3s not restarted). Kubeconfig: `~/.kube/sthings-edge`.
 
 | File | |
 |---|---|
@@ -85,8 +85,9 @@ ansible-core 2.18 (Homebrew) on the Mac, collections from `requirements.yaml`
 
 **UFW is active now.** baseos/`configure_rke_node` enables it with an allow list:
 22, 443, 2376, 2379-2380, 6443, 8443, 9099, 9100, 9345, 9443, 9796, 10250, 10252,
-10254, 30000-33000/tcp. There is **no rule for 80/tcp** (same as the lab node),
-so check the Gateway VIP on 80 with the first HTTPRoute.
+10254, 30000-33000/tcp. There is **no rule for 80/tcp** (same as the lab node), and none is
+needed: Cilium handles the VIPs' traffic in eBPF before UFW sees it -- checked 2026-10-12,
+`http://schmetterpause.edge.sthings.lab/` answers 301 → https on `edge-gateway` (`192.168.8.20`).
 
 **kubectl from the Mac:** `nc -z 192.168.8.10 6443` worked, but the Homebrew `kubectl` got
 `connect: no route to host`. Most likely macOS Local Network privacy blocking the binary
@@ -94,7 +95,10 @@ so check the Gateway VIP on 80 with the first HTTPRoute.
 terminal app, then retry. Until then use `kubectl` on the box
 (`sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl …`).
 
-Not done yet: a second run for idempotency (the lab: `changed=7`, all known always-changed tasks).
+**Run 2, 2026-10-12 (idempotency):** `ok=86 changed=7 failed=0`. Changed: `Update apt-cache` (2×),
+`Set filesystem watchers`, `Add external ip to kubeconfig`, `Apply Gateway API CRDs (server-side)`,
+`Upgrade cilium configuration`, `Fetch kubeconfig` -- all report changed on every run; k3s was not
+restarted, the fetched kubeconfig was identical.
 
 ## Open points
 
@@ -102,7 +106,5 @@ Not done yet: a second run for idempotency (the lab: `changed=7`, all known alwa
   nor `cilium-config.yaml.j2` has a hook (still true in sthings.rke 26.1011.1456).
   - k3s takes the address of the default route interface, which is `enp1s0` / `192.168.8.10`.
   - Cilium auto-detects devices, and once a cable is in `enp2s0`, the rescue port is one of them.
-  - Keep VIPs off the rescue port with the L2 policy (`interfaces: ["^enp1s0$"]`) when the
-    Flux tree is applied, or add a `devices` hook to the role.
-- **Flux:** needs its own cluster vars for this box (`EDGE_DOMAIN` `edge.sthings.lab`, a VIP
-  from the Opal LAN outside the DHCP range). Not prepared yet.
+  - The flux `cilium-lb` L2 policy has no `interfaces` field, so the VIPs are announced there too:
+    stuttgart-things/flux#678 (`CILIUM_L2_INTERFACES: ^enp1s0$` once it exists).
