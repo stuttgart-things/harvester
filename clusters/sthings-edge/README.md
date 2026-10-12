@@ -228,4 +228,3 @@ LAN, see [k3s/README.md](./k3s/README.md).
 ssh -N -L 16443:127.0.0.1:6443 sthings@192.168.8.10 &
 export KUBECONFIG=~/.kube/sthings-edge-tunnel          # server https://127.0.0.1:16443 (in the cert SANs)
 ```
-
