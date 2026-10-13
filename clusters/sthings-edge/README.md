@@ -77,7 +77,7 @@ uci set dhcp.@dnsmasq[0].domain='edge.sthings.lab'
 uci set dhcp.@dnsmasq[0].local='/edge.sthings.lab/'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
-for n in schmetterpause zaehlwerk buttons openbao minio minio-console led-catcher light-catcher \
+for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
          light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
@@ -86,6 +86,9 @@ uci set dhcp.@host[0].name='sthings-edge'
 uci commit dhcp && /etc/init.d/dnsmasq restart
 ```
 
+- No `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs only on the lab. The
+  router of 2026-10-12 still has the line; drop it once with
+  `uci del_list dhcp.@dnsmasq[0].address='/buttons.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.

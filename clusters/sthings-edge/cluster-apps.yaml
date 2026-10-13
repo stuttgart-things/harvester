@@ -42,12 +42,13 @@ spec:
   # piezo-sim/buttons-sim switches on the sops bundles (flux#666), plus
   # OpenBao requests/limits (flux#657) and homerun2 catcher bumps;
   # v1.128.4: zaehlwerk-buttons v0.12.0, the table mock's display device
-  # (flux#671).
+  # (flux#671); v1.128.5: zaehlwerk v0.13.0 + led-catcher v0.16.0, the
+  # board with player names and who serves on the LED panel (flux#683).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.128.4
+    tag: v1.128.5
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
