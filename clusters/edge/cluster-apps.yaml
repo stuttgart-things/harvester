@@ -59,12 +59,14 @@ spec:
   # OpenBao requests/limits (flux#657) and homerun2 catcher bumps;
   # v1.128.4: zaehlwerk-buttons v0.12.0, the table mock's display device
   # (flux#671); v1.128.5: zaehlwerk v0.13.0 + led-catcher v0.16.0, the
-  # board with player names and who serves on the LED panel (flux#683).
+  # board with player names and who serves on the LED panel (flux#683);
+  # v1.129.0: zaehlwerk v0.14.0 (match phases, ADR-0005) and
+  # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.128.5
+    tag: v1.129.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -237,6 +239,9 @@ spec:
         # 'on' QUOTED: a bare on is YAML 1.1 true.
         TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
         TABLETENNIS_SCHMETTERPAUSE_BOOTSTRAP_ADMIN: timoboll
+        # House rule (zaehlwerk#77, ADR-0005): whoever lost the previous set
+        # serves first in the next one, instead of ITTF's alternation.
+        TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
         # LAB: zaehlwerk's table mock (flux#666) at https://buttons.<EDGE_DOMAIN>
         # -- emulated buttons, and a page that pauses and tunes the emulated
         # board. The board is piezo-a in ./lab/esp-mock (it enrols through

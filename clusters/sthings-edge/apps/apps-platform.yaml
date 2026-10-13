@@ -56,6 +56,7 @@ spec:
       TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: '1Gi'
       TABLETENNIS_SCOREBOARD_HANDOVER: sops
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+      TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
   prune: true
   retryInterval: '1m'
   sourceRef:
