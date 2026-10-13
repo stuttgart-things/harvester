@@ -28,7 +28,7 @@ networks:
       Flat lab and management network. Gateway, DNS and DHCP all live on the
       DD-WRT router (.1); the dynamic DHCP pool is .100-.149.
   - cidr: 192.168.8.0/24
-    name: tabletennis
+    name: opal-lan
     # Values from clusters/sthings-edge/README.md, step 1 (Opal config).
     gateway: 192.168.8.1
     dhcp_pool: 192.168.8.100-192.168.8.249
@@ -37,11 +37,23 @@ networks:
       travels with the sthings-edge box. Gateway, DNS and DHCP on the Opal
       (.1); uplink is a Wi-Fi repeater. The VIPs .20-.22 sit outside the
       DHCP pool .100-.249.
+  - cidr: 10.100.136.0/24
+    name: labda
+    # foreign: another site's network. Only the addresses this lab uses there
+    # are listed, so the page does not count the rest as free.
+    foreign: true
+    # Not this lab: the LabDA vSphere network the edge lab cluster runs in.
+    # Gateway and DHCP pool are not recorded in this repo, so the matrix only
+    # shows assigned vs. free. Addresses from clusters/edge/README.md.
+    description: >-
+      LabDA vSphere network (site outside this lab). Carries the edge lab
+      cluster edge-tt-test1; addresses reserved in the LabDA Clusterbook,
+      names under *.4sthings.tiab.ssc.sva.de.
 
 # One entry per host. `system` groups them - entries sharing a system name
 # end up in the same box in the diagram.
 #
-# `kind` is optional: host | k3s-cluster | hypervisor | router.
+# `kind` is optional: host | k3s-cluster | rke2-cluster | hypervisor | router.
 #
 # `cluster` is optional and names the Kubernetes cluster a host and its
 # services belong to. Values match the directories under clusters/, so the
@@ -334,3 +346,230 @@ hosts:
       The same LED matrix Pi (MAC b8:27:eb:d9:33:db) when it travels with the
       box: Wi-Fi `sthings-edge`, static lease on the Opal, Redis from
       edge-redis. matrix.sthings.lab points here via the Opal's dnsmasq.
+
+  # ---------------------------------------------------------------------------
+  # homerun2-dev: single-node RKE2 VM on Harvester. clusters/homerun2-dev/README.md,
+  # static lease in docs/install.md.
+  # ---------------------------------------------------------------------------
+  - system: homerun2-dev
+    hostname: homerun2-dev
+    ip: 192.168.10.117
+    kind: rke2-cluster
+    cluster: homerun2-dev
+    description: >-
+      VM node of the RKE2 cluster homerun2-dev (12 vCPU / 12Gi / 50Gi,
+      static lease for MAC BA:B3:3E:EA:51:F3; a rebuilt VM needs it updated).
+      Flux syncs clusters/homerun2-dev. Runs the homerun2 and table tennis
+      stacks of the lab.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: RKE2 API server.
+
+  - system: homerun2-dev
+    hostname: homerun2-dev-gateway
+    ip: 192.168.10.171
+    kind: host
+    cluster: homerun2-dev
+    description: >-
+      Cilium LB VIP (Clusterbook 171:ASSIGNED:DNS:homerun2-dev) of the
+      Gateway homerun2-dev-sthings-gateway; *.homerun2-dev.sthings.lab with
+      certificates from the OpenBao PKI on platform.
+    services:
+      - name: Headlamp
+        fqdn: headlamp.homerun2-dev.sthings.lab
+        description: Kubernetes UI.
+      - name: Flux web
+        fqdn: flux.homerun2-dev.sthings.lab
+        description: Flux UI.
+      - name: led-catcher
+        fqdn: led-catcher.homerun2-dev.sthings.lab
+        description: >-
+          homerun2 LED catcher with its web simulator; switches between the
+          `messages` and `tabletennis` streams.
+      - name: light-catcher
+        fqdn: light-catcher.homerun2-dev.sthings.lab
+        description: homerun2 light catcher, drives the WLED strip (wled-matrix).
+      - name: wled-mock
+        fqdn: wled-mock.homerun2-dev.sthings.lab
+        description: Stand-in for a WLED device.
+      - name: core-catcher
+        fqdn: core-catcher.homerun2-dev.sthings.lab
+        description: homerun2 core catcher.
+      - name: omni-pitcher
+        fqdn: omni-pitcher.homerun2-dev.sthings.lab
+        description: homerun2 omni pitcher; zaehlwerk pitches scores here.
+      - name: demo-pitcher
+        fqdn: demo-pitcher.homerun2-dev.sthings.lab
+        description: homerun2 demo pitcher.
+      - name: config-viewer
+        fqdn: config-viewer.homerun2-dev.sthings.lab
+        description: homerun2 config viewer.
+      - name: scout
+        fqdn: scout.homerun2-dev.sthings.lab
+        description: homerun2 scout.
+      - name: schmetterpause
+        fqdn: schmetterpause.homerun2-dev.sthings.lab
+        description: >-
+          Table tennis league app; CNPG database backed up to MinIO on
+          platform.
+      - name: Zählwerk
+        fqdn: zaehlwerk.homerun2-dev.sthings.lab
+        description: Scoring API and panel.
+
+  - system: homerun2-dev
+    hostname: homerun2-dev-redis
+    ip: 192.168.10.179
+    kind: host
+    cluster: homerun2-dev
+    description: >-
+      Cilium LB address of redis-stack-lb (clusters/homerun2-dev/redis-lb.yaml),
+      own pool with only this IP; Clusterbook 179:ASSIGNED:homerun2-dev-redis,
+      deliberately without DNS.
+    services:
+      - name: Redis
+        port: 6379
+        description: >-
+          The `messages` stream the LED matrix Pi reads in SthingsNet
+          (consumer group homerun2-led-matrix).
+
+  - system: wled-matrix
+    hostname: wled-matrix
+    ip: 192.168.10.123
+    kind: host
+    description: >-
+      WLED on an ESP32, 36 LEDs. Fed by the light-catcher on homerun2-dev
+      (clusters/homerun2-dev/homerun2-light-catcher-profile.yaml).
+    services:
+      - name: WLED UI
+        fqdn: wled-matrix.sthings.lab
+        url: http://wled-matrix.sthings.lab
+        description: The device's own web UI and JSON API.
+
+  # ---------------------------------------------------------------------------
+  # machinery-hv: Crossplane management cluster (ClusterStack), RKE2 VM.
+  # clusters/machinery-hv/README.md, static lease in docs/install.md.
+  # ---------------------------------------------------------------------------
+  - system: machinery-hv
+    hostname: machinery-hv
+    ip: 192.168.10.105
+    kind: rke2-cluster
+    cluster: machinery-hv
+    description: >-
+      VM node of the RKE2 cluster machinery-hv (8 vCPU / 16Gi / 80Gi, static
+      lease for MAC BE:64:F3:26:1A:60). Crossplane with the `machinery`
+      profile and Tekton; orders whole clusters as ClusterStacks.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: RKE2 API server.
+      - name: Crossplane
+        description: >-
+          ClusterStack API; reached through the Kubernetes API, no ingress.
+
+  - system: machinery-hv
+    hostname: machinery-hv-gateway
+    ip: 192.168.10.178
+    kind: host
+    cluster: machinery-hv
+    description: >-
+      Cilium LB VIP (Clusterbook 178:ASSIGNED:DNS:machinery-hv) of the cluster
+      Gateway; *.machinery-hv.sthings.lab.
+    services:
+      - name: Headlamp
+        fqdn: headlamp.machinery-hv.sthings.lab
+        description: Kubernetes UI.
+      - name: Flux web
+        fqdn: flux.machinery-hv.sthings.lab
+        description: Flux UI.
+
+  # TODO: tabletennis -- the k3s cluster ordered as a RancherCluster on
+  # crossplane-mgmt (clusters/crossplane-mgmt/xrs/infra/tabletennis), names
+  # *.tabletennis.sthings.lab. Clusterbook assigns its address automatically and
+  # no repo file records it; add the node IP and the gateway VIP here once they
+  # are read from the ledger (kubectl get networkconfig networks-labul -n
+  # clusterbook on platform).
+
+  # ---------------------------------------------------------------------------
+  # edge (edge-tt-test1): the edge lab cluster in LabDA vSphere, the reference
+  # for sthings-edge. clusters/edge/README.md.
+  # ---------------------------------------------------------------------------
+  - system: edge-tt-test1
+    hostname: edge-tt-test1
+    ip: 10.100.136.89
+    kind: k3s-cluster
+    cluster: edge
+    description: >-
+      LabDA vSphere VM (8 vCPU / 15Gi / 128Gi, Ubuntu 26.04), single-node k3s
+      + Cilium + Flux; the first edge lab cluster and the reference for the
+      others. Folder clusters/edge.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: k3s API server; kubeconfig in secrets/edge (SOPS).
+
+  - system: edge-tt-test1
+    hostname: edge-tt-test1-gateway
+    ip: 10.100.136.223
+    kind: host
+    cluster: edge
+    description: >-
+      Cilium L2 VIP of edge-gateway, internal names
+      *.edge-tt-test1.4sthings.tiab.ssc.sva.de (LabDA Clusterbook), certificates
+      from the edge CA.
+    services:
+      - name: schmetterpause
+        fqdn: schmetterpause.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: Table tennis app, admin side.
+      - name: Zählwerk
+        fqdn: zaehlwerk.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: Score counter.
+      - name: OpenBao
+        fqdn: openbao.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: Edge PKI and ACME directory.
+      - name: MinIO console
+        fqdn: minio-console.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: Web UI for MinIO.
+      - name: led-catcher
+        fqdn: led-catcher.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: homerun2 LED catcher.
+      - name: light-catcher-tabletennis
+        fqdn: light-catcher-tabletennis.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: homerun2 light catcher for the table.
+      - name: wled-mock
+        fqdn: wled-mock.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: Stand-in for the WLED strip.
+      - name: demo-pitcher
+        fqdn: demo-pitcher.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: homerun2 demo pitcher.
+      - name: config-viewer
+        fqdn: config-viewer.edge-tt-test1.4sthings.tiab.ssc.sva.de
+        description: homerun2 config viewer.
+
+  - system: edge-tt-test1
+    hostname: edge-tt-test1-play
+    ip: 10.100.136.226
+    kind: host
+    cluster: edge
+    description: >-
+      Cilium L2 VIP of the players' Gateway. The public Hetzner record
+      *.sthings-edge.com points here; on the sthings-edge box the Opal answers
+      the same names with 192.168.8.21 instead.
+    services:
+      - name: schmetterpause (players, public)
+        url: https://schmetterpause.sthings-edge.com/
+        description: >-
+          Players' side via the public sthings-edge.com record, Let's Encrypt
+          (DNS-01 at Hetzner). FQDN listed under edge-play-gateway.
+
+  - system: labda-dns
+    hostname: labda-dns
+    ip: 10.100.136.115
+    kind: host
+    description: >-
+      LabDA resolver, the only one that knows 4sthings.tiab.ssc.sva.de; the
+      edge lab cluster's CoreDNS forwards that zone here.
+    services:
+      - name: DNS
+        port: 53
+        description: Zone 4sthings.tiab.ssc.sva.de.

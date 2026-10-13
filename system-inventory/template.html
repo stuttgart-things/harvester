@@ -829,7 +829,9 @@ function netStats(n) {
   };
 }
 
-const freeAddresses = () => nets.reduce((sum, n) => sum + netStats(n).free, 0);
+// A `foreign` network (another site's) lists only the addresses we use there;
+// its "free" count would be a guess, so the stamp leaves it out.
+const freeAddresses = () => nets.filter(n => !n.foreign).reduce((sum, n) => sum + netStats(n).free, 0);
 
 /* ---------------------------------------------------------------- Masthead */
 
@@ -901,6 +903,8 @@ function endpoint(s) {
   if (s.fqdn) return s.fqdn;
   if (s.ip) return s.ip + (s.port ? ":" + s.port : "");
   if (s.port) return "port " + s.port;
+  // A bare url (a name another host already lists as its fqdn) still links.
+  if (s.url) return s.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
   return "";
 }
 
@@ -1164,7 +1168,9 @@ nets.forEach(net => {
   block.innerHTML = `
     <div class="card-head">
       <h2>Address allocation ${net.cidr}${net.name ? ` · ${net.name}` : ""}</h2>
-      <span class="note">${inNet.length} statically assigned · ${poolCount} in DHCP pool · ${freeCount} free</span>
+      <span class="note">${net.foreign
+        ? `${inNet.length} addresses used by this lab · rest of the network not tracked here`
+        : `${inNet.length} statically assigned · ${poolCount} in DHCP pool · ${freeCount} free`}</span>
     </div>
     <div class="matrix-wrap"></div>
     <div class="legend"></div>`;
@@ -1215,7 +1221,7 @@ nets.forEach(net => {
         state = `${host.hostname} · ${host.system}`;
         cell.addEventListener("click", () => select(host.hostname, { goToTopology: true }));
       } else if (inPool) { cell.classList.add("is-pool"); state = "DHCP pool, free"; }
-      else { state = "free"; }
+      else { state = net.foreign ? "not tracked here" : "free"; }
 
       cell.setAttribute("aria-label", `${ip} — ${state}`);
       cell.addEventListener("mousemove", ev => showTip(
@@ -1228,8 +1234,8 @@ nets.forEach(net => {
 
   block.querySelector(".legend").innerHTML = `
     <span><i class="swatch static"></i>statically assigned</span>
-    <span><i class="swatch pool"></i>DHCP pool ${net.dhcp_pool || ""}</span>
-    <span><i class="swatch free"></i>free</span>
+    ${net.dhcp_pool ? `<span><i class="swatch pool"></i>DHCP pool ${net.dhcp_pool}</span>` : ""}
+    <span><i class="swatch free"></i>${net.foreign ? "not tracked" : "free"}</span>
     <span><i class="swatch reserved"></i>network / broadcast address</span>`;
 });
 
