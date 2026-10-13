@@ -21,6 +21,9 @@ import yaml
 # One colour per network - used for edges and the legend.
 NET_COLORS = ["#0f766e", "#b45309", "#7c3aed", "#be123c", "#1d4ed8", "#4d7c0f"]
 
+# Kinds that are a Kubernetes node and therefore need a `cluster` name.
+CLUSTER_KINDS = ("k3s-cluster", "rke2-cluster")
+
 
 def slug(value: str) -> str:
     """Node ID that D2 accepts."""
@@ -98,8 +101,8 @@ def validate(data: dict) -> list[str]:
 
         # A cluster host without a cluster name leaves its services unattributed
         # in the service index.
-        if h.get("kind") == "k3s-cluster" and not h.get("cluster"):
-            problems.append(f"{where}: kind is k3s-cluster but no 'cluster' name is set")
+        if h.get("kind") in CLUSTER_KINDS and not h.get("cluster"):
+            problems.append(f"{where}: kind is {h['kind']} but no 'cluster' name is set")
 
         problems.extend(
             _check_services(h, where, networks, seen_ip, seen_fqdn)

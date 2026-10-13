@@ -14,8 +14,8 @@ tabs — Topology, Addresses, Services — so nothing has to be scrolled past.
 Each tab is deep-linkable (`#services`) and the last one used is remembered
 per browser. Nodes can be dragged
 and stay where you drop them, clicking one shows its description and the
-services it runs, an address matrix lays out all 256 addresses of the `/24`
-(statically assigned, DHCP pool, free), and a service index lists everything
+services it runs, one address matrix per network lays out all 256 addresses
+of its `/24` (statically assigned, DHCP pool, free), and a service index lists everything
 running in the lab — grouped by cluster, sortable by any column, filterable by
 free text. Diagram and matrix are linked: selecting in one
 highlights in the other.
@@ -46,7 +46,7 @@ hosts:
   - system: platform-sthings
     hostname: platform
     ip: 192.168.10.160
-    kind: k3s-cluster              # host | k3s-cluster | hypervisor | router
+    kind: k3s-cluster              # host | k3s-cluster | rke2-cluster | hypervisor | router
     cluster: platform              # matches the directory under clusters/
     description: >-
       Single-node k3s cluster `platform.sthings.lab` (Cilium LB VIP).
@@ -71,7 +71,7 @@ index is keyed on the cluster rather than the host: for the single-node
 clusters the two are the same, so a Host column would only restate the cluster.
 The host is named on a row only where it adds something — a cluster served by
 more than one host, or a service outside any cluster. Setting
-`kind: k3s-cluster` without a `cluster` name is a validation error.
+`kind: k3s-cluster` or `rke2-cluster` without a `cluster` name is a validation error.
 
 **Services nest under the host that serves them and inherit its IP.** That is
 the point of the nesting: Vault and Clusterbook are both published on the same
@@ -100,7 +100,7 @@ Chart and app versions are deliberately **not** tracked here. They live in
 - invalid IPs and out-of-range ports
 - IPs outside every network defined under `networks`
 - a missing description or hostname, or a service without a description
-- `kind: k3s-cluster` without a `cluster` name
+- `kind: k3s-cluster` / `rke2-cluster` without a `cluster` name
 
 `make check` additionally does what CI does: render, then diff against the
 committed artifacts. That way `topology.svg` cannot silently fall behind
@@ -240,6 +240,25 @@ networks:
 ```
 
 Without them the matrix only distinguishes assigned from free.
+
+`foreign: true` marks another site's network (LabDA): only the addresses this
+lab uses there are listed, so its matrix says so and the *free ips* stamp leaves
+it out.
+
+More than one network is fine: every entry under `networks` gets its own node
+in the topology and its own address matrix. The lab network `192.168.10.0/24`
+(DD-WRT), the table tennis network `192.168.8.0/24` (`opal-lan`, GL.iNet Opal,
+travels with the sthings-edge box) and the LabDA network `10.100.136.0/24`
+(the edge lab cluster `edge-tt-test1`) are listed. A device that lives in both — the
+sthings-edge box, the LED matrix Pi — is one host entry per network, under the
+same `system`, with its own hostname (`matrix` / `matrix-edge`): hostnames are
+the selection key, so they stay unique.
+
+The topology places hosts in rows rather than leaving them to the force
+layout: systems ordered by the networks they touch, hosts within a system by
+network and IP, each network level with the hosts it carries. With a dozen
+hosts a pure force layout piled the members of one system on top of each
+other.
 
 ## Generated files
 
