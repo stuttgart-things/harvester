@@ -61,12 +61,13 @@ spec:
   # (flux#671); v1.128.5: zaehlwerk v0.13.0 + led-catcher v0.16.0, the
   # board with player names and who serves on the LED panel (flux#683);
   # v1.129.0: zaehlwerk v0.14.0 (match phases, ADR-0005) and
-  # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686).
+  # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686); v1.130.0: zaehlwerk
+  # v0.15.0, start options on the scoring page (flux#687).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.129.0
+    tag: v1.130.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
