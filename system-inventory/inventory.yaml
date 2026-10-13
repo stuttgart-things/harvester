@@ -483,8 +483,75 @@ hosts:
         fqdn: flux.machinery-hv.sthings.lab
         description: Flux UI.
 
+  # ---------------------------------------------------------------------------
+  # crossplane-mgmt: Crossplane for the VM path, fed by Argo CD on platform.
+  # Node address: static lease in docs/install.md. Distribution not recorded
+  # in this repo, hence kind host.
+  # ---------------------------------------------------------------------------
+  - system: crossplane-mgmt
+    hostname: crossplane-mgmt
+    ip: 192.168.10.108
+    kind: host
+    cluster: crossplane-mgmt
+    description: >-
+      VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28).
+      Crossplane for the VM path (XVirtualMachine -> Harvester) and the
+      RancherCluster order tabletennis; Argo CD on platform syncs
+      clusters/crossplane-mgmt (showcase-crossplane-platform / -xrs).
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: >-
+          API server; also the Argo CD cluster server URL (useFQDNAsServer:
+          false).
+      - name: Crossplane
+        description: >-
+          RancherCluster, XVirtualMachine and AnsibleRun claims; reached
+          through the Kubernetes API, no ingress.
+
+  # From the Clusterbook seed (clusters/platform-seeds/networkconfig-networks-labul.yaml,
+  # 177:ASSIGNED:DNS:crossplane-mgmt). The seed is not the ledger -- confirm
+  # against the live networks-labul CR on platform.
+  - system: crossplane-mgmt
+    hostname: crossplane-mgmt-vip
+    ip: 192.168.10.177
+    kind: host
+    cluster: crossplane-mgmt
+    description: >-
+      Clusterbook reservation of crossplane-mgmt with DNS
+      (*.crossplane-mgmt.sthings.lab), made by the ClusterbookCluster on
+      platform for the Argo CD registration.
+
+  # ---------------------------------------------------------------------------
+  # app-dev-hv: the first ClusterStack ordered on machinery-hv
+  # (clusters/machinery-hv/xrs/app-dev-hv.yaml). Address from
+  # docs/demo/bare-metal-self-service.md.
+  # TODO: every ClusterStack takes a second Clusterbook address for its
+  # gateway/DNS reservation; app-dev-hv's is not recorded in this repo.
+  # ---------------------------------------------------------------------------
+  - system: app-dev-hv
+    hostname: app-dev-hv
+    ip: 192.168.10.176
+    kind: k3s-cluster
+    cluster: app-dev-hv
+    description: >-
+      Cluster built by Rancher on a Harvester machine pool (rancher-k3s,
+      4 CPU / 8 GiB / 64 GiB), ordered as a ClusterStack on machinery-hv.
+      Node address reserved in Clusterbook as app-dev-hv-node; Cilium,
+      homerun2 and tabletennis come from the platform profiles via Argo CD
+      on platform.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: k3s API server, registered in Argo CD on platform.
+      - name: homerun2 + tabletennis
+        description: >-
+          Platform profiles: homerun2 stack, schmetterpause (CNPG, backup to
+          s3://app-dev-hv-schmetterpause-cnpg on platform's MinIO) and
+          zaehlwerk.
+
   # TODO: tabletennis -- the k3s cluster ordered as a RancherCluster on
-  # crossplane-mgmt (clusters/crossplane-mgmt/xrs/infra/tabletennis), names
+  # crossplane-mgmt (to be replaced by an order on machinery-hv; never both at once) (clusters/crossplane-mgmt/xrs/infra/tabletennis), names
   # *.tabletennis.sthings.lab. Clusterbook assigns its address automatically and
   # no repo file records it; add the node IP and the gateway VIP here once they
   # are read from the ledger (kubectl get networkconfig networks-labul -n

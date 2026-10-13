@@ -31,6 +31,51 @@ net_10_100_136_0_24: "labda\n10.100.136.0/24" {
   }
 }
 
+sys_app_dev_hv: "app-dev-hv" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  app_dev_hv: "app-dev-hv\n192.168.10.176\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_app_dev_hv -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_crossplane_mgmt: "crossplane-mgmt" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  crossplane_mgmt: "crossplane-mgmt\n192.168.10.108\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  crossplane_mgmt_vip: "crossplane-mgmt-vip\n192.168.10.177" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_crossplane_mgmt -> net_192_168_10_0_24: "2 hosts" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
 sys_edge_tt_test1: "edge-tt-test1" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
