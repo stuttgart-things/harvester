@@ -268,7 +268,7 @@ body {
   .detail { border-left: 0 !important; border-top: 1px solid var(--rule); }
 }
 
-#graph { display: block; width: 100%; height: 600px; touch-action: none; }
+#graph { display: block; width: 100%; height: var(--graph-h, 600px); touch-action: none; }
 #graph text { pointer-events: none; }
 
 .link { stroke: var(--rule-strong); fill: none; }
@@ -433,6 +433,8 @@ tr.svc-row.hidden { display: none; }
   font-size: 13px; color: var(--ink-2);
 }
 .legend span { display: inline-flex; align-items: center; gap: 9px; }
+/* One block per network; every block after the first gets a rule above it. */
+.net-block + .net-block { border-top: 1px solid var(--rule); }
 .swatch {
   width: 15px; height: 15px; border-radius: 5px;
   border: 1px solid var(--rule-strong); flex: none;
@@ -629,6 +631,8 @@ footer.colophon {
      otherwise the header stays behind and the diagram lands on the next page
      with a hole where it was. */
   #panel-topology { break-inside: avoid; }
+  /* Same for each network's matrix: a /24 split over two pages reads as two networks. */
+  .net-block { break-inside: avoid; }
 
   /* Compact masthead: at full screen size it eats half of page one. */
   .masthead { gap: 8px; padding: 0 0 2px; }
@@ -655,7 +659,9 @@ footer.colophon {
     -webkit-print-color-adjust: exact;
   }
 
-  #graph { height: 430px; }
+  /* Taller than the screen floor: with two networks the diagram has twice
+     the hosts, and at 430px their labels shrank below legibility. */
+  #graph { height: 640px; }
   .cell { width: 27px; height: 21px; font-size: 7pt; border-radius: 4px; }
   .matrix { border-spacing: 1.5px; }
   .matrix th { font-size: 6.5pt; padding: 2px 4px; }
@@ -735,18 +741,13 @@ footer.colophon {
       </span>
     </div>
     <div class="topo-layout">
-      <svg id="graph" role="img" aria-label="Network topology: systems and hosts on the lab network"></svg>
+      <svg id="graph" role="img" aria-label="Network topology: systems and hosts on the lab networks"></svg>
       <aside class="detail" id="detail" aria-live="polite"></aside>
     </div>
   </section>
 
   <section class="card" id="panel-addresses" role="tabpanel" aria-labelledby="tab-addresses" hidden>
-    <div class="card-head">
-      <h2 id="matrix-title"></h2>
-      <span class="note" id="matrix-note"></span>
-    </div>
-    <div class="matrix-wrap" id="matrix-wrap"></div>
-    <div class="legend" id="legend"></div>
+    <div id="matrices"></div>
     <details class="table-view">
       <summary>Table view</summary>
       <div class="data-table-wrap" id="table-wrap"></div>
@@ -790,37 +791,45 @@ const DATA = /*__DATA__*/;
 const ipToInt = ip => ip.split(".").reduce((a, o) => (a << 8 >>> 0) + (+o), 0) >>> 0;
 const intToIp = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
 
-const net = DATA.networks[0] || null;
+const nets = DATA.networks;
 const hosts = DATA.hosts;
 const byIp = new Map(hosts.map(h => [h.ip, h]));
 
 const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-/** Free addresses in the first network - same arithmetic as the matrix note. */
-function freeAddresses() {
-  if (!net) return 0;
-  const bits = +net.cidr.split("/")[1];
-  const size = Math.min(2 ** (32 - bits), 256);
-  const used = hosts.filter(h => net_contains(h.ip)).length;
-  let pool = 0, staticInPool = 0;
-  if (net.dhcp_pool) {
-    const [a, b] = net.dhcp_pool.split("-").map(x => ipToInt(x.trim()));
-    pool = b - a + 1;
-    staticInPool = hosts.filter(h => {
-      const n = ipToInt(h.ip);
-      return n >= a && n <= b;
-    }).length;
-  }
-  return size - 2 - used - (pool - staticInPool);
+function net_contains(n, ip) {
+  if (!n || !ip) return false;
+  const base = ipToInt(n.cidr.split("/")[0]);
+  const size = 2 ** (32 - +n.cidr.split("/")[1]);
+  const x = ipToInt(ip);
+  return x >= base && x < base + size;
 }
 
-function net_contains(ip) {
-  if (!net || !ip) return false;
-  const base = ipToInt(net.cidr.split("/")[0]);
-  const size = 2 ** (32 - +net.cidr.split("/")[1]);
-  const n = ipToInt(ip);
-  return n >= base && n < base + size;
+/** The network an address belongs to, or null. */
+const netOf = ip => nets.find(n => net_contains(n, ip)) || null;
+
+/** Address counts for one network - shared by the stamp and the matrix note. */
+function netStats(n) {
+  const bits = +n.cidr.split("/")[1];
+  const size = Math.min(2 ** (32 - bits), 256);
+  const inNet = hosts.filter(h => net_contains(n, h.ip));
+  let poolFrom = null, poolTo = null, pool = 0, staticInPool = 0;
+  if (n.dhcp_pool) {
+    [poolFrom, poolTo] = n.dhcp_pool.split("-").map(x => ipToInt(x.trim()));
+    pool = poolTo - poolFrom + 1;
+    // Static addresses inside the pool would otherwise be counted twice.
+    staticInPool = inNet.filter(h => {
+      const x = ipToInt(h.ip);
+      return x >= poolFrom && x <= poolTo;
+    }).length;
+  }
+  return {
+    size, inNet, poolFrom, poolTo, pool,
+    free: size - 2 - inNet.length - (pool - staticInPool),
+  };
 }
+
+const freeAddresses = () => nets.reduce((sum, n) => sum + netStats(n).free, 0);
 
 /* ---------------------------------------------------------------- Masthead */
 
@@ -946,11 +955,16 @@ function syncHighlight() {
 /* ------------------------------------------------------------------- Graph */
 
 const nodes = [], links = [];
-if (net) nodes.push({ id: "net", kind: "net", label: net.name || net.cidr, sub: net.cidr, fx: null });
+nets.forEach(n => nodes.push({ id: "net:" + n.cidr, kind: "net", label: n.name || n.cidr, sub: n.cidr, fx: null }));
 systems.forEach(s => {
   const members = hosts.filter(h => h.system === s);
   nodes.push({ id: "sys:" + s, kind: "system", label: s, count: members.length });
-  if (net) links.push({ source: "sys:" + s, target: "net", label: members.length + (members.length === 1 ? " host" : " hosts") });
+  // One edge per system and network, labelled with the host count - a system
+  // that lives in two networks (a box that travels) gets two.
+  nets.forEach(n => {
+    const c = members.filter(h => net_contains(n, h.ip)).length;
+    if (c) links.push({ source: "sys:" + s, target: "net:" + n.cidr, label: c + (c === 1 ? " host" : " hosts") });
+  });
   members.forEach(h => {
     nodes.push({
       id: "host:" + h.hostname, kind: "host", host: h,
@@ -962,7 +976,40 @@ systems.forEach(s => {
 });
 
 const svg = d3.select("#graph");
-let W = 0, H = 600;
+// Hosts stack in one column, so the canvas grows with them; 600 is the floor.
+const ROW = 64, GAP = 18, PAD = 40;
+let W = 0, H = Math.max(600, hosts.length * ROW + systems.length * GAP + PAD);
+svg.style("--graph-h", H + "px");
+
+// Rows, not physics, decide the vertical order. With a dozen hosts a pure
+// force layout piles the members of one system on top of each other. Systems
+// are ordered by the networks they touch (lab-only first, systems spanning
+// two networks in the middle, the second network last), hosts inside a system
+// by network and IP, and every node is pulled towards its row. The networks
+// sit level with the hosts they carry.
+{
+  const netIdx = h => nets.findIndex(n => net_contains(n, h.ip));
+  const score = s => d3.mean(hosts.filter(h => h.system === s), netIdx);
+  const order = [...systems].sort((a, b) => score(a) - score(b) || a.localeCompare(b));
+  const byId = new Map(nodes.map(d => [d.id, d]));
+  let y = (H - hosts.length * ROW - (order.length - 1) * GAP) / 2 + ROW / 2;
+  order.forEach(s => {
+    const members = hosts.filter(h => h.system === s)
+      .sort((a, b) => netIdx(a) - netIdx(b) || ipToInt(a.ip) - ipToInt(b.ip));
+    const rows = members.map(h => {
+      const d = byId.get("host:" + h.hostname);
+      d.ty = d.y = y; y += ROW;
+      return d.ty;
+    });
+    const sys = byId.get("sys:" + s);
+    sys.ty = sys.y = d3.mean(rows);
+    y += GAP;
+  });
+  nets.forEach(n => {
+    const ys = hosts.filter(h => net_contains(n, h.ip)).map(h => byId.get("host:" + h.hostname).ty);
+    byId.get("net:" + n.cidr).ty = ys.length ? d3.mean(ys) : H / 2;
+  });
+}
 
 const gLinks = svg.append("g");
 const gLinkLabels = svg.append("g");
@@ -1015,10 +1062,9 @@ node.each(function (d) {
 });
 
 const sim = d3.forceSimulation(nodes)
-  .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.label ? 190 : 108).strength(.7))
-  .force("charge", d3.forceManyBody().strength(-600))
+  .force("link", d3.forceLink(links).id(d => d.id).distance(d => d.label ? 190 : 108).strength(.05))
   .force("collide", d3.forceCollide(d => d.kind === "net" ? 74 : 31).strength(1))
-  .force("y", d3.forceY(H / 2).strength(.03))
+  .force("y", d3.forceY(d => d.ty ?? H / 2).strength(.5))
   .on("tick", ticked);
 
 node.filter(d => d.kind !== "net")
@@ -1078,8 +1124,9 @@ function layout() {
   if (!w) return;   // panel hidden - showTab() calls this again when it opens
   W = w;
   svg.attr("viewBox", `0 0 ${W} ${H}`);
-  const netNode = nodes.find(n => n.kind === "net");
-  if (netNode) { netNode.fx = W * 0.76; netNode.fy = H / 2; }
+  // Networks on the right, level with the hosts they carry.
+  const netNodes = nodes.filter(n => n.kind === "net");
+  netNodes.forEach(n => { n.fx = W * 0.76; n.fy = Math.max(62, Math.min(H - 62, n.ty)); });
   // Force hosts and systems into fixed columns - otherwise the rectangles
   // collide sideways, which a circular collider cannot prevent.
   sim.force("x", d3.forceX(columnX).strength(d => d.kind === "net" ? 0 : 0.9));
@@ -1107,28 +1154,21 @@ addEventListener("beforeprint", openTablesForPrint);
 
 /* ---------------------------------------------------------- Address matrix */
 
-if (net) {
+nets.forEach(net => {
   const base = ipToInt(net.cidr.split("/")[0]);
-  const bits = +net.cidr.split("/")[1];
-  const size = Math.min(2 ** (32 - bits), 256);
   const cols = 16;
+  const { size, inNet, poolFrom, poolTo, pool: poolCount, free: freeCount } = netStats(net);
 
-  let poolFrom = null, poolTo = null;
-  if (net.dhcp_pool) {
-    const [a, b] = net.dhcp_pool.split("-").map(s => ipToInt(s.trim()));
-    poolFrom = a; poolTo = b;
-  }
-
-  document.getElementById("matrix-title").textContent = `Address allocation ${net.cidr}`;
-  const inNet = hosts.filter(h => ipToInt(h.ip) >= base && ipToInt(h.ip) < base + size);
-  const usedCount = inNet.length;
-  const poolCount = (poolFrom !== null) ? (poolTo - poolFrom + 1) : 0;
-  // .110 and .139 sit inside the pool - without this they would be counted twice.
-  const staticInPool = poolFrom === null ? 0
-    : inNet.filter(h => ipToInt(h.ip) >= poolFrom && ipToInt(h.ip) <= poolTo).length;
-  const freeCount = size - 2 - usedCount - (poolCount - staticInPool);
-  document.getElementById("matrix-note").textContent =
-    `${usedCount} statically assigned · ${poolCount} in DHCP pool · ${freeCount} free`;
+  const block = document.createElement("div");
+  block.className = "net-block";
+  block.innerHTML = `
+    <div class="card-head">
+      <h2>Address allocation ${net.cidr}${net.name ? ` · ${net.name}` : ""}</h2>
+      <span class="note">${inNet.length} statically assigned · ${poolCount} in DHCP pool · ${freeCount} free</span>
+    </div>
+    <div class="matrix-wrap"></div>
+    <div class="legend"></div>`;
+  document.getElementById("matrices").appendChild(block);
 
   const tbl = document.createElement("table");
   tbl.className = "matrix";
@@ -1184,14 +1224,14 @@ if (net) {
       td.appendChild(cell);
     }
   }
-  document.getElementById("matrix-wrap").appendChild(tbl);
+  block.querySelector(".matrix-wrap").appendChild(tbl);
 
-  document.getElementById("legend").innerHTML = `
+  block.querySelector(".legend").innerHTML = `
     <span><i class="swatch static"></i>statically assigned</span>
     <span><i class="swatch pool"></i>DHCP pool ${net.dhcp_pool || ""}</span>
     <span><i class="swatch free"></i>free</span>
     <span><i class="swatch reserved"></i>network / broadcast address</span>`;
-}
+});
 
 /* ------------------------------------------------------------------- Table */
 
@@ -1395,7 +1435,7 @@ document.querySelectorAll('[role="tab"]').forEach((tab, i, all) => {
 });
 
 document.getElementById("count-addresses").textContent =
-  net ? hosts.filter(h => net_contains(h.ip)).length : hosts.length;
+  nets.length ? hosts.filter(h => netOf(h.ip)).length : hosts.length;
 document.getElementById("count-services").textContent = allServices.length;
 
 addEventListener("hashchange", () => showTab(location.hash.slice(1)));

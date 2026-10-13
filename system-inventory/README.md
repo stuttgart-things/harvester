@@ -14,8 +14,8 @@ tabs — Topology, Addresses, Services — so nothing has to be scrolled past.
 Each tab is deep-linkable (`#services`) and the last one used is remembered
 per browser. Nodes can be dragged
 and stay where you drop them, clicking one shows its description and the
-services it runs, an address matrix lays out all 256 addresses of the `/24`
-(statically assigned, DHCP pool, free), and a service index lists everything
+services it runs, one address matrix per network lays out all 256 addresses
+of its `/24` (statically assigned, DHCP pool, free), and a service index lists everything
 running in the lab — grouped by cluster, sortable by any column, filterable by
 free text. Diagram and matrix are linked: selecting in one
 highlights in the other.
@@ -240,6 +240,20 @@ networks:
 ```
 
 Without them the matrix only distinguishes assigned from free.
+
+More than one network is fine: every entry under `networks` gets its own node
+in the topology and its own address matrix. The lab network `192.168.10.0/24`
+(DD-WRT) and the table tennis network `192.168.8.0/24` (GL.iNet Opal, travels
+with the sthings-edge box) are both listed. A device that lives in both — the
+sthings-edge box, the LED matrix Pi — is one host entry per network, under the
+same `system`, with its own hostname (`matrix` / `matrix-edge`): hostnames are
+the selection key, so they stay unique.
+
+The topology places hosts in rows rather than leaving them to the force
+layout: systems ordered by the networks they touch, hosts within a system by
+network and IP, each network level with the hosts it carries. With a dozen
+hosts a pure force layout piled the members of one system on top of each
+other.
 
 ## Generated files
 

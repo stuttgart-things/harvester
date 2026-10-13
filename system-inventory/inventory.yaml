@@ -27,6 +27,16 @@ networks:
     description: >-
       Flat lab and management network. Gateway, DNS and DHCP all live on the
       DD-WRT router (.1); the dynamic DHCP pool is .100-.149.
+  - cidr: 192.168.8.0/24
+    name: tabletennis
+    # Values from clusters/sthings-edge/README.md, step 1 (Opal config).
+    gateway: 192.168.8.1
+    dhcp_pool: 192.168.8.100-192.168.8.249
+    description: >-
+      Table tennis network behind the GL.iNet Opal (Wi-Fi `sthings-edge`),
+      travels with the sthings-edge box. Gateway, DNS and DHCP on the Opal
+      (.1); uplink is a Wi-Fi repeater. The VIPs .20-.22 sit outside the
+      DHCP pool .100-.249.
 
 # One entry per host. `system` groups them - entries sharing a system name
 # end up in the same box in the diagram.
@@ -176,3 +186,151 @@ hosts:
         description: >-
           Reconciles ClusterbookCluster resources against the Clusterbook API
           on this cluster. No ingress.
+
+  # The sthings-edge box (LattePanda) in SthingsNet: role `kiosk`, no k3s.
+  # Address from clusters/sthings-edge/README.md (troubleshooting); inside the
+  # DHCP pool like .110 and .139.
+  - system: sthings-edge
+    hostname: sthings-edge-kiosk
+    ip: 192.168.10.111
+    kind: host
+    description: >-
+      The sthings-edge box (MAC 00:e0:4c:0a:f6:ff) when it boots in SthingsNet:
+      role `kiosk` (detected from the gateway), Firefox kiosk with the
+      homerun2-dev tabs, k3s skipped. See clusters/sthings-edge/README.md.
+
+  # ---------------------------------------------------------------------------
+  # Table tennis network 192.168.8.0/24 (GL.iNet Opal). Everything below from
+  # clusters/sthings-edge/README.md and clusters/sthings-edge/cluster-vars.yaml.
+  # ---------------------------------------------------------------------------
+  - system: network
+    hostname: opal
+    ip: 192.168.8.1
+    kind: router
+    description: >-
+      GL.iNet Opal (GL-SFT1200, OpenWrt 18.06). Gateway, DNS (dnsmasq) and DHCP
+      for the table tennis network, own Wi-Fi `sthings-edge`, uplink as a
+      Wi-Fi repeater.
+    services:
+      - name: dnsmasq
+        port: 53
+        description: >-
+          Local domain edge.sthings.lab: one address line per service name to
+          the Gateway VIP .20, sthings-edge.com to the players' VIP .21, and
+          matrix.sthings.lab to the LED matrix Pi.
+      - name: DHCP
+        port: 67
+        description: >-
+          Dynamic pool .100-.249 plus static leases for the box (.10) and the
+          LED matrix Pi (.30).
+
+  - system: sthings-edge
+    hostname: sthings-edge
+    ip: 192.168.8.10
+    kind: k3s-cluster
+    cluster: sthings-edge
+    description: >-
+      LattePanda Mu (N100, 8 GB, eMMC) on a LAN port of the Opal, static lease
+      for enp1s0. Single-node k3s + Cilium + Flux (role `tt`) for the table
+      tennis stack.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: >-
+          k3s API server; kubeconfig ~/.kube/sthings-edge, or through an SSH
+          tunnel to 127.0.0.1:6443.
+
+  - system: sthings-edge
+    hostname: edge-gateway
+    ip: 192.168.8.20
+    kind: host
+    cluster: sthings-edge
+    description: >-
+      Cilium L2 VIP of the Gateway `edge-gateway`, internal names
+      *.edge.sthings.lab with certificates from the edge CA (OpenBao on the
+      box). Resolves only inside the Opal LAN.
+    services:
+      - name: schmetterpause
+        fqdn: schmetterpause.edge.sthings.lab
+        description: Table tennis app, admin side.
+      - name: Zählwerk
+        fqdn: zaehlwerk.edge.sthings.lab
+        description: Score counter (redirects to its login).
+      - name: OpenBao
+        fqdn: openbao.edge.sthings.lab
+        description: >-
+          PKI of the edge (intermediate signed by the edge root) and ACME
+          directory under /v1/pki/acme/directory.
+      - name: MinIO (S3)
+        fqdn: minio.edge.sthings.lab
+        description: S3 API; bucket for the CNPG backups of schmetterpause.
+      - name: MinIO console
+        fqdn: minio-console.edge.sthings.lab
+        description: Web UI for MinIO.
+      - name: led-catcher
+        fqdn: led-catcher.edge.sthings.lab
+        description: homerun2 LED catcher.
+      - name: light-catcher
+        fqdn: light-catcher.edge.sthings.lab
+        description: homerun2 light catcher.
+      - name: light-catcher-tabletennis
+        fqdn: light-catcher-tabletennis.edge.sthings.lab
+        description: >-
+          homerun2 light catcher for the table; still sends to wled-mock
+          until there is a real LED strip.
+      - name: wled-mock
+        fqdn: wled-mock.edge.sthings.lab
+        description: Stand-in for the WLED strip.
+      - name: config-viewer
+        fqdn: config-viewer.edge.sthings.lab
+        description: homerun2 config viewer.
+      - name: demo-pitcher
+        fqdn: demo-pitcher.edge.sthings.lab
+        description: homerun2 demo pitcher.
+      - name: scout
+        fqdn: scout.edge.sthings.lab
+        description: homerun2 scout.
+      - name: core-catcher
+        fqdn: core-catcher.edge.sthings.lab
+        description: homerun2 core catcher.
+      - name: omni-pitcher
+        fqdn: omni-pitcher.edge.sthings.lab
+        description: homerun2 omni pitcher (API only, no page on /).
+
+  - system: sthings-edge
+    hostname: edge-play-gateway
+    ip: 192.168.8.21
+    kind: host
+    cluster: sthings-edge
+    description: >-
+      Cilium L2 VIP of the players' Gateway `edge-play-gateway`, public name
+      sthings-edge.com with a Let's Encrypt wildcard (DNS-01 at Hetzner).
+      Inside the Opal LAN the router answers the name locally.
+    services:
+      - name: schmetterpause (players)
+        fqdn: schmetterpause.sthings-edge.com
+        description: The players' side of schmetterpause, from their phones.
+
+  - system: sthings-edge
+    hostname: edge-redis
+    ip: 192.168.8.22
+    kind: host
+    cluster: sthings-edge
+    description: >-
+      Cilium LB address of redis-stack-lb (clusters/sthings-edge/lan), own pool
+      with exactly this IP. Only 6379, password-protected.
+    services:
+      - name: Redis
+        port: 6379
+        description: >-
+          The `messages` stream the LED matrix Pi consumes when it is in the
+          table tennis network.
+
+  - system: matrix
+    hostname: matrix-edge
+    ip: 192.168.8.30
+    kind: host
+    description: >-
+      The same LED matrix Pi (MAC b8:27:eb:d9:33:db) when it travels with the
+      box: Wi-Fi `sthings-edge`, static lease on the Opal, Redis from
+      edge-redis. matrix.sthings.lab points here via the Opal's dnsmasq.
