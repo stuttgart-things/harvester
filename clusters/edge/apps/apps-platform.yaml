@@ -61,6 +61,7 @@ spec:
       TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
       TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+      TABLETENNIS_ZAEHLWERK_PONG: 'on'
       TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
   prune: true
   retryInterval: '1m'

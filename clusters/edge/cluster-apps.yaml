@@ -64,14 +64,15 @@ spec:
   # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686); v1.130.0: zaehlwerk
   # v0.15.0, start options on the scoring page (flux#687); v1.131.0:
   # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689);
-  # v1.135.0: schmetterpause v0.17.0 + zaehlwerk/zaehlwerk-buttons v0.18.0,
-  # check-in by fob (TABLETENNIS_FOB_CHECKIN) and by phone
-  # (TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK) (flux#697).
+  # v1.135.0/v1.136.0: schmetterpause v0.17.0 + zaehlwerk/zaehlwerk-buttons
+  # v0.18.0, check-in by fob (TABLETENNIS_FOB_CHECKIN) and by phone
+  # (TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK) (flux#697), and zaehlwerk-pong
+  # (TABLETENNIS_ZAEHLWERK_PONG, the flux pong PR) -- one release each.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.135.0
+    tag: v1.136.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -266,6 +267,14 @@ spec:
         # the component mounts. Both need the scoreboard + handover above.
         TABLETENNIS_FOB_CHECKIN: sops
         TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK: 'on'
+        # LAB: zaehlwerk-pong (zaehlwerk ADR-0006/0008/0009), the game on the
+        # LED panel -- internal at https://zaehlwerk-pong.<EDGE_DOMAIN>, for
+        # players' phones at https://zaehlwerk-pong.<EDGE_PLAY_DOMAIN>
+        # (./lab/play-routes). Every pong match is a demo: never reported to
+        # schmetterpause, and a real match takes the table from it. Attract
+        # mode (`attract`, ZAEHLWERK_PONG_ATTRACT_AFTER) stays off: the panel
+        # would play itself whenever the table is idle. 'on' QUOTED.
+        TABLETENNIS_ZAEHLWERK_PONG: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
