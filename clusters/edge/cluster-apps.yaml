@@ -63,12 +63,15 @@ spec:
   # v1.129.0: zaehlwerk v0.14.0 (match phases, ADR-0005) and
   # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686); v1.130.0: zaehlwerk
   # v0.15.0, start options on the scoring page (flux#687); v1.131.0:
-  # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689).
+  # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689);
+  # v1.135.0: schmetterpause v0.17.0 + zaehlwerk/zaehlwerk-buttons v0.18.0,
+  # check-in by fob (TABLETENNIS_FOB_CHECKIN) and by phone
+  # (TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK) (flux#697).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.131.0
+    tag: v1.135.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -253,6 +256,16 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
         TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
         TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
+        # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
+        # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
+        # player links a fob in schmetterpause, the hub (here the table mock's
+        # "hold a fob") checks in with ZAEHLWERK_CHECKIN_TOKEN. By phone:
+        # /table/left|right on schmetterpause, which claims the half at
+        # zaehlwerk itself -- over https://zaehlwerk.<EDGE_DOMAIN> (the
+        # default), trusting the edge root through trust-manager's bundle that
+        # the component mounts. Both need the scoreboard + handover above.
+        TABLETENNIS_FOB_CHECKIN: sops
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -263,6 +276,11 @@ spec:
           SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
           # one token, read by both sides (schmetterpause /api, zaehlwerk)
           SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
+          # check-in by fob: schmetterpause's fob key (a new one unlinks every
+          # fob -- never rotate it casually) and the hub's bearer, which the
+          # table mock reads too
+          SCHMETTERPAUSE_RFID_UID_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_RFID_UID_KEY # pragma: allowlist secret
+          ZAEHLWERK_CHECKIN_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_CHECKIN_TOKEN # pragma: allowlist secret
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
