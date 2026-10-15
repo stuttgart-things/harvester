@@ -67,7 +67,7 @@ spec:
   # v1.135.0/v1.136.0: schmetterpause v0.17.0 + zaehlwerk/zaehlwerk-buttons
   # v0.18.0, check-in by fob (TABLETENNIS_FOB_CHECKIN) and by phone
   # (TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK) (flux#697), and zaehlwerk-pong
-  # (TABLETENNIS_ZAEHLWERK_PONG, the flux pong PR) -- one release each.
+  # (TABLETENNIS_ZAEHLWERK_PONG, flux#698) -- one release each.
   source:
     kind: OCIRepository
     name: flux-repo
