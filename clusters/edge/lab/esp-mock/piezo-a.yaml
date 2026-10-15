@@ -9,7 +9,9 @@
 #      zaehlwerk page (players picked there from schmetterpause) and scores it
 #      to the end, a rally every PIEZO_PACE, then waits for the next one --
 #      what a real board does after power-up. zaehlwerk reports the result to
-#      schmetterpause. Over HTTPS through the Gateway, trusting only the edge
+#      schmetterpause. From v0.22.0 it waits through a demo -- any match
+#      zaehlwerk-pong started: attract mode, the screensaver, a browser
+#      game -- instead of rolling rallies into it (zaehlwerk#138). Over HTTPS through the Gateway, trusting only the edge
 #      root (SSL_CERT_FILE) -- like a device that knows nothing but that root.
 #      PIEZO_JOIN=false would make it start its own matches without players
 #      and replace any match started on the page (zaehlwerk has ONE running
@@ -63,7 +65,7 @@ spec:
             limits: {memory: 128Mi}
       containers:
         - name: piezo
-          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.21.2
+          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.22.0
           env:
             - name: ZAEHLWERK_URL
               value: https://zaehlwerk.${EDGE_DOMAIN}

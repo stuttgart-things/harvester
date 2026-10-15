@@ -72,12 +72,15 @@ spec:
   # fob per player and shows the reader's LEDs (flux#701); v1.139.0:
   # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.21.0, the side select on the
   # watch screen and, with PONG_URL from zaehlwerk-pong-on, the pong
-  # screensaver on an idle table (flux#704).
+  # screensaver on an idle table (flux#704); v1.140.0: zaehlwerk v0.22.0, the
+  # scoring page links Watch/Buttons/Pong/Schmetterpause (BUTTONS_URL from
+  # zaehlwerk-buttons-sim-on), the pong lobby suggests schmetterpause's players
+  # and picks one set, best of 3 or 5, PONG_BEST_OF=1 (flux#709).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.139.0
+    tag: v1.140.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
