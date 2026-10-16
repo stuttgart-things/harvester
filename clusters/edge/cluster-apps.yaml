@@ -75,12 +75,15 @@ spec:
   # screensaver on an idle table (flux#704); v1.140.0: zaehlwerk v0.22.0, the
   # scoring page links Watch/Buttons/Pong/Schmetterpause (BUTTONS_URL from
   # zaehlwerk-buttons-sim-on), the pong lobby suggests schmetterpause's players
-  # and picks one set, best of 3 or 5, PONG_BEST_OF=1 (flux#709).
+  # and picks one set, best of 3 or 5, PONG_BEST_OF=1 (flux#709); v1.141.0:
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.24.0, a diagonal serve in
+  # pong, /ui/live for a display at the table (no demos, no screensaver), and
+  # the sets so far and a set or match point on both screens (flux#710, #712).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.140.0
+    tag: v1.141.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
