@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - schmetterpause.yaml
   - zaehlwerk-pong.yaml
+  - zaehlwerk-buttons.yaml
