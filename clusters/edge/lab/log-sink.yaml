@@ -1,0 +1,28 @@
+---
+# LAB ONLY: the firmware's log sink with a stand-in sender (./log-sink): the
+# box's sink (../../sthings-edge/log-sink) tested before a real board talks to
+# it. Its own Kustomization, so it shows its own Ready state; it brings its
+# namespace, so it waits for nothing.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: log-sink
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/lab/log-sink
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: false

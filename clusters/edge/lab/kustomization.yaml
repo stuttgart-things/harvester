@@ -11,3 +11,5 @@ resources:
   # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao);
   # the table mock that drives it comes from tabletennis (../cluster-apps.yaml)
   - esp-mock.yaml
+  # the firmware's log sink with a stand-in sender (a CronJob of log-sink mock)
+  - log-sink.yaml
