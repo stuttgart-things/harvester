@@ -54,7 +54,7 @@ Shared with the lab, not in this folder: `secrets/edge/` (SOPS values, seal key,
 | Uplink | INTERNET → Repeater → `SVA Visitor` (open, no password) |
 | LAN | `192.168.8.0/24`, own Wi-Fi `sthings-edge`, DHCP `.100–.249` |
 | Box | static lease MAC `00:e0:4c:0a:f6:ff` (`enp1s0`) → `192.168.8.10`, name `sthings-edge` |
-| VIPs (outside DHCP) | `192.168.8.20` Gateway (`*.edge.sthings.lab`), `192.168.8.21` players (`sthings-edge.com`) |
+| VIPs (outside DHCP) | `192.168.8.20` Gateway (`*.edge.sthings.lab`), `192.168.8.21` players (`sthings-edge.com`), `192.168.8.22` Redis for the LED matrix, `192.168.8.23` the firmware's log sink (UDP 9000) |
 | DNS | dnsmasq: `edge.sthings.lab` local, service names → `.20`, `sthings-edge.com` → `.21` |
 
 The box needs the LAN port of the Opal, **not the WAN port** (on WAN it gets no `192.168.8.x`).
@@ -89,6 +89,9 @@ uci commit dhcp && /etc/init.d/dnsmasq restart
 - No `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs only on the lab. The
   router of 2026-10-12 still has the line; drop it once with
   `uci del_list dhcp.@dnsmasq[0].address='/buttons.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+- `log-sink` (the firmware's log sink, [`log-sink/`](./log-sink/log-sink.yaml)) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/log-sink.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+  The board sends to `192.168.8.23` directly and needs no name.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.
@@ -455,6 +458,7 @@ Opal LAN (Wi-Fi `sthings-edge` or cable), where the router answers them.
 | https://schmetterpause.sthings-edge.com/ | the players' side, Let's Encrypt |
 | https://zaehlwerk.edge.sthings.lab/ | score counter (redirects to its login) |
 | https://openbao.edge.sthings.lab/ | OpenBao UI; ACME `…/v1/pki/acme/directory` |
+| https://log-sink.edge.sthings.lab/ | the firmware's log sink: sessions and games the board sent to `192.168.8.23:9000` (read-only, no login) |
 | https://minio-console.edge.sthings.lab/ | MinIO console (`minio.edge.sthings.lab` = the S3 API) |
 | https://led-catcher.edge.sthings.lab/, https://light-catcher.edge.sthings.lab/, https://light-catcher-tabletennis.edge.sthings.lab/, https://wled-mock.edge.sthings.lab/ | homerun2 lights |
 | https://config-viewer.edge.sthings.lab/, https://demo-pitcher.edge.sthings.lab/, https://scout.edge.sthings.lab/, https://core-catcher.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |

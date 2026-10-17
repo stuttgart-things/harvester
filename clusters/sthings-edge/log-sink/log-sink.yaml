@@ -1,0 +1,165 @@
+---
+# The firmware's log sink (zaehlwerk-firmware tools/log-sink, docs/log-sink.md)
+# on the box, so a session at the table is recorded without a laptop that has
+# to stay awake for the whole match. The board sends its diagnostic log over
+# UDP; the sink writes one file per session and one per game, and its viewer
+# shows the curves next to the thresholds that judged them.
+#
+# - UDP 9000 on its own LAN address, 192.168.8.23 (outside the Opal's DHCP
+#   range .100-.249), with a pool of its own that selects only this Service
+#   -- the pattern of ../lan/redis-lb.yaml. Point the board at it:
+#   curl "http://zaehlwerk.local/diag?host=192.168.8.23&port=9000&on=1"
+#   (or under "Diagnose" on the board's page).
+# - The viewer (TCP 9001, read-only, no login) at
+#   https://log-sink.<EDGE_DOMAIN> on edge-gateway -- needs its name on the
+#   Opal's dnsmasq (README, step 1).
+# - The files on a local-path volume. local-path deletes the data with the
+#   claim: copy a day you want to keep (kubectl cp) before removing this.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: log-sink
+---
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: log-sink
+spec:
+  blocks:
+    - start: "192.168.8.23"
+      stop: "192.168.8.23"
+  serviceSelector:
+    matchLabels:
+      zaehlwerk.stuttgart-things.com/lb-pool: log-sink
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: log-sink-data
+  namespace: log-sink
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-sink
+  namespace: log-sink
+  labels:
+    app.kubernetes.io/name: log-sink
+spec:
+  replicas: 1
+  # One writer per volume: a second pod during a rollout would split a
+  # session over two files.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: log-sink
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: log-sink
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: log-sink
+          image: ghcr.io/stuttgart-things/zaehlwerk-log-sink:sha-4c4f846e8e039f0c2bb12e6e048753ce2f267589
+          args: ["-listen", ":9000", "-viewer", ":9001", "-dir", "/data"]
+          ports:
+            - name: diag
+              containerPort: 9000
+              protocol: UDP
+            - name: viewer
+              containerPort: 9001
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: viewer
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: viewer
+            periodSeconds: 30
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: log-sink-data
+---
+# The board's way in: UDP on the LAN. The sink answers each ping at the
+# datagram's source; the load balancer's connection tracking takes the
+# answer back to the board.
+apiVersion: v1
+kind: Service
+metadata:
+  name: log-sink-lb
+  namespace: log-sink
+  labels:
+    zaehlwerk.stuttgart-things.com/lb-pool: log-sink
+  annotations:
+    lbipam.cilium.io/ips: "192.168.8.23"
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: log-sink
+  ports:
+    - name: diag
+      port: 9000
+      targetPort: diag
+      protocol: UDP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: log-sink
+  namespace: log-sink
+spec:
+  selector:
+    app.kubernetes.io/name: log-sink
+  ports:
+    - name: viewer
+      port: 80
+      targetPort: viewer
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: log-sink
+  namespace: log-sink
+spec:
+  parentRefs:
+    - name: ${EDGE_GATEWAY_NAME}
+      namespace: default
+      sectionName: https
+  hostnames:
+    - log-sink.${EDGE_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: log-sink
+          port: 80
