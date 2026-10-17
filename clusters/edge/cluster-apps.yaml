@@ -78,12 +78,15 @@ spec:
   # and picks one set, best of 3 or 5, PONG_BEST_OF=1 (flux#709); v1.141.0:
   # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.24.0, a diagonal serve in
   # pong, /ui/live for a display at the table (no demos, no screensaver), and
-  # the sets so far and a set or match point on both screens (flux#710, #712).
+  # the sets so far and a set or match point on both screens (flux#710, #712);
+  # v1.146.1: zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.25.0, the referee
+  # on the watch and live screens with the leader's colour on its cord, pong's
+  # favicon (flux#685, #729).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.141.0
+    tag: v1.146.1
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
