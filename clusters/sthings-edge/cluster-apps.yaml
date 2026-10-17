@@ -47,12 +47,18 @@ spec:
   # v1.129.0: zaehlwerk v0.14.0 (match phases, ADR-0005) and
   # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686); v1.130.0: zaehlwerk
   # v0.15.0, start options on the scoring page (flux#687); v1.131.0:
-  # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689).
+  # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689);
+  # v1.146.1 (catching up with the lab, #442): schmetterpause v0.17.0 and
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.25.0 -- check-in by phone,
+  # zaehlwerk-pong, the side select and the pong screensaver, /ui/live for a
+  # display at the table, the set history and a set or match point on both
+  # screens, the referee and the leader's colour on the cord (flux#697 ..
+  # #712, #729; the lab's comment in ../edge/cluster-apps.yaml has each step).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.131.0
+    tag: v1.146.1
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -94,8 +100,9 @@ spec:
         - kind: ConfigMap
           name: cluster-vars
           optional: false
-    # BOX: only the players' route of schmetterpause on edge-play-gateway
-    # (hand-written, ./play). On the lab this route sits in edge-lab next to
+    # BOX: the players' routes on edge-play-gateway (schmetterpause,
+    # zaehlwerk-pong, the table mock) and the LED matrix's Redis on the LAN
+    # (hand-written, ./play). On the lab the routes sit in edge-lab next to
     # lab-only parts (Vault issuer, CoreDNS forward, ESP mock), none of which
     # the box has.
     edge-play:
@@ -231,6 +238,31 @@ spec:
         # House rule (zaehlwerk#77, ADR-0005): whoever lost the previous set
         # serves first in the next one, instead of ITTF's alternation.
         TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
+        # BOX, UNTIL THE REAL BOARD SCORES: zaehlwerk's table mock (flux#666)
+        # at https://buttons.<EDGE_DOMAIN> and, for phones,
+        # https://buttons.<EDGE_PLAY_DOMAIN> (./play/play-routes) -- emulated
+        # buttons, the only way to score on the box while the firmware does
+        # not send to zaehlwerk yet and no button hardware exists. No piezo
+        # URL: the page's piezo section points at the piezo-sim, which is off,
+        # and reports the board as not answering. The page takes points back
+        # without a login: REMOVE IT once real matches are played at the
+        # table (both lines, and play/play-routes/zaehlwerk-buttons.yaml).
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        # Check-in by phone (flux#697; schmetterpause ADR-0026, zaehlwerk
+        # ADR-0011): /table/left|right on schmetterpause claims the half at
+        # zaehlwerk over https://zaehlwerk.<EDGE_DOMAIN>, trusting the edge
+        # root through trust-manager's bundle. Needs the scoreboard + handover
+        # above. By fob (TABLETENNIS_FOB_CHECKIN: sops) only once a real hub
+        # with an RC522 exists -- that hardware is not ordered yet.
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK: 'on'
+        # zaehlwerk-pong (zaehlwerk ADR-0006/0008/0009), the game on the LED
+        # panel -- internal at https://zaehlwerk-pong.<EDGE_DOMAIN> (needs the
+        # name on the Opal's dnsmasq, #442), for phones at
+        # https://zaehlwerk-pong.<EDGE_PLAY_DOMAIN>. Every pong match is a
+        # demo, and a real match takes the table from it. Attract mode stays
+        # off: the panel would play itself whenever the table is idle.
+        TABLETENNIS_ZAEHLWERK_PONG: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -241,6 +273,12 @@ spec:
           SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
           # one token, read by both sides (schmetterpause /api, zaehlwerk)
           SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
+          # check-in by fob, read only once TABLETENNIS_FOB_CHECKIN is on:
+          # schmetterpause's fob key (a new one unlinks every fob -- never
+          # rotate it) and the hub's bearer. Shared with the lab, so a fob
+          # linked there resolves here too.
+          SCHMETTERPAUSE_RFID_UID_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_RFID_UID_KEY # pragma: allowlist secret
+          ZAEHLWERK_CHECKIN_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_CHECKIN_TOKEN # pragma: allowlist secret
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
