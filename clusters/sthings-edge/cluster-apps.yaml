@@ -229,9 +229,18 @@ spec:
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: 7d
         # scoreboard + handover (flux#642): players and scorers from
         # schmetterpause on the zaehlwerk page, won matches reported back.
-        # zaehlwerk calls https://schmetterpause.<EDGE_DOMAIN> (the default),
-        # trusting the edge root through trust-manager's bundle.
+        # zaehlwerk calls https://schmetterpause.<EDGE_PLAY_DOMAIN>, the
+        # players' name, so its Schmetterpause link opens on a phone too: a Let's
+        # Encrypt certificate, among the public CAs in trust-manager's bundle.
+        # Pods resolve it through the Opal, which answers *.sthings-edge.com
+        # with the play VIP 192.168.8.21 (the Hetzner record is the lab's).
+        # (Before: https://schmetterpause.<EDGE_DOMAIN>, the default.)
         TABLETENNIS_SCOREBOARD_HANDOVER: sops
+        TABLETENNIS_ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
+        # The pages' links -- zaehlwerk's Pong, the way back to zaehlwerk -- go
+        # to the players' names (./play/play-routes), which a phone reaches
+        # without the edge CA (flux#736).
+        TABLETENNIS_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
         # The office's admin who never plays (schmetterpause
         # docs/admin-and-observers.md): `timoboll` joins on the page with its
         # own PIN, gets the admin flag here at every start, then marks itself
@@ -242,6 +251,26 @@ spec:
         # House rule (zaehlwerk#77, ADR-0005): whoever lost the previous set
         # serves first in the next one, instead of ITTF's alternation.
         TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
+        # Check-in by phone (flux#697; schmetterpause ADR-0025/0026, zaehlwerk
+        # ADR-0010/0011): /table/left|right on schmetterpause claims the half
+        # at zaehlwerk itself. Needs the scoreboard + handover above. By fob
+        # (TABLETENNIS_FOB_CHECKIN) stays off until the real fob hub is there.
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK: 'on'
+        # schmetterpause's way to zaehlwerk is the players' name: the start
+        # page's browser reads the live score from it (/live/stream), so a
+        # phone needs a name with a Let's Encrypt certificate, and the
+        # check-in by phone claims over it too (./play/play-routes/zaehlwerk.yaml).
+        # zaehlwerk lets both of schmetterpause's names read its stream (CORS).
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk.${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause.${EDGE_PLAY_DOMAIN},https://schmetterpause.${EDGE_DOMAIN}
+        # zaehlwerk-pong (zaehlwerk ADR-0006/0008/0009), the game on the LED
+        # panel -- internal at https://zaehlwerk-pong.<EDGE_DOMAIN> (needs the
+        # Opal dnsmasq name, #442), for players' phones at
+        # https://zaehlwerk-pong.<EDGE_PLAY_DOMAIN> (./play/play-routes). Every
+        # pong match is a demo: never reported to schmetterpause, never posted
+        # to Teams, and a real match takes the table from it. Attract mode
+        # stays off: the panel would play itself whenever the table is idle.
+        TABLETENNIS_ZAEHLWERK_PONG: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
