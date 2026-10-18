@@ -38,7 +38,7 @@ spec:
       HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
       HOMERUN2_REDIS_STORAGE_CLASS: local-path
       HOMERUN2_REDIS_STORAGE_SIZE: '1Gi'
-      HOMERUN2_SOPS_NOTIFY: tabletennis-results-with-demos
+      HOMERUN2_SOPS_NOTIFY: tabletennis-results
       INFRA_DOMAIN: ${EDGE_DOMAIN}
       INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
       INFRA_GATEWAY_NAMESPACE: default
