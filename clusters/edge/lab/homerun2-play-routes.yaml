@@ -1,0 +1,35 @@
+---
+# homerun2's UIs on edge-play-gateway as well: https://<app>.<EDGE_PLAY_DOMAIN>
+# beside the internal https://<app>.<EDGE_DOMAIN> routes the apps bring
+# themselves. In homerun2's namespaces, which the apps create -- so a
+# Kustomization of its own that retries until they exist (README, Layout,
+# lesson 2). Not part of play-routes: a hanging homerun2 must not hold back
+# the players' routes.
+#
+# No dependsOn homerun2-light-catcher-tabletennis: its namespace is all the
+# route needs, and the retry finds it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-play-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/lab/homerun2-play-routes
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
+        optional: false
