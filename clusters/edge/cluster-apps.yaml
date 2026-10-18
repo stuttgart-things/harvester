@@ -91,7 +91,8 @@ spec:
   # table mock beside the single button (flux#739); v1.151.0:
   # TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE, the device the table mock starts on
   # (flux#742), and the notification-catcher's streams and dry run as values
-  # on homerun2-sops (flux#741, defaults unchanged).
+  # on homerun2-sops (flux#741, defaults unchanged) -- table tennis results
+  # to the edge's own Teams channel (dry run here).
   source:
     kind: OCIRepository
     name: flux-repo
@@ -241,6 +242,12 @@ spec:
         HOMERUN2_REDIS_STORAGE_CLASS: local-path
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+        # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
+        # shared with sthings-edge). DRY RUN here: the lab plays mock matches,
+        # the catcher only logs what it would send.
+        HOMERUN2_SOPS_NOTIFY: tabletennis-results
+        HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
+        HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'on'
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
