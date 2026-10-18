@@ -95,12 +95,14 @@ spec:
   # to the edge's own Teams channel; v1.152.0: notification-catcher v3.1.0,
   # the results card without demo/bot games, and
   # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM, the table light's profile
-  # from lab/light-profile (flux#747).
+  # from lab/light-profile (flux#747); v1.154.0: the notify variant
+  # tabletennis-results-with-demos (flux#750) and openbao chart 0.30.4 (same
+  # OpenBao v2.7.1, flux#746).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.152.0
+    tag: v1.154.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -247,9 +249,12 @@ spec:
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
         # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
         # shared with sthings-edge) -- for real, no dry run: a match won on
-        # the table mock posts a card (players, sets, set scores). Demo and
-        # bot games (demo=1) stay out (flux#747, notification-catcher v3.1.0).
-        HOMERUN2_SOPS_NOTIFY: tabletennis-results
+        # the table mock posts a card (players, sets, set scores).
+        # TESTING: -with-demos posts pong games too, with a Demo row on the
+        # card (flux#750) -- every zaehlwerk-pong match, the bot games the
+        # service plays by itself included, so a card every few minutes. Back
+        # to tabletennis-results (demo=1 left out) once the card looks right.
+        HOMERUN2_SOPS_NOTIFY: tabletennis-results-with-demos
         HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
         HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
       secrets:
