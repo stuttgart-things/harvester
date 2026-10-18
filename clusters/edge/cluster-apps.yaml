@@ -92,12 +92,15 @@ spec:
   # TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE, the device the table mock starts on
   # (flux#742), and the notification-catcher's streams and dry run as values
   # on homerun2-sops (flux#741, defaults unchanged) -- table tennis results
-  # to the edge's own Teams channel (dry run here).
+  # to the edge's own Teams channel; v1.152.0: notification-catcher v3.1.0,
+  # the results card without demo/bot games, and
+  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM, the table light's profile
+  # from lab/light-profile (flux#747).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.151.0
+    tag: v1.152.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -243,11 +246,12 @@ spec:
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
         # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
-        # shared with sthings-edge). DRY RUN here: the lab plays mock matches,
-        # the catcher only logs what it would send.
+        # shared with sthings-edge) -- for real, no dry run: a match won on
+        # the table mock posts a card (players, sets, set scores). Demo and
+        # bot games (demo=1) stay out (flux#747, notification-catcher v3.1.0).
         HOMERUN2_SOPS_NOTIFY: tabletennis-results
         HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
-        HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'on'
+        HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
@@ -342,10 +346,13 @@ spec:
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
-    # fireworks. Sends to the wled-mock that homerun2-sops brings; on the box
-    # set HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT to the real strip.
-    # Same redis password as homerun2-sops (same ref).
+    # fireworks. The profile is this cluster's own ConfigMap
+    # (lab/light-profile, flux#747): those effects plus serve, warm-up and
+    # change of ends, still on the wled-mock that homerun2-sops brings -- the
+    # lab cannot reach a device. Same redis password as homerun2-sops (same ref).
     homerun2-light-catcher-tabletennis-sops:
+      vars:
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
       secrets:
         homerun2-light-catcher-tabletennis-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
