@@ -51,12 +51,15 @@ spec:
   # v1.150.0: everything clusters/edge ran up to it (zaehlwerk/buttons/pong
   # v0.28.0 among it -- none of its new opt-in switches is set here), and the
   # notification-catcher's streams and dry-run switches on homerun2-sops
-  # (flux#741).
+  # (flux#741); v1.152.0: notification-catcher v3.1.0 -- the results card
+  # with players and set scores, demo/bot games (demo=1) no longer posted
+  # (flux#747); TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE and
+  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM exist, neither set here.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.150.0
+    tag: v1.152.0
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
