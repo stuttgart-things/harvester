@@ -1,0 +1,163 @@
+# homerun2 on edge-play-gateway: the same Services as the internal routes
+# (homerun2-sops, homerun2-light-catcher-tabletennis-sops), one rule at "/"
+# like theirs, under the *.<EDGE_PLAY_DOMAIN> wildcard certificate that already
+# covers schmetterpause and zaehlwerk. Same set as clusters/edge (#460).
+#
+# The route is the access control, as for ../play-routes/zaehlwerk.yaml.
+# omni-pitcher and scout ask for their token; demo-pitcher, the led-catcher's
+# stream switch, the light-catcher test page and the wled-mock do not --
+# anyone in the table Wi-Fi who reaches the name can send messages to the
+# LED matrix and switch its stream.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: config-viewer-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - config-viewer.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-config-viewer
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: core-catcher-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - core-catcher.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-core-catcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: demo-pitcher-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - demo-pitcher.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-demo-pitcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: led-catcher-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - led-catcher.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-led-catcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: light-catcher-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - light-catcher.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-light-catcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: omni-pitcher-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - omni-pitcher.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-omni-pitcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: scout-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - scout.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-scout
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wled-mock-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - wled-mock.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-wled-mock
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: light-catcher-tabletennis-play
+  namespace: homerun2-tabletennis
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - light-catcher-tabletennis.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-light-catcher
+          port: 80

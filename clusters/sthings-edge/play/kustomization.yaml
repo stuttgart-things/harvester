@@ -8,5 +8,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - play-routes.yaml
+  # homerun2's UIs under EDGE_PLAY_DOMAIN too
+  - homerun2-play-routes.yaml
   - redis-lb.yaml
   - log-sink.yaml
