@@ -65,7 +65,7 @@ spec:
             limits: {memory: 128Mi}
       containers:
         - name: piezo
-          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.25.0
+          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.26.0
           env:
             - name: ZAEHLWERK_URL
               value: https://zaehlwerk.${EDGE_DOMAIN}

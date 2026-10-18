@@ -81,12 +81,14 @@ spec:
   # the sets so far and a set or match point on both screens (flux#710, #712);
   # v1.146.1: zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.25.0, the referee
   # on the watch and live screens with the leader's colour on its cord, pong's
-  # favicon (flux#685, #729).
+  # favicon (flux#685, #729); v1.147.0: zaehlwerk/zaehlwerk-buttons/
+  # zaehlwerk-pong v0.26.0, bot games the service plays itself, on with no tab
+  # open (zaehlwerk ADR-0014), and TABLETENNIS_LINK_DOMAIN (flux#736).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.146.1
+    tag: v1.147.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
