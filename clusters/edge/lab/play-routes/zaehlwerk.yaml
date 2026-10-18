@@ -1,0 +1,25 @@
+---
+# zaehlwerk on a phone: https://zaehlwerk.<EDGE_PLAY_DOMAIN>, the same Service
+# as the internal route (apps/tabletennis, zaehlwerk), through
+# edge-play-gateway. Covered by its *.<EDGE_PLAY_DOMAIN> wildcard (certificate
+# and Hetzner record), like schmetterpause.yaml. One rule at "/", as zaehlwerk's
+# own route: the scoring page, the watch and live screens, the API and ingest.
+# LAB ONLY: zaehlwerk has no authentication, its route is the access control,
+# so anyone who reaches this name can start, score and end a match. The name
+# is public, the VIP behind it (EDGE_PLAY_LB_IP) is not -- keep it that way.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: zaehlwerk-play
+  namespace: zaehlwerk
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - zaehlwerk.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: zaehlwerk
+          port: 80
