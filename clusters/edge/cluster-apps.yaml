@@ -286,6 +286,10 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
         TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
         TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
+        # The device the table mock starts on (flux#742): button (one key,
+        # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
+        # The page switches at runtime; a restart comes back to this value.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
         # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
         # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
         # player links a fob in schmetterpause, the hub (here the table mock's
