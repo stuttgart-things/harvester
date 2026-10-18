@@ -32,8 +32,9 @@ spec:
     substitute:
       APPS_SOURCE: flux-repo
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
       HOMERUN2_NAMESPACE: homerun2
-      HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'on'
+      HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
       HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
       HOMERUN2_REDIS_STORAGE_CLASS: local-path
       HOMERUN2_REDIS_STORAGE_SIZE: '1Gi'

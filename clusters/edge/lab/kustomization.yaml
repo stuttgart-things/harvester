@@ -8,6 +8,8 @@ resources:
   - coredns-lab-zone.yaml
   - vault-issuer.yaml
   - play-routes.yaml
+  # the table light's own profile (light-catcher-tabletennis)
+  - light-profile.yaml
   # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao);
   # the table mock that drives it comes from tabletennis (../cluster-apps.yaml)
   - esp-mock.yaml
