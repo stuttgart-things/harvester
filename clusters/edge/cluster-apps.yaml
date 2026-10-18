@@ -88,12 +88,15 @@ spec:
   # in the scoring page's navigation (Watch and Live only by address), and the
   # page follows the match at the table (flux#738); v1.149.0:
   # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.28.0, two keys per half on the
-  # table mock beside the single button (flux#739).
+  # table mock beside the single button (flux#739); v1.151.0:
+  # TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE, the device the table mock starts on
+  # (flux#742), and the notification-catcher's streams and dry run as values
+  # on homerun2-sops (flux#741, defaults unchanged).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.149.0
+    tag: v1.151.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -286,6 +289,10 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
         TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
         TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
+        # The device the table mock starts on (flux#742): button (one key,
+        # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
+        # The page switches at runtime; a restart comes back to this value.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
         # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
         # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
         # player links a fob in schmetterpause, the hub (here the table mock's
