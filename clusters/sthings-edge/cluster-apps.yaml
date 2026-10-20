@@ -275,10 +275,12 @@ spec:
         # stays off: the panel would play itself whenever the table is idle.
         TABLETENNIS_ZAEHLWERK_PONG: 'on'
         # The dev portal (zaehlwerk tools/chain-mock/portal, flux#787): one
-        # page at https://zaehlwerk-portal.<EDGE_DOMAIN> with zaehlwerk,
-        # schmetterpause and pong up or down, their pages side by side, the
-        # running match and the table stream. Internal only (needs the Opal
-        # dnsmasq name, README step 1): it ends matches without a login.
+        # page at https://zaehlwerk-portal.<EDGE_PLAY_DOMAIN> (./play/play-routes;
+        # internal also at zaehlwerk-portal.<EDGE_DOMAIN>, which needs the Opal
+        # dnsmasq name, README step 1) with zaehlwerk, schmetterpause and pong
+        # up or down, their pages side by side, the running match and the
+        # table stream. No login, it ends matches: the table Wi-Fi is the
+        # boundary, as for zaehlwerk.
         TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
       secrets:
         tabletennis-sops-secrets:
