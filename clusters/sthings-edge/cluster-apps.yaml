@@ -64,12 +64,14 @@ spec:
   # bumps and omni-pitcher without /pitch/github (flux#785); v1.169.0:
   # zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790), demo-pitcher v2.3.0
   # (flux#789), and the table mock's piezo board on the portal (flux#796,
-  # only with the table mock on).
+  # only with the table mock on); v1.169.1: zaehlwerk v0.30.0, pages that
+  # follow the table switch on its stream, the portal's side column fixed
+  # (flux#797).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.169.0
+    tag: v1.169.1
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
