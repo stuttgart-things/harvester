@@ -106,12 +106,15 @@ spec:
   # the dev portal too (flux#796), zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790)
   # and demo-pitcher v2.3.0 (flux#789); v1.169.1: zaehlwerk v0.30.0, pages
   # that follow the table switch on its stream, the portal's side column
-  # fixed (flux#797).
+  # fixed (flux#797); v1.170.0: homerun2-portal as a bundle component,
+  # BASE_PATH through the bundle and homerun2 at its latest releases
+  # (portal v0.6.0, led-catcher v0.20.0, core-catcher v1.3.0,
+  # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.169.1
+    tag: v1.170.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
