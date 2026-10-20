@@ -78,7 +78,8 @@ uci set dhcp.@dnsmasq[0].local='/edge.sthings.lab/'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
 for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
-         light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout; do
+         light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout \
+         zaehlwerk-portal; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
 uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
@@ -92,6 +93,8 @@ uci commit dhcp && /etc/init.d/dnsmasq restart
 - `log-sink` (the firmware's log sink, [`log-sink/`](./log-sink/log-sink.yaml)) is new: add its line once,
   `uci add_list dhcp.@dnsmasq[0].address='/log-sink.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
   The board sends to `192.168.8.23` directly and needs no name.
+- `zaehlwerk-portal` (zaehlwerk's dev portal, `TABLETENNIS_ZAEHLWERK_PORTAL`) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/zaehlwerk-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.

@@ -271,6 +271,12 @@ spec:
         # to Teams, and a real match takes the table from it. Attract mode
         # stays off: the panel would play itself whenever the table is idle.
         TABLETENNIS_ZAEHLWERK_PONG: 'on'
+        # The dev portal (zaehlwerk tools/chain-mock/portal, flux#787): one
+        # page at https://zaehlwerk-portal.<EDGE_DOMAIN> with zaehlwerk,
+        # schmetterpause and pong up or down, their pages side by side, the
+        # running match and the table stream. Internal only (needs the Opal
+        # dnsmasq name, README step 1): it ends matches without a login.
+        TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
