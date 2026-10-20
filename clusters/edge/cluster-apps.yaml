@@ -399,7 +399,7 @@ spec:
     homerun2-portal:
       vars:
         HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
-        HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,pitch=http://homerun2-demo-pitcher,config=http://homerun2-config-viewer
+        HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
     # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
     # SOPS file, never generated.
