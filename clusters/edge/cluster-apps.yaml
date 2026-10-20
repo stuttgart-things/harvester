@@ -101,12 +101,15 @@ spec:
   # TABLETENNIS_ZAEHLWERK_PORTAL (flux#787, zaehlwerk v0.29.0); in between,
   # BASE_PATH for the homerun2 catchers and mocks behind homerun2-portal
   # (flux#759/#761/#767/#771/#777, empty by default), homerun2 bumps and
-  # omni-pitcher without /pitch/github (flux#785).
+  # omni-pitcher without /pitch/github (flux#785); v1.169.0: the table mock's
+  # piezo board (TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL, here piezo-a) on
+  # the dev portal too (flux#796), zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790)
+  # and demo-pitcher v2.3.0 (flux#789).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.166.0
+    tag: v1.169.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -340,7 +343,8 @@ spec:
         # LAB: the dev portal (zaehlwerk tools/chain-mock/portal, flux#787):
         # one page at https://zaehlwerk-portal.<EDGE_PLAY_DOMAIN>
         # (./lab/play-routes; internal at zaehlwerk-portal.<EDGE_DOMAIN>) with
-        # zaehlwerk, schmetterpause, pong and the table mock up or down, their
+        # zaehlwerk, schmetterpause, pong, the table mock and piezo-a (through
+        # the table mock's board URL, flux#796) up or down, their
         # pages side by side, the running match and the table stream. No
         # login, it ends matches: the route is the boundary, as for zaehlwerk.
         # 'on' QUOTED.
