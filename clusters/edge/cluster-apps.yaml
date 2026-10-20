@@ -97,12 +97,19 @@ spec:
   # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM, the table light's profile
   # from lab/light-profile (flux#747); v1.154.0: the notify variant
   # tabletennis-results-with-demos (flux#750) and openbao chart 0.30.4 (same
-  # OpenBao v2.7.1, flux#746).
+  # OpenBao v2.7.1, flux#746); v1.166.0: zaehlwerk's dev portal,
+  # TABLETENNIS_ZAEHLWERK_PORTAL (flux#787, zaehlwerk v0.29.0); in between,
+  # BASE_PATH for the homerun2 catchers and mocks behind homerun2-portal
+  # (flux#759/#761/#767/#771/#777, empty by default), homerun2 bumps and
+  # omni-pitcher without /pitch/github (flux#785); v1.169.0: the table mock's
+  # piezo board (TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL, here piezo-a) on
+  # the dev portal too (flux#796), zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790)
+  # and demo-pitcher v2.3.0 (flux#789).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.154.0
+    tag: v1.169.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -333,6 +340,15 @@ spec:
         # mode (`attract`, ZAEHLWERK_PONG_ATTRACT_AFTER) stays off: the panel
         # would play itself whenever the table is idle. 'on' QUOTED.
         TABLETENNIS_ZAEHLWERK_PONG: 'on'
+        # LAB: the dev portal (zaehlwerk tools/chain-mock/portal, flux#787):
+        # one page at https://zaehlwerk-portal.<EDGE_PLAY_DOMAIN>
+        # (./lab/play-routes; internal at zaehlwerk-portal.<EDGE_DOMAIN>) with
+        # zaehlwerk, schmetterpause, pong, the table mock and piezo-a (through
+        # the table mock's board URL, flux#796) up or down, their
+        # pages side by side, the running match and the table stream. No
+        # login, it ends matches: the route is the boundary, as for zaehlwerk.
+        # 'on' QUOTED.
+        TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
