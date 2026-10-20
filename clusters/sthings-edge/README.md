@@ -79,7 +79,7 @@ uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
 for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
          light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout \
-         zaehlwerk-portal; do
+         zaehlwerk-portal buttons; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
 uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
@@ -87,8 +87,9 @@ uci set dhcp.@host[0].name='sthings-edge'
 uci commit dhcp && /etc/init.d/dnsmasq restart
 ```
 
-- No `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs only on the lab. The
-  router of 2026-10-12 still has the line; drop it once with
+- `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs on the box too, until the real
+  buttons exist. The router of 2026-10-12 already has the line -- keep it. Once real buttons count and
+  the mock is off again, drop it with
   `uci del_list dhcp.@dnsmasq[0].address='/buttons.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - `log-sink` (the firmware's log sink, [`log-sink/`](./log-sink/log-sink.yaml)) is new: add its line once,
   `uci add_list dhcp.@dnsmasq[0].address='/log-sink.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
@@ -460,6 +461,7 @@ Opal LAN (Wi-Fi `sthings-edge` or cable), where the router answers them.
 | https://schmetterpause.edge.sthings.lab/ | schmetterpause (admin `timoboll`) |
 | https://schmetterpause.sthings-edge.com/ | the players' side, Let's Encrypt |
 | https://zaehlwerk.edge.sthings.lab/ | score counter (redirects to its login) |
+| https://buttons.edge.sthings.lab/, https://buttons.sthings-edge.com/ | the table mock: emulated buttons, until the real ones exist (scores into the running match, no login) |
 | https://openbao.edge.sthings.lab/ | OpenBao UI; ACME `…/v1/pki/acme/directory` |
 | https://log-sink.edge.sthings.lab/ | the firmware's log sink: sessions and games the board sent to `192.168.8.23:9000` (read-only, no login) |
 | https://minio-console.edge.sthings.lab/ | MinIO console (`minio.edge.sthings.lab` = the S3 API) |
