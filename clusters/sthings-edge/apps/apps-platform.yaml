@@ -32,6 +32,7 @@ spec:
     substitute:
       APPS_SOURCE: flux-repo
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
       HOMERUN2_NAMESPACE: homerun2
       HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
       HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
