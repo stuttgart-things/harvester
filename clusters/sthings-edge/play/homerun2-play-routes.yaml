@@ -8,6 +8,10 @@
 #
 # No dependsOn homerun2-light-catcher-tabletennis: its namespace is all the
 # route needs, and the retry finds it.
+#
+# dependsOn homerun2-portal: Cilium resolves a route's backend once, and a
+# route applied before the portal's Service answers 500 until it is touched
+# again.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -19,6 +23,7 @@ metadata:
 spec:
   dependsOn:
     - name: homerun2
+    - name: homerun2-portal
   interval: 1h
   retryInterval: 30s
   timeout: 2m
