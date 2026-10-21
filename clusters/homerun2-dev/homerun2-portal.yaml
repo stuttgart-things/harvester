@@ -1,0 +1,71 @@
+---
+# homerun2-portal (stuttgart-things/homerun2-portal) -- stuttgart-things/flux
+# → ./apps/homerun2/profiles/portal. One page at
+# https://portal.homerun2-dev.sthings.lab: a card per service with its status
+# and what it offers as a fragment (the latest messages, light effects,
+# findings), and each service's own UI under /<key>/ through the portal's
+# reverse proxy. Each service runs with BASE_PATH=/<key>, set in
+# ./homerun2.yaml.
+#
+# On its own Kustomizations next to homerun2, not inside it: the portal holds
+# no secrets and fronts the stack without being part of it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-portal
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/portal
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      # In navigation order. The keys are the BASE_PATHs in ./homerun2.yaml.
+      HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
+---
+# The route, once the portal is Ready: Cilium resolves a route's backendRefs
+# once (see homerun2-routes in ./homerun2.yaml).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-portal-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2-portal
+    - name: cilium-gateway
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/portal-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOMERUN2_PORTAL_HOSTNAME: portal
