@@ -2,5 +2,18 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Annotated pins in the cluster dirs: Flux postBuild *_VERSION substitutes, OCIRepository ref.tag and Kustomization images[].newTag, each followed by `# datasource=<ds> depName=<dep>` on the same line. Same convention as stuttgart-things/stuttgart-things. Nothing may stand between value and annotation -- an unmatched pin is not an error, it is silence.",
+      "fileMatch": [
+        "^clusters/.+\\.ya?ml$"
+      ],
+      "matchStrings": [
+        "\\s*(?<binName>[A-Za-z0-9_]+_VERSION|tag|newTag):\\s[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\"']?\\s*#\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)"
+      ],
+      "versioningTemplate": "semver"
+    }
   ]
 }
