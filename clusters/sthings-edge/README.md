@@ -578,4 +578,3 @@ kubectl -n homerun2-tabletennis logs deploy/homerun2-light-catcher --tail=20   #
 ```
 
 A point on the table should light blue or red for 1 s.
-
