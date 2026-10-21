@@ -10,6 +10,7 @@ packer/
 │   ├── spec.pkr.hcl            # QEMU source + build (no Harvester step — see below)
 │   ├── spec.cloud-init.pkr.hcl # Cloud-init user-data/meta-data generation
 │   ├── variables.pkr.hcl       # Variable declarations (values come from each image's var-file)
+│   ├── verify-cloud-init.sh    # Fails the build on a cloud-init error or a missing package (#314)
 │   ├── publish-base.sh         # Publishes the built image to the MinIO artifact store
 │   ├── register-image.sh       # Registers it with Harvester (Harvester downloads it)
 │   ├── prune-images.sh         # Removes superseded images (dry run unless told otherwise)
@@ -27,7 +28,7 @@ packer/
     └── u26-dev/
         ├── build.pkrvars.hcl   # source = published golden artifact; image_name = u26-dev
         ├── users.yaml          # devs append their SSH keys here
-        ├── packages.yaml       # devs append packages here
+        ├── packages.yaml       # devs append packages here (a wrong name fails the build)
         └── catalog-info.yaml   # type: packer-image-dev
 ```
 
