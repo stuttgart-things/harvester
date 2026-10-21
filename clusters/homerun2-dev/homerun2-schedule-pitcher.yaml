@@ -71,6 +71,18 @@ spec:
         name: homerun2-schedule-pitcher-secrets
         optional: false
   patches:
+    # Roll the pod when its profile ConfigMap or a Secret it reads changes:
+    # it reads them at start only. Reloader is in ./infra-platform.yaml.
+    - target:
+        kind: Deployment
+        name: homerun2-schedule-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-schedule-pitcher
+          annotations:
+            reloader.stakater.com/auto: "true"
     # The artifact ships placeholder Secrets; the real values come from the
     # substitutions above. stringData wins over the placeholder data.
     - target:

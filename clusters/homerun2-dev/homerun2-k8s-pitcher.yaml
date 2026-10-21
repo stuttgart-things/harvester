@@ -80,6 +80,18 @@ spec:
     - name: ghcr.io/stuttgart-things/homerun2-k8s-pitcher
       newTag: v1.2.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher
   patches:
+    # Roll the pod when its profile ConfigMap or a Secret it reads changes:
+    # it reads them at start only. Reloader is in ./infra-platform.yaml.
+    - target:
+        kind: Deployment
+        name: homerun2-k8s-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-k8s-pitcher
+          annotations:
+            reloader.stakater.com/auto: "true"
     # The profile reads omni-pitcher's token instead; the artefact's own
     # token Secret would only carry its "changeme" default.
     - target:
