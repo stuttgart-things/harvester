@@ -318,6 +318,7 @@ committed, the FluxInstance syncing `clusters/homerun2-dev` applies it -- no
 | `openebs` | local storage |
 | `headlamp` | `https://headlamp.homerun2-dev.sthings.lab` |
 | `flux-web` | `https://flux.homerun2-dev.sthings.lab` |
+| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- homerun2-portal picks up a new service list without a manual restart |
 
 The bundle maps one `INFRA_DOMAIN` onto every base that needs a domain, so the
 name is written once. Ordering comes from upstream `dependsOn`, not from the
