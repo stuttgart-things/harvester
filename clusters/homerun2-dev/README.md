@@ -521,6 +521,31 @@ the RBAC ships with its base) and selects them with
 `app.kubernetes.io/part-of=homerun2`. A component without that label is simply
 absent from the view, which reads as an empty panel rather than an error.
 
+### Beside the profile: sound-catcher, schedule-pitcher, k8s-pitcher
+
+Three more components, each on Kustomizations of its own in `flux-system`
+because `profiles/sops` does not carry them. Each mirrors its counterpart on
+platform-sthings (`stuttgart-things/stuttgart-things`,
+`clusters/labul/vsphere/platform-sthings/apps/`):
+
+| Component | File | Source | Portal key |
+|---|---|---|---|
+| sound-catcher (browser player) | [`homerun2-sound-catcher.yaml`](./homerun2-sound-catcher.yaml) | `profiles/base-sound-catcher` (+ `-routes`) | `/sound` |
+| schedule-pitcher | [`homerun2-schedule-pitcher.yaml`](./homerun2-schedule-pitcher.yaml) | released kustomize artifact (OCI) | `/schedule` |
+| k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
+
+schedule-pitcher's own API/UI token is
+[`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
+generated for this cluster; it runs with no checks yet (none of
+platform-sthings' token checks has a Secret here). k8s-pitcher's error events
+reach Teams through the `teams-homerun2-dev` output.
+
+**Every version is pinned in this directory** -- `*_VERSION` substitutes,
+OCIRepository `tag` and `newTag`, each annotated `# datasource=docker depName=…`
+-- and `renovate.json` at the repo root picks them up. The stack used to follow
+flux-apps `main`'s defaults, so a release arrived whenever someone bumped a
+default upstream, unannounced.
+
 ### The real devices: LED matrix and WLED
 
 Two pieces of hardware hang off this stack since 2026-09-28:
