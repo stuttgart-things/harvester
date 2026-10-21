@@ -1,0 +1,23 @@
+---
+# homerun2-portal: https://homerun2-portal.<EDGE_PLAY_DOMAIN>, the same Service
+# as the internal route (flux apps/platform homerun2-portal), through
+# edge-play-gateway. Covered by its *.<EDGE_PLAY_DOMAIN> wildcard (certificate
+# and Hetzner record), like zaehlwerk-portal.yaml. No login: this route is the
+# access control. The services behind it answer under their BASE_PATH (/led,
+# /core, ...), all through this one hostname.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: homerun2-portal-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - homerun2-portal.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-portal
+          port: 80
