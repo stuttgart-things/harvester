@@ -553,7 +553,7 @@ Two pieces of hardware hang off this stack since 2026-09-28:
 
 | Device | Address | Fed by |
 |---|---|---|
-| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN |
+| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN; in the portal as `/matrix` |
 | WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the light-catcher here, via [`homerun2-light-catcher-profile.yaml`](./homerun2-light-catcher-profile.yaml) |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
@@ -568,6 +568,15 @@ redis-cli -h 192.168.10.179 -a "$REDIS_PASSWORD" --no-auth-warning ping
 kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
   'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning XINFO GROUPS messages'
 ```
+
+**In the portal** the Pi is the card *LED Matrix (Pi)* under
+https://portal.homerun2-dev.sthings.lab/ui/matrix, next to the simulator under
+`/led`: `matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080` in
+[`homerun2-portal.yaml`](./homerun2-portal.yaml). The portal forwards
+`/matrix/...` unchanged, so the Pi runs with `BASE_PATH=/matrix`
+(`led_base_path`, led-catcher v0.19.0 or later for the card's fragment). It is
+plain HTTP on 8080, not Caddy's https: the portal image does not carry the
+sthings.lab CA.
 
 The Pi's catcher uses its own consumer group, `homerun2-led-matrix`. **It must
 not share `homerun2-led-catcher` with the in-cluster simulator:** consumers in
