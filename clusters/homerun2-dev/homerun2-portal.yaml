@@ -38,7 +38,12 @@ spec:
       # In navigation order, the same as platform-sthings. The keys are the
       # BASE_PATHs in ./homerun2.yaml, ./homerun2-schedule-pitcher.yaml and
       # ./homerun2-sound-catcher.yaml; `key|Label` sets the card's title.
-      HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
+      #
+      # matrix is not in the cluster: the Pi's own led-catcher
+      # (../../hosts/matrix), on BASE_PATH=/matrix, over plain HTTP on 8080 --
+      # the portal's image does not trust the sthings.lab CA behind Caddy's
+      # https://matrix.sthings.lab. led stays the simulator in the cluster.
+      HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
 ---
 # The route, once the portal is Ready: Cilium resolves a route's backendRefs
 # once (see homerun2-routes in ./homerun2.yaml).

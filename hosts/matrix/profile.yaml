@@ -10,7 +10,7 @@
 #
 # It only fires once the panel reads the `tabletennis` stream. That switch is
 # a human act (clusters/homerun2-dev/README.md, section 9): the `tabletennis`
-# button on https://matrix.sthings.lab, and `messages` -- or `reset` -- after
+# button on https://matrix.sthings.lab/matrix/, and `messages` -- or `reset` -- after
 # the match.
 # Notifications are `card`s (homerun2-led-catcher#121): a header bar in the
 # severity colour with the system, the title wrapped over 3-4 lines, the
