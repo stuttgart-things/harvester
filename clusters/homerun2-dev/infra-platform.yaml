@@ -66,6 +66,11 @@ spec:
     # dashboards
     - ../components/headlamp
     - ../components/flux-web
+    # rollouts -- rolls Deployments annotated reloader.stakater.com/auto when a
+    # ConfigMap/Secret they mount changes. homerun2-portal reads its service
+    # list (envFrom) only at start: without this a new card needed a manual
+    # rollout restart. Standalone, no dependency.
+    - ../components/reloader
   postBuild:
     substitute:
       FLUX_SOURCE: flux-infra
@@ -151,6 +156,10 @@ spec:
       # reason the rest of this block is.
       VAULT_ISSUER_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
       VAULT_ISSUER_CA_KEY: ca.crt
+
+      # ---- reloader --------------------------------------------------------
+      # Chart version, pinned like the homerun2 components (renovate.json).
+      RELOADER_VERSION: "2.2.18" # datasource=helm depName=reloader registryUrl=https://stakater.github.io/stakater-charts
 
       # Ready on this issuer proves the LOGIN worked and nothing more --
       # cert-manager never re-checks the ability to SIGN. A role bound to a

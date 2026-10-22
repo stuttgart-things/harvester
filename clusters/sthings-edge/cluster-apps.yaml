@@ -329,13 +329,18 @@ spec:
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
-    # fireworks. Sends to the wled-mock that homerun2-sops brings; on the box
-    # set HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT to the real strip.
+    # fireworks. Sends to the real WLED (README, section 13): the ESP32 that
+    # homerun2-dev drives in SthingsNet joins the Opal's Wi-Fi `sthings-edge`
+    # as its second network, and the Opal answers wled-matrix.sthings.lab with
+    # its static lease 192.168.8.31. Solid, Rainbow and Fireworks carry the
+    # IDs WLED 16 uses (light-catcher v1.14.0 FxMap: 0, 9, 42). Unset, it is
+    # the wled-mock that homerun2-sops brings.
     # Same redis password as homerun2-sops (same ref).
     homerun2-light-catcher-tabletennis-sops:
       vars:
         # /table behind homerun2-portal, next to the other light-catcher's /light.
         HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
       secrets:
         homerun2-light-catcher-tabletennis-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret

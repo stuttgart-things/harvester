@@ -516,8 +516,8 @@ kubectl top node
 - **Kiosk releases:** stuttgart-things/ansible#1371 → #1372 → #1373 → #1374 (stacked) → new `sthings.baseos`
   release → bump `k3s/requirements.yaml` → run the play once with the `main` raw URL.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
-- **WLED:** the light-catcher still sends to `wled-mock`; set `HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT`
-  once there is a real LED strip.
+- **WLED:** in both networks, [section 13](#13-wled-in-both-networks); the Wi-Fi on the WLED and the Opal's
+  lease and DNS entry are still to be set, then test it.
 - **Offline:** images and charts still come from the internet ([runbook.md](../../docs/edge/runbook.md), *Still online*).
 
 ## 12. LED matrix (sthings-matrix Pi) in both networks
@@ -536,3 +536,53 @@ Tested 2026-10-12: switch to `led-edge` → `LAN changed to edge` → catcher on
 `homerun2-led-matrix` on the box's Redis, `https://matrix.sthings.lab` 200. Not tested yet: the way back and
 cold boots. Opal changes: static lease `B8:27:EB:D9:33:DB` → `.30` and the `matrix.sthings.lab` address
 (backup `/etc/config/dhcp.bak-20261012-matrix`).
+
+## 13. WLED in both networks
+
+The WLED ([`wled-matrix.sthings.lab`](http://wled-matrix.sthings.lab), ESP32, WLED 16.0.1, 36 LEDs, MAC
+`d4:e9:f4:c3:e9:dc`) travels with the box like the matrix. WLED 16 keeps several Wi-Fi networks and joins one
+that is in range, so nothing has to be switched by hand. The light it shows comes from the light-catcher of
+the network it is in:
+
+| | SthingsNet | Table tennis (Opal) |
+|---|---|---|
+| Wi-Fi | `sthings` (WLED network 1) | `sthings-edge` (WLED network 2) |
+| WLED | `192.168.10.123` | `192.168.8.31` (static lease on the Opal) |
+| `wled-matrix.sthings.lab` | dd-wrt | Opal: `address=/wled-matrix.sthings.lab/192.168.8.31` |
+| Driven by | homerun2-dev's light-catcher, `messages` ([profile](../homerun2-dev/homerun2-light-catcher-profile.yaml)) | the box's `homerun2-light-catcher-tabletennis`, `tabletennis` (`HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT` in [`cluster-apps.yaml`](./cluster-apps.yaml)) |
+
+The light-catcher that is in the other network fails to reach the WLED and logs it. Nothing else happens.
+
+**1. WLED: add the second network.** Do this in SthingsNet in the WLED UI: *Config → WiFi Setup*, `+` for
+a second network, SSID `sthings-edge` with its password. Keep DHCP (static IP `0.0.0.0`) for both networks,
+then *Save & Connect*. Check it afterwards: `nw.ins` has two entries, and the password is only shown as
+`pskl`.
+
+```bash
+curl -s http://wled-matrix.sthings.lab/json/cfg | jq '.nw.ins[] | {ssid, pskl, ip}'
+```
+
+If the WLED finds none of its networks, it opens its own access point `WLED-AP` (http://4.3.2.1).
+
+**2. Opal: lease and name.** Do this in the Opal LAN, the same way as the matrix in section 12:
+
+```bash
+opal   # alias from section 1
+cp /etc/config/dhcp /etc/config/dhcp.bak-$(date +%Y%m%d)-wled
+uci add dhcp host
+uci set dhcp.@host[-1].name=wled-matrix
+uci set dhcp.@host[-1].mac=D4:E9:F4:C3:E9:DC
+uci set dhcp.@host[-1].ip=192.168.8.31
+uci add_list dhcp.@dnsmasq[0].address=/wled-matrix.sthings.lab/192.168.8.31
+uci commit dhcp && /etc/init.d/dnsmasq restart
+```
+
+**3. Test** in the Opal network, after the WLED has joined it:
+
+```bash
+nslookup wled-matrix.sthings.lab 192.168.8.1     # 192.168.8.31
+curl -s http://wled-matrix.sthings.lab/json/info | jq '{ver, ip, wifi}'
+kubectl -n homerun2-tabletennis logs deploy/homerun2-light-catcher --tail=20   # effect sent to http://wled-matrix.sthings.lab
+```
+
+A point on the table should light blue or red for 1 s.

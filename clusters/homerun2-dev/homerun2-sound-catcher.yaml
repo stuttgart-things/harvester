@@ -1,0 +1,82 @@
+---
+# homerun2-sound-catcher (stuttgart-things/homerun2-sound-catcher): messages
+# as clips and spoken announcements, heard on its browser player page --
+# browser sink only, one replica. Served under /sound/ for
+# ./homerun2-portal.yaml; / on sound-catcher.homerun2-dev.sthings.lab
+# redirects there, /health stays at the root.
+#
+# stuttgart-things/flux → ./apps/homerun2/profiles/base-sound-catcher, the sops
+# variant: the redis password is HOMERUN2_REDIS_PASSWORD_B64 from
+# homerun2-secrets-subst, which ./homerun2.yaml already requires -- nothing new.
+# Its own Kustomization because profiles/sops does not carry it. Mirrors
+# platform-sthings' apps/homerun2-sound-catcher.yaml.
+#
+# No Reloader on this cluster, so the component's reloader annotation is inert:
+# a profile change needs a manual rollout restart.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-sound-catcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2 # redis-stack
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-sound-catcher
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      # Image and kustomize artifact share this tag.
+      HOMERUN2_SOUND_CATCHER_VERSION: v0.6.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-sound-catcher
+      HOMERUN2_SOUND_CATCHER_BASE_PATH: /sound
+---
+# The route, once the catcher is Ready: Cilium resolves a route's backendRefs
+# once (see homerun2-routes in ./homerun2.yaml). The event-stream rule without
+# a request timeout sits under the BASE_PATH, so it is set here too.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-sound-catcher-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2-sound-catcher
+    - name: cilium-gateway
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/base-sound-catcher-routes
+  postBuild:
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOMERUN2_SOUND_CATCHER_HOSTNAME: sound-catcher
+      HOMERUN2_SOUND_CATCHER_BASE_PATH: /sound

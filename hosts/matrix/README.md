@@ -14,8 +14,9 @@ record on the DD-WRT and a certificate from the OpenBao PKI on `platform`.
 
 | | |
 |---|---|
-| Demo UI and API | **https://matrix.sthings.lab** (Caddy on 443, 80 redirects) |
-| Direct, plain HTTP | http://192.168.10.120:8080 |
+| Demo UI and API | **https://matrix.sthings.lab/matrix/** (Caddy on 443, 80 redirects; `/` redirects to `/matrix/`) |
+| In the portal | https://portal.homerun2-dev.sthings.lab/ui/matrix, through http://matrix.sthings.lab:8080 |
+| Direct, plain HTTP | http://192.168.10.120:8080/matrix/ |
 | Health | https://matrix.sthings.lab/healthz, which reports the installed version and commit |
 | Board | Raspberry Pi 3 Model B Plus Rev 1.3, Raspberry Pi OS Trixie (64-bit) |
 | wlan0 | `192.168.10.120`, MAC `b8:27:eb:d9:33:db`, static lease, the address used everywhere |
@@ -154,7 +155,7 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.13.0 \
+led_catcher_version=v0.20.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock \
 run_id=$(date +%s%N)" \
@@ -166,6 +167,7 @@ rm -f ansible.env
 | Parameter | |
 |---|---|
 | `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses |
+| `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
@@ -185,11 +187,11 @@ The play then reports `certificate ok before this run` and changes nothing.
 curl -s https://matrix.sthings.lab/healthz
 
 # put something on the panel (the token from /etc/default/led-catcher)
-curl -s -X POST https://matrix.sthings.lab/display -H "Authorization: Bearer $LED_API_TOKEN" \
+curl -s -X POST https://matrix.sthings.lab/matrix/display -H "Authorization: Bearer $LED_API_TOKEN" \
   -H 'Content-Type: application/json' -d '{"kind":"text","text":"HELLO","color":"success"}'
 
 # the clock: switch it or its colour at runtime (not persisted; the unit's LED_IDLE wins after a restart)
-curl -s -X PUT https://matrix.sthings.lab/display/idle -H "Authorization: Bearer $LED_API_TOKEN" \
+curl -s -X PUT https://matrix.sthings.lab/matrix/display/idle -H "Authorization: Bearer $LED_API_TOKEN" \
   -H 'Content-Type: application/json' -d '{"mode":"clock","color":[255,140,0]}'
 ```
 
@@ -205,7 +207,7 @@ journalctl -u caddy -f
 zaehlwerk pitches each score onto the `tabletennis` stream. The panel only
 shows it while subscribed to that stream, and switching is done by hand, as on
 the cluster's simulator ([why](../../clusters/homerun2-dev/README.md#tabletennis-is-a-stream-nobody-reads-and-that-is-the-decision)):
-the **tabletennis** button on https://matrix.sthings.lab before the match, and
+the **tabletennis** button on https://matrix.sthings.lab/matrix/ before the match, and
 **messages** or **reset** afterwards. The score stays up between points
 (`tabletennis-score` in [`profile.yaml`](./profile.yaml): `kind: static`,
 `hold: true`). A restart falls back to `messages`, because the switch is not
@@ -214,8 +216,8 @@ persisted.
 From a terminal:
 
 ```bash
-curl -s -X POST https://matrix.sthings.lab/streams -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
-curl -s -X POST https://matrix.sthings.lab/streams -H 'content-type: application/json' -d '{"streams": ["messages"]}'
+curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
+curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["messages"]}'
 ```
 
 `/streams` is unauthenticated, like on the cluster. Anyone on the lab network

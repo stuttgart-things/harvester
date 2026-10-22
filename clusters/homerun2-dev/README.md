@@ -318,6 +318,7 @@ committed, the FluxInstance syncing `clusters/homerun2-dev` applies it -- no
 | `openebs` | local storage |
 | `headlamp` | `https://headlamp.homerun2-dev.sthings.lab` |
 | `flux-web` | `https://flux.homerun2-dev.sthings.lab` |
+| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- homerun2-portal picks up a new service list without a manual restart |
 
 The bundle maps one `INFRA_DOMAIN` onto every base that needs a domain, so the
 name is written once. Ordering comes from upstream `dependsOn`, not from the
@@ -521,13 +522,38 @@ the RBAC ships with its base) and selects them with
 `app.kubernetes.io/part-of=homerun2`. A component without that label is simply
 absent from the view, which reads as an empty panel rather than an error.
 
+### Beside the profile: sound-catcher, schedule-pitcher, k8s-pitcher
+
+Three more components, each on Kustomizations of its own in `flux-system`
+because `profiles/sops` does not carry them. Each mirrors its counterpart on
+platform-sthings (`stuttgart-things/stuttgart-things`,
+`clusters/labul/vsphere/platform-sthings/apps/`):
+
+| Component | File | Source | Portal key |
+|---|---|---|---|
+| sound-catcher (browser player) | [`homerun2-sound-catcher.yaml`](./homerun2-sound-catcher.yaml) | `profiles/base-sound-catcher` (+ `-routes`) | `/sound` |
+| schedule-pitcher | [`homerun2-schedule-pitcher.yaml`](./homerun2-schedule-pitcher.yaml) | released kustomize artifact (OCI) | `/schedule` |
+| k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
+
+schedule-pitcher's own API/UI token is
+[`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
+generated for this cluster; it runs with no checks yet (none of
+platform-sthings' token checks has a Secret here). k8s-pitcher's error events
+reach Teams through the `teams-homerun2-dev` output.
+
+**Every version is pinned in this directory** -- `*_VERSION` substitutes,
+OCIRepository `tag` and `newTag`, each annotated `# datasource=docker depName=…`
+-- and `renovate.json` at the repo root picks them up. The stack used to follow
+flux-apps `main`'s defaults, so a release arrived whenever someone bumped a
+default upstream, unannounced.
+
 ### The real devices: LED matrix and WLED
 
 Two pieces of hardware hang off this stack since 2026-09-28:
 
 | Device | Address | Fed by |
 |---|---|---|
-| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN |
+| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN; in the portal as `/matrix` |
 | WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the light-catcher here, via [`homerun2-light-catcher-profile.yaml`](./homerun2-light-catcher-profile.yaml) |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
@@ -542,6 +568,15 @@ redis-cli -h 192.168.10.179 -a "$REDIS_PASSWORD" --no-auth-warning ping
 kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
   'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning XINFO GROUPS messages'
 ```
+
+**In the portal** the Pi is the card *LED Matrix (Pi)* under
+https://portal.homerun2-dev.sthings.lab/ui/matrix, next to the simulator under
+`/led`: `matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080` in
+[`homerun2-portal.yaml`](./homerun2-portal.yaml). The portal forwards
+`/matrix/...` unchanged, so the Pi runs with `BASE_PATH=/matrix`
+(`led_base_path`, led-catcher v0.19.0 or later for the card's fragment). It is
+plain HTTP on 8080, not Caddy's https: the portal image does not carry the
+sthings.lab CA.
 
 The Pi's catcher uses its own consumer group, `homerun2-led-matrix`. **It must
 not share `homerun2-led-catcher` with the in-cluster simulator:** consumers in

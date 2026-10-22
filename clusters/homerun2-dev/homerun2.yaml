@@ -63,6 +63,26 @@ spec:
     substitute:
       HOMERUN2_NAMESPACE: homerun2
 
+      # Pinned, as on platform-sthings, rather than riding flux-apps main's
+      # defaults: a component release then reaches this cluster as a Renovate
+      # PR here (renovate.json, clusters/ manager), not as a silent change
+      # whenever someone bumps the default upstream. Where a component has a
+      # *_KUSTOMIZE_VERSION, image and kustomize artifact share the tag.
+      HOMERUN2_OMNI_PITCHER_VERSION: v2.3.3 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
+      HOMERUN2_CORE_CATCHER_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher
+      HOMERUN2_CORE_CATCHER_KUSTOMIZE_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher-kustomize
+      HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
+      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.3.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
+      HOMERUN2_SCOUT_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout
+      HOMERUN2_SCOUT_KUSTOMIZE_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout-kustomize
+      HOMERUN2_LED_CATCHER_VERSION: v0.20.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+      HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
+      HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
+      HOMERUN2_WLED_MOCK_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-wled-mock
+      HOMERUN2_DEMO_PITCHER_VERSION: v2.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-demo-pitcher
+      HOMERUN2_CONFIG_VIEWER_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-config-viewer
+      HOMERUN2_CONFIG_VIEWER_KUSTOMIZE_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-config-viewer-kustomize
+
       # The only StorageClass on this cluster, and the default. The component
       # default is `standard`, which does not exist here -- unset, the PVC
       # would never bind.
