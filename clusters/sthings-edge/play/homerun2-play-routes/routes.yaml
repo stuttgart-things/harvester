@@ -1,7 +1,10 @@
 # homerun2 on edge-play-gateway: the same Services as the internal routes
-# (homerun2-sops, homerun2-light-catcher-tabletennis-sops), one rule at "/"
-# like theirs, under the *.<EDGE_PLAY_DOMAIN> wildcard certificate that already
-# covers schmetterpause and zaehlwerk. Same set as clusters/edge (#460).
+# (homerun2-sops, homerun2-light-catcher-tabletennis-sops, homerun2-portal),
+# one rule at "/" like theirs, under the *.<EDGE_PLAY_DOMAIN> wildcard
+# certificate that already covers schmetterpause and zaehlwerk. Same set as
+# clusters/edge (#460, #473). The services behind homerun2-portal answer under
+# their BASE_PATH (/led, /core, ...) on their own hostname too; "/" redirects
+# there.
 #
 # The route is the access control, as for ../play-routes/zaehlwerk.yaml.
 # omni-pitcher and scout ask for their token; demo-pitcher, the led-catcher's
@@ -160,4 +163,21 @@ spec:
   rules:
     - backendRefs:
         - name: homerun2-light-catcher
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: homerun2-portal-play
+  namespace: homerun2
+spec:
+  parentRefs:
+    - name: edge-play-gateway
+      namespace: default
+      sectionName: https
+  hostnames:
+    - homerun2-portal.${EDGE_PLAY_DOMAIN}
+  rules:
+    - backendRefs:
+        - name: homerun2-portal
           port: 80

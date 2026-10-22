@@ -5,3 +5,5 @@ resources:
   - schmetterpause.yaml
   - zaehlwerk.yaml
   - zaehlwerk-pong.yaml
+  - zaehlwerk-portal.yaml
+  - zaehlwerk-buttons.yaml

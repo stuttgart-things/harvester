@@ -78,7 +78,8 @@ uci set dhcp.@dnsmasq[0].local='/edge.sthings.lab/'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
 for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
-         light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout; do
+         light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout \
+         zaehlwerk-portal homerun2-portal buttons; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
 uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
@@ -86,12 +87,17 @@ uci set dhcp.@host[0].name='sthings-edge'
 uci commit dhcp && /etc/init.d/dnsmasq restart
 ```
 
-- No `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs only on the lab. The
-  router of 2026-10-12 still has the line; drop it once with
+- `buttons`: the table mock (`TABLETENNIS_ZAEHLWERK_BUTTONS_SIM`) runs on the box too, until the real
+  buttons exist. The router of 2026-10-12 already has the line -- keep it. Once real buttons count and
+  the mock is off again, drop it with
   `uci del_list dhcp.@dnsmasq[0].address='/buttons.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - `log-sink` (the firmware's log sink, [`log-sink/`](./log-sink/log-sink.yaml)) is new: add its line once,
   `uci add_list dhcp.@dnsmasq[0].address='/log-sink.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
   The board sends to `192.168.8.23` directly and needs no name.
+- `zaehlwerk-portal` (zaehlwerk's dev portal, `TABLETENNIS_ZAEHLWERK_PORTAL`) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/zaehlwerk-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+- `homerun2-portal` (homerun2's portal, flux v1.170.0) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/homerun2-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.
@@ -457,11 +463,13 @@ Opal LAN (Wi-Fi `sthings-edge` or cable), where the router answers them.
 | https://schmetterpause.edge.sthings.lab/ | schmetterpause (admin `timoboll`) |
 | https://schmetterpause.sthings-edge.com/ | the players' side, Let's Encrypt |
 | https://zaehlwerk.edge.sthings.lab/ | score counter (redirects to its login) |
+| https://buttons.edge.sthings.lab/, https://buttons.sthings-edge.com/ | the table mock: emulated buttons, until the real ones exist (scores into the running match, no login) |
 | https://openbao.edge.sthings.lab/ | OpenBao UI; ACME `…/v1/pki/acme/directory` |
 | https://log-sink.edge.sthings.lab/ | the firmware's log sink: sessions and games the board sent to `192.168.8.23:9000` (read-only, no login) |
 | https://minio-console.edge.sthings.lab/ | MinIO console (`minio.edge.sthings.lab` = the S3 API) |
-| https://led-catcher.edge.sthings.lab/, https://light-catcher.edge.sthings.lab/, https://light-catcher-tabletennis.edge.sthings.lab/, https://wled-mock.edge.sthings.lab/ | homerun2 lights |
-| https://config-viewer.edge.sthings.lab/, https://demo-pitcher.edge.sthings.lab/, https://scout.edge.sthings.lab/, https://core-catcher.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
+| https://homerun2-portal.edge.sthings.lab/ | homerun2-portal: every service's status and latest, each one's UI under its key (`/led/`, `/core/`, `/light/`, `/table/`, `/wled/`, `/config/`, `/pitch/`) |
+| https://led-catcher.edge.sthings.lab/led/, https://light-catcher.edge.sthings.lab/light/, https://light-catcher-tabletennis.edge.sthings.lab/table/, https://wled-mock.edge.sthings.lab/wled/ | homerun2 lights (each under its BASE_PATH; `/` redirects there) |
+| https://config-viewer.edge.sthings.lab/config/, https://demo-pitcher.edge.sthings.lab/pitch/, https://core-catcher.edge.sthings.lab/core/, https://scout.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
 
 **kubectl / flux from the Mac.** `~/.kube/sthings-edge` (server `https://192.168.8.10:6443`) works
 once Local Network access is allowed (step 4). Until then through an SSH tunnel; `127.0.0.1` is
