@@ -198,6 +198,11 @@ hosts:
         description: >-
           Reconciles ClusterbookCluster resources against the Clusterbook API
           on this cluster. No ingress.
+      - name: Grafana
+        fqdn: grafana.platform.sthings.lab
+        description: >-
+          kube-prometheus-stack of this cluster (Prometheus, Alertmanager,
+          Grafana). Alerts go to omni-pitcher on homerun2-dev.
 
   # The sthings-edge box (LattePanda) in SthingsNet: role `kiosk`, no k3s.
   # Address from clusters/sthings-edge/README.md (troubleshooting); inside the

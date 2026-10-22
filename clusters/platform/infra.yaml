@@ -258,3 +258,59 @@ spec:
   postBuild:
     substitute:
       RELOADER_NAMESPACE: reloader
+---
+# kube-prometheus-stack: Prometheus, Alertmanager, Grafana, node-exporter and
+# kube-state-metrics for this cluster (harvester#490). The first monitoring in
+# the Harvester lab; Grafana at grafana.platform.sthings.lab.
+#
+# ALERTS go to homerun2-dev's omni-pitcher (this cluster runs no homerun2),
+# through its Gateway, so Alertmanager has to trust the OpenBao PKI that signed
+# it: alertmanager-webhook-ca mounts the cluster-trust-bundle ConfigMap
+# trust-manager writes into every namespace (OpenBao root included). From the
+# pitcher the notification-catcher on homerun2-dev fans them out (Teams,
+# severity >= warning).
+#
+# SECRETS, created out of band like rancher-secrets (not optional: a missing
+# Secret stops this Kustomization instead of rolling out the chart defaults):
+#   kubectl -n flux-system create secret generic kube-prometheus-stack-secrets \
+#     --from-literal=KPS_GRAFANA_ADMIN_PASSWORD=<password> \
+#     --from-literal=HOMERUN2_OMNI_PITCHER_AUTH_TOKEN=<homerun2-dev's omni-pitcher token>
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 15m
+  dependsOn:
+    - name: cilium-gateway
+    - name: trust-manager
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/kube-prometheus-stack
+  components:
+    - components/alertmanager-webhook-ca
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      KPS_NAMESPACE: monitoring
+      KPS_VERSION: "92.10.1"
+      KPS_PROMETHEUS_STORAGE_CLASS: local-path
+      KPS_PROMETHEUS_STORAGE_SIZE: 20Gi
+      KPS_PROMETHEUS_RETENTION: 15d
+      KPS_SCRAPE_INTERVAL: 60s
+      KPS_ALERTMANAGER_WEBHOOK_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/grafana
+      KPS_ALERTMANAGER_CA_CONFIGMAP: cluster-trust-bundle
+      KPS_ALERTMANAGER_CA_KEY: trust-bundle.pem
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: grafana
+      DOMAIN: platform.sthings.lab
+    substituteFrom:
+      - kind: Secret
+        name: kube-prometheus-stack-secrets
+        optional: false
