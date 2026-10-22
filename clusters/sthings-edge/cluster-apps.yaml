@@ -69,12 +69,15 @@ spec:
   # (flux#797); v1.170.0: homerun2-portal as a bundle component, BASE_PATH
   # through the bundle and homerun2 at its latest releases (portal v0.6.0,
   # led-catcher v0.20.0, core-catcher v1.3.0, light-catcher/wled-mock
-  # v1.14.0, config-viewer v0.7.0; flux#800).
+  # v1.14.0, config-viewer v0.7.0; flux#800); v1.178.0: the redis image tag
+  # through homerun2-sops (flux#808, #815), sentinel getMasterTimeout 15s
+  # (flux#809), omni-pitcher v2.4.0 (flux#811), for Redis Stack 7.4
+  # (stuttgart-things#3923).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.170.0
+    tag: v1.178.0
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -222,6 +225,9 @@ spec:
         HOMERUN2_NAMESPACE: homerun2
         HOMERUN2_REDIS_STORAGE_CLASS: local-path
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
+        # Redis Stack 7.4 (stuttgart-things#3923). One-way: writes RDB v12.
+        # Nothing kept here worth a backup (2026-10-22).
+        HOMERUN2_REDIS_IMAGE_VERSION: 7.4.0-v8
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
         HOMERUN2_SOPS_NOTIFY: tabletennis-results
         HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis

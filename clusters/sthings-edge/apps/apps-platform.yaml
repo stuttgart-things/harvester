@@ -45,6 +45,7 @@ spec:
       HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
       HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
       HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
+      HOMERUN2_REDIS_IMAGE_VERSION: '7.4.0-v8'
       HOMERUN2_REDIS_STORAGE_CLASS: local-path
       HOMERUN2_REDIS_STORAGE_SIZE: '1Gi'
       HOMERUN2_SOPS_NOTIFY: tabletennis-results
