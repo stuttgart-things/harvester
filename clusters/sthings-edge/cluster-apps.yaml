@@ -8,7 +8,8 @@
 #   - path ./clusters/sthings-edge; values in ./cluster-vars.yaml
 #     (edge.sthings.lab, VIPs 192.168.8.20 / .21)
 #   - no edge-lab layer; the players' route lives in the edge-play layer (./play)
-#   - zaehlwerk's table mock (TABLETENNIS_ZAEHLWERK_BUTTONS_SIM) off: real buttons
+#   - zaehlwerk's table mock (TABLETENNIS_ZAEHLWERK_BUTTONS_SIM) on until the real
+#     buttons exist, but without a piezo board (no esp-mock, no piezo-sim)
 #   - its own SOPS key: cluster-secrets/sops-age.enc.yaml (made by the first
 #     render), escrowed for the master key (--escrow-recipients)
 #
@@ -54,7 +55,8 @@ spec:
   # (flux#741); v1.152.0: notification-catcher v3.1.0 -- the results card
   # with players and set scores, demo/bot games (demo=1) no longer posted
   # (flux#747); TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE and
-  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM exist, neither set here.
+  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM exist (the first set below
+  # with the table mock).
   # v1.166.0: zaehlwerk's dev portal, TABLETENNIS_ZAEHLWERK_PORTAL (flux#787,
   # the portal image v0.29.0, zaehlwerk itself still v0.28.0); in between,
   # BASE_PATH for the homerun2 catchers and mocks behind homerun2-portal
@@ -301,6 +303,19 @@ spec:
         # table stream. No login, it ends matches: the table Wi-Fi is the
         # boundary, as for zaehlwerk.
         TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
+        # The table mock (flux#666), until the real buttons exist: emulated
+        # buttons and their hub at https://buttons.<EDGE_DOMAIN> (Opal dnsmasq
+        # name, README step 1) and https://buttons.<EDGE_PLAY_DOMAIN>
+        # (./play/play-routes), for trying the LED matrix and the table light
+        # at the box. THE PAGE TAKES POINTS BACK without a login and scores into
+        # the running match -- turn it off again once real buttons count.
+        # No piezo board here: the piezo-sim stays off, because it would play
+        # every match started on the scoring page itself; the page and the
+        # portal report the board as not answering. The real board comes with
+        # new firmware (zaehlwerk-firmware v0.3.0), not through this page.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
