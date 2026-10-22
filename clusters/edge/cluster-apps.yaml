@@ -109,12 +109,14 @@ spec:
   # fixed (flux#797); v1.170.0: homerun2-portal as a bundle component,
   # BASE_PATH through the bundle and homerun2 at its latest releases
   # (portal v0.6.0, led-catcher v0.20.0, core-catcher v1.3.0,
-  # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800).
+  # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800);
+  # v1.173.0: HOMERUN2_REDIS_IMAGE_VERSION through the bundle (flux#808),
+  # for Redis Stack 7.4 (stuttgart-things#3923).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.170.0
+    tag: v1.173.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -258,6 +260,8 @@ spec:
         HOMERUN2_NAMESPACE: homerun2
         HOMERUN2_REDIS_STORAGE_CLASS: local-path
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
+        # Redis Stack 7.4 (stuttgart-things#3923). No way back: writes RDB v12.
+        HOMERUN2_REDIS_IMAGE_VERSION: 7.4.0-v8
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
         # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
         # shared with sthings-edge) -- for real, no dry run: a match won on
