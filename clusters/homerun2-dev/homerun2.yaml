@@ -72,7 +72,7 @@ spec:
       HOMERUN2_CORE_CATCHER_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher
       HOMERUN2_CORE_CATCHER_KUSTOMIZE_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher-kustomize
       HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
-      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
+      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.13.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       HOMERUN2_SCOUT_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout
       HOMERUN2_SCOUT_KUSTOMIZE_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout-kustomize
       HOMERUN2_LED_CATCHER_VERSION: v0.20.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
