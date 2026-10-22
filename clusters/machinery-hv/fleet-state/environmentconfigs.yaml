@@ -120,7 +120,7 @@ metadata:
     rancher-cluster.resources.stuttgart-things.com/environment: rancher-join-sthings-lab
 data:
   distro: k3s
-  kubernetesVersion: v1.35.4+k3s1
+  kubernetesVersion: v1.35.9+k3s1
   providerConfigRef: in-cluster
   rancherNamespace: fleet-default
   rancherProviderConfigRef: rancher-mgmt
