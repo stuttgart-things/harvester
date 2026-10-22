@@ -20,7 +20,9 @@ spec:
   postBuild:
     substitute:
       BACKSTAGE_NAMESPACE: backstage
-      BACKSTAGE_VERSION: "2.6.3"
+      # Chart 2.10.2, the app's own default and what sthings-platform (LabDA)
+      # runs with the same patches as below.
+      BACKSTAGE_VERSION: "2.10.2"
       BACKSTAGE_IMAGE_REGISTRY: ghcr.io
       BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
       BACKSTAGE_STORAGE_CLASS: local-path
@@ -34,6 +36,14 @@ spec:
       DOMAIN: platform.sthings.lab
       GATEWAY_NAME: platform-sthings-gateway
       GATEWAY_NAMESPACE: default
+      # RAG-AI ("Ask AI") with its own pgvector Postgres (backstage-rag-postgres.yaml).
+      # LLM endpoint and models are the app's defaults (OpenRouter);
+      # BACKSTAGE_LLM_API_KEY is in backstage-secrets-subst. FIRST ROLLOUT:
+      # Backstage starts before rag-postgres-creds exists and skips RAG-AI
+      # quietly -- restart it once the CNPG Cluster is Ready:
+      #   kubectl -n backstage wait cluster.postgresql.cnpg.io/rag-postgres --for=condition=Ready --timeout=15m
+      #   kubectl -n backstage rollout restart deploy/backstage-deployment
+      BACKSTAGE_RAG_AI_ENABLED: "true"
     substituteFrom:
       - kind: Secret
         name: backstage-secrets-subst
@@ -94,6 +104,10 @@ spec:
               backstage-secrets:
                 secretKVs:
                   CLAIM_MACHINERY_API_URL: https://claims.${DOMAIN}
+                  # ServiceAccount token on the Harvester cluster for the VM
+                  # entity provider (backstage-vms-config in
+                  # backstage-prereqs.yaml), from backstage-secrets-subst.
+                  HARVESTER_TOKEN: ${BACKSTAGE_HARVESTER_TOKEN:-}
     - target:
         kind: HelmRelease
         name: backstage-deployment
@@ -121,3 +135,18 @@ spec:
                   readOnly: true
               extraEnvVarsCM:
                 - backstage-ca-env
+              # The whole Secret, for HARVESTER_TOKEN: the app lists its env
+              # vars one by one in extraEnvVars, which a patch could only
+              # replace. The keys already mapped get the same value twice.
+              extraEnvVarsSecrets:
+                - backstage-secrets
+              # Restates the app's two entries (flux apps/backstage/release.yaml
+              # on main): the list is replaced, not merged. Update this when
+              # the app's list changes.
+              extraAppConfig:
+                - filename: app-config.extra.yaml
+                  configMapRef: backstage-app-config
+                - filename: app-config.catalog.yaml
+                  configMapRef: backstage-catalog-config
+                - filename: app-config.vms.yaml
+                  configMapRef: backstage-vms-config

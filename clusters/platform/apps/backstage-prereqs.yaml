@@ -19,7 +19,10 @@ data:
   # v1.6.0 replaces allow-all with the template audience policy
   # (stuttgart-things/sthings-backstage#119): templates are platform-team only
   # unless annotated backstage.stuttgart-things.com/audience: developers.
-  imageTag: "v1.6.0"
+  # v1.7.2 the VM entity provider, v1.9.0 RAG-AI with LLM_* names, v1.13.0
+  # per-entity embedding hashes, v1.17.0 its Harvester source -- used by
+  # backstage-vms-config below.
+  imageTag: "v1.17.0"
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
@@ -31,6 +34,40 @@ metadata:
   namespace: backstage
 data:
   NODE_EXTRA_CA_CERTS: /etc/ssl/custom/trust-bundle.pem
+---
+# VM entity provider (sthings-backstage plugins/catalog-backend-module-
+# sthings-vms, Harvester source since v1.17.0): mirrors the KubeVirt VMs of the
+# Harvester cluster into the catalog as Resource entities <vm>-harvester-vm.
+# Mounted as app-config.vms.yaml through extraAppConfig in backstage.yaml.
+#
+# The ${...} below are resolved by Backstage at startup, not by Flux: the root
+# sync that applies this file does no postBuild substitution. HARVESTER_TOKEN
+# must exist in the pod (backstage-secrets, from BACKSTAGE_HARVESTER_TOKEN in
+# backstage-secrets-subst) -- an unset ${...} stops the whole backend.
+#
+# The token is the ServiceAccount backstage-vm-reader on the Harvester cluster
+# (clusters/harvester/backstage-vm-reader.yaml, applied by hand there).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-vms-config
+  namespace: backstage
+data:
+  app-config.vms.yaml: |
+    catalog:
+      providers:
+        sthingsVms:
+          harvester-sthings:
+            type: harvester
+            # The Kubernetes API of Harvester (RKE2), not the Rancher proxy.
+            endpoint: https://harvester.sthings.lab:6443
+            token: ${HARVESTER_TOKEN}
+            uiUrl: https://harvester.sthings.lab
+            system: harvester
+            # The RKE2 cluster CA that signs the API certificate (the
+            # certificate-authority-data of a Harvester kubeconfig).
+            caCert: |
+              HARVESTER_CA_PLACEHOLDER
 ---
 # The catalog ConfigMap `backstage-catalog-config` is NOT here any more. The
 # flux app (stuttgart-things/flux apps/backstage/catalog-config.yaml) ships it
