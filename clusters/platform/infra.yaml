@@ -270,11 +270,11 @@ spec:
 # pitcher the notification-catcher on homerun2-dev fans them out (Teams,
 # severity >= warning).
 #
-# SECRETS, created out of band like rancher-secrets (not optional: a missing
-# Secret stops this Kustomization instead of rolling out the chart defaults):
-#   kubectl -n flux-system create secret generic kube-prometheus-stack-secrets \
-#     --from-literal=KPS_GRAFANA_ADMIN_PASSWORD=<password> \
-#     --from-literal=HOMERUN2_OMNI_PITCHER_AUTH_TOKEN=<homerun2-dev's omni-pitcher token>
+# SECRETS: Secret kube-prometheus-stack-secrets in flux-system with
+# KPS_GRAFANA_ADMIN_PASSWORD and HOMERUN2_OMNI_PITCHER_AUTH_TOKEN (homerun2-dev's
+# omni-pitcher token), committed SOPS-encrypted like apps/rancher-secrets.enc.yaml.
+# Not optional: a missing Secret stops this Kustomization instead of rolling
+# out the chart defaults.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
