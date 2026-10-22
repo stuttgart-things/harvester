@@ -88,6 +88,10 @@ spec:
       # would never bind.
       HOMERUN2_REDIS_STORAGE_CLASS: openebs-hostpath
       HOMERUN2_REDIS_STORAGE_SIZE: 8Gi
+      # Held at 7.2 on purpose: the library default moves to 7.4, which writes
+      # RDB v12 that 7.2 cannot load -- one-way. This cluster moves when someone
+      # decides to, after a backup (stuttgart-things#3923).
+      HOMERUN2_REDIS_IMAGE_VERSION: 7.2.0-v18
 
       # notification-catcher posts for real from here on. It ships
       # DRY_RUN=true, which makes Dispatch log `would have sent` at INFO and
