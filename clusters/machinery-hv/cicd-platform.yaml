@@ -25,8 +25,14 @@
 #     the ansible SSH file. Until this cluster carries sops-git, the placement
 #     and the ansible defaults stay written out in ./fleet-state.
 #
-#   machinery / claim-machinery-api / komoplane -- the API and the dashboards
-#     already run on platform; add komoplane here if a local view is wanted.
+#   claim-machinery-api / komoplane -- the API already runs on platform; add
+#     komoplane here if a local view is wanted.
+#
+# machinery IS selected (harvester#490): it is a dashboard over the
+# config./resources.stuttgart-things.com claims of the cluster it runs on, so
+# platform cannot show the ClusterStacks and RancherClusters that live here.
+# It waits on crossplane-configs, which the machinery profile creates.
+# machinery.machinery-hv.sthings.lab, through the cluster Gateway.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -54,6 +60,8 @@ spec:
     # The PipelineRuns every ClusterStack's ansible stages execute in, in
     # namespace tekton-ci.
     - ../components/tekton
+    # Claims dashboard, + HTTPRoute machinery.<INFRA_DOMAIN>.
+    - ../components/machinery
   postBuild:
     substitute:
       APPS_SOURCE: flux-infra
