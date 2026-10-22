@@ -68,7 +68,7 @@ spec:
       # PR here (renovate.json, clusters/ manager), not as a silent change
       # whenever someone bumps the default upstream. Where a component has a
       # *_KUSTOMIZE_VERSION, image and kustomize artifact share the tag.
-      HOMERUN2_OMNI_PITCHER_VERSION: v2.3.3 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
+      HOMERUN2_OMNI_PITCHER_VERSION: v2.4.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
       HOMERUN2_CORE_CATCHER_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher
       HOMERUN2_CORE_CATCHER_KUSTOMIZE_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher-kustomize
       HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
