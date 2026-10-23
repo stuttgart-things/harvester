@@ -60,14 +60,23 @@ data:
           harvester-sthings:
             type: harvester
             # The Kubernetes API of Harvester (RKE2), not the Rancher proxy.
-            endpoint: https://harvester.sthings.lab:6443
+            endpoint: https://192.168.10.110:6443
             token: ${HARVESTER_TOKEN}
             uiUrl: https://harvester.sthings.lab
             system: harvester
             # The RKE2 cluster CA that signs the API certificate (the
             # certificate-authority-data of a Harvester kubeconfig).
             caCert: |
-              HARVESTER_CA_PLACEHOLDER
+              -----BEGIN CERTIFICATE-----
+              MIIBejCCAR+gAwIBAgIBADAKBggqhkjOPQQDAjAkMSIwIAYDVQQDDBlya2UyLXNl
+              cnZlci1jYUAxNzgwNjQ3MTQ5MB4XDTI2MDYwNTA4MTIyOVoXDTM2MDYwMjA4MTIy
+              OVowJDEiMCAGA1UEAwwZcmtlMi1zZXJ2ZXItY2FAMTc4MDY0NzE0OTBZMBMGByqG
+              SM49AgEGCCqGSM49AwEHA0IABEW2CsDXmKmjN8yM7SpcJJ0NkMr5JN8b+Z/Yv4M3
+              ANJ2KjOv3QGXk7Wza8EKlX9rm08HBWDuJ75h264H52Hwr7ijQjBAMA4GA1UdDwEB
+              /wQEAwICpDAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQ2hjDdOFgBLn9HfQcb
+              oXO5qMoe8jAKBggqhkjOPQQDAgNJADBGAiEA1R8+JSKHq/9zSLwP9QxEBpe34Jib
+              jU/4BJ1U4wResusCIQDTFtJArOXToYtgQ1yYbzCs44gOcUpLoj1xFNIwJ7lLGw==
+              -----END CERTIFICATE-----
 ---
 # The catalog ConfigMap `backstage-catalog-config` is NOT here any more. The
 # flux app (stuttgart-things/flux apps/backstage/catalog-config.yaml) ships it
