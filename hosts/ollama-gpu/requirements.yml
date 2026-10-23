@@ -1,0 +1,7 @@
+---
+# The collection that carries sthings.container.ollama_gpu
+# (stuttgart-things/ansible#1414). Set the release that contains it once it is
+# cut: https://github.com/stuttgart-things/ansible/releases?q=sthings-container
+collections:
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-REPLACE-ME/sthings-container-REPLACE-ME.tar.gz
+    type: url
