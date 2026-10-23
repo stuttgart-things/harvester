@@ -1,0 +1,90 @@
+---
+# pgvector Postgres for the Backstage RAG-AI plugin (CNPG Cluster
+# `rag-postgres` in the backstage namespace, DB backstage_rag, owner rag).
+# It does not touch Backstage's own database.
+#
+# Deviations from the app, both deliberate, as on stuttgart-things
+# platform-sthings (LabUL):
+#   - Credentials from SOPS, not Vault/OpenBao: rag-postgres-creds is
+#     backstage-rag-postgres-secrets.enc.yaml beside this file, like every
+#     other Backstage secret on this cluster. The app's two ExternalSecrets
+#     are deleted below (this cluster runs no external-secrets).
+#   - No backups: the embeddings are re-created by indexing again, so the
+#     Barman Cloud WAL archiving (spec.plugins), ObjectStore, ScheduledBackup
+#     and Velero Schedule are deleted below -- which also keeps
+#     cnpg-barman-cloud, a bucket and velero off this cluster.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: backstage-rag-postgres
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cnpg-operator
+    # owns the namespace's Backstage; rag-postgres lands beside it
+    - name: backstage
+  interval: 1h
+  retryInterval: 1m
+  # initdb on a fresh PVC
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/backstage-rag-postgres
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      BACKSTAGE_NAMESPACE: backstage
+      # k3s' local-path, like Backstage's own Postgres here.
+      STORAGE_CLASS: local-path
+      RAG_PG_STORAGE_SIZE: 5Gi
+      RAG_PG_DATABASE: backstage_rag
+      RAG_PG_OWNER: rag
+  patches:
+    - target:
+        group: postgresql.cnpg.io
+        kind: Cluster
+        name: rag-postgres
+      patch: |
+        - op: remove
+          path: /spec/plugins
+    - target:
+        group: external-secrets.io
+        kind: ExternalSecret
+      patch: |
+        $patch: delete
+        apiVersion: external-secrets.io/v1
+        kind: ExternalSecret
+        metadata:
+          name: not-used
+    - target:
+        group: barmancloud.cnpg.io
+        kind: ObjectStore
+      patch: |
+        $patch: delete
+        apiVersion: barmancloud.cnpg.io/v1
+        kind: ObjectStore
+        metadata:
+          name: not-used
+    - target:
+        group: postgresql.cnpg.io
+        kind: ScheduledBackup
+      patch: |
+        $patch: delete
+        apiVersion: postgresql.cnpg.io/v1
+        kind: ScheduledBackup
+        metadata:
+          name: not-used
+    - target:
+        group: velero.io
+        kind: Schedule
+      patch: |
+        $patch: delete
+        apiVersion: velero.io/v1
+        kind: Schedule
+        metadata:
+          name: not-used
