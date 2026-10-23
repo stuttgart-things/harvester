@@ -80,7 +80,7 @@ uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
 for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
          light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout \
-         zaehlwerk-portal homerun2-portal buttons; do
+         zaehlwerk-portal homerun2-portal notification-catcher buttons; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
 uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
@@ -99,6 +99,9 @@ uci commit dhcp && /etc/init.d/dnsmasq restart
   `uci add_list dhcp.@dnsmasq[0].address='/zaehlwerk-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - `homerun2-portal` (homerun2's portal, flux v1.170.0) is new: add its line once,
   `uci add_list dhcp.@dnsmasq[0].address='/homerun2-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+- `notification-catcher` (its read-only UI, flux v1.182.2) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/notification-catcher.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+  The portal shows it under `/notify/` without the name.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.
@@ -514,9 +517,9 @@ Opal LAN (Wi-Fi `sthings-edge` or cable), where the router answers them.
 | https://openbao.edge.sthings.lab/ | OpenBao UI; ACME `…/v1/pki/acme/directory` |
 | https://log-sink.edge.sthings.lab/ | the firmware's log sink: sessions and games the board sent to `192.168.8.23:9000` (read-only, no login) |
 | https://minio-console.edge.sthings.lab/ | MinIO console (`minio.edge.sthings.lab` = the S3 API) |
-| https://homerun2-portal.edge.sthings.lab/ | homerun2-portal: every service's status and latest, each one's UI under its key (`/led/`, `/core/`, `/light/`, `/table/`, `/wled/`, `/config/`, `/pitch/`) |
+| https://homerun2-portal.edge.sthings.lab/ | homerun2-portal: every service's status and latest, each one's UI under its key (`/core/`, `/notify/`, `/led/`, `/light/`, `/table/`, `/wled/`, `/config/`, `/pitch/`) |
 | https://led-catcher.edge.sthings.lab/led/, https://light-catcher.edge.sthings.lab/light/, https://light-catcher-tabletennis.edge.sthings.lab/table/, https://wled-mock.edge.sthings.lab/wled/ | homerun2 lights (each under its BASE_PATH; `/` redirects there) |
-| https://config-viewer.edge.sthings.lab/config/, https://demo-pitcher.edge.sthings.lab/pitch/, https://core-catcher.edge.sthings.lab/core/, https://scout.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
+| https://config-viewer.edge.sthings.lab/config/, https://demo-pitcher.edge.sthings.lab/pitch/, https://core-catcher.edge.sthings.lab/core/, https://notification-catcher.edge.sthings.lab/notify/ (read-only: config, sent messages, dead letters), https://scout.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
 
 **kubectl / flux from the Mac.** `~/.kube/sthings-edge` (server `https://192.168.8.10:6443`) works
 once Local Network access is allowed (step 4). Until then through an SSH tunnel; `127.0.0.1` is
