@@ -184,7 +184,7 @@ spec:
       # CA changed the checksum Rancher agents pin and locked Harvester's agent
       # out (#518). Needs stuttgart-things/flux#831; without it this is unused.
       TRUST_BUNDLE_SECRET_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
-      TRUST_BUNDLE_SECRET_CA_KEY: ca.crt
+      TRUST_BUNDLE_SECRET_CA_KEY: ca.crt # pragma: allowlist secret
 ---
 # The ClusterIssuer for the OpenBao on this cluster — the tokenless half of the
 # migration off the infra Vault.
