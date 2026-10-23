@@ -13,7 +13,7 @@ own Flux objects here. `SOPS_AGE_KEY` is the only thing that is not.
 | Cluster / VM name | `homerun2-dev` (the name is load-bearing: DNS, `cluster_name`, and the file names in `vms/`) |
 | LB address | `192.168.10.171`, reserved in Clusterbook -- the Cilium VIP for Services, **not** the node's address (that is a DHCP lease, see step 3) |
 | Domain | `homerun2-dev.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy, no Canal |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy, no Canal |
 | GitOps | Flux, syncing `clusters/homerun2-dev` |
 | Harvester image | `sthings-u26`, 12 vCPU / 12Gi / 50Gi root disk |
 
@@ -376,6 +376,46 @@ archive was again the slow step, roughly half of the 21 minutes.
 
 The node took `192.168.10.117` from DHCP. `192.168.10.171` stays the LB VIP and
 is not reachable until `cilium-lb` and `cilium-gateway` have reconciled.
+
+### Upgrading Kubernetes in place
+
+`bake-harvester` is for building. On a running node, use `execute-ansible`
+with the same parameters and only the RKE2 play. `sthings.rke.rke2_cluster`
+re-runs the RKE2 install script on every run (no "already installed" guard),
+which drops in the binaries for `rke2_k8s_version`. It then restarts
+`rke2-server` (`restart_rke2_already_running: true`), and that is the upgrade.
+
+```bash
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/homerun2-dev.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/homerun2-dev.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+  execute-ansible \
+  --playbooks "sthings.rke.rke2_cluster" \
+  --hosts 192.168.10.117 \
+  --inventory-type cluster \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ssh-user env:ANSIBLE_USER \
+  --ssh-password env:ANSIBLE_PASSWORD \
+  --cache-buster "upgrade-$(date +%s)" \
+  --progress plain
+```
+
+- **Read the node IP first** (step 3). `--hosts` must be the node, not the VIP.
+- **Cilium moves too.** Without `cilium_chart_version`, the role installs the
+  Cilium its cilium-cli build defaults to (cli 0.19.7 -> 1.19.5). Pin
+  `cilium_chart_version` if that is not wanted.
+- **Single node: the restart is downtime** for everything on the cluster,
+  including omni-pitcher, which platform's k8s-pitcher posts to. Expect a few
+  minutes.
+- RKE2 keeps local etcd snapshots (`kubectl get etcdsnapshotfiles`). Check that
+  a recent one exists before the run.
+
+Last upgrade: `2026-10-23`, `v1.35.3+rke2r1` -> `v1.35.9+rke2r1` (#491), Cilium
+1.19.3 -> 1.19.5. `Ansible.execute DONE [9m17s]`, recap
+`ok=135 changed=21 unreachable=0 failed=0 skipped=85`. Afterwards: node `Ready` on
+`v1.35.9+rke2r1`, only `cilium`/`cilium-envoy` as DaemonSets, the
+`helm-install-rke2-*` jobs `Complete`, all Flux Kustomizations Ready.
 
 Steps 4-6 followed on the same day. All nine Kustomizations Ready, four Helm
 releases installed (cert-manager v1.21.2, headlamp 0.45.0, openebs 4.6.1,
