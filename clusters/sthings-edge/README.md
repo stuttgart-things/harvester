@@ -30,6 +30,7 @@ This README is the run book for this box, in build order. The general edge docs
 | File | Purpose |
 |---|---|
 | `inventory` | Ansible inventory (`[edge]` → `192.168.8.10`) for base OS, tools and kiosk |
+| `inventory-sthingsnet` | the same `[edge]` group in SthingsNet (`192.168.10.111`) -- kiosk runs there, e.g. via Dagger (step 7) |
 | `tools.yaml` | Tool install play (wraps `sthings.container.download_install_binary`, supports `-e tools=…`) |
 | `edge.yaml` | Tool profile: kubectl, helm, k9s, helmfile, flux, cilium-cli, kubectl-slice, sops, age |
 | [`k3s/`](./k3s/README.md) | k3s + Cilium: inventory, vars, collection requirements, run book + results |
@@ -260,8 +261,49 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
 ```
 
 `kiosk_url` is only the fallback for a first start without network. The play can run in either network
-(in SthingsNet the box has another address, e.g. `-i "192.168.10.111," -u sthings -e target_host=all`).
+(in SthingsNet the box has another address: `-i inventory-sthingsnet`).
 The homerun2-dev names resolve only in SthingsNet.
+
+**The same run via Dagger** (`stuttgart-things/dagger/ansible`, no local Ansible; tested 2026-10-23 in
+SthingsNet, `changed=1` = the leftover Firefox snap removed). The module logs in with user + password,
+read from an env file in your home -- once, in a normal terminal (not a `!` prompt in Claude Code), never
+in the repo:
+
+```bash
+install -m 600 /dev/null ~/.sthings-edge.env && nano ~/.sthings-edge.env
+```
+
+```bash
+SSH_USER=sthings
+SSH_PASSWORD='<password of sthings on the box>'
+```
+
+Dagger cannot read a dotenv file into `--ssh-user`/`--ssh-password`, so the file is loaded into the shell
+and passed as `env:` secrets (masked in the output, the user shows up as `***`). Run from the repo root;
+`--src` lands in the container as `/src`, hence `kiosk_ca_certs=/src/sthings-lab-ca.crt`. sudo on the box
+is NOPASSWD, so no `ansible_become_password`/`--env-secrets` is needed. `run_id` forces a real run
+instead of Dagger's cache. In the table tennis network take `inventory` instead of `inventory-sthingsnet`.
+
+```bash
+cd ~/harvester
+set -a; . ~/.sthings-edge.env; set +a
+
+dagger -m github.com/stuttgart-things/dagger/ansible call execute \
+  --src clusters/sthings-edge \
+  --requirements clusters/sthings-edge/k3s/requirements.yaml \
+  --inventory clusters/sthings-edge/inventory-sthingsnet \
+  --playbooks sthings.baseos.kiosk \
+  --ssh-user env:SSH_USER \
+  --ssh-password env:SSH_PASSWORD \
+  --parameters "target_host=edge \
+kiosk_config_url=https://raw.githubusercontent.com/stuttgart-things/harvester/main/clusters/sthings-edge/kiosk.yaml \
+kiosk_url=https://www.google.de \
+kiosk_ca_certs=/src/sthings-lab-ca.crt \
+run_id=$(date +%s%N)" \
+  --progress plain
+
+# PLAY RECAP: failed=0
+```
 
 Tested 2026-10-12 in SthingsNet: tabs from `kiosk.yaml`, all three load with the CA; rotation holds the tab
 for the pause after real keyboard/mouse input; reset after inactivity restarts with the start URLs; per-tab
@@ -519,9 +561,6 @@ kubectl top node
 ## Open
 
 - **Back in the table tennis network:** check that k3s and Flux come back (29/29 Ready) after the SthingsNet boot.
-- **Kiosk play from the release:** `sthings-baseos-26.1023.1505` (ansible#1371–#1374, no-snap pin #1412) is in
-  `k3s/requirements.yaml`; still to do: `ansible-galaxy collection install -r k3s/requirements.yaml --upgrade`
-  and run the play once with the `main` raw URL (step 7). The no-snap pin is on the box by hand since 2026-10-23.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
 - **WLED:** in both networks, [section 13](#13-wled-in-both-networks); the Wi-Fi on the WLED and the Opal's
   lease and DNS entry are still to be set, then test it.
