@@ -482,6 +482,11 @@ hosts:
       - name: Flux web
         fqdn: flux.machinery-hv.sthings.lab
         description: Flux UI.
+      - name: machinery
+        fqdn: machinery.machinery-hv.sthings.lab
+        description: >-
+          Dashboard over the cluster's Crossplane claims (ClusterStack,
+          RancherCluster, ...).
 
   # ---------------------------------------------------------------------------
   # crossplane-mgmt: Crossplane for the VM path, fed by Argo CD on platform.
