@@ -137,9 +137,18 @@ cd hosts/matrix
 
 # credentials only in the environment; the module passes them as Dagger secrets
 export SSH_USER=sthings SSH_PASSWORD='…'
+# sudo on the Pi (ansible_become_password below)
+export ANSIBLE_PASSWORD='…'
+# the bearer token for POST /display. On a Pi that already runs the catcher,
+# reuse the one in /etc/default/led-catcher: the play writes this value there,
+# and a new one locks out everything that still sends the old one.
+export LED_API_TOKEN='…'
+# homerun2-dev's Redis password
+export REDIS_PASSWORD=$(KUBECONFIG=~/.kube/homerun2-dev kubectl -n homerun2 \
+  get secret redis-stack-auth -o jsonpath='{.data.redis-password}' | base64 -d)
+# only needed when the certificate must be (re)issued; see below
+export VAULT_TOKEN="${VAULT_TOKEN:-}"
 umask 077
-# REDIS_PASSWORD: homerun2-dev's, e.g.
-#   kubectl -n homerun2 get secret redis-stack-auth -o jsonpath='{.data.redis-password}' | base64 -d
 printf 'LED_API_TOKEN=%s\nVAULT_TOKEN=%s\nREDIS_PASSWORD=%s\n' "$LED_API_TOKEN" "$VAULT_TOKEN" "$REDIS_PASSWORD" > ansible.env
 
 dagger -m github.com/stuttgart-things/dagger/ansible call execute \
