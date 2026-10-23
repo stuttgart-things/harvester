@@ -21,8 +21,9 @@ data:
   # unless annotated backstage.stuttgart-things.com/audience: developers.
   # v1.7.2 the VM entity provider, v1.9.0 RAG-AI with LLM_* names, v1.13.0
   # per-entity embedding hashes, v1.17.0 its Harvester source -- used by
-  # backstage-vms-config below.
-  imageTag: "v1.17.0"
+  # backstage-vms-config below -- v1.18.0 VM details (OS, network, disks,
+  # image) and a VM entity page.
+  imageTag: "v1.18.0"
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to

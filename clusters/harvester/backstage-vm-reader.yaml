@@ -5,7 +5,8 @@
 # Applied BY HAND on the Harvester cluster -- no Flux syncs this directory:
 #   kubectl --kubeconfig ~/.kube/harvester apply -f clusters/harvester/backstage-vm-reader.yaml
 #
-# get/list on VMs and VMIs, nothing else: no Secrets, no write. The token
+# get/list on VMs, VMIs and PVCs (disk sizes and images), nothing else: no
+# Secrets, no write. The token
 # Secret below is the long-lived ServiceAccount token Kubernetes fills in; its
 # value goes into BACKSTAGE_HARVESTER_TOKEN in
 # clusters/platform/apps/backstage-secrets-subst.enc.yaml. Deleting the Secret
@@ -23,6 +24,9 @@ metadata:
 rules:
   - apiGroups: [kubevirt.io]
     resources: [virtualmachines, virtualmachineinstances]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
     verbs: [get, list]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
