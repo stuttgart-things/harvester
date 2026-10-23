@@ -1,0 +1,28 @@
+# Ollama on the Harvester host's RTX 5060 Ti (16 GB), the local LLM endpoint for
+# Backstage RAG-AI (harvester#526). Runbook: hosts/ollama-gpu/README.md.
+#
+# large = 8 vCPU / 8 GiB / 128 GiB: the models live in VRAM, RAM only stages
+# them; the disk holds the model files (~10 GB for the default pair).
+# sthings-u26 (golden) because ansible: true logs in with the baked password;
+# the AnsibleRun does the base OS only, Ollama comes from the Dagger run.
+#
+# hostDevices needs virtual-machine >= v0.1.16 / harvester-vm >= v0.1.14
+# (crossplane-configurations#550). The deviceName is the PCIDevice's
+# .status.resourceName AFTER passthrough is enabled in Harvester -- VERIFY IT
+# before merging:
+#   kubectl get pcidevices -o custom-columns=NAME:.metadata.name,RESOURCE:.status.resourceName | grep -i nvidia
+# A name the node does not advertise leaves the VMI Pending (unschedulable).
+apiVersion: resources.stuttgart-things.com/v1alpha1
+kind: XVirtualMachine
+metadata:
+  name: ollama-gpu
+  namespace: default
+spec:
+  size: large
+  provider: harvester
+  environment: harvester
+  os: sthings-u26
+  ansible: true
+  hostDevices:
+    - name: gpu0
+      deviceName: nvidia.com/GB206_GEFORCE_RTX_5060_TI
