@@ -294,6 +294,11 @@ Known issues / decisions:
   `wlr_xdg_surface_schedule_configure: Assertion 'surface->initialized' failed` in cage 0.2.1.
   This is also why `xdotool` (XTEST) can drive the tab rotation.
 - A plain systemd service (`PAMName=login`) did not get `seat0` from logind → replaced by tty1 autologin.
+- **Firefox must stay the Mozilla `.deb`.** On 2026-10-21 unattended-upgrades swapped it for Ubuntu's
+  snap transitional package (`1:1snap1-…`; the `mozilla` pin does not count, unattended-upgrades only takes
+  Ubuntu origins) → `/usr/bin/firefox` is a snap wrapper, black screen after boot. Fix on the box:
+  `/etc/apt/preferences.d/firefox-no-snap` (`firefox*` from `o=Ubuntu` at `-1`) +
+  `sudo apt-get install --allow-downgrades firefox`; in the play from stuttgart-things/ansible#1412.
 - Harmless log lines:
   - `Sandbox: CanCreateUserNamespace() … EPERM`: Ubuntu's AppArmor profile `firefox` covers `/usr/lib/firefox/firefox`.
   - `[xwayland ei] EI setup failed`: XTEST works without libei.
@@ -508,11 +513,14 @@ kubectl top node
 | SthingsNet: box not in `arp -an`, or `No route to host` to a homerun2-dev VIP | a loose cable on the dd-wrt side (2026-10-12); the box takes a DHCP address there (`192.168.10.111`) |
 | kiosk: Firefox shows a certificate error | the page's CA is missing in `kiosk_ca_certs` (Firefox on Linux ignores `/etc/ssl/certs`) |
 | kiosk: black screen, monitor plugged in after boot | `sudo systemctl restart getty@tty1` |
+| kiosk: black screen, `cage` runs but no `firefox` process | `apt-cache policy firefox`: installed `1:1snap1-…` = Ubuntu's snap package, see *Known issues* in step 7 |
 | kiosk ignores a change of `kiosk.yaml` | `journalctl -t kiosk -b`: `invalid kiosk config: …` = the file was rejected; otherwise wait (check interval + raw cache, up to ~10 min) |
 
 ## Open
 
 - **Back in the table tennis network:** check that k3s and Flux come back (29/29 Ready) after the SthingsNet boot.
+- **Firefox no-snap pin:** stuttgart-things/ansible#1412 → new `sthings.baseos` release → bump `k3s/requirements.yaml`
+  (the pin is already on the box by hand since 2026-10-23).
 - **Kiosk releases:** stuttgart-things/ansible#1371 → #1372 → #1373 → #1374 (stacked) → new `sthings.baseos`
   release → bump `k3s/requirements.yaml` → run the play once with the `main` raw URL.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
