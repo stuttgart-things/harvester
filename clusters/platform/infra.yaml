@@ -270,7 +270,7 @@ spec:
 # pitcher the notification-catcher on homerun2-dev fans them out (Teams,
 # severity >= warning).
 #
-# SECRETS: Secret kube-prometheus-stack-secrets in flux-system with
+# SECRETS: Secret kube-prometheus-stack-secrets in flux-system with # pragma: allowlist secret
 # KPS_GRAFANA_ADMIN_PASSWORD and HOMERUN2_OMNI_PITCHER_AUTH_TOKEN (homerun2-dev's
 # omni-pitcher token), committed SOPS-encrypted like apps/rancher-secrets.enc.yaml.
 # Not optional: a missing Secret stops this Kustomization instead of rolling
