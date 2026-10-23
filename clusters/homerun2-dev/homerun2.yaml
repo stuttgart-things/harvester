@@ -128,6 +128,12 @@ spec:
       # the base's mock profile is mounted. Either merge order is safe.
       HOMERUN2_LIGHT_CATCHER_PROFILE_CM: homerun2-light-catcher-profile-wled
 
+      # The led-catcher simulator's profile, from
+      # ./homerun2-led-catcher-profile.yaml: the real matrix's rules
+      # (../../hosts/matrix/profile.yaml) instead of the base's, so the web
+      # UI shows what the panel shows.
+      HOMERUN2_LED_CATCHER_PROFILE_CM: homerun2-led-catcher-profile-matrix
+
       # Behind homerun2-portal (./homerun2-portal.yaml): each service answers
       # under the key the portal serves it at -- on its own hostname too,
       # e.g. led-catcher.homerun2-dev.sthings.lab/led/.
