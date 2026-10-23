@@ -75,7 +75,7 @@ spec:
       HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       HOMERUN2_SCOUT_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout
       HOMERUN2_SCOUT_KUSTOMIZE_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout-kustomize
-      HOMERUN2_LED_CATCHER_VERSION: v0.20.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+      HOMERUN2_LED_CATCHER_VERSION: v0.22.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
       HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
       HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
       HOMERUN2_WLED_MOCK_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-wled-mock
@@ -133,6 +133,13 @@ spec:
       # (../../hosts/matrix/profile.yaml) instead of the base's, so the web
       # UI shows what the panel shows.
       HOMERUN2_LED_CATCHER_PROFILE_CM: homerun2-led-catcher-profile-matrix
+      # The same display queue as the real matrix (../../hosts/matrix,
+      # led_display_queue=3): up to 3 finite displays wait their turn instead
+      # of the newest waiting one replacing the rest, so the simulator plays a
+      # burst of Flux Ready flips the way the panel does. led-catcher v0.22.0
+      # or later in web mode (homerun2-led-catcher#144); quoted, a substitute
+      # value must be a string.
+      HOMERUN2_LED_CATCHER_DISPLAY_QUEUE: "3"
 
       # Behind homerun2-portal (./homerun2-portal.yaml): each service answers
       # under the key the portal serves it at -- on its own hostname too,
