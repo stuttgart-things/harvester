@@ -66,7 +66,7 @@ execute-ansible-encrypt-and-commit \
 --ssh-user=env:SSH_USER \
 --ssh-password=env:SSH_PASSWORD \
 --requirements=../../requirements.yaml \
---parameters "cilium_version=0.19.0 k3s_k8s_version=1.35.1 k3s_release_kind=k3s1 cluster_setup=singlenode fetched_kubeconfig_path=/tmp/k3s.yaml install_k3s=true k3s_state=present prepare_rancher_ha_nodes=true" \
+--parameters "cilium_version=0.19.0 k3s_k8s_version=1.35.9 k3s_release_kind=k3s1 cluster_setup=singlenode fetched_kubeconfig_path=/tmp/k3s.yaml install_k3s=true k3s_state=present prepare_rancher_ha_nodes=true" \
 --inventory-type cluster \
 --age-public-key=env:AGE_PUB \
 --export-paths "/tmp/k3s.yaml" \
