@@ -1,0 +1,70 @@
+---
+# The led-catcher simulator's profile -- the same rules as the real 64x64
+# panel, so what the web UI shows is what the matrix shows.
+#
+# The source is ../../hosts/matrix/profile.yaml (installed on the Pi by its
+# Ansible play); this is its data, without the comments. KEEP THE TWO
+# IDENTICAL -- edit there, then regenerate this block or compare with:
+#
+#   diff <(yq -o=json -I0 '.' hosts/matrix/profile.yaml) \
+#        <(yq '.data."profile.yaml"' clusters/homerun2-dev/homerun2-led-catcher-profile.yaml | yq -o=json -I0 '.')
+#
+# Until 2026-10-23 the simulator ran the base profile of
+# stuttgart-things/homerun2-led-catcher (`text`, 5 s, no DEBUG) while the
+# panel ran cards for 10 s, so the two disagreed on what was shown and for
+# how long.
+#
+# homerun2.yaml sets HOMERUN2_LED_CATCHER_PROFILE_CM to this ConfigMap's name;
+# unset, the component mounts the base's own profile again. The catcher reads
+# its profile at start only: Reloader (./infra-platform.yaml) rolls the pod
+# when this changes.
+#
+# No ${VAR} in here: the Kustomization that applies this file (the
+# FluxInstance's own sync) has no postBuild, so none would be substituted.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-led-catcher-profile-matrix
+  namespace: homerun2
+data:
+  profile.yaml: |
+    displayRules:
+      error-all:
+        systems: ['*']
+        severity: [ERROR, CRITICAL]
+        kind: card
+        strip_prefix: true
+        duration: 10
+      warning-all:
+        systems: ['*']
+        severity: [WARNING]
+        kind: card
+        strip_prefix: true
+        duration: 10
+      tabletennis-score:
+        systems: [tabletennis]
+        severity: [INFO, SUCCESS]
+        kind: static
+        text: '{{ title }}'
+        font: 6x10.bdf
+        hold: true
+        duration: 3
+      success-all:
+        systems: ['*']
+        severity: [SUCCESS]
+        kind: card
+        strip_prefix: true
+        duration: 4
+      default-info:
+        systems: ['*']
+        severity: [INFO, DEBUG]
+        kind: card
+        strip_prefix: true
+        duration: 10
+    colors:
+      error: [255, 0, 0]
+      critical: [255, 0, 0]
+      warning: [255, 165, 0]
+      success: [0, 255, 0]
+      info: [0, 100, 255]
+      debug: [128, 128, 128]
