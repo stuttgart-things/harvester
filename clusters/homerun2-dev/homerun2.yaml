@@ -71,8 +71,8 @@ spec:
       HOMERUN2_OMNI_PITCHER_VERSION: v2.3.3 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
       HOMERUN2_CORE_CATCHER_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher
       HOMERUN2_CORE_CATCHER_KUSTOMIZE_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher-kustomize
-      HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
-      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.9.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
+      HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
+      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       HOMERUN2_SCOUT_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout
       HOMERUN2_SCOUT_KUSTOMIZE_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout-kustomize
       HOMERUN2_LED_CATCHER_VERSION: v0.20.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
@@ -137,6 +137,7 @@ spec:
       HOMERUN2_WLED_MOCK_BASE_PATH: /wled
       HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
       HOMERUN2_CONFIG_VIEWER_BASE_PATH: /config
+      HOMERUN2_NOTIFICATION_CATCHER_BASE_PATH: /notify
 
       # NOT redundant with substituteFrom. Both carry a `:-changeme` default
       # upstream, so a missing value does not fail -- it installs the literal
