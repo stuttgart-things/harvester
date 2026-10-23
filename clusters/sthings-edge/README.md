@@ -250,7 +250,7 @@ done** -- no Ansible run, in either network. An invalid file is ignored (the las
 The play is needed only for the box itself and for the private CA of the pages: `*.homerun2-dev.sthings.lab`
 comes from `CN=sthings.lab` ([`sthings-lab-ca.crt`](./sthings-lab-ca.crt)), and Firefox on Linux ignores the
 system store. `kiosk_ca_certs`, `kiosk_rotate_pause_seconds`, `kiosk_reset_idle_seconds`/`kiosk_tab_zoom` and
-`kiosk_config_url` are stuttgart-things/ansible#1371–#1374 (not released yet; tested on the box from the branches):
+`kiosk_config_url` are stuttgart-things/ansible#1371–#1374 (released, `sthings-baseos-26.1023.1505` in `k3s/requirements.yaml`):
 
 ```bash
 ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
@@ -519,10 +519,9 @@ kubectl top node
 ## Open
 
 - **Back in the table tennis network:** check that k3s and Flux come back (29/29 Ready) after the SthingsNet boot.
-- **Firefox no-snap pin:** stuttgart-things/ansible#1412 → new `sthings.baseos` release → bump `k3s/requirements.yaml`
-  (the pin is already on the box by hand since 2026-10-23).
-- **Kiosk releases:** stuttgart-things/ansible#1371 → #1372 → #1373 → #1374 (stacked) → new `sthings.baseos`
-  release → bump `k3s/requirements.yaml` → run the play once with the `main` raw URL.
+- **Kiosk play from the release:** `sthings-baseos-26.1023.1505` (ansible#1371–#1374, no-snap pin #1412) is in
+  `k3s/requirements.yaml`; still to do: `ansible-galaxy collection install -r k3s/requirements.yaml --upgrade`
+  and run the play once with the `main` raw URL (step 7). The no-snap pin is on the box by hand since 2026-10-23.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
 - **WLED:** in both networks, [section 13](#13-wled-in-both-networks); the Wi-Fi on the WLED and the Opal's
   lease and DNS entry are still to be set, then test it.
