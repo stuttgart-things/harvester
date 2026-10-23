@@ -198,6 +198,11 @@ hosts:
         description: >-
           Reconciles ClusterbookCluster resources against the Clusterbook API
           on this cluster. No ingress.
+      - name: clusterscope
+        fqdn: clusterscope.platform.sthings.lab
+        description: >-
+          Map of the lab's clusters from clusters/ in this repo, with live
+          status and endpoint probes for platform itself.
       - name: Loki
         fqdn: loki.platform.sthings.lab
         description: >-
