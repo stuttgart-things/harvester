@@ -37,6 +37,9 @@ spec:
   path: ./apps/platform/root
   components:
     - ../components/openbao
+    # The k8s-pitcher only, pitching to homerun2-dev's omni-pitcher. The -sops
+    # variant: this cluster has no external-secrets.
+    - ../components/homerun2-k8s-pitcher-remote-sops
   # The OpenBao agent injector WITHOUT its pod anti-affinity. The chart ships a
   # HARD anti-affinity of the injector against itself plus the default
   # RollingUpdate: on this single node the new pod can never sit beside the old
@@ -114,3 +117,17 @@ spec:
       #
       # Run `bao operator init` once — ./openbao/README.md, step 3 — and the
       # next reconcile goes green on its own.
+
+      # ---- homerun2-k8s-pitcher-remote-sops (stuttgart-things/flux#823) ----
+      # The pilot of "k8s-pitcher on every cluster, one central homerun2
+      # stack": Warning Events with the important-events reasons (BackOff,
+      # OOMKilling, Evicted, FailedMount, ...) and Ready flips of nodes, Flux
+      # Kustomizations and HelmReleases, with a 1h cooldown per object/reason
+      # and at most 20 pitches per 10m. They land in homerun2-dev's
+      # teams-homerun2-dev output (warning and up).
+      #
+      # The token is homerun2-dev's omni-pitcher token, from
+      # ./apps/homerun2-k8s-pitcher-remote-sops-secrets.enc.yaml. The endpoint's
+      # CA (CN=sthings.lab) is in trust-manager's cluster-trust-bundle here.
+      HOMERUN2_CENTRAL_PITCHER_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch
+      CLUSTER_NAME: platform
