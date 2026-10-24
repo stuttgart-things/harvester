@@ -82,7 +82,7 @@ spec:
       TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
       TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
       TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
-      TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.30.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
+      TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.31.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
       TABLETENNIS_ZAEHLWERK_PONG: 'on'
       TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
