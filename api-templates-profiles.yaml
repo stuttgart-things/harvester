@@ -16,9 +16,9 @@
 templates:
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-namespace/templates/namespace-minimal.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-namespace/templates/namespace-annotated.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-minimal.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-detailed.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-virtualmachine/templates/virtualmachine-harvester.yaml
+  # xr-virtualmachine-* dropped: XVirtualMachine -> VMProvision -> VsphereVM/ProxmoxVM
+  # (OpenTofu) is not installed on machinery; VMs are NativeVsphereVM /
+  # NativeProxmoxVM (xr-native-vm, profile labul-vsphere in claim-machinery-api).
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-minimal.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-baseos.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-detailed.yaml
