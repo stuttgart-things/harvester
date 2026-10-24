@@ -34,7 +34,7 @@ spec:
   postBuild:
     substitute:
       HOMERUN2_NAMESPACE: homerun2
-      HOMERUN2_PORTAL_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
+      HOMERUN2_PORTAL_VERSION: v0.8.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
       # In navigation order, the same as platform-sthings. The keys are the
       # BASE_PATHs in ./homerun2.yaml, ./homerun2-schedule-pitcher.yaml and
       # ./homerun2-sound-catcher.yaml; `key|Label` sets the card's title.
