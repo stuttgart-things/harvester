@@ -17,6 +17,7 @@ spec:
   - '../components/homerun2-sops'
   - '../components/minio'
   - '../components/openbao-sops'
+  - '../components/tabletennis-sandbox'
   - '../components/tabletennis-sops-backup'
   force: false
   interval: '1h'
@@ -36,7 +37,8 @@ spec:
       HOMERUN2_CORE_CATCHER_BASE_PATH: /core
       HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
-      HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+      HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis-sandbox
+      HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis,tabletennis-sandbox
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
@@ -64,6 +66,10 @@ spec:
       OPENBAO_TOPOLOGY: single-node
       TABLETENNIS_FOB_CHECKIN: sops
       TABLETENNIS_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
+      TABLETENNIS_SANDBOX_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
+      TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
+      TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
+      TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL: redis
       TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
       TABLETENNIS_SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
       TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: '7d'
@@ -79,6 +85,7 @@ spec:
       TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
       TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
       TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+      TABLETENNIS_ZAEHLWERK_CATCHER_IDLE_STREAMS: messages,tabletennis-sandbox
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
       TABLETENNIS_ZAEHLWERK_PONG: 'on'
       TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
