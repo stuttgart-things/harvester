@@ -111,12 +111,15 @@ spec:
   # (portal v0.6.0, led-catcher v0.20.0, core-catcher v1.3.0,
   # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800);
   # v1.173.0: HOMERUN2_REDIS_IMAGE_VERSION through the bundle (flux#808),
-  # for Redis Stack 7.4 (stuttgart-things#3923).
+  # for Redis Stack 7.4 (stuttgart-things#3923); v1.191.0: zaehlwerk v0.31.0 +
+  # schmetterpause v0.18.0 and tabletennis-sandbox, the Pong league next to
+  # the office's pair, with the redis panel and the catcher's idle streams
+  # (flux#847).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.173.0
+    tag: v1.191.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
