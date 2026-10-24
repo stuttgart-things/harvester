@@ -13,7 +13,7 @@
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
 #     --master-age-key env:SOPS_AGE_KEY \
-#     --escrow-recipients "$(age-keygen -y <<<"$SOPS_AGE_KEY")" \
+#     --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
 #     --sops-ref-dir . \
 #     --existing-secrets clusters/edge/cluster-secrets \
 #     export --path /tmp/edge-gen
@@ -34,6 +34,13 @@
 # --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
 # the master key), not with a cluster key of its own, so the generated secrets
 # must be encrypted for it too. Drop it once the edge gets its own key.
+#
+# The recipient is written out, the master's public key, rather than derived
+# with `age-keygen -y <<<"$SOPS_AGE_KEY"`. That derivation once came back
+# empty, and an empty recipient is not an error: the render dropped the master
+# from cluster-secrets/.sops.yaml and re-encrypted every cluster secret for the
+# cluster key alone, which the edge cannot decrypt (harvester#535). AFTER EVERY
+# RENDER, `git diff clusters/edge/cluster-secrets/.sops.yaml` must be empty.
 #
 # LAB vs LATTEPANDA. The values that differ stay in cluster-vars.yaml: every
 # value below that is ${EDGE_*} is substituted by the layer that applies the
