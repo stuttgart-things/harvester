@@ -35,8 +35,8 @@ networks:
     description: >-
       Table tennis network behind the GL.iNet Opal (Wi-Fi `sthings-edge`),
       travels with the sthings-edge box. Gateway, DNS and DHCP on the Opal
-      (.1); uplink is a Wi-Fi repeater. The VIPs .20-.22 sit outside the
-      DHCP pool .100-.249.
+      (.1); uplink is a Wi-Fi repeater. The VIPs .20-.23 and the static
+      leases (.10, .30, .31) sit outside the DHCP pool .100-.249.
   - cidr: 10.100.136.0/24
     name: labda
     # foreign: another site's network. Only the addresses this lab uses there
@@ -238,8 +238,8 @@ hosts:
       - name: DHCP
         port: 67
         description: >-
-          Dynamic pool .100-.249 plus static leases for the box (.10) and the
-          LED matrix Pi (.30).
+          Dynamic pool .100-.249 plus static leases for the box (.10), the
+          LED matrix Pi (.30) and the WLED (.31).
 
   - system: sthings-edge
     hostname: sthings-edge
@@ -293,11 +293,16 @@ hosts:
       - name: light-catcher-tabletennis
         fqdn: light-catcher-tabletennis.edge.sthings.lab
         description: >-
-          homerun2 light catcher for the table; still sends to wled-mock
-          until there is a real LED strip.
+          homerun2 light catcher for the table (stream `tabletennis`);
+          drives the WLED at wled-matrix.sthings.lab (.31).
       - name: wled-mock
         fqdn: wled-mock.edge.sthings.lab
         description: Stand-in for the WLED strip.
+      - name: log-sink
+        fqdn: log-sink.edge.sthings.lab
+        description: >-
+          Viewer of the firmware's log sink: sessions and games the board sent
+          to edge-log-sink (.23), read-only, no login.
       - name: config-viewer
         fqdn: config-viewer.edge.sthings.lab
         description: homerun2 config viewer.
@@ -343,6 +348,23 @@ hosts:
           The `messages` stream the LED matrix Pi consumes when it is in the
           table tennis network.
 
+  - system: sthings-edge
+    hostname: edge-log-sink
+    ip: 192.168.8.23
+    kind: host
+    cluster: sthings-edge
+    description: >-
+      Cilium LB address of the firmware's log sink (clusters/sthings-edge/log-sink),
+      own pool with exactly this IP. The piezo board sends its diagnostic log
+      here directly, without a name.
+    services:
+      - name: log sink (UDP)
+        port: 9000
+        description: >-
+          One JSON line per event over UDP (zaehlwerk-firmware ADR-0004); one
+          file per session and per game. The viewer is log-sink.edge.sthings.lab
+          on edge-gateway.
+
   - system: matrix
     hostname: matrix-edge
     ip: 192.168.8.30
@@ -351,6 +373,21 @@ hosts:
       The same LED matrix Pi (MAC b8:27:eb:d9:33:db) when it travels with the
       box: Wi-Fi `sthings-edge`, static lease on the Opal, Redis from
       edge-redis. matrix.sthings.lab points here via the Opal's dnsmasq.
+
+  - system: wled-matrix
+    hostname: wled-edge
+    ip: 192.168.8.31
+    kind: host
+    description: >-
+      The same WLED (MAC d4:e9:f4:c3:e9:dc) when it travels with the box: WLED
+      keeps both Wi-Fi networks and joins `sthings-edge` here, static lease on
+      the Opal. wled-matrix.sthings.lab points here via the Opal's dnsmasq;
+      driven by the box's light-catcher-tabletennis (clusters/sthings-edge/README.md,
+      section 13).
+    services:
+      - name: WLED UI
+        url: http://192.168.8.31
+        description: The device's own web UI and JSON API.
 
   # ---------------------------------------------------------------------------
   # homerun2-dev: single-node RKE2 VM on Harvester. clusters/homerun2-dev/README.md,
