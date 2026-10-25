@@ -814,7 +814,7 @@ it from there and plays the league again when it is done; close it there too.
 6. **The matrix Pi** reads both streams: re-run its play with
    `led_redis_stream=messages,tabletennis` and led-catcher v0.22.0
    ([`hosts/matrix/README.md`](../../hosts/matrix/README.md)). Needs the
-   `container` collection with REDIS_STREAMS support (stuttgart-things/ansible).
+   `container` collection with REDIS_STREAMS support (stuttgart-things/ansible#1421).
 
 ### Versions
 
