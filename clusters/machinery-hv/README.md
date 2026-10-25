@@ -17,7 +17,7 @@ has open points listed at the end.
 | Domain | `machinery-hv.sthings.lab` |
 | Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
-| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
+| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.179.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
 
 ## Why not upgrade crossplane-mgmt
