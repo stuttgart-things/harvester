@@ -2,8 +2,7 @@
 
 One page for the whole thing: the router, the box, the services on it, the
 boards and screens around it, and who talks to whom on which port. **Solid**
-lines and boxes run today, **dashed** ones are planned, and anything marked
-**open** is not decided yet. The details stay where they are: the site, the
+lines and boxes run today, **dashed** ones are planned. The details stay where they are: the site, the
 cluster and the two name worlds in [architecture.md](./architecture.md), the
 box step by step in
 [`clusters/sthings-edge/README.md`](https://github.com/stuttgart-things/harvester/blob/main/clusters/sthings-edge/README.md), the
@@ -20,7 +19,7 @@ flowchart TB
 
   subgraph opal["GL.iNet Opal (GL-SFT1200) -- 192.168.8.1"]
     dns["dnsmasq<br/>DHCP + DNS"]
-    portal["captive portal<br/>(open)"]
+    portal["captive portal<br/>(planned, #431)"]
   end
 
   subgraph box["LattePanda Mu -- 192.168.8.10, k3s + Cilium + Flux"]
@@ -61,9 +60,7 @@ flowchart TB
   piezo -. diagnostics .-> sink
 
   classDef planned stroke-dasharray: 5 5
-  classDef open stroke-dasharray: 2 4,stroke-width:2px
-  class buttons planned
-  class portal open
+  class buttons,portal planned
 ```
 
 - **The box is the only server.** Everything that keeps state runs on it; the
@@ -166,21 +163,24 @@ offers.
 | Piezo board | reports over HTTPS, edge root checked on the board | -- | zaehlwerk-firmware |
 | Buttons | not built | ESP-NOW buttons to a hub, the hub reports to zaehlwerk | zaehlwerk-firmware#2, #3 |
 | Device certificates | OpenBao ACME runs (HTTP-01, no EAB); only the lab's ESP mock enrols, the piezo board trusts the edge root but has no certificate of its own | boards enrol themselves; EAB per device + static leases | [architecture.md](./architecture.md), *Internal* |
-| Players reach schmetterpause | join `sthings-edge`, open the URL | **open**: a captive portal that sends them there | not decided -- needs an issue / ADR |
+| Players reach schmetterpause | join `sthings-edge`, open the URL | free Wi-Fi, captive sheet, one tap to schmetterpause | [harvester#431](https://github.com/stuttgart-things/harvester/issues/431) |
 | Kiosk | role `kiosk` in SthingsNet only | -- | [box README](https://github.com/stuttgart-things/harvester/blob/main/clusters/sthings-edge/README.md), step 7 |
 
-### Open: a captive portal
+### Planned: a captive portal
 
-Not decided, and nothing is built. What a decision has to answer:
+Tracked in [harvester#431](https://github.com/stuttgart-things/harvester/issues/431).
+The goal is settled, the way there is not:
 
-- **Where it runs.** On the Opal (openNDS or the portal of the GL firmware --
-  keeps the box out of the path, but the router has little memory and the GL
-  firmware must stay), or as a service on the box behind the players' gateway
-  (one place for everything, but the router still has to redirect to it).
-- **What it is for.** Only a landing page that points at schmetterpause, or a
-  gate in front of the uplink.
+- **The goal.** A free Wi-Fi anybody can join; the captive sheet opens on its
+  own, and one tap later the player is on schmetterpause. Players care about
+  schmetterpause only -- zaehlwerk, homerun2 and the rest are for admins and
+  do not belong on the page. After the tap the uplink is open, so nobody at
+  the table is offline.
+- **Where it runs.** On the Opal: openNDS intercepts and lets clients
+  through, the page itself is served by the box (FAS) on the players'
+  gateway. Whether openNDS runs on the GL firmware (OpenWrt 18.06) is the
+  first thing to find out; the fallbacks are in the issue.
 - **What it must not break.** The boards, the matrix and the WLED join the
-  same Wi-Fi without a browser -- they must pass untouched (by MAC or by a
-  separate SSID). And the players' certificate is publicly trusted only for
-  `*.sthings-edge.com`: the portal page has to live on that name, or phones
-  show a certificate warning.
+  same Wi-Fi without a browser -- they must pass untouched (by MAC). And the
+  players' certificate is publicly trusted only for `*.sthings-edge.com`: the
+  page has to live on that name, or phones show a certificate warning.
