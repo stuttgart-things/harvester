@@ -198,6 +198,11 @@ hosts:
         description: >-
           Reconciles ClusterbookCluster resources against the Clusterbook API
           on this cluster. No ingress.
+      - name: clusterscope
+        fqdn: clusterscope.platform.sthings.lab
+        description: >-
+          Map of the lab's clusters from clusters/ in this repo, with live
+          status and endpoint probes for platform itself.
 
   # The sthings-edge box (LattePanda) in SthingsNet: role `kiosk`, no k3s.
   # Address from clusters/sthings-edge/README.md (troubleshooting); inside the
@@ -482,6 +487,11 @@ hosts:
       - name: Flux web
         fqdn: flux.machinery-hv.sthings.lab
         description: Flux UI.
+      - name: machinery
+        fqdn: machinery.machinery-hv.sthings.lab
+        description: >-
+          Dashboard over the cluster's Crossplane claims (ClusterStack,
+          RancherCluster, ...).
 
   # ---------------------------------------------------------------------------
   # crossplane-mgmt: Crossplane for the VM path, fed by Argo CD on platform.

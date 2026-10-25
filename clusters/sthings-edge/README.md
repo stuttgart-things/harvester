@@ -30,6 +30,7 @@ This README is the run book for this box, in build order. The general edge docs
 | File | Purpose |
 |---|---|
 | `inventory` | Ansible inventory (`[edge]` → `192.168.8.10`) for base OS, tools and kiosk |
+| `inventory-sthingsnet` | the same `[edge]` group in SthingsNet (`192.168.10.111`) -- kiosk runs there, e.g. via Dagger (step 7) |
 | `tools.yaml` | Tool install play (wraps `sthings.container.download_install_binary`, supports `-e tools=…`) |
 | `edge.yaml` | Tool profile: kubectl, helm, k9s, helmfile, flux, cilium-cli, kubectl-slice, sops, age |
 | [`k3s/`](./k3s/README.md) | k3s + Cilium: inventory, vars, collection requirements, run book + results |
@@ -79,7 +80,7 @@ uci add_list dhcp.@dnsmasq[0].rebind_domain='edge.sthings.lab'
 uci add_list dhcp.@dnsmasq[0].rebind_domain='sthings-edge.com'
 for n in schmetterpause zaehlwerk openbao minio minio-console led-catcher light-catcher \
          light-catcher-tabletennis wled-mock config-viewer demo-pitcher core-catcher omni-pitcher scout \
-         zaehlwerk-portal homerun2-portal buttons; do
+         zaehlwerk-portal homerun2-portal notification-catcher buttons; do
   uci add_list dhcp.@dnsmasq[0].address="/$n.edge.sthings.lab/192.168.8.20"
 done
 uci add_list dhcp.@dnsmasq[0].address='/sthings-edge.com/192.168.8.21'
@@ -98,6 +99,9 @@ uci commit dhcp && /etc/init.d/dnsmasq restart
   `uci add_list dhcp.@dnsmasq[0].address='/zaehlwerk-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
 - `homerun2-portal` (homerun2's portal, flux v1.170.0) is new: add its line once,
   `uci add_list dhcp.@dnsmasq[0].address='/homerun2-portal.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+- `notification-catcher` (its read-only UI, flux v1.182.2) is new: add its line once,
+  `uci add_list dhcp.@dnsmasq[0].address='/notification-catcher.edge.sthings.lab/192.168.8.20' && uci commit dhcp && /etc/init.d/dnsmasq restart`.
+  The portal shows it under `/notify/` without the name.
 - Concrete names, not `address=/edge.sthings.lab/…`: that would also catch the devices' names.
   A new HTTPRoute hostname needs its own `address` line (list them: [step 11](#11-use-and-verify)).
 - GL DNS stays on `auto` (no "Override DNS Settings for All Clients"), so clients use dnsmasq.
@@ -244,13 +248,15 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
 **What the kiosk shows is declared in [`kiosk.yaml`](./kiosk.yaml)** -- tabs (URL + zoom), tab rotation,
 pause after input, reset to the start URLs after inactivity. The box fetches it from GitHub (raw URL of
 `main`) at every kiosk start and every 5 minutes; a change restarts the kiosk. **Change the file, merge,
-done** -- no Ansible run, in either network. An invalid file is ignored (the last valid copy stays), see
+done** -- no Ansible run, in either network. The homerun2 pages are one tab: homerun2-portal's `/kiosk` (portal v0.8.0+)
+rotates through the services itself, skips the ones that are down and holds on input; the browser only
+switches between it and Flux (#528). An invalid file is ignored (the last valid copy stays), see
 `journalctl -t kiosk -b`. GitHub's raw cache adds up to 5 min.
 
 The play is needed only for the box itself and for the private CA of the pages: `*.homerun2-dev.sthings.lab`
 comes from `CN=sthings.lab` ([`sthings-lab-ca.crt`](./sthings-lab-ca.crt)), and Firefox on Linux ignores the
 system store. `kiosk_ca_certs`, `kiosk_rotate_pause_seconds`, `kiosk_reset_idle_seconds`/`kiosk_tab_zoom` and
-`kiosk_config_url` are stuttgart-things/ansible#1371–#1374 (not released yet; tested on the box from the branches):
+`kiosk_config_url` are stuttgart-things/ansible#1371–#1374 (released, `sthings-baseos-26.1023.1505` in `k3s/requirements.yaml`):
 
 ```bash
 ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
@@ -260,8 +266,49 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
 ```
 
 `kiosk_url` is only the fallback for a first start without network. The play can run in either network
-(in SthingsNet the box has another address, e.g. `-i "192.168.10.111," -u sthings -e target_host=all`).
+(in SthingsNet the box has another address: `-i inventory-sthingsnet`).
 The homerun2-dev names resolve only in SthingsNet.
+
+**The same run via Dagger** (`stuttgart-things/dagger/ansible`, no local Ansible; tested 2026-10-23 in
+SthingsNet, `changed=1` = the leftover Firefox snap removed). The module logs in with user + password,
+read from an env file in your home -- once, in a normal terminal (not a `!` prompt in Claude Code), never
+in the repo:
+
+```bash
+install -m 600 /dev/null ~/.sthings-edge.env && nano ~/.sthings-edge.env
+```
+
+```bash
+SSH_USER=sthings
+SSH_PASSWORD='<password of sthings on the box>'
+```
+
+Dagger cannot read a dotenv file into `--ssh-user`/`--ssh-password`, so the file is loaded into the shell
+and passed as `env:` secrets (masked in the output, the user shows up as `***`). Run from the repo root;
+`--src` lands in the container as `/src`, hence `kiosk_ca_certs=/src/sthings-lab-ca.crt`. sudo on the box
+is NOPASSWD, so no `ansible_become_password`/`--env-secrets` is needed. `run_id` forces a real run
+instead of Dagger's cache. In the table tennis network take `inventory` instead of `inventory-sthingsnet`.
+
+```bash
+cd ~/harvester
+set -a; . ~/.sthings-edge.env; set +a
+
+dagger -m github.com/stuttgart-things/dagger/ansible call execute \
+  --src clusters/sthings-edge \
+  --requirements clusters/sthings-edge/k3s/requirements.yaml \
+  --inventory clusters/sthings-edge/inventory-sthingsnet \
+  --playbooks sthings.baseos.kiosk \
+  --ssh-user env:SSH_USER \
+  --ssh-password env:SSH_PASSWORD \
+  --parameters "target_host=edge \
+kiosk_config_url=https://raw.githubusercontent.com/stuttgart-things/harvester/main/clusters/sthings-edge/kiosk.yaml \
+kiosk_url=https://www.google.de \
+kiosk_ca_certs=/src/sthings-lab-ca.crt \
+run_id=$(date +%s%N)" \
+  --progress plain
+
+# PLAY RECAP: failed=0
+```
 
 Tested 2026-10-12 in SthingsNet: tabs from `kiosk.yaml`, all three load with the CA; rotation holds the tab
 for the pause after real keyboard/mouse input; reset after inactivity restarts with the start URLs; per-tab
@@ -294,6 +341,11 @@ Known issues / decisions:
   `wlr_xdg_surface_schedule_configure: Assertion 'surface->initialized' failed` in cage 0.2.1.
   This is also why `xdotool` (XTEST) can drive the tab rotation.
 - A plain systemd service (`PAMName=login`) did not get `seat0` from logind → replaced by tty1 autologin.
+- **Firefox must stay the Mozilla `.deb`.** On 2026-10-21 unattended-upgrades swapped it for Ubuntu's
+  snap transitional package (`1:1snap1-…`; the `mozilla` pin does not count, unattended-upgrades only takes
+  Ubuntu origins) → `/usr/bin/firefox` is a snap wrapper, black screen after boot. Fix on the box:
+  `/etc/apt/preferences.d/firefox-no-snap` (`firefox*` from `o=Ubuntu` at `-1`) +
+  `sudo apt-get install --allow-downgrades firefox`; in the play from stuttgart-things/ansible#1412.
 - Harmless log lines:
   - `Sandbox: CanCreateUserNamespace() … EPERM`: Ubuntu's AppArmor profile `firefox` covers `/usr/lib/firefox/firefox`.
   - `[xwayland ei] EI setup failed`: XTEST works without libei.
@@ -467,9 +519,9 @@ Opal LAN (Wi-Fi `sthings-edge` or cable), where the router answers them.
 | https://openbao.edge.sthings.lab/ | OpenBao UI; ACME `…/v1/pki/acme/directory` |
 | https://log-sink.edge.sthings.lab/ | the firmware's log sink: sessions and games the board sent to `192.168.8.23:9000` (read-only, no login) |
 | https://minio-console.edge.sthings.lab/ | MinIO console (`minio.edge.sthings.lab` = the S3 API) |
-| https://homerun2-portal.edge.sthings.lab/ | homerun2-portal: every service's status and latest, each one's UI under its key (`/led/`, `/core/`, `/light/`, `/table/`, `/wled/`, `/config/`, `/pitch/`) |
+| https://homerun2-portal.edge.sthings.lab/ | homerun2-portal: every service's status and latest, each one's UI under its key (`/core/`, `/notify/`, `/led/`, `/light/`, `/table/`, `/wled/`, `/config/`, `/pitch/`) |
 | https://led-catcher.edge.sthings.lab/led/, https://light-catcher.edge.sthings.lab/light/, https://light-catcher-tabletennis.edge.sthings.lab/table/, https://wled-mock.edge.sthings.lab/wled/ | homerun2 lights (each under its BASE_PATH; `/` redirects there) |
-| https://config-viewer.edge.sthings.lab/config/, https://demo-pitcher.edge.sthings.lab/pitch/, https://core-catcher.edge.sthings.lab/core/, https://scout.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
+| https://config-viewer.edge.sthings.lab/config/, https://demo-pitcher.edge.sthings.lab/pitch/, https://core-catcher.edge.sthings.lab/core/, https://notification-catcher.edge.sthings.lab/notify/ (read-only: config, sent messages, dead letters), https://scout.edge.sthings.lab/, https://omni-pitcher.edge.sthings.lab/ | homerun2 (omni-pitcher has no page on `/`) |
 
 **kubectl / flux from the Mac.** `~/.kube/sthings-edge` (server `https://192.168.8.10:6443`) works
 once Local Network access is allowed (step 4). Until then through an SSH tunnel; `127.0.0.1` is
@@ -508,13 +560,12 @@ kubectl top node
 | SthingsNet: box not in `arp -an`, or `No route to host` to a homerun2-dev VIP | a loose cable on the dd-wrt side (2026-10-12); the box takes a DHCP address there (`192.168.10.111`) |
 | kiosk: Firefox shows a certificate error | the page's CA is missing in `kiosk_ca_certs` (Firefox on Linux ignores `/etc/ssl/certs`) |
 | kiosk: black screen, monitor plugged in after boot | `sudo systemctl restart getty@tty1` |
+| kiosk: black screen, `cage` runs but no `firefox` process | `apt-cache policy firefox`: installed `1:1snap1-…` = Ubuntu's snap package, see *Known issues* in step 7 |
 | kiosk ignores a change of `kiosk.yaml` | `journalctl -t kiosk -b`: `invalid kiosk config: …` = the file was rejected; otherwise wait (check interval + raw cache, up to ~10 min) |
 
 ## Open
 
 - **Back in the table tennis network:** check that k3s and Flux come back (29/29 Ready) after the SthingsNet boot.
-- **Kiosk releases:** stuttgart-things/ansible#1371 → #1372 → #1373 → #1374 (stacked) → new `sthings.baseos`
-  release → bump `k3s/requirements.yaml` → run the play once with the `main` raw URL.
 - **L2 only on `enp1s0`:** stuttgart-things/flux#678 → `CILIUM_L2_INTERFACES: ^enp1s0$` on `cilium-lb`, re-render.
 - **WLED:** in both networks, [section 13](#13-wled-in-both-networks); the Wi-Fi on the WLED and the Opal's
   lease and DNS entry are still to be set, then test it.

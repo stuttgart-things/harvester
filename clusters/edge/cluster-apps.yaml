@@ -13,7 +13,7 @@
 #     render-cluster-apps \
 #     --cluster-apps clusters/edge/cluster-apps.yaml \
 #     --master-age-key env:SOPS_AGE_KEY \
-#     --escrow-recipients "$(age-keygen -y <<<"$SOPS_AGE_KEY")" \
+#     --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
 #     --sops-ref-dir . \
 #     --existing-secrets clusters/edge/cluster-secrets \
 #     export --path /tmp/edge-gen
@@ -34,6 +34,13 @@
 # --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
 # the master key), not with a cluster key of its own, so the generated secrets
 # must be encrypted for it too. Drop it once the edge gets its own key.
+#
+# The recipient is written out, the master's public key, rather than derived
+# with `age-keygen -y <<<"$SOPS_AGE_KEY"`. That derivation once came back
+# empty, and an empty recipient is not an error: the render dropped the master
+# from cluster-secrets/.sops.yaml and re-encrypted every cluster secret for the
+# cluster key alone, which the edge cannot decrypt (harvester#535). AFTER EVERY
+# RENDER, `git diff clusters/edge/cluster-secrets/.sops.yaml` must be empty.
 #
 # LAB vs LATTEPANDA. The values that differ stay in cluster-vars.yaml: every
 # value below that is ${EDGE_*} is substituted by the layer that applies the
@@ -111,12 +118,19 @@ spec:
   # (portal v0.6.0, led-catcher v0.20.0, core-catcher v1.3.0,
   # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800);
   # v1.173.0: HOMERUN2_REDIS_IMAGE_VERSION through the bundle (flux#808),
-  # for Redis Stack 7.4 (stuttgart-things#3923).
+  # for Redis Stack 7.4 (stuttgart-things#3923); v1.191.0: zaehlwerk v0.31.0 +
+  # schmetterpause v0.18.0 and tabletennis-sandbox, the Pong league next to
+  # the office's pair, with the redis panel and the catcher's idle streams
+  # (flux#847); v1.194.0: the sandbox's Pong league plays open tournament
+  # places first, PONG_TOURNAMENTS=on (flux#857, zaehlwerk ADR-0017);
+  # v1.194.1: zaehlwerk v0.32.0 + schmetterpause v0.19.0 (flux#849), which
+  # actually play them, and the MATCHES_TOKEN env from zaehlwerk's base
+  # (flux#858).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.173.0
+    tag: v1.194.1
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -262,15 +276,20 @@ spec:
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
         # Redis Stack 7.4 (stuttgart-things#3923). No way back: writes RDB v12.
         HOMERUN2_REDIS_IMAGE_VERSION: 7.4.0-v8
-        HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
+        # The Pong sandbox (tabletennis-sandbox below) is a third preset: its
+        # league alone on the panel, for showing it on purpose.
+        HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis,tabletennis-sandbox
+        # What the catcher listens to when nobody switched it: the messages
+        # and the sandbox's league between two office matches (zaehlwerk
+        # ADR-0016). An office match switches it to tabletennis alone.
+        HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis-sandbox
         # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
         # shared with sthings-edge) -- for real, no dry run: a match won on
-        # the table mock posts a card (players, sets, set scores).
-        # TESTING: -with-demos posts pong games too, with a Demo row on the
-        # card (flux#750) -- every zaehlwerk-pong match, the bot games the
-        # service plays by itself included, so a card every few minutes. Back
-        # to tabletennis-results (demo=1 left out) once the card looks right.
-        HOMERUN2_SOPS_NOTIFY: tabletennis-results-with-demos
+        # the table mock posts a card (players, sets, set scores). Demo and
+        # bot games (demo=1, every zaehlwerk-pong match) stay out. To test the
+        # webhook and the card with a pong game: tabletennis-results-with-demos
+        # (flux#750) -- checked 2026-10-18, then switched back.
+        HOMERUN2_SOPS_NOTIFY: tabletennis-results
         HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
         HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
         # LAB: behind homerun2-portal (below), each service under the key the
@@ -293,6 +312,10 @@ spec:
     tabletennis-sops-backup:
       vars:
         TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+        # After a match the catcher goes back to the messages AND the Pong
+        # sandbox's stream, so the league shows while the table is free
+        # (flux tabletennis-sandbox, zaehlwerk ADR-0016).
+        TABLETENNIS_ZAEHLWERK_CATCHER_IDLE_STREAMS: messages,tabletennis-sandbox
         TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
         TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
@@ -382,6 +405,42 @@ spec:
           # table mock reads too
           SCHMETTERPAUSE_RFID_UID_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_RFID_UID_KEY # pragma: allowlist secret
           ZAEHLWERK_CHECKIN_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_CHECKIN_TOKEN # pragma: allowlist secret
+    # LAB: the Pong sandbox (flux apps/tabletennis/profiles/sandbox; zaehlwerk
+    # ADR-0015/0016, schmetterpause ADR-0027). A SECOND schmetterpause and
+    # zaehlwerk in schmetterpause-sandbox / zaehlwerk-sandbox, where
+    # zaehlwerk-pong plays a league by itself: eight bots (Ada ... Hanna,
+    # seeded), one rated match after another, the observer `Pong` as the
+    # operator. Next to tabletennis-sops-backup, not instead of it -- nothing of
+    # the office's pair is shared but homerun2's Redis.
+    #
+    # Its score goes straight into that Redis on tabletennis-sandbox, never
+    # switching the catcher; the office's zaehlwerk and the led-catcher list
+    # that stream as idle (above), so the panel shows the league while the
+    # table is free and an office match takes it at once.
+    #
+    # Internal at https://<name>.<EDGE_DOMAIN>, for phones at
+    # https://<name>.<EDGE_PLAY_DOMAIN> (./lab/play-routes): schmetterpause-sandbox,
+    # zaehlwerk-sandbox, zaehlwerk-pong-sandbox. zaehlwerk reports to
+    # schmetterpause over the Service (the default), Pong reads the players
+    # the same way.
+    tabletennis-sandbox:
+      vars:
+        TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL: redis
+        TABLETENNIS_SANDBOX_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
+      secrets:
+        tabletennis-sandbox-secrets:
+          # NEW KEYS in secrets/edge/app-values.enc.yaml, the sandbox's own:
+          # `openssl rand -hex 16` for the DB password (it goes into a URL),
+          # `openssl rand -base64 32` for the session key, `openssl rand -hex 32`
+          # for both tokens.
+          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_SESSION_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
+          SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
+          ZAEHLWERK_MATCHES_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_ZAEHLWERK_MATCHES_TOKEN # pragma: allowlist secret
+          # homerun2's, the same reference as the office's zaehlwerk.
+          ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:

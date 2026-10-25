@@ -137,9 +137,18 @@ cd hosts/matrix
 
 # credentials only in the environment; the module passes them as Dagger secrets
 export SSH_USER=sthings SSH_PASSWORD='…'
+# sudo on the Pi (ansible_become_password below)
+export ANSIBLE_PASSWORD='…'
+# the bearer token for POST /display. On a Pi that already runs the catcher,
+# reuse the one in /etc/default/led-catcher: the play writes this value there,
+# and a new one locks out everything that still sends the old one.
+export LED_API_TOKEN='…'
+# homerun2-dev's Redis password
+export REDIS_PASSWORD=$(KUBECONFIG=~/.kube/homerun2-dev kubectl -n homerun2 \
+  get secret redis-stack-auth -o jsonpath='{.data.redis-password}' | base64 -d)
+# only needed when the certificate must be (re)issued; see below
+export VAULT_TOKEN="${VAULT_TOKEN:-}"
 umask 077
-# REDIS_PASSWORD: homerun2-dev's, e.g.
-#   kubectl -n homerun2 get secret redis-stack-auth -o jsonpath='{.data.redis-password}' | base64 -d
 printf 'LED_API_TOKEN=%s\nVAULT_TOKEN=%s\nREDIS_PASSWORD=%s\n' "$LED_API_TOKEN" "$VAULT_TOKEN" "$REDIS_PASSWORD" > ansible.env
 
 dagger -m github.com/stuttgart-things/dagger/ansible call execute \
@@ -155,9 +164,9 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.20.0 led_base_path=/matrix \
+led_catcher_version=v0.21.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
-led_idle=clock \
+led_idle=clock led_display_queue=3 \
 run_id=$(date +%s%N)" \
   --progress plain
 
@@ -170,6 +179,7 @@ rm -f ansible.env
 | `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
+| `led_display_queue=3` | up to 3 finite displays wait their turn, first in first out, instead of the newest waiting one replacing the rest: a burst (three Flux `Ready=True` flips within seconds) reaches the panel in full. A held display (the table-tennis score) is still replaced at once. Needs led-catcher v0.21.0 ([#142](https://github.com/stuttgart-things/homerun2-led-catcher/issues/142)); every drop is logged (`display dropped before reaching the panel`) and `GET /matrix/display` reports the queue |
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
 | `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
 | `led_profile_src` | [`profile.yaml`](./profile.yaml) in this directory, at `/src` inside the Dagger container. Installed on every run, and the catcher restarts when it changes: edit it here, not on the Pi |

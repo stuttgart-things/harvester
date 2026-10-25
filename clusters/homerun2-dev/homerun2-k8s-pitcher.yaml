@@ -51,7 +51,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-k8s-pitcher-kustomize
   ref:
-    tag: v1.2.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher-kustomize
+    tag: v1.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -78,7 +78,7 @@ spec:
   targetNamespace: homerun2
   images:
     - name: ghcr.io/stuttgart-things/homerun2-k8s-pitcher
-      newTag: v1.2.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher
+      newTag: v1.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher
   patches:
     # Roll the pod when its profile ConfigMap or a Secret it reads changes:
     # it reads them at start only. Reloader is in ./infra-platform.yaml.

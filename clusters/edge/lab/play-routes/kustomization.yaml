@@ -8,3 +8,7 @@ resources:
   - zaehlwerk-buttons.yaml
   - zaehlwerk-portal.yaml
   - homerun2-portal.yaml
+  # the Pong sandbox (tabletennis-sandbox)
+  - schmetterpause-sandbox.yaml
+  - zaehlwerk-sandbox.yaml
+  - zaehlwerk-pong-sandbox.yaml

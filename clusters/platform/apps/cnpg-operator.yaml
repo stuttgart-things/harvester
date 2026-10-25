@@ -1,0 +1,28 @@
+---
+# CloudNativePG operator -- the postgresql.cnpg.io CRDs and controller that
+# backstage-rag-postgres needs. Chart and namespace stay at the app's
+# defaults (cnpg-system).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: cnpg-operator
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/cnpg-operator
+  prune: true
+  wait: true
+  # Flux substitutes only when postBuild is set: without it the app's
+  # ${CNPG_NAMESPACE:-cnpg-system} is applied literally and fails as a
+  # Namespace name. The value is the app's default.
+  postBuild:
+    substitute:
+      CNPG_NAMESPACE: cnpg-system

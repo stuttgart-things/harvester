@@ -3,6 +3,7 @@
 # 26.921.1352 and later: TLS (led_tls_*) and the idle clock (led_idle), stuttgart-things/ansible#1252.
 # 26.928.1374 and later: led_profile_src and led_ui_stream_presets, stuttgart-things/ansible#1275.
 # 26.1021.1487 and later: led_base_path, stuttgart-things/ansible#1398.
+# 26.1023.1506 and later: led_display_queue, stuttgart-things/ansible#1413.
 collections:
-  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1021.1487/sthings-container-26.1021.1487.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1023.1506/sthings-container-26.1023.1506.tar.gz
     type: url
