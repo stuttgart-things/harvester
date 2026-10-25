@@ -335,7 +335,7 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
         # The sim's image: the bundle still defaults to v0.28.0 (flux v1.182.2),
         # the component itself to v0.30.0, with zaehlwerk. Drop once the bundle catches up.
-        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.30.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.32.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -374,7 +374,7 @@ spec:
     # still defaults to v0.6.0).
     homerun2-portal:
       vars:
-        HOMERUN2_PORTAL_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
+        HOMERUN2_PORTAL_VERSION: v0.8.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
         HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
         HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
