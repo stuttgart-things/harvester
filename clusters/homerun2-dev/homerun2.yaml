@@ -107,26 +107,23 @@ spec:
       # confirm the right outputs match, flip again.
       HOMERUN2_NOTIFICATION_CATCHER_DRYRUN: "false"
 
-      # UI_STREAM_PRESETS -- the two buttons in the led-catcher's web
-      # simulator. Before the profile switch this was a patch appended to the
-      # led-catcher's child Kustomization; the component now reads it as a
-      # variable (apps/homerun2/README.md), so no patch.
-      #
-      # zaehlwerk CAN switch this catcher onto the `tabletennis` stream for a
-      # match and back again, but only by calling the catcher directly, which
-      # needs CATCHER_URL. That is deliberately not set -- see the note in
-      # ./tabletennis.yaml -- so on this cluster the switch is a human act.
-      # Unset, the control offers only the configured stream (`messages`) and
-      # no way to reach `tabletennis`. The header's `overridden` badge plus
-      # `reset` keep a panel from sitting in scoreboard mode after an
-      # abandoned match.
+      # The simulator reads both streams all the time, as the real matrix does
+      # (../../hosts/matrix, led_streams): `messages` for the cluster and
+      # `tabletennis` for the demo's score (./tabletennis.yaml), which its
+      # tabletennis-score rule holds on the panel while cards for the cluster
+      # pass over it. Nothing switches the panel -- zaehlwerk has no
+      # CATCHER_URL -- because Pong plays almost without a pause, and a panel
+      # switched to the score would never show a cluster message again.
+      HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis
+      # The web control's buttons, for looking at one stream alone.
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
 
-      # The light-catcher's profile, from ./homerun2-light-catcher-profile.yaml:
-      # every effect on the real WLED (wled-matrix.sthings.lab) instead of the
-      # wled-mock (flux#570). Unset, or on a flux-apps revision before #570,
-      # the base's mock profile is mounted. Either merge order is safe.
-      HOMERUN2_LIGHT_CATCHER_PROFILE_CM: homerun2-light-catcher-profile-wled
+      # No HOMERUN2_LIGHT_CATCHER_PROFILE_CM: this light-catcher reads
+      # `messages` and drives the wled-mock with the base's profile again, so
+      # the cluster's alerts show on the TV (portal key `wled`). The real
+      # strip belongs to the table now (./light-catcher-tabletennis.yaml): a
+      # point every few seconds would bury every warning on it, and two
+      # catchers on one strip cut each other's effects off.
 
       # The led-catcher simulator's profile, from
       # ./homerun2-led-catcher-profile.yaml: the real matrix's rules

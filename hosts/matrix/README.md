@@ -2,7 +2,7 @@
 
 A Raspberry Pi 3B+ driving a 64x64 HUB75 RGB matrix through an Adafruit HAT.
 It runs [homerun2-led-catcher](https://github.com/stuttgart-things/homerun2-led-catcher)
-natively under systemd, in `full` mode: it consumes the `messages` stream from
+natively under systemd, in `full` mode: it consumes the `messages` and `tabletennis` streams from
 homerun2-dev's Redis (`192.168.10.179:6379`, consumer group
 `homerun2-led-matrix`), and the panel can still be driven over HTTP
 (`/display`). The same port serves the **demo UI**, a simulator of the panel
@@ -162,9 +162,9 @@ dagger -m github.com/stuttgart-things/dagger/ansible call execute \
   --parameters "ansible_become_password='{{ lookup(\"env\", \"ANSIBLE_PASSWORD\") }}' \
 led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
-led_profile_src=/src/profile.yaml led_ui_stream_presets=messages,tabletennis \
+led_profile_src=/src/profile.yaml led_redis_stream=messages,tabletennis led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.21.0 led_base_path=/matrix \
+led_catcher_version=v0.22.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock led_display_queue=3 \
 run_id=$(date +%s%N)" \
@@ -180,10 +180,11 @@ rm -f ansible.env
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
 | `led_display_queue=3` | up to 3 finite displays wait their turn, first in first out, instead of the newest waiting one replacing the rest: a burst (three Flux `Ready=True` flips within seconds) reaches the panel in full. A held display (the table-tennis score) is still replaced at once. Needs led-catcher v0.21.0 ([#142](https://github.com/stuttgart-things/homerun2-led-catcher/issues/142)); every drop is logged (`display dropped before reaching the panel`) and `GET /matrix/display` reports the queue |
-| `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's `messages` stream from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
+| `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's streams from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
 | `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
 | `led_profile_src` | [`profile.yaml`](./profile.yaml) in this directory, at `/src` inside the Dagger container. Installed on every run, and the catcher restarts when it changes: edit it here, not on the Pi |
-| `led_ui_stream_presets` | the `messages` / `tabletennis` buttons in the demo UI, which switch the panel to the score and back |
+| `led_redis_stream=messages,tabletennis` | both streams at once: the cluster's messages and the table tennis demo's score ([homerun2-dev's README](../../clusters/homerun2-dev/README.md#9-the-demo-pong-plays-tournaments-on-the-tv-the-matrix-and-the-strip)), which the profile's `tabletennis-score` rule holds on the panel while cards pass over it. A comma makes the play write `REDIS_STREAMS` (stuttgart-things/ansible, `container` collection after #<pending>) |
+| `led_ui_stream_presets` | the `messages` / `tabletennis` buttons in the demo UI, for looking at one stream alone |
 | `led_redis_password` | written to `/etc/default/led-catcher` beside the token |
 | `led_api_token` | the bearer token for `POST /display`, written to `/etc/default/led-catcher` (`0600`) |
 | `run_id` | **must change on every call**. Dagger caches the `ansible-playbook` step, and without it a second call replays the first result and never reaches the Pi |

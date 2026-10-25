@@ -1,0 +1,77 @@
+---
+# The demo table's light -- a second light-catcher that reads only the
+# `tabletennis` stream zaehlwerk pitches to, and drives the REAL WLED strip
+# (wled-matrix.sthings.lab) with ../homerun2-dev-light/profile.yaml: a point on
+# the scorer's half, set and match point pulsing on the holder's half, a won
+# set, match, tournament match and final each its own size of celebration.
+#
+# stuttgart-things/flux → ./apps/homerun2/profiles/sops-light-catcher-tabletennis
+# (components/light-catcher-tabletennis: its own namespace, its own consumer
+# group). The first light-catcher (./homerun2.yaml) reads `messages` and
+# drives the wled-mock, so the cluster's alerts stay visible on the TV and
+# never fight the table for the strip.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-light-catcher-tabletennis
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/sops-light-catcher-tabletennis
+  postBuild:
+    # HOMERUN2_REDIS_PASSWORD_B64, the value ./homerun2.yaml reads too.
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+    substitute:
+      HOMERUN2_NAMESPACE: homerun2
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_NAMESPACE: homerun2-tabletennis
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
+      # ../homerun2-dev-light/profile.yaml, applied by ./light-profile.yaml.
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
+      # Under the portal's key (./homerun2-portal.yaml), like the others.
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
+      HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
+      HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
+---
+# Its dashboard on light-catcher-tabletennis.homerun2-dev.sthings.lab/table/.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-light-catcher-tabletennis-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2-light-catcher-tabletennis
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/homerun2/profiles/platform-light-catcher-tabletennis-routes
+  postBuild:
+    substitute:
+      DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_NAMESPACE: homerun2-tabletennis
+      HOMERUN2_LIGHT_CATCHER_TABLETENNIS_HOSTNAME: light-catcher-tabletennis

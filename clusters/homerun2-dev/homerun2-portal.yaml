@@ -43,7 +43,7 @@ spec:
       # (../../hosts/matrix), on BASE_PATH=/matrix, over plain HTTP on 8080 --
       # the portal's image does not trust the sthings.lab CA behind Caddy's
       # https://matrix.sthings.lab. led stays the simulator in the cluster.
-      HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
+      HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,table|Table Light=http://homerun2-light-catcher.homerun2-tabletennis.svc.cluster.local,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
 ---
 # The route, once the portal is Ready: Cilium resolves a route's backendRefs
 # once (see homerun2-routes in ./homerun2.yaml).
