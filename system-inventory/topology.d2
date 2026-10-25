@@ -319,7 +319,14 @@ sys_sthings_edge: "sthings-edge" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
   style.font-size: 20
-  edge_gateway: "edge-gateway\n192.168.8.20\n14 services" {
+  edge_gateway: "edge-gateway\n192.168.8.20\n15 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  edge_log_sink: "edge-log-sink\n192.168.8.23\n1 service" {
     shape: rectangle
     style: {
       fill: "#ffffff"
@@ -355,7 +362,7 @@ sys_sthings_edge: "sthings-edge" {
     }
   }
 }
-sys_sthings_edge -> net_192_168_8_0_24: "4 hosts" {
+sys_sthings_edge -> net_192_168_8_0_24: "5 hosts" {
   style: {
     stroke: "#b45309"
     stroke-width: 2
@@ -372,12 +379,25 @@ sys_wled_matrix: "wled-matrix" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
   style.font-size: 20
+  wled_edge: "wled-edge\n192.168.8.31\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
   wled_matrix: "wled-matrix\n192.168.10.123\n1 service" {
     shape: rectangle
     style: {
       fill: "#ffffff"
       stroke: "#475569"
     }
+  }
+}
+sys_wled_matrix -> net_192_168_8_0_24: "1 host" {
+  style: {
+    stroke: "#b45309"
+    stroke-width: 2
   }
 }
 sys_wled_matrix -> net_192_168_10_0_24: "1 host" {

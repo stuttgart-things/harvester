@@ -126,7 +126,7 @@ flowchart TB
 
 The fixed addresses all sit outside the Opal's DHCP range `.100-.249`:
 `.1` router, `.10` box, `.20` gateway, `.21` players, `.22` Redis for the
-matrix, `.23` log sink, `.31` WLED.
+matrix, `.23` log sink, `.30` LED matrix Pi, `.31` WLED.
 
 ## Two networks, two roles of the box
 
@@ -134,13 +134,13 @@ matrix, `.23` log sink, `.31` WLED.
 flowchart TB
   subgraph tt["Table tennis network -- Opal, 192.168.8.0/24"]
     box1["box, role tt<br/>k3s + Cilium + Flux<br/>no browser"]
-    matrix1["LED matrix Pi<br/>(when it travels)"]
-    wled1["WLED"]
+    matrix1["LED matrix Pi<br/>192.168.8.30"]
+    wled1["WLED<br/>192.168.8.31"]
   end
   subgraph sn["SthingsNet -- dd-wrt, 192.168.10.0/24"]
     box2["box, role kiosk<br/>Firefox kiosk<br/>no k3s"]
     matrix2["LED matrix Pi<br/>192.168.10.120"]
-    wled2["WLED"]
+    wled2["WLED<br/>192.168.10.123"]
     hrdev["homerun2-dev"]
   end
   box1 <-. "same box, role from the default gateway<br/>(/usr/local/bin/edge-role)" .-> box2
