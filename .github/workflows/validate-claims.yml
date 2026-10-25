@@ -32,9 +32,15 @@ jobs:
       contents: read
     env:
       # Match the kyverno module's engineVersion (kyverno/dagger.json).
-      DAGGER_VERSION: 0.20.8
+      DAGGER_VERSION: 0.21.9
       # Pinned to a dagger-repo commit for reproducible CI; bump deliberately.
-      KYVERNO_MODULE: github.com/stuttgart-things/dagger/kyverno@acf61ed2c80c7ca70746944edb60785d4ab01431
+      # acf61ed (2026-06-09) stopped building: its generated client pulled
+      # mismatched OpenTelemetry modules ("import cycle not allowed" in
+      # go.opentelemetry.io/otel/internal/global), so no claim was checked.
+      # e344519 carries the otel v1.46.0 fix (dagger#27, #350) and engine
+      # v0.21.9; it pins the Kyverno CLI (default 1.19.1) instead of wolfi's
+      # floating kyverno-cli package.
+      KYVERNO_MODULE: github.com/stuttgart-things/dagger/kyverno@e3445199fde8f550eb8e200ea5e55297b8fdbffb
     steps:
       - uses: actions/checkout@v7
 
