@@ -1,24 +1,26 @@
 ---
-# schmetterpause and zaehlwerk -- stuttgart-things/flux →
-# ./apps/tabletennis/profiles/sops.
+# The table tennis DEMO -- stuttgart-things/flux →
+# ./apps/tabletennis/profiles/sandbox, the Pong sandbox (zaehlwerk ADR-0015/16/17,
+# schmetterpause ADR-0027/28) as the whole of this cluster's table tennis.
 #
-# This file used to assemble both by hand: the upstream profile read every
-# credential through ExternalSecrets, and this cluster runs no ESO. flux#483
-# gave apps/tabletennis a sops path. profiles/sops is the same pair as
-# profiles/base, with plain Secrets from substituteFrom in place of the
-# ExternalSecrets, which it deletes. Upstream changes to the HTTPRoute,
-# ConfigMap and Deployment patches reach this cluster again.
+# homerun2-dev runs in the office next to a TV, the real LED matrix and the
+# real WLED strip, as a demo nobody plays at: eight bot players seeded into a
+# schmetterpause of its own, zaehlwerk-pong playing one real match after
+# another between two of them -- the open places of a tournament first, a
+# random pair when none is open -- every result reported and rated at once.
+# The score goes onto the matrix, the moments onto the strip
+# (./light-catcher-tabletennis.yaml), and the TV shows the game.
 #
-# Everything the profile brings is one Kustomization now: both namespaces, both
-# OCIRepositories, the two app Kustomizations (in their own namespaces), the
-# CloudNativePG Cluster and the three Secrets. The Cluster used to sit in
-# ../homerun2-dev-seeds behind a Kustomization of its own. That was only because
-# a CNPG object in THIS directory deadlocks flux-system on the CRD. Here it is
-# inside a Kustomization that waits for infra-platform, which is the same
-# guard.
+# Until 2026-10-25 this file ran profiles/sops: the office's pair, with a copy
+# of the office's data restored into it (README, "History"). That copy and its
+# backups are gone on purpose -- a demo that rates bots at once does not belong
+# next to real people's ratings, and the seed refuses a database that already
+# has players.
 #
-# What stays local is below: the values, and two patches the profile does not
-# carry.
+# What the profile selects is fixed: the handover and the scoreboard, the
+# matches token (Pong's door into zaehlwerk), immediate settling, the pong
+# seed and league mode with tournaments. Below: the cluster's values, the
+# score straight into this cluster's Redis, and the court speed.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -37,38 +39,24 @@ spec:
     # cnpg-operator (the Cluster CRD, else the dry-run fails the whole apply)
     # and the Gateway the HTTPRoutes attach to.
     - name: infra-platform
-    # zaehlwerk's panel pitches into omni-pitcher.
+    # The score goes into homerun2's Redis.
     - name: homerun2
-    # The ObjectStore CRD schmetterpause-db-backup-sops needs (infra-platform
-    # waits on it too; named here so the reason is visible).
-    - name: cnpg-barman-cloud
   sourceRef:
     kind: GitRepository
     name: flux-apps
-  path: ./apps/tabletennis/profiles/sops
-  # schmetterpause-db archives WAL continuously and takes a base backup every
-  # night into s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/ on the
-  # MinIO on platform (flux#573). Its data came from the office on 2026-09-28
-  # as a pg_dump (README section 10), so there is no Barman archive to recover
-  # from any more -- schmetterpause-db-recovery is gone again. NEVER archive
-  # under `schmetterpause-db` in this bucket: that path is reserved for a copy
-  # of the office's own archive.
+  path: ./apps/tabletennis/profiles/sandbox
   components:
-    - ../../components/schmetterpause-db-backup-sops
-    # The handover: a won match goes from zaehlwerk to schmetterpause's
-    # POST /api/results, and the scoring page offers schmetterpause's players
-    # and observers. Two ends of one feature -- both or neither (flux README).
-    # One credential, SCHMETTERPAUSE_SCOREBOARD_TOKEN (substituteFrom), read by
-    # both. zaehlwerk calls https://schmetterpause.homerun2-dev.sthings.lab
-    # through the Gateway and trusts it via ./zaehlwerk-trust-bundle.yaml.
-    - ../../components/schmetterpause-scoreboard-sops
-    - ../../components/zaehlwerk-handover-sops
+    # The score straight into redis-stack in `homerun2`, on the stream the
+    # matrix and the led-catcher simulator read besides `messages`
+    # (./homerun2.yaml, ../../hosts/matrix). No CATCHER_URL: nothing switches
+    # the panel, it always shows both.
+    - ../../components/zaehlwerk-panel-redis
+    # The running match on schmetterpause's start page.
+    - ../../components/schmetterpause-zaehlwerk-on
   postBuild:
     # SCHMETTERPAUSE_SESSION_KEY, SCHMETTERPAUSE_DB_PASSWORD,
-    # ZAEHLWERK_OMNI_PITCHER_TOKEN and ZAEHLWERK_REDIS_PASSWORD -- the values
-    # tabletennis-secrets.enc.yaml held, byte for byte, so nothing rotates.
-    # The profile fixes the database username to `schmetterpause`, which is
-    # what this cluster already uses; SCHMETTERPAUSE_DB_USERNAME is unread.
+    # SCHMETTERPAUSE_SCOREBOARD_TOKEN, ZAEHLWERK_MATCHES_TOKEN (all required)
+    # and ZAEHLWERK_REDIS_PASSWORD (homerun2's) -- ./homerun2-secrets-subst.enc.yaml.
     substituteFrom:
       - kind: Secret
         name: homerun2-secrets-subst
@@ -77,38 +65,47 @@ spec:
       DOMAIN: homerun2-dev.sthings.lab
       GATEWAY_NAME: homerun2-dev-sthings-gateway
       GATEWAY_NAMESPACE: default
-      # NOT the profile's 1Gi default. The Cluster was created at 2Gi, and a
-      # smaller size is a shrink that CNPG refuses.
-      SCHMETTERPAUSE_DB_STORAGE_SIZE: 2Gi
-      # Backups (schmetterpause-db-backup-sops). Credentials and CA from the
-      # Secret schmetterpause-db-backup (./schmetterpause-db-backup.enc.yaml).
-      # 30d like the office; the database is a few MB, and the gzipped WAL of
-      # an idle hour is small.
-      SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
-      SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: https://artifacts.platform.sthings.lab
-      SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-homerun2-dev
-      SCHMETTERPAUSE_BACKUP_RETENTION: 30d
-      # Where zaehlwerk hands a won match over (zaehlwerk-handover-sops). Set
-      # rather than left to the component's nested default
-      # (https://${SCHMETTERPAUSE_HOSTNAME}.${DOMAIN}) -- same value, nothing
-      # to resolve. The token is SCHMETTERPAUSE_SCOREBOARD_TOKEN from the
-      # Secret above.
-      ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.homerun2-dev.sthings.lab
-      # Pinned rather than left to the profile's defaults, so a flux-apps
-      # change never upgrades this cluster by surprise. v0.14.0 since
-      # 2026-09-28 (#305), before the restore: the office (homerun2-test1)
-      # runs v0.14.0, and a recovered database must meet an app at least as
-      # new as its schema. v0.11 -> v0.14 brought no schema migration (goose
-      # stayed at 20260916170000). zaehlwerk v0.7.0 goes with it: from v0.6.0
-      # it reads v0.14's GET /api/operators.
-      SCHMETTERPAUSE_VERSION: v0.14.0
-      ZAEHLWERK_VERSION: v0.7.0
+      # Namespaces of their own, not the old `schmetterpause` and `zaehlwerk`:
+      # the old CloudNativePG Cluster carries prune: disabled and still holds
+      # the office's copy until it is deleted by hand (README, "The demo"),
+      # and a Cluster of the same name in the same namespace would be adopted
+      # with its data. The hostnames are the short ones -- the old routes go
+      # with the old Kustomization's objects.
+      SCHMETTERPAUSE_NAMESPACE: schmetterpause-demo
+      SCHMETTERPAUSE_HOSTNAME: schmetterpause
+      ZAEHLWERK_NAMESPACE: zaehlwerk-demo
+      ZAEHLWERK_HOSTNAME: zaehlwerk
+      ZAEHLWERK_PONG_HOSTNAME: zaehlwerk-pong
+      LINK_DOMAIN: homerun2-dev.sthings.lab
+      ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause.homerun2-dev.sthings.lab
+      SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk.homerun2-dev.sthings.lab
+      # zaehlwerk reports, and Pong reads its players and tournaments, over
+      # the Service: no certificate, no trust bundle.
+      ZAEHLWERK_SCHMETTERPAUSE_URL: http://schmetterpause.schmetterpause-demo.svc.cluster.local
+      ZAEHLWERK_HOMERUN2_NAMESPACE: homerun2
+      # The stream the score goes on, and the one the panel's
+      # tabletennis-score rule draws (../../hosts/matrix/profile.yaml).
+      ZAEHLWERK_PANEL_STREAM: tabletennis
+      ZAEHLWERK_SET_OPENER: alternate
+      ZAEHLWERK_PONG_BOT_SKILL: mittel
+      ZAEHLWERK_PONG_OPERATOR: Pong
+      # The bots, by the names they carry HERE: the seed's Ada .. Hanna,
+      # renamed after the seed into table tennis legends (README, "The demo"),
+      # strongest first. A name the database does not have plays at
+      # ZAEHLWERK_PONG_BOT_SKILL, and the game logs it once.
+      ZAEHLWERK_PONG_PLAYER_SKILL: Waldner=schwer,Ma Long=schwer,Boll=0.1,Ovtcharov=mittel,Zhang Jike=mittel,Persson=0.2,Samsonov=leicht,Saive=leicht
+      # Longer than zaehlwerk's 15 s grace period, so a result is in -- and a
+      # final decided -- before the next match starts.
+      ZAEHLWERK_PONG_LEAGUE_PAUSE: 30s
+      SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
+      # Pinned, so a flux-apps change never moves the demo by surprise.
+      # zaehlwerk v0.34.0: the panel's stake and tournament tags, which the
+      # strip's match-point and final effects match on, and PONG_COURT_SPEED.
+      SCHMETTERPAUSE_VERSION: v0.19.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
+      ZAEHLWERK_VERSION: v0.34.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
   patches:
-    # The base ships SP_PUBLIC_BASE_URL as https://schmetterpause.cluster.example.com,
-    # a placeholder. schmetterpause builds absolute links from it (login
-    # redirects, mail), so left alone it sends users to a host that does not
-    # exist while the app itself is healthy. The profile does not set it, so
-    # this reaches into the child Kustomization's own patches.
+    # SP_PUBLIC_BASE_URL: the base ships a placeholder, and schmetterpause
+    # builds its absolute links (login redirects) from it.
     - target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization
@@ -124,30 +121,24 @@ spec:
               - op: replace
                 path: /data/SP_PUBLIC_BASE_URL
                 value: "https://schmetterpause.homerun2-dev.sthings.lab"
-    # The panel, pointed at this cluster's omni-pitcher over the gateway. The
-    # profile REMOVES OMNI_PITCHER_URL (no panel by default), and this runs
-    # after that, so it is an add.
-    #
-    # Not upstream's zaehlwerk-panel-homerun2 component. That one also sets
-    # CATCHER_URL, which makes zaehlwerk call the led-catcher's /streams API
-    # directly to switch it onto `tabletennis` for a match. That is a second
-    # outbound dependency across namespaces, from an app that should only ever
-    # reach omni-pitcher. zaehlwerk logs "panel stream switching disabled, no
-    # CATCHER_URL configured", and that line is the intended state here.
-    # Switching the led-catcher is a deliberate act instead: its own web
-    # control, or POST /streams.
+    # The court three times as fast as real time: a best-of-three in five
+    # minutes rather than a quarter of an hour, which is what a screen in the
+    # office can hold attention for. Quoted: an env value is a string, and
+    # kustomize keeps the quotes of one that would parse as a number.
+    # zaehlwerk-pong before v0.34.0 ignores the variable.
     - target:
-        group: kustomize.toolkit.fluxcd.io
-        kind: Kustomization
-        name: zaehlwerk
+        kind: Deployment
+        name: zaehlwerk-pong
       patch: |
-        - op: add
-          path: /spec/patches/-
-          value:
-            target:
-              kind: ConfigMap
-              name: zaehlwerk-config
-            patch: |
-              - op: add
-                path: /data/OMNI_PITCHER_URL
-                value: "https://omni-pitcher.homerun2-dev.sthings.lab"
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: zaehlwerk-pong
+        spec:
+          template:
+            spec:
+              containers:
+                - name: pong
+                  env:
+                    - name: PONG_COURT_SPEED
+                      value: "3"

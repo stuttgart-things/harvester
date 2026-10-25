@@ -4,6 +4,7 @@
 # 26.928.1374 and later: led_profile_src and led_ui_stream_presets, stuttgart-things/ansible#1275.
 # 26.1021.1487 and later: led_base_path, stuttgart-things/ansible#1398.
 # 26.1023.1506 and later: led_display_queue, stuttgart-things/ansible#1413.
+# 26.1025.1511 and later: a comma in led_redis_stream writes REDIS_STREAMS, stuttgart-things/ansible#1421.
 collections:
-  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1023.1506/sthings-container-26.1023.1506.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1025.1511/sthings-container-26.1025.1511.tar.gz
     type: url

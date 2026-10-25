@@ -1,0 +1,9 @@
+---
+# The demo table light's profile, applied by ../homerun2-dev/light-profile.yaml
+# into the namespace the light-catcher-tabletennis instance creates. A sibling
+# directory rather than a subdirectory of ../homerun2-dev: flux-system applies
+# that one whole, and this ConfigMap's namespace does not exist before the app.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - profile.yaml
