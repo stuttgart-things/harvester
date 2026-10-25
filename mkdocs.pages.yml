@@ -1,0 +1,19 @@
+---
+# The GitHub Pages build of the docs (system-inventory workflow, /docs/).
+# Everything comes from mkdocs.yml; this only adds the look of the landing
+# page and the inventory -- dark, IBM Plex, the violet of the logo -- so the
+# three parts of the site read as one.
+#
+# Backstage TechDocs builds from mkdocs.yml (catalog-info.yaml, dir:.) and
+# never sees this file: its pages sit inside Backstage's own theme, light or
+# dark, and a dark stylesheet forced on them would fight it.
+INHERIT: mkdocs.yml
+
+theme:
+  name: material
+  font:
+    text: IBM Plex Sans
+    code: IBM Plex Mono
+
+extra_css:
+  - assets/stylesheets/pages.css
