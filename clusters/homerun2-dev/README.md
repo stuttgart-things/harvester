@@ -747,8 +747,9 @@ it from there and plays the league again when it is done; close it there too.
 ### Once, before the switch (2026-10-25)
 
 1. **Dump the office copy.** Until this change, schmetterpause here held a
-   `pg_dump` of the office's data (18 players, 77 matches, PIN hashes), restored
-   2026-09-28, backed up nightly into
+   database of its own (restored from the office 2026-09-28, recreated
+   2026-10-03; at the switch 3 players, 10 matches, PIN hashes), backed up
+   nightly into
    `s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/` (kept 30 days). A
    last dump stays with whoever takes it -- never in git, never on shared
    storage:
