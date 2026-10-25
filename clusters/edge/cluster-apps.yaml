@@ -121,12 +121,13 @@ spec:
   # for Redis Stack 7.4 (stuttgart-things#3923); v1.191.0: zaehlwerk v0.31.0 +
   # schmetterpause v0.18.0 and tabletennis-sandbox, the Pong league next to
   # the office's pair, with the redis panel and the catcher's idle streams
-  # (flux#847).
+  # (flux#847); v1.194.0: the sandbox's Pong league plays open tournament
+  # places first, PONG_TOURNAMENTS=on (flux#857, zaehlwerk ADR-0017).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.191.0
+    tag: v1.194.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
