@@ -820,10 +820,10 @@ it from there and plays the league again when it is done; close it there too.
 ### Versions
 
 schmetterpause and zaehlwerk are pinned in [`tabletennis.yaml`](./tabletennis.yaml).
-The panel's stake and tournament tags (what the strip's match-point and final
-effects match on) and `PONG_COURT_SPEED` arrive with zaehlwerk v0.34.0; before
-it the plain point, set and match effects play, and the court runs in real
-time.
+zaehlwerk v0.34.0 is the first with the panel's stake and tournament tags
+(what the strip's match-point and final effects match on) and
+`PONG_COURT_SPEED`; on an older one only the plain point, set and match
+effects play, and the court runs in real time.
 
 ### History
 
