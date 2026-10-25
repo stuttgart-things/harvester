@@ -21,4 +21,4 @@ spec:
 # The resolver also never RAISES an already-satisfied dependency — it refuses
 # one level at a time. Patch each dependency Configuration's spec.package by
 # hand, top-down, until `kubectl get configurations` is clean.
-  package: ghcr.io/stuttgart-things/crossplane-configurations/virtual-machine:v0.1.14
+  package: ghcr.io/stuttgart-things/crossplane-configurations/virtual-machine:v0.1.15
