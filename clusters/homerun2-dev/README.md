@@ -13,7 +13,7 @@ own Flux objects here. `SOPS_AGE_KEY` is the only thing that is not.
 | Cluster / VM name | `homerun2-dev` (the name is load-bearing: DNS, `cluster_name`, and the file names in `vms/`) |
 | LB address | `192.168.10.171`, reserved in Clusterbook -- the Cilium VIP for Services, **not** the node's address (that is a DHCP lease, see step 3) |
 | Domain | `homerun2-dev.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy, no Canal |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy, no Canal |
 | GitOps | Flux, syncing `clusters/homerun2-dev` |
 | Harvester image | `sthings-u26`, 12 vCPU / 12Gi / 50Gi root disk |
 
@@ -96,7 +96,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/homerun2-dev.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -318,6 +318,7 @@ committed, the FluxInstance syncing `clusters/homerun2-dev` applies it -- no
 | `openebs` | local storage |
 | `headlamp` | `https://headlamp.homerun2-dev.sthings.lab` |
 | `flux-web` | `https://flux.homerun2-dev.sthings.lab` |
+| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- homerun2-portal picks up a new service list without a manual restart |
 
 The bundle maps one `INFRA_DOMAIN` onto every base that needs a domain, so the
 name is written once. Ordering comes from upstream `dependsOn`, not from the
@@ -375,6 +376,46 @@ archive was again the slow step, roughly half of the 21 minutes.
 
 The node took `192.168.10.117` from DHCP. `192.168.10.171` stays the LB VIP and
 is not reachable until `cilium-lb` and `cilium-gateway` have reconciled.
+
+### Upgrading Kubernetes in place
+
+`bake-harvester` is for building. On a running node, use `execute-ansible`
+with the same parameters and only the RKE2 play. `sthings.rke.rke2_cluster`
+re-runs the RKE2 install script on every run (no "already installed" guard),
+which drops in the binaries for `rke2_k8s_version`. It then restarts
+`rke2-server` (`restart_rke2_already_running: true`), and that is the upgrade.
+
+```bash
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/homerun2-dev.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/homerun2-dev.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+  execute-ansible \
+  --playbooks "sthings.rke.rke2_cluster" \
+  --hosts 192.168.10.117 \
+  --inventory-type cluster \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ssh-user env:ANSIBLE_USER \
+  --ssh-password env:ANSIBLE_PASSWORD \
+  --cache-buster "upgrade-$(date +%s)" \
+  --progress plain
+```
+
+- **Read the node IP first** (step 3). `--hosts` must be the node, not the VIP.
+- **Cilium moves too.** Without `cilium_chart_version`, the role installs the
+  Cilium its cilium-cli build defaults to (cli 0.19.7 -> 1.19.5). Pin
+  `cilium_chart_version` if that is not wanted.
+- **Single node: the restart is downtime** for everything on the cluster,
+  including omni-pitcher, which platform's k8s-pitcher posts to. Expect a few
+  minutes.
+- RKE2 keeps local etcd snapshots (`kubectl get etcdsnapshotfiles`). Check that
+  a recent one exists before the run.
+
+Last upgrade: `2026-10-23`, `v1.35.3+rke2r1` -> `v1.35.9+rke2r1` (#491), Cilium
+1.19.3 -> 1.19.5. `Ansible.execute DONE [9m17s]`, recap
+`ok=135 changed=21 unreachable=0 failed=0 skipped=85`. Afterwards: node `Ready` on
+`v1.35.9+rke2r1`, only `cilium`/`cilium-envoy` as DaemonSets, the
+`helm-install-rke2-*` jobs `Complete`, all Flux Kustomizations Ready.
 
 Steps 4-6 followed on the same day. All nine Kustomizations Ready, four Helm
 releases installed (cert-manager v1.21.2, headlamp 0.45.0, openebs 4.6.1,
@@ -521,13 +562,38 @@ the RBAC ships with its base) and selects them with
 `app.kubernetes.io/part-of=homerun2`. A component without that label is simply
 absent from the view, which reads as an empty panel rather than an error.
 
+### Beside the profile: sound-catcher, schedule-pitcher, k8s-pitcher
+
+Three more components, each on Kustomizations of its own in `flux-system`
+because `profiles/sops` does not carry them. Each mirrors its counterpart on
+platform-sthings (`stuttgart-things/stuttgart-things`,
+`clusters/labul/vsphere/platform-sthings/apps/`):
+
+| Component | File | Source | Portal key |
+|---|---|---|---|
+| sound-catcher (browser player) | [`homerun2-sound-catcher.yaml`](./homerun2-sound-catcher.yaml) | `profiles/base-sound-catcher` (+ `-routes`) | `/sound` |
+| schedule-pitcher | [`homerun2-schedule-pitcher.yaml`](./homerun2-schedule-pitcher.yaml) | released kustomize artifact (OCI) | `/schedule` |
+| k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
+
+schedule-pitcher's own API/UI token is
+[`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
+generated for this cluster; it runs with no checks yet (none of
+platform-sthings' token checks has a Secret here). k8s-pitcher's error events
+reach Teams through the `teams-homerun2-dev` output.
+
+**Every version is pinned in this directory** -- `*_VERSION` substitutes,
+OCIRepository `tag` and `newTag`, each annotated `# datasource=docker depName=…`
+-- and `renovate.json` at the repo root picks them up. The stack used to follow
+flux-apps `main`'s defaults, so a release arrived whenever someone bumped a
+default upstream, unannounced.
+
 ### The real devices: LED matrix and WLED
 
 Two pieces of hardware hang off this stack since 2026-09-28:
 
 | Device | Address | Fed by |
 |---|---|---|
-| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN |
+| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN; in the portal as `/matrix` |
 | WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the light-catcher here, via [`homerun2-light-catcher-profile.yaml`](./homerun2-light-catcher-profile.yaml) |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
@@ -542,6 +608,15 @@ redis-cli -h 192.168.10.179 -a "$REDIS_PASSWORD" --no-auth-warning ping
 kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
   'redis-cli -a "$REDIS_PASSWORD" --no-auth-warning XINFO GROUPS messages'
 ```
+
+**In the portal** the Pi is the card *LED Matrix (Pi)* under
+https://portal.homerun2-dev.sthings.lab/ui/matrix, next to the simulator under
+`/led`: `matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080` in
+[`homerun2-portal.yaml`](./homerun2-portal.yaml). The portal forwards
+`/matrix/...` unchanged, so the Pi runs with `BASE_PATH=/matrix`
+(`led_base_path`, led-catcher v0.19.0 or later for the card's fragment). It is
+plain HTTP on 8080, not Caddy's https: the portal image does not carry the
+sthings.lab CA.
 
 The Pi's catcher uses its own consumer group, `homerun2-led-matrix`. **It must
 not share `homerun2-led-catcher` with the in-cluster simulator:** consumers in

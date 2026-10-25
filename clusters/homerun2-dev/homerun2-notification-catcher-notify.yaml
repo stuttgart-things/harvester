@@ -63,3 +63,16 @@ data:
           # dev cluster and an over-narrow filter here is indistinguishable
           # from a broken webhook -- both produce silence.
           severity_min: warning
+        # At most 5 posts per 10 minutes, and the same author/system/title
+        # once per 10 minutes; what is held back ends the window as ONE
+        # "N notifications held back (throttle)" post naming the top keys.
+        # Resolved alerts always go out. (catcher v3.15.0, #80)
+        #
+        # Since the k8s-pitcher pilot on platform (2026-10-23): a new flux
+        # revision flipped every Kustomization there through
+        # Ready=Unknown/False and back within seconds -- 37 Teams posts in an
+        # hour. Its Flux informers are gone now (flux#827); this is the
+        # backstop for the next burst from anywhere.
+        throttle:
+          window: 10m
+          max: 5

@@ -8,7 +8,8 @@
 #   - path ./clusters/sthings-edge; values in ./cluster-vars.yaml
 #     (edge.sthings.lab, VIPs 192.168.8.20 / .21)
 #   - no edge-lab layer; the players' route lives in the edge-play layer (./play)
-#   - zaehlwerk's table mock (TABLETENNIS_ZAEHLWERK_BUTTONS_SIM) off: real buttons
+#   - zaehlwerk's table mock (TABLETENNIS_ZAEHLWERK_BUTTONS_SIM) on until the real
+#     buttons exist, but without a piezo board (no esp-mock, no piezo-sim)
 #   - its own SOPS key: cluster-secrets/sops-age.enc.yaml (made by the first
 #     render), escrowed for the master key (--escrow-recipients)
 #
@@ -54,12 +55,33 @@ spec:
   # (flux#741); v1.152.0: notification-catcher v3.1.0 -- the results card
   # with players and set scores, demo/bot games (demo=1) no longer posted
   # (flux#747); TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE and
-  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM exist, neither set here.
+  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM exist (the first set below
+  # with the table mock).
+  # v1.166.0: zaehlwerk's dev portal, TABLETENNIS_ZAEHLWERK_PORTAL (flux#787,
+  # the portal image v0.29.0, zaehlwerk itself still v0.28.0); in between,
+  # BASE_PATH for the homerun2 catchers and mocks behind homerun2-portal
+  # (flux#759/#761/#767/#771/#777, empty by default, none set here), homerun2
+  # bumps and omni-pitcher without /pitch/github (flux#785); v1.169.0:
+  # zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790), demo-pitcher v2.3.0
+  # (flux#789), and the table mock's piezo board on the portal (flux#796,
+  # only with the table mock on); v1.169.1: zaehlwerk v0.30.0, pages that
+  # follow the table switch on its stream, the portal's side column fixed
+  # (flux#797); v1.170.0: homerun2-portal as a bundle component, BASE_PATH
+  # through the bundle and homerun2 at its latest releases (portal v0.6.0,
+  # led-catcher v0.20.0, core-catcher v1.3.0, light-catcher/wled-mock
+  # v1.14.0, config-viewer v0.7.0; flux#800); v1.178.0: the redis image tag
+  # through homerun2-sops (flux#808, #815), sentinel getMasterTimeout 15s
+  # (flux#809), omni-pitcher v2.4.0 (flux#811), for Redis Stack 7.4
+  # (stuttgart-things#3923); v1.182.2: the notification-catcher's read-only
+  # UI with its Service, route and BASE_PATH (flux#821), DISPLAY_QUEUE for
+  # the led-catcher (flux#826), kube-prometheus-stack CRDs with the chart
+  # (flux#828). Its homerun2 defaults lag the releases, so the latest are
+  # pinned on homerun2-sops and homerun2-portal below.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.152.0
+    tag: v1.182.2
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -207,10 +229,29 @@ spec:
         HOMERUN2_NAMESPACE: homerun2
         HOMERUN2_REDIS_STORAGE_CLASS: local-path
         HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
+        # Redis Stack 7.4 (stuttgart-things#3923). One-way: writes RDB v12.
+        # Nothing kept here worth a backup (2026-10-22).
+        HOMERUN2_REDIS_IMAGE_VERSION: 7.4.0-v8
         HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
         HOMERUN2_SOPS_NOTIFY: tabletennis-results
         HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
         HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
+        # Behind homerun2-portal (below), each service under the key the
+        # portal serves it at -- on its own hostname too, e.g.
+        # led-catcher.<EDGE_DOMAIN>/led/ (/ redirects there).
+        HOMERUN2_LED_CATCHER_BASE_PATH: /led
+        HOMERUN2_CORE_CATCHER_BASE_PATH: /core
+        HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
+        HOMERUN2_WLED_MOCK_BASE_PATH: /wled
+        HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
+        HOMERUN2_CONFIG_VIEWER_BASE_PATH: /config
+        HOMERUN2_NOTIFICATION_CATCHER_BASE_PATH: /notify
+        # The latest releases where flux's defaults are older (v1.182.2:
+        # led-catcher v0.20.0, notification-catcher v3.13.0), as on
+        # homerun2-dev. Drop a pin once the flux default catches up.
+        HOMERUN2_LED_CATCHER_VERSION: v0.22.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+        HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
+        HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
@@ -271,6 +312,30 @@ spec:
         # to Teams, and a real match takes the table from it. Attract mode
         # stays off: the panel would play itself whenever the table is idle.
         TABLETENNIS_ZAEHLWERK_PONG: 'on'
+        # The dev portal (zaehlwerk tools/chain-mock/portal, flux#787): one
+        # page at https://zaehlwerk-portal.<EDGE_PLAY_DOMAIN> (./play/play-routes;
+        # internal also at zaehlwerk-portal.<EDGE_DOMAIN>, which needs the Opal
+        # dnsmasq name, README step 1) with zaehlwerk, schmetterpause and pong
+        # up or down, their pages side by side, the running match and the
+        # table stream. No login, it ends matches: the table Wi-Fi is the
+        # boundary, as for zaehlwerk.
+        TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
+        # The table mock (flux#666), until the real buttons exist: emulated
+        # buttons and their hub at https://buttons.<EDGE_DOMAIN> (Opal dnsmasq
+        # name, README step 1) and https://buttons.<EDGE_PLAY_DOMAIN>
+        # (./play/play-routes), for trying the LED matrix and the table light
+        # at the box. THE PAGE TAKES POINTS BACK without a login and scores into
+        # the running match -- turn it off again once real buttons count.
+        # No piezo board here: the piezo-sim stays off, because it would play
+        # every match started on the scoring page itself; the page and the
+        # portal report the board as not answering. The real board comes with
+        # new firmware (zaehlwerk-firmware v0.3.0), not through this page.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
+        # The sim's image: the bundle still defaults to v0.28.0 (flux v1.182.2),
+        # the component itself to v0.30.0, with zaehlwerk. Drop once the bundle catches up.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.32.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -284,13 +349,34 @@ spec:
     # The light at the table: a second light-catcher on zaehlwerk's
     # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
     # for side a: blue, side b: red (1 s); set won: rainbow; match won:
-    # fireworks. Sends to the wled-mock that homerun2-sops brings; on the box
-    # set HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT to the real strip.
+    # fireworks. Sends to the real WLED (README, section 13): the ESP32 that
+    # homerun2-dev drives in SthingsNet joins the Opal's Wi-Fi `sthings-edge`
+    # as its second network, and the Opal answers wled-matrix.sthings.lab with
+    # its static lease 192.168.8.31. Solid, Rainbow and Fireworks carry the
+    # IDs WLED 16 uses (light-catcher v1.14.0 FxMap: 0, 9, 42). Unset, it is
+    # the wled-mock that homerun2-sops brings.
     # Same redis password as homerun2-sops (same ref).
     homerun2-light-catcher-tabletennis-sops:
+      vars:
+        # /table behind homerun2-portal, next to the other light-catcher's /light.
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
       secrets:
         homerun2-light-catcher-tabletennis-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
+    # homerun2-portal -- one page for homerun2: every service's status and
+    # latest (messages, light effects, findings), and each service's own UI
+    # under its key. https://homerun2-portal.<EDGE_DOMAIN> and
+    # https://homerun2-portal.<EDGE_PLAY_DOMAIN> (./play). The keys are the
+    # BASE_PATHs set on homerun2-sops and the table's light-catcher above;
+    # the table's light is in its own namespace. No login, no secrets.
+    # v0.7.0 knows the notification-catcher by its key notify (flux v1.182.2
+    # still defaults to v0.6.0).
+    homerun2-portal:
+      vars:
+        HOMERUN2_PORTAL_VERSION: v0.8.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
+        HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
+        HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
     # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
     # SOPS file, never generated.

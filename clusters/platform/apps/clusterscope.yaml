@@ -1,0 +1,50 @@
+---
+# clusterscope: the lab's clusters as a map, read from this repo's clusters/
+# (git-sync, the repo is public) plus live status of this cluster
+# (harvester#490). clusterscope.platform.sthings.lab.
+#
+# Live mode reads only `platform` itself, in-cluster. The other clusters need
+# kubeconfigs (components/vault-kubeconfigs), and that component reads them
+# through an ESO ClusterSecretStore, which this cluster does not run yet.
+#
+# PROBE checks every HTTPRoute URL it finds; the cluster-trust-bundle (OpenBao
+# root) is mounted so *.sthings.lab endpoints verify.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: app
+  name: clusterscope
+  namespace: flux-system
+spec:
+  force: false
+  interval: '1h'
+  path: './apps/clusterscope'
+  postBuild:
+    substitute:
+      CLUSTERSCOPE_NAMESPACE: clusterscope
+      CLUSTERSCOPE_VERSION: v0.28.0
+      CLUSTERSCOPE_TECH: flux
+      CLUSTERSCOPE_LAB: sthings-lab
+      CLUSTERSCOPE_LIVE: 'true'
+      CLUSTERSCOPE_SELF_CLUSTER: platform
+      CLUSTERSCOPE_PROBE: 'true'
+      CLUSTERSCOPE_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
+      CLUSTERSCOPE_TRUST_BUNDLE_KEY: trust-bundle.pem
+      GIT_SYNC_REPO: https://github.com/stuttgart-things/harvester
+      GIT_SYNC_BRANCH: main
+      GIT_SYNC_PERIOD: 60s
+      GIT_SYNC_DIR: /data/harvester/clusters
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: clusterscope
+      DOMAIN: platform.sthings.lab
+  prune: true
+  retryInterval: '1m'
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  suspend: false
+  timeout: '5m'
+  wait: true

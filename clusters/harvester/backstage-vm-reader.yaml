@@ -1,0 +1,52 @@
+---
+# Read access for the Backstage VM entity provider on platform.sthings.lab
+# (backstage-vms-config in clusters/platform/apps/backstage-prereqs.yaml).
+#
+# Applied BY HAND on the Harvester cluster -- no Flux syncs this directory:
+#   kubectl --kubeconfig ~/.kube/harvester apply -f clusters/harvester/backstage-vm-reader.yaml
+#
+# get/list on VMs, VMIs and PVCs (disk sizes and images), nothing else: no
+# Secrets, no write. The token
+# Secret below is the long-lived ServiceAccount token Kubernetes fills in; its
+# value goes into BACKSTAGE_HARVESTER_TOKEN in
+# clusters/platform/apps/backstage-secrets-subst.enc.yaml. Deleting the Secret
+# revokes it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: backstage-vm-reader
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: backstage-vm-reader
+rules:
+  - apiGroups: [kubevirt.io]
+    resources: [virtualmachines, virtualmachineinstances]
+    verbs: [get, list]
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: [get, list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: backstage-vm-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: backstage-vm-reader
+subjects:
+  - kind: ServiceAccount
+    name: backstage-vm-reader
+    namespace: kube-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backstage-vm-reader-token
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: backstage-vm-reader
+type: kubernetes.io/service-account-token
