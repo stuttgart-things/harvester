@@ -15,6 +15,18 @@ nav:
       - Claims CLI: services/claims-cli.md
       - Claim Registry API: services/claim-registry-api.md
       - Claim Status Collector: services/claim-status-collector.md
+  - Edge cluster:
+      - Overview: edge/index.md
+      - Architecture: edge/architecture.md
+      - Step by step: edge/step-by-step.md
+      - Runbook (all in one): edge/runbook.md
+      - k3s + Cilium: edge/k3s.md
+      - From scratch: edge/from-scratch.md
+      - Lab testing: edge/lab-testing.md
+      - Notes: edge/notes.md
+  - Guides:
+      - Workstation setup: workstation.md
+      - SOPS + age: sops.md
   - Runbooks:
       - Harvester Reinstall: install.md
   - Demo:
@@ -23,3 +35,13 @@ nav:
 
 plugins:
   - techdocs-core
+
+# Mermaid diagrams (docs/edge): rendered in the browser by mkdocs-material on
+# GitHub Pages (system-inventory workflow builds this site into /docs/);
+# Backstage TechDocs renders the same <pre class="mermaid"> blocks.
+markdown_extensions:
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format

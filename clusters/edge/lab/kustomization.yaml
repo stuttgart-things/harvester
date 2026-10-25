@@ -1,0 +1,19 @@
+---
+# What edge-lab (../apps.yaml) applies. ./play-routes is applied by
+# play-routes.yaml (the routes live in the apps' namespaces).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  # the LabDA zone to the resolver that knows it (k3s coredns-custom)
+  - coredns-lab-zone.yaml
+  - vault-issuer.yaml
+  - play-routes.yaml
+  # the table light's own profile (light-catcher-tabletennis)
+  - light-profile.yaml
+  # homerun2's UIs under EDGE_PLAY_DOMAIN too
+  - homerun2-play-routes.yaml
+  # an emulated ESP32 (piezo mock + ACME device certificate from OpenBao);
+  # the table mock that drives it comes from tabletennis (../cluster-apps.yaml)
+  - esp-mock.yaml
+  # the firmware's log sink with a stand-in sender (a CronJob of log-sink mock)
+  - log-sink.yaml

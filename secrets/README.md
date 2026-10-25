@@ -30,3 +30,25 @@ dagger call -m github.com/stuttgart-things/dagger/sops@v0.85.0 decrypt \
   --encrypted-file ../secrets/homerun2-dev.yaml \
   export --path=/home/sthings/.kube/homerun2-dev
 ```
+
+## edge/
+
+How to create each of them (content, value generators, SOPS):
+`docs/edge/from-scratch.md`, section 1.
+
+The SOPS sources of `clusters/edge` (single-node edge k3s). Never read by Flux;
+`docs/edge/runbook.md` ("Layout of a cluster folder", step 4) says what each
+holds and how it is made:
+
+- `app-values.enc.yaml` -- the apps' secret values (`ref+sops` source of
+  `clusters/edge/cluster-apps.yaml`, input of `clusters/edge/terraform/minio`)
+- `openbao-seal.enc.yaml` -- OpenBao's static seal key. **Never change it**: the
+  raft data is sealed with it.
+- `root-ca.enc.yaml` -- the edge root key + all intermediate keys (offline)
+- `openbao-init.enc.yaml` -- root token + recovery key from `bao operator init`
+  (only `edge-tt-test1`, initialised by hand)
+- `kubeconfig-<node>.enc.yaml` -- each edge cluster's admin kubeconfig (whole
+  file encrypted): `edge-tt-test1`, `edge-tt-test2`
+
+SOPS, the age key and encrypting/decrypting (CLI or Dagger): `docs/sops.md`
+(https://stuttgart-things.github.io/harvester/docs/sops/).

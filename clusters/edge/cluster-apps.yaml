@@ -1,0 +1,490 @@
+---
+# ClusterApps for clusters/edge (harvester#364, phase 4b): the input from which
+# blueprints `render-cluster-apps` generates this folder's source, layers and
+# bundle Kustomizations. NOT a Kubernetes object -- Flux never reads it
+# (.sourceignore). LIVE since harvester#364 phase 4b step 2: the files listed
+# under Output are generated -- change this file and re-render, never edit them.
+#
+# Re-render (from the repo root) with blueprints/flux v3.10.0 or newer
+# (blueprints#212-#216; bundle module claim-flux-kustomizations 0.5.0, kcl#338).
+# Every AppProfile comes from the flux catalog in flux-repo (flux#634, #635):
+#
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.10.0 \
+#     render-cluster-apps \
+#     --cluster-apps clusters/edge/cluster-apps.yaml \
+#     --master-age-key env:SOPS_AGE_KEY \
+#     --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
+#     --sops-ref-dir . \
+#     --existing-secrets clusters/edge/cluster-secrets \
+#     export --path /tmp/edge-gen
+#   cp -r /tmp/edge-gen/flux/. clusters/edge/
+#
+# Output (relative to clusters/edge): kustomization.yaml, infra/ and
+# apps/kustomization.yaml (the wiring), apps.yaml (OCIRepository flux-repo + the
+# layers edge-infra, edge-apps, edge-lab), infra/infra-platform.yaml,
+# apps/apps-platform.yaml (homerun2-sops, minio, openbao-sops,
+# tabletennis-sops-backup), cluster-secrets/ (their secrets; sops-age.enc.yaml
+# there is the escrowed cluster key, never applied: .sourceignore).
+#
+# --existing-secrets keeps what is already encrypted there. Every secret value
+# below is a ref+sops into a hand-kept SOPS file in secrets/edge/ (repo root,
+# never read by Flux), so nothing rotates --
+# above all the OpenBao seal key, which must never change.
+#
+# --escrow-recipients: the edge decrypts with the repo's age key (sops-age =
+# the master key), not with a cluster key of its own, so the generated secrets
+# must be encrypted for it too. Drop it once the edge gets its own key.
+#
+# The recipient is written out, the master's public key, rather than derived
+# with `age-keygen -y <<<"$SOPS_AGE_KEY"`. That derivation once came back
+# empty, and an empty recipient is not an error: the render dropped the master
+# from cluster-secrets/.sops.yaml and re-encrypted every cluster secret for the
+# cluster key alone, which the edge cannot decrypt (harvester#535). AFTER EVERY
+# RENDER, `git diff clusters/edge/cluster-secrets/.sops.yaml` must be empty.
+#
+# LAB vs LATTEPANDA. The values that differ stay in cluster-vars.yaml: every
+# value below that is ${EDGE_*} is substituted by the layer that applies the
+# generated file, exactly as with the hand-written ones. The only structural
+# difference is the layer edge-lab (lab only): remove it for the LattePanda.
+kind: ClusterApps
+metadata:
+  name: edge
+spec:
+  # The whole stuttgart-things/flux repo as one OCI artifact (sources.yaml).
+  # Generated as the OCIRepository flux-repo; the bundles read it with
+  # sourceRef.kind OCIRepository plus a kind patch for their children.
+  # v1.120.0: the infra AppProfiles (flux#634), the SOPS alternatives
+  # homerun2-sops, tabletennis-sops-backup, openbao-sops (flux#635) and
+  # homerun2-light-catcher-tabletennis-sops (flux#639); v1.121.0/v1.122.0:
+  # the trust-manager AppProfile (flux#641) and the scoreboard + handover
+  # switch of tabletennis-sops(-backup) (flux#642); v1.123.0: OpenBao
+  # self-init with a terraform and a break-glass admin user (flux#640);
+  # v1.124.0: the schmetterpause admin switch in tabletennis-sops* (flux#643);
+  # v1.125.0: cert-manager-letsencrypt-hetzner + cilium-gateway-extra (flux#645);
+  # v1.128.2: the table mock TABLETENNIS_ZAEHLWERK_BUTTONS_SIM and the
+  # piezo-sim/buttons-sim switches on the sops bundles (flux#666), plus
+  # OpenBao requests/limits (flux#657) and homerun2 catcher bumps;
+  # v1.128.4: zaehlwerk-buttons v0.12.0, the table mock's display device
+  # (flux#671); v1.128.5: zaehlwerk v0.13.0 + led-catcher v0.16.0, the
+  # board with player names and who serves on the LED panel (flux#683);
+  # v1.129.0: zaehlwerk v0.14.0 (match phases, ADR-0005) and
+  # TABLETENNIS_ZAEHLWERK_SET_OPENER (flux#686); v1.130.0: zaehlwerk
+  # v0.15.0, start options on the scoring page (flux#687); v1.131.0:
+  # zaehlwerk v0.16.0, the scoring page explains its choices (flux#689);
+  # v1.135.0/v1.136.0: schmetterpause v0.17.0 + zaehlwerk/zaehlwerk-buttons
+  # v0.18.0, check-in by fob (TABLETENNIS_FOB_CHECKIN) and by phone
+  # (TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK) (flux#697), and zaehlwerk-pong
+  # (TABLETENNIS_ZAEHLWERK_PONG, flux#698) -- one release each; v1.138.0:
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.20.0, the table mock offers a
+  # fob per player and shows the reader's LEDs (flux#701); v1.139.0:
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.21.0, the side select on the
+  # watch screen and, with PONG_URL from zaehlwerk-pong-on, the pong
+  # screensaver on an idle table (flux#704); v1.140.0: zaehlwerk v0.22.0, the
+  # scoring page links Watch/Buttons/Pong/Schmetterpause (BUTTONS_URL from
+  # zaehlwerk-buttons-sim-on), the pong lobby suggests schmetterpause's players
+  # and picks one set, best of 3 or 5, PONG_BEST_OF=1 (flux#709); v1.141.0:
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.24.0, a diagonal serve in
+  # pong, /ui/live for a display at the table (no demos, no screensaver), and
+  # the sets so far and a set or match point on both screens (flux#710, #712);
+  # v1.146.1: zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.25.0, the referee
+  # on the watch and live screens with the leader's colour on its cord, pong's
+  # favicon (flux#685, #729); v1.147.0: zaehlwerk/zaehlwerk-buttons/
+  # zaehlwerk-pong v0.26.0, bot games the service plays itself, on with no tab
+  # open (zaehlwerk ADR-0014), and TABLETENNIS_LINK_DOMAIN (flux#736);
+  # v1.148.0: zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.27.0, Demo and Pong
+  # in the scoring page's navigation (Watch and Live only by address), and the
+  # page follows the match at the table (flux#738); v1.149.0:
+  # zaehlwerk/zaehlwerk-buttons/zaehlwerk-pong v0.28.0, two keys per half on the
+  # table mock beside the single button (flux#739); v1.151.0:
+  # TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE, the device the table mock starts on
+  # (flux#742), and the notification-catcher's streams and dry run as values
+  # on homerun2-sops (flux#741, defaults unchanged) -- table tennis results
+  # to the edge's own Teams channel; v1.152.0: notification-catcher v3.1.0,
+  # the results card without demo/bot games, and
+  # HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM, the table light's profile
+  # from lab/light-profile (flux#747); v1.154.0: the notify variant
+  # tabletennis-results-with-demos (flux#750) and openbao chart 0.30.4 (same
+  # OpenBao v2.7.1, flux#746); v1.166.0: zaehlwerk's dev portal,
+  # TABLETENNIS_ZAEHLWERK_PORTAL (flux#787, zaehlwerk v0.29.0); in between,
+  # BASE_PATH for the homerun2 catchers and mocks behind homerun2-portal
+  # (flux#759/#761/#767/#771/#777, empty by default), homerun2 bumps and
+  # omni-pitcher without /pitch/github (flux#785); v1.169.0: the table mock's
+  # piezo board (TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL, here piezo-a) on
+  # the dev portal too (flux#796), zaehlwerk/zaehlwerk-pong v0.29.0 (flux#790)
+  # and demo-pitcher v2.3.0 (flux#789); v1.169.1: zaehlwerk v0.30.0, pages
+  # that follow the table switch on its stream, the portal's side column
+  # fixed (flux#797); v1.170.0: homerun2-portal as a bundle component,
+  # BASE_PATH through the bundle and homerun2 at its latest releases
+  # (portal v0.6.0, led-catcher v0.20.0, core-catcher v1.3.0,
+  # light-catcher/wled-mock v1.14.0, config-viewer v0.7.0; flux#800);
+  # v1.173.0: HOMERUN2_REDIS_IMAGE_VERSION through the bundle (flux#808),
+  # for Redis Stack 7.4 (stuttgart-things#3923); v1.191.0: zaehlwerk v0.31.0 +
+  # schmetterpause v0.18.0 and tabletennis-sandbox, the Pong league next to
+  # the office's pair, with the redis panel and the catcher's idle streams
+  # (flux#847); v1.194.0: the sandbox's Pong league plays open tournament
+  # places first, PONG_TOURNAMENTS=on (flux#857, zaehlwerk ADR-0017);
+  # v1.194.1: zaehlwerk v0.32.0 + schmetterpause v0.19.0 (flux#849), which
+  # actually play them, and the MATCHES_TOKEN env from zaehlwerk's base
+  # (flux#858).
+  source:
+    kind: OCIRepository
+    name: flux-repo
+    url: oci://ghcr.io/stuttgart-things/flux/repo
+    tag: v1.194.1
+    interval: 1h
+  path: ./clusters/edge
+  # The secrets the generator makes go to ./cluster-secrets and are applied
+  # by flux-system (the generated kustomization.yaml lists cluster-secrets/secrets).
+  secrets:
+    mode: inline
+  # The wiring is generated too (blueprints v3.10.0, #215): kustomization.yaml
+  # (config.yaml + secrets.yaml from the bootstrap, the extras below, apps.yaml,
+  # cluster-secrets/secrets) and one per layer dir with a bundle or extras.
+  # lab/ keeps its hand-written kustomization.yaml (no bundle, no extras).
+  wiring:
+    generate: true
+    # hand-written: the environment's values
+    extraResources: [cluster-vars.yaml]
+  layers:
+    edge-infra:
+      dir: infra
+      # hand-written: Kustomization edge-ca (the SOPS intermediate, ./ca)
+      extraResources: [ca.yaml]
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+      timeout: 15m
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+    edge-apps:
+      dir: apps
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: apps
+      dependsOn: [edge-infra]
+      wait: false
+      # ./apps holds no SOPS file (the values are in secrets/edge/ and reach
+      # the cluster via cluster-secrets); kept so a hand-added *.enc.yaml works.
+      decryptionSecret: sops-age # pragma: allowlist secret
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+    # LAB ONLY: Vault issuer + the players' Gateway (hand-written, ./lab)
+    edge-lab:
+      dir: lab
+      labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+      dependsOn: [edge-infra]
+      timeout: 10m
+      substituteFrom:
+        - kind: ConfigMap
+          name: cluster-vars
+          optional: false
+  bundles:
+    infra-platform:
+      layer: edge-infra
+      # as infra/infra-platform.yaml (blueprints v3.8.0; default 15m)
+      timeout: 10m
+    apps-platform:
+      layer: edge-apps
+  # Every bundle gets these.
+  vars:
+    INFRA_DOMAIN: ${EDGE_DOMAIN}
+    INFRA_GATEWAY_NAME: ${EDGE_GATEWAY_NAME}
+    INFRA_GATEWAY_NAMESPACE: default
+    INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+  apps:
+    # ---- infra-platform ---------------------------------------------------
+    # Cilium itself is the CNI from k3s/ (Ansible); these are its LB pool and
+    # the Gateway. ONE address, the Gateway's VIP.
+    cilium-lb:
+      vars:
+        CILIUM_LB_IP_START: ${EDGE_LB_IP}
+        CILIUM_LB_IP_STOP: ${EDGE_LB_IP}
+    cilium-gateway: {}
+    cert-manager-install: {}
+    # The wildcard comes from the persistent edge CA (ClusterIssuer edge-ca),
+    # not from the self-signed cluster-ca, which is new on every install.
+    cert-manager-selfsigned:
+      vars:
+        CERT_MANAGER_SELFSIGNED_ISSUER: edge-ca
+    # ClusterIssuer edge-ca from the SOPS Secret in infra/ca (hand-written: the
+    # intermediate is a manual offline artifact).
+    cert-manager-ca-from-secret:
+      vars:
+        CERT_MANAGER_CA_FROM_SECRET_ISSUER: edge-ca # pragma: allowlist secret
+        CERT_MANAGER_CA_FROM_SECRET_NAME: edge-ca # pragma: allowlist secret
+    # One CA distribution for the cluster: trust-manager's Bundle
+    # cluster-trust-bundle (ConfigMap in every namespace, key trust-bundle.pem)
+    # = the default public CAs + the self-signed cluster CA + the persistent
+    # edge root. Its Vault source slot points at edge-ca (ca.crt = the edge
+    # root) -- there is no Vault on the edge. zaehlwerk reads exactly this
+    # ConfigMap, so it can call schmetterpause over the Gateway (HTTPS).
+    trust-manager:
+      vars:
+        TRUST_BUNDLE_VAULT_CA_SECRET: edge-ca # pragma: allowlist secret
+    # The public players' side (since 2026-10-05, before: hand-written in
+    # ./lab): Let's Encrypt via DNS-01 at Hetzner DNS -- webhook, ClusterIssuers
+    # letsencrypt-staging-hetzner / letsencrypt-hetzner, the token Secret
+    # cert-manager/hetzner-dns. Token of the Hetzner project edge-dns (only the
+    # zone sthings-edge.com).
+    cert-manager-letsencrypt-hetzner:
+      secrets:
+        cert-manager-letsencrypt-hetzner-secrets:
+          HETZNER_DNS_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HETZNER_DNS_TOKEN # pragma: allowlist secret
+    # ... and its own Gateway on its own VIP: *.EDGE_PLAY_DOMAIN with the Let's
+    # Encrypt wildcard. Waits for the issuer (ISSUER_KUSTOMIZATION).
+    cilium-gateway-extra:
+      vars:
+        CILIUM_GATEWAY_EXTRA_NAME: edge-play-gateway
+        CILIUM_GATEWAY_EXTRA_NAMESPACE: default
+        CILIUM_GATEWAY_EXTRA_POOL_NAME: edge-play-pool
+        CILIUM_GATEWAY_EXTRA_IP: ${EDGE_PLAY_LB_IP}
+        CILIUM_GATEWAY_EXTRA_DOMAIN: ${EDGE_PLAY_DOMAIN}
+        CILIUM_GATEWAY_EXTRA_ISSUER: letsencrypt-hetzner
+        CILIUM_GATEWAY_EXTRA_ISSUER_KIND: ClusterIssuer
+        CILIUM_GATEWAY_EXTRA_TLS_SECRET: play-wildcard-tls # pragma: allowlist secret
+        CILIUM_GATEWAY_EXTRA_ISSUER_KUSTOMIZATION: cert-manager-letsencrypt-hetzner
+    cnpg-operator: {}
+    cnpg-barman-cloud: {}
+    reloader: {}
+    # ---- apps-platform (profile: flux catalog) ---------------------------
+    # The S3 target for schmetterpause's backups. Chart 16.0.10 (17 needs an
+    # image that cannot be pulled).
+    minio:
+      vars:
+        MINIO_STORAGE_CLASS: local-path
+        MINIO_STORAGE_SIZE: 5Gi
+        MINIO_VERSION: 16.0.10
+      # The admin credentials Terraform (../terraform/minio) already uses:
+      # taken from secrets/edge/app-values, not generated, so nothing rotates.
+      secrets:
+        minio-secrets:
+          MINIO_ADMIN_USER: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/MINIO_ADMIN_USER
+          MINIO_ADMIN_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/MINIO_ADMIN_PASSWORD # pragma: allowlist secret
+    # homerun2 without ESO: secrets from SOPS, no notification catcher
+    # (homerun2-sops). Its values are the ones secrets/edge/app-values has always
+    # had, so nothing rotates.
+    homerun2-sops:
+      vars:
+        HOMERUN2_NAMESPACE: homerun2
+        HOMERUN2_REDIS_STORAGE_CLASS: local-path
+        HOMERUN2_REDIS_STORAGE_SIZE: 1Gi
+        # Redis Stack 7.4 (stuttgart-things#3923). No way back: writes RDB v12.
+        HOMERUN2_REDIS_IMAGE_VERSION: 7.4.0-v8
+        # The Pong sandbox (tabletennis-sandbox below) is a third preset: its
+        # league alone on the panel, for showing it on purpose.
+        HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis,tabletennis-sandbox
+        # What the catcher listens to when nobody switched it: the messages
+        # and the sandbox's league between two office matches (zaehlwerk
+        # ADR-0016). An office match switches it to tabletennis alone.
+        HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis-sandbox
+        # Won matches to the edge's Teams channel (TEAMS_WEBHOOK_URL below,
+        # shared with sthings-edge) -- for real, no dry run: a match won on
+        # the table mock posts a card (players, sets, set scores).
+        # TESTING: -with-demos posts pong games too, with a Demo row on the
+        # card (flux#750) -- every zaehlwerk-pong match, the bot games the
+        # service plays by itself included, so a card every few minutes. Back
+        # to tabletennis-results (demo=1 left out) once the card looks right.
+        HOMERUN2_SOPS_NOTIFY: tabletennis-results-with-demos
+        HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
+        HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
+        # LAB: behind homerun2-portal (below), each service under the key the
+        # portal serves it at -- on its own hostname too, e.g.
+        # led-catcher.<EDGE_DOMAIN>/led/.
+        HOMERUN2_LED_CATCHER_BASE_PATH: /led
+        HOMERUN2_CORE_CATCHER_BASE_PATH: /core
+        HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
+        HOMERUN2_WLED_MOCK_BASE_PATH: /wled
+        HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
+        HOMERUN2_CONFIG_VIEWER_BASE_PATH: /config
+      secrets:
+        homerun2-sops-secrets:
+          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
+          TEAMS_WEBHOOK_URL: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/TEAMS_WEBHOOK_URL
+          HOMERUN2_OMNI_PITCHER_AUTH_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_OMNI_PITCHER_AUTH_TOKEN # pragma: allowlist secret
+          HOMERUN2_SCOUT_AUTH_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_SCOUT_AUTH_TOKEN # pragma: allowlist secret
+    # schmetterpause + zaehlwerk (panel: homerun2), CNPG backups into MinIO
+    # with the schmetterpause-cnpg user (../terraform/minio).
+    tabletennis-sops-backup:
+      vars:
+        TABLETENNIS_ZAEHLWERK_PANEL: homerun2
+        # After a match the catcher goes back to the messages AND the Pong
+        # sandbox's stream, so the league shows while the table is free
+        # (flux tabletennis-sandbox, zaehlwerk ADR-0016).
+        TABLETENNIS_ZAEHLWERK_CATCHER_IDLE_STREAMS: messages,tabletennis-sandbox
+        TABLETENNIS_SCHMETTERPAUSE_DB_STORAGE_SIZE: 1Gi
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_BUCKET: schmetterpause-cnpg
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_S3_ENDPOINT: http://minio-deployment.minio.svc.cluster.local:9000
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_SERVER_NAME: schmetterpause-db-edge
+        TABLETENNIS_SCHMETTERPAUSE_BACKUP_RETENTION: 7d
+        # scoreboard + handover (flux#642): players and scorers from
+        # schmetterpause on the zaehlwerk page, won matches reported back.
+        # zaehlwerk calls https://schmetterpause.<EDGE_PLAY_DOMAIN>, the
+        # players' name, so its Schmetterpause link opens on a phone too: a Let's
+        # Encrypt certificate, among the public CAs in trust-manager's bundle.
+        # (Before: https://schmetterpause.<EDGE_DOMAIN>, the default.)
+        TABLETENNIS_SCOREBOARD_HANDOVER: sops
+        TABLETENNIS_ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
+        # The pages' links -- zaehlwerk's Buttons and Pong, the buttons page's
+        # way back to zaehlwerk -- go to the players' names (./lab/play-routes),
+        # which a phone reaches without the edge CA. Read from the flux release
+        # with flux#736 on; older tags ignore it.
+        TABLETENNIS_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
+        # The office's admin who never plays (schmetterpause
+        # docs/admin-and-observers.md): `timoboll` joins on the page with its
+        # own PIN, gets the admin flag here at every start, then marks itself
+        # as observer under /admin -- counts at zaehlwerk, never in the ranking.
+        # 'on' QUOTED: a bare on is YAML 1.1 true.
+        TABLETENNIS_SCHMETTERPAUSE_ADMIN: 'on'
+        TABLETENNIS_SCHMETTERPAUSE_BOOTSTRAP_ADMIN: timoboll
+        # House rule (zaehlwerk#77, ADR-0005): whoever lost the previous set
+        # serves first in the next one, instead of ITTF's alternation.
+        TABLETENNIS_ZAEHLWERK_SET_OPENER: loser
+        # LAB: zaehlwerk's table mock (flux#666) at https://buttons.<EDGE_DOMAIN>
+        # -- emulated buttons, and a page that pauses and tunes the emulated
+        # board. The board is piezo-a in ./lab/esp-mock (it enrols through
+        # ACME, which the flux piezo-sim does not), so the page points at its
+        # control Service and the piezo-sim stays off. REMOVE ON THE
+        # LATTEPANDA with the edge-lab layer: the page takes points back.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+        TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_PIEZO_URL: http://piezo-a-control.esp-mock.svc.cluster.local:8081
+        # The device the table mock starts on (flux#742): button (one key,
+        # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
+        # The page switches at runtime; a restart comes back to this value.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
+        # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
+        # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
+        # player links a fob in schmetterpause, the hub (here the table mock's
+        # "hold a fob") checks in with ZAEHLWERK_CHECKIN_TOKEN. By phone:
+        # /table/left|right on schmetterpause, which claims the half at
+        # zaehlwerk itself. Both need the scoreboard + handover above.
+        TABLETENNIS_FOB_CHECKIN: sops
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK: 'on'
+        # schmetterpause's way to zaehlwerk is the players' name: the start
+        # page's browser reads the live score from it (/live/stream), so a
+        # phone needs a name with a Let's Encrypt certificate, and the
+        # check-in by phone claims over it too (./lab/play-routes/zaehlwerk.yaml).
+        # zaehlwerk lets both of schmetterpause's names read its stream (CORS).
+        # (Before: https://zaehlwerk.<EDGE_DOMAIN>, the default.)
+        TABLETENNIS_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk.${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause.${EDGE_PLAY_DOMAIN},https://schmetterpause.${EDGE_DOMAIN}
+        # LAB: zaehlwerk-pong (zaehlwerk ADR-0006/0008/0009), the game on the
+        # LED panel -- internal at https://zaehlwerk-pong.<EDGE_DOMAIN>, for
+        # players' phones at https://zaehlwerk-pong.<EDGE_PLAY_DOMAIN>
+        # (./lab/play-routes). Every pong match is a demo: never reported to
+        # schmetterpause, and a real match takes the table from it. Attract
+        # mode (`attract`, ZAEHLWERK_PONG_ATTRACT_AFTER) stays off: the panel
+        # would play itself whenever the table is idle. 'on' QUOTED.
+        TABLETENNIS_ZAEHLWERK_PONG: 'on'
+        # LAB: the dev portal (zaehlwerk tools/chain-mock/portal, flux#787):
+        # one page at https://zaehlwerk-portal.<EDGE_PLAY_DOMAIN>
+        # (./lab/play-routes; internal at zaehlwerk-portal.<EDGE_DOMAIN>) with
+        # zaehlwerk, schmetterpause, pong, the table mock and piezo-a (through
+        # the table mock's board URL, flux#796) up or down, their
+        # pages side by side, the running match and the table stream. No
+        # login, it ends matches: the route is the boundary, as for zaehlwerk.
+        # 'on' QUOTED.
+        TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
+      secrets:
+        tabletennis-sops-secrets:
+          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_SESSION_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
+          ZAEHLWERK_OMNI_PITCHER_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_OMNI_PITCHER_TOKEN # pragma: allowlist secret
+          ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_ACCESS_KEY_ID # pragma: allowlist secret
+          SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_BACKUP_SECRET_ACCESS_KEY # pragma: allowlist secret
+          # one token, read by both sides (schmetterpause /api, zaehlwerk)
+          SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
+          # check-in by fob: schmetterpause's fob key (a new one unlinks every
+          # fob -- never rotate it casually) and the hub's bearer, which the
+          # table mock reads too
+          SCHMETTERPAUSE_RFID_UID_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_RFID_UID_KEY # pragma: allowlist secret
+          ZAEHLWERK_CHECKIN_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_CHECKIN_TOKEN # pragma: allowlist secret
+    # LAB: the Pong sandbox (flux apps/tabletennis/profiles/sandbox; zaehlwerk
+    # ADR-0015/0016, schmetterpause ADR-0027). A SECOND schmetterpause and
+    # zaehlwerk in schmetterpause-sandbox / zaehlwerk-sandbox, where
+    # zaehlwerk-pong plays a league by itself: eight bots (Ada ... Hanna,
+    # seeded), one rated match after another, the observer `Pong` as the
+    # operator. Next to tabletennis-sops-backup, not instead of it -- nothing of
+    # the office's pair is shared but homerun2's Redis.
+    #
+    # Its score goes straight into that Redis on tabletennis-sandbox, never
+    # switching the catcher; the office's zaehlwerk and the led-catcher list
+    # that stream as idle (above), so the panel shows the league while the
+    # table is free and an office match takes it at once.
+    #
+    # Internal at https://<name>.<EDGE_DOMAIN>, for phones at
+    # https://<name>.<EDGE_PLAY_DOMAIN> (./lab/play-routes): schmetterpause-sandbox,
+    # zaehlwerk-sandbox, zaehlwerk-pong-sandbox. zaehlwerk reports to
+    # schmetterpause over the Service (the default), Pong reads the players
+    # the same way.
+    tabletennis-sandbox:
+      vars:
+        TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL: redis
+        TABLETENNIS_SANDBOX_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
+        TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
+      secrets:
+        tabletennis-sandbox-secrets:
+          # NEW KEYS in secrets/edge/app-values.enc.yaml, the sandbox's own:
+          # `openssl rand -hex 16` for the DB password (it goes into a URL),
+          # `openssl rand -base64 32` for the session key, `openssl rand -hex 32`
+          # for both tokens.
+          SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
+          SCHMETTERPAUSE_SESSION_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_SESSION_KEY # pragma: allowlist secret
+          SCHMETTERPAUSE_SCOREBOARD_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_SCHMETTERPAUSE_SCOREBOARD_TOKEN # pragma: allowlist secret
+          ZAEHLWERK_MATCHES_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SANDBOX_ZAEHLWERK_MATCHES_TOKEN # pragma: allowlist secret
+          # homerun2's, the same reference as the office's zaehlwerk.
+          ZAEHLWERK_REDIS_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_REDIS_PASSWORD # pragma: allowlist secret
+    # The light at the table: a second light-catcher on zaehlwerk's
+    # tabletennis stream, in its own namespace (homerun2-tabletennis). Point
+    # for side a: blue, side b: red (1 s); set won: rainbow; match won:
+    # fireworks. The profile is this cluster's own ConfigMap
+    # (lab/light-profile, flux#747): those effects plus serve, warm-up and
+    # change of ends, still on the wled-mock that homerun2-sops brings -- the
+    # lab cannot reach a device. Same redis password as homerun2-sops (same ref).
+    homerun2-light-catcher-tabletennis-sops:
+      vars:
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
+        # LAB: /table behind homerun2-portal, next to the other light-catcher's /light.
+        HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
+      secrets:
+        homerun2-light-catcher-tabletennis-sops-secrets:
+          HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
+    # LAB: homerun2-portal -- one page for homerun2: every service's status
+    # and latest (messages, light effects, findings), and each service's own
+    # UI under its key. https://homerun2-portal.<EDGE_PLAY_DOMAIN>
+    # (./lab/play-routes) and homerun2-portal.<EDGE_DOMAIN>. The keys are the
+    # BASE_PATHs set on homerun2-sops and the table's light-catcher above;
+    # the table's light is in its own namespace. No login, no secrets.
+    homerun2-portal:
+      vars:
+        HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
+        HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
+    # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
+    # MUST NEVER CHANGE (the raft data is sealed with it): taken from the
+    # SOPS file, never generated.
+    openbao-sops:
+      vars:
+        OPENBAO_TOPOLOGY: single-node
+        OPENBAO_STORAGE_CLASS: local-path
+        OPENBAO_STORAGE_SIZE: 2Gi
+        OPENBAO_SEAL_KEY_ID: edge-20261004
+        # Self-init (flux#640): on EMPTY storage OpenBao initialises itself --
+        # userpass with `terraform` (PKI only, used by terraform/openbao and
+        # sign-intermediate.sh) and `admin` (break-glass, by hand only). No
+        # root token, no recovery keys. On an already initialised instance
+        # (edge-tt-test1, initialised by hand 2026-10-04) this does nothing; the
+        # same users were created there once by hand.
+        OPENBAO_INIT: self-init-userpass
+      secrets:
+        openbao-sops-secrets:
+          OPENBAO_SEAL_STATIC_KEY: ref+sops://secrets/edge/openbao-seal.enc.yaml#/stringData/key # pragma: allowlist secret
+          OPENBAO_TERRAFORM_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/OPENBAO_TERRAFORM_PASSWORD # pragma: allowlist secret
+          OPENBAO_ADMIN_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/OPENBAO_ADMIN_PASSWORD # pragma: allowlist secret

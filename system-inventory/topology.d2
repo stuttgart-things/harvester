@@ -14,6 +14,100 @@ net_192_168_10_0_24: "lab\n192.168.10.0/24" {
     bold: true
   }
 }
+net_192_168_8_0_24: "opal-lan\n192.168.8.0/24" {
+  shape: cloud
+  style: {
+    fill: "#b45309"
+    font-color: "#ffffff"
+    bold: true
+  }
+}
+net_10_100_136_0_24: "labda\n10.100.136.0/24" {
+  shape: cloud
+  style: {
+    fill: "#7c3aed"
+    font-color: "#ffffff"
+    bold: true
+  }
+}
+
+sys_app_dev_hv: "app-dev-hv" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  app_dev_hv: "app-dev-hv\n192.168.10.176\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_app_dev_hv -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_crossplane_mgmt: "crossplane-mgmt" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  crossplane_mgmt: "crossplane-mgmt\n192.168.10.108\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  crossplane_mgmt_vip: "crossplane-mgmt-vip\n192.168.10.177" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_crossplane_mgmt -> net_192_168_10_0_24: "2 hosts" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_edge_tt_test1: "edge-tt-test1" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  edge_tt_test1: "edge-tt-test1\n10.100.136.89\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  edge_tt_test1_gateway: "edge-tt-test1-gateway\n10.100.136.223\n9 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  edge_tt_test1_play: "edge-tt-test1-play\n10.100.136.226\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_edge_tt_test1 -> net_10_100_136_0_24: "3 hosts" {
+  style: {
+    stroke: "#7c3aed"
+    stroke-width: 2
+  }
+}
 
 sys_harvester: "harvester" {
   style.fill: "#f8fafc"
@@ -41,6 +135,39 @@ sys_harvester -> net_192_168_10_0_24: "2 hosts" {
   }
 }
 
+sys_homerun2_dev: "homerun2-dev" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  homerun2_dev: "homerun2-dev\n192.168.10.117\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  homerun2_dev_gateway: "homerun2-dev-gateway\n192.168.10.171\n12 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  homerun2_dev_redis: "homerun2-dev-redis\n192.168.10.179\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_homerun2_dev -> net_192_168_10_0_24: "3 hosts" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
 sys_jump_server: "jump-server" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
@@ -60,6 +187,51 @@ sys_jump_server -> net_192_168_10_0_24: "1 host" {
   }
 }
 
+sys_labda_dns: "labda-dns" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  labda_dns: "labda-dns\n10.100.136.115\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_labda_dns -> net_10_100_136_0_24: "1 host" {
+  style: {
+    stroke: "#7c3aed"
+    stroke-width: 2
+  }
+}
+
+sys_machinery_hv: "machinery-hv" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  machinery_hv: "machinery-hv\n192.168.10.105\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  machinery_hv_gateway: "machinery-hv-gateway\n192.168.10.178\n3 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_machinery_hv -> net_192_168_10_0_24: "2 hosts" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
 sys_matrix: "matrix" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
@@ -71,10 +243,23 @@ sys_matrix: "matrix" {
       stroke: "#475569"
     }
   }
+  matrix_edge: "matrix-edge\n192.168.8.30" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
 }
 sys_matrix -> net_192_168_10_0_24: "1 host" {
   style: {
     stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+sys_matrix -> net_192_168_8_0_24: "1 host" {
+  style: {
+    stroke: "#b45309"
     stroke-width: 2
   }
 }
@@ -90,10 +275,23 @@ sys_network: "network" {
       stroke: "#475569"
     }
   }
+  opal: "opal\n192.168.8.1\n2 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
 }
 sys_network -> net_192_168_10_0_24: "1 host" {
   style: {
     stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+sys_network -> net_192_168_8_0_24: "1 host" {
+  style: {
+    stroke: "#b45309"
     stroke-width: 2
   }
 }
@@ -102,7 +300,7 @@ sys_platform_sthings: "platform-sthings" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"
   style.font-size: 20
-  platform: "platform\n192.168.10.160\n10 services" {
+  platform: "platform\n192.168.10.160\n11 services" {
     shape: rectangle
     style: {
       fill: "#ffffff"
@@ -111,6 +309,78 @@ sys_platform_sthings: "platform-sthings" {
   }
 }
 sys_platform_sthings -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_sthings_edge: "sthings-edge" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  edge_gateway: "edge-gateway\n192.168.8.20\n14 services" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  edge_play_gateway: "edge-play-gateway\n192.168.8.21\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  edge_redis: "edge-redis\n192.168.8.22\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  sthings_edge: "sthings-edge\n192.168.8.10\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+  sthings_edge_kiosk: "sthings-edge-kiosk\n192.168.10.111" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_sthings_edge -> net_192_168_8_0_24: "4 hosts" {
+  style: {
+    stroke: "#b45309"
+    stroke-width: 2
+  }
+}
+sys_sthings_edge -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
+sys_wled_matrix: "wled-matrix" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  wled_matrix: "wled-matrix\n192.168.10.123\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_wled_matrix -> net_192_168_10_0_24: "1 host" {
   style: {
     stroke: "#0f766e"
     stroke-width: 2

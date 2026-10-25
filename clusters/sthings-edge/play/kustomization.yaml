@@ -1,0 +1,14 @@
+---
+# What edge-play (../apps.yaml) applies: the players' routes on
+# edge-play-gateway (./play-routes), the box's Redis on the LAN for the
+# LED matrix (../lan) and the firmware's log sink (../log-sink). Each is
+# applied by a Kustomization of its own: the first two live in the apps'
+# namespaces, which the apps create; the sink for its own Ready state.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - play-routes.yaml
+  # homerun2's UIs under EDGE_PLAY_DOMAIN too
+  - homerun2-play-routes.yaml
+  - redis-lb.yaml
+  - log-sink.yaml

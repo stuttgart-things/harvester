@@ -1,0 +1,22 @@
+---
+# What differs between environments, for the box sthings-edge (LattePanda,
+# table tennis network 192.168.8.0/24 behind the GL.iNet Opal). Only plain
+# strings, no secrets. Every layer substitutes ${EDGE_*} from this ConfigMap.
+# Names resolve on the router's dnsmasq (docs/edge/architecture.md, DNS commands);
+# both VIPs are outside the Opal's DHCP range and announced by Cilium (L2).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-vars
+  namespace: flux-system
+data:
+  EDGE_CLUSTER_NAME: sthings-edge
+  # internal names: *.EDGE_DOMAIN -> EDGE_LB_IP (router dnsmasq)
+  EDGE_DOMAIN: edge.sthings.lab
+  EDGE_LB_IP: 192.168.8.20
+  EDGE_GATEWAY_NAME: edge-gateway
+  # public players' names: *.EDGE_PLAY_DOMAIN -> EDGE_PLAY_LB_IP; on the box
+  # the router answers sthings-edge.com locally with this VIP, so phones on
+  # the edge Wi-Fi never depend on the public record (Hetzner, still the lab's)
+  EDGE_PLAY_DOMAIN: sthings-edge.com
+  EDGE_PLAY_LB_IP: 192.168.8.21

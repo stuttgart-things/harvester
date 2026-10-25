@@ -1,0 +1,21 @@
+---
+# What the sthings-edge kiosk shows (role kiosk, SthingsNet). Read by the box itself:
+# kiosk-session fetches this file from GitHub (raw URL of main) at every start and every
+# 5 minutes; a change restarts the kiosk. Change it here, merge, done -- no Ansible run.
+# Not a Kubernetes object (.sourceignore). Format: stuttgart-things/ansible
+# collections/baseos/kiosk.yaml, kiosk-config. Pages behind a private CA also need the CA in
+# the play's kiosk_ca_certs (README, step 7).
+# homerun2 sits behind homerun2-portal there (clusters/homerun2-dev/homerun2-portal.yaml),
+# and the portal rotates through the homerun2 services itself (/kiosk, portal v0.8.0+):
+# full screen, one after another, services that are down skipped, held on input -- also
+# inside a service UI -- and reloaded after `reset` s idle (homerun2-portal README, Kiosk).
+# So the browser only switches between the portal kiosk and Flux, which is another origin
+# the portal cannot frame.
+tabs:
+  - url: https://portal.homerun2-dev.sthings.lab/kiosk?services=overview,core,notify,led,matrix,light,schedule&seconds=30&pause=60&reset=300
+    zoom: 100
+  - url: https://flux.homerun2-dev.sthings.lab/
+    zoom: 130
+rotate_seconds: 300         # portal kiosk 5 min, Flux 5 min
+rotate_pause_seconds: 60    # ... but not within 60 s after keyboard/mouse input
+reset_idle_seconds: 300     # 5 min after the last use: all tabs back to these URLs

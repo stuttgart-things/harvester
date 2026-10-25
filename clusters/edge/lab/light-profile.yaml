@@ -1,0 +1,29 @@
+---
+# The table light's profile (light-profile/), in the namespace of the
+# light-catcher-tabletennis instance, which that app creates -- so a
+# Kustomization of its own that retries until it exists (the namespace
+# pattern: README, Layout, lesson 2), like play-routes.
+#
+# No dependsOn: homerun2-light-catcher-tabletennis waits for its pod, and the
+# pod waits for this ConfigMap (HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM
+# in ../cluster-apps.yaml) -- depending on it would never become ready. On a
+# fresh cluster the pod sits in ContainerCreating until the first retry here
+# after the namespace exists.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: light-profile
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/edge/lab/light-profile

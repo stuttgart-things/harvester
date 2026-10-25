@@ -1,0 +1,277 @@
+---
+# homerun2-schedule-pitcher (stuttgart-things/homerun2-schedule-pitcher):
+# token and certificate expiry checks, reminders and findings from other jobs,
+# delivered in office hours through omni-pitcher. Mirrors platform-sthings'
+# apps/homerun2-schedule-pitcher.yaml, which is the central instance; this one
+# is the dev instance next to the stack, mainly for its portal card and UI
+# under /schedule/.
+#
+# No checks and no reminders yet: platform-sthings' checks read GitHub tokens
+# in backstage, argocd and kargo, none of which exist here. It still sends its
+# daily "schedule-pitcher alive" heartbeat (info -- below the Teams output's
+# severity_min, so it stays out of Teams). Add checks to the profile below;
+# a check reading a Secret outside homerun2 needs a Role like platform-sthings'
+# homerun2-schedule-pitcher-rbac.yaml.
+#
+# Cluster-local on the released kustomize artifact; the reusable flux
+# component is stuttgart-things/flux#653.
+#
+# Credentials: the redis and omni-pitcher ones from homerun2-secrets-subst (the same
+# values the stack uses); the API/UI/findings token from
+# ./homerun2-schedule-pitcher-secrets.enc.yaml (HOMERUN2_SCHEDULE_PITCHER_AUTH_TOKEN,
+# generated for this cluster, not shared with platform-sthings).
+#
+# No ServiceMonitor/PrometheusRule as on platform-sthings: this cluster has no
+# prometheus-operator CRDs.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: homerun2-schedule-pitcher-kustomize
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
+  ref:
+    # v1.11.0+: the UI serves under BASE_PATH, /schedule for homerun2-portal
+    # (patch below); the session cookie is scoped to it.
+    tag: v1.13.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-schedule-pitcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2 # redis-stack and omni-pitcher
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: homerun2-schedule-pitcher-kustomize
+  path: ./
+  targetNamespace: homerun2
+  postBuild:
+    # optional:false for the reason given in ./homerun2.yaml: left optional, a
+    # missing Secret substitutes empty strings and the pod starts with an
+    # empty API token and no redis password.
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
+      - kind: Secret
+        name: homerun2-schedule-pitcher-secrets
+        optional: false
+  patches:
+    # Roll the pod when its profile ConfigMap or a Secret it reads changes:
+    # it reads them at start only. Reloader is in ./infra-platform.yaml.
+    - target:
+        kind: Deployment
+        name: homerun2-schedule-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-schedule-pitcher
+          annotations:
+            reloader.stakater.com/auto: "true"
+    # The artifact ships placeholder Secrets; the real values come from the
+    # substitutions above. stringData wins over the placeholder data.
+    - target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-token
+      patch: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-token
+        stringData:
+          auth-token: "${HOMERUN2_SCHEDULE_PITCHER_AUTH_TOKEN}"
+    - target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-redis
+      patch: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-redis
+        stringData:
+          password: "${HOMERUN2_REDIS_PASSWORD}"
+    - target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-pitcher
+      patch: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-pitcher
+        stringData:
+          token: "${HOMERUN2_OMNI_PITCHER_AUTH_TOKEN}"
+    - target:
+        kind: ConfigMap
+        name: homerun2-schedule-pitcher-profile
+      patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: homerun2-schedule-pitcher-profile
+        data:
+          profile.yaml: |
+            apiVersion: homerun2.sthings.io/v1alpha1
+            kind: SchedulePitcherProfile
+            metadata:
+              name: homerun2-dev
+            spec:
+              pitcher:
+                # In-cluster omni-pitcher, grafana format as on platform-sthings.
+                addr: http://homerun2-omni-pitcher.homerun2.svc.cluster.local/pitch/grafana
+                format: grafana
+              defaults:
+                timezone: Europe/Berlin
+                assignee: patrick.hermann
+              findings:
+                officeHours: { start: 8, end: 18 }
+              checks: []
+    # homerun2-portal serves the UI under /schedule/ (./homerun2-portal.yaml),
+    # so it answers under that prefix; /ui on schedule-pitcher.<domain>
+    # redirects there. /findings, /api, /health and /metrics stay at the root
+    # for agents and probes, so the route keeps matching /.
+    - target:
+        kind: Deployment
+        name: homerun2-schedule-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-schedule-pitcher
+        spec:
+          template:
+            spec:
+              containers:
+                - name: homerun2-schedule-pitcher
+                  env:
+                    - name: BASE_PATH
+                      value: /schedule
+    # The route is a separate Kustomization below that waits for this one:
+    # a route applied before its Service serves HTTP 500 for good (Cilium
+    # resolves backends once), see homerun2-routes in ./homerun2.yaml.
+    - patch: |
+        $patch: delete
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: homerun2-schedule-pitcher
+      target:
+        kind: HTTPRoute
+        name: homerun2-schedule-pitcher
+---
+# Only the HTTPRoute of the same artifact, once the Service exists.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-schedule-pitcher-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2-schedule-pitcher
+    - name: cilium-gateway
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: homerun2-schedule-pitcher-kustomize
+  path: ./
+  targetNamespace: homerun2
+  patches:
+    - patch: |
+        $patch: delete
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-schedule-pitcher
+      target:
+        kind: Deployment
+        name: homerun2-schedule-pitcher
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: homerun2-schedule-pitcher
+      target:
+        kind: Service
+        name: homerun2-schedule-pitcher
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: ServiceAccount
+        metadata:
+          name: homerun2-schedule-pitcher
+      target:
+        kind: ServiceAccount
+        name: homerun2-schedule-pitcher
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: homerun2-schedule-pitcher-profile
+      target:
+        kind: ConfigMap
+        name: homerun2-schedule-pitcher-profile
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-token
+      target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-token
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-redis
+      target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-redis
+    - patch: |
+        $patch: delete
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-pitcher
+      target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-pitcher
+    - target:
+        kind: HTTPRoute
+        name: homerun2-schedule-pitcher
+      patch: |
+        - op: replace
+          path: /spec/parentRefs/0/name
+          value: homerun2-dev-sthings-gateway
+        - op: replace
+          path: /spec/parentRefs/0/namespace
+          value: default
+        - op: replace
+          path: /spec/hostnames
+          value: [schedule-pitcher.homerun2-dev.sthings.lab]

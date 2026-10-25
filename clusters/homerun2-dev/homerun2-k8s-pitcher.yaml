@@ -1,0 +1,242 @@
+---
+# homerun2-k8s-pitcher on homerun2-dev: Flux reconcile failures of this
+# cluster. The notification-controller posts error events (generic provider)
+# to the pitcher's webhook, POST :8080/flux; the pitcher pitches them to the
+# in-cluster omni-pitcher as system flux, author k8s-pitcher-homerun2-dev, and
+# the notification-catcher's teams-homerun2-dev output (warning and up) sends
+# them to Teams. Mirrors platform-sthings' apps/homerun2-k8s-pitcher.yaml.
+#
+# Webhook only: no informers or collectors, which a profile accepts since
+# v1.2.0 (stuttgart-things/homerun2-k8s-pitcher#80). So the artefact's broad
+# ClusterRole is emptied; the one thing the pitcher reads is omni-pitcher's
+# own token, through the Role below -- the same token scout uses, so no new
+# secret.
+#
+# Cluster-local on the released kustomize artifact: flux's
+# components/k8s-pitcher assumes namespace homerun2-flux, a token Secret of
+# its own and a trust bundle, none of which this setup wants. The artefact
+# ships neither the containerPort nor a Service for the webhook, and still
+# pins image v0.1.1 and a demo profile; all of that is set here.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: homerun2-k8s-pitcher-token
+  namespace: homerun2
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["homerun2-omni-pitcher-token"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: homerun2-k8s-pitcher-token
+  namespace: homerun2
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: homerun2-k8s-pitcher-token
+subjects:
+  - kind: ServiceAccount
+    name: homerun2-k8s-pitcher
+    namespace: homerun2
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: homerun2-k8s-pitcher-kustomize
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/homerun2-k8s-pitcher-kustomize
+  ref:
+    tag: v1.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher-kustomize
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2 # omni-pitcher and its token Secret
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: homerun2-k8s-pitcher-kustomize
+  path: ./
+  targetNamespace: homerun2
+  images:
+    - name: ghcr.io/stuttgart-things/homerun2-k8s-pitcher
+      newTag: v1.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-k8s-pitcher
+  patches:
+    # Roll the pod when its profile ConfigMap or a Secret it reads changes:
+    # it reads them at start only. Reloader is in ./infra-platform.yaml.
+    - target:
+        kind: Deployment
+        name: homerun2-k8s-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-k8s-pitcher
+          annotations:
+            reloader.stakater.com/auto: "true"
+    # The profile reads omni-pitcher's token instead; the artefact's own
+    # token Secret would only carry its "changeme" default.
+    - target:
+        kind: Secret
+        name: homerun2-k8s-pitcher-token
+      patch: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-k8s-pitcher-token
+        $patch: delete
+    # Nothing to watch: the token Secret is read through the Role above.
+    - target:
+        kind: ClusterRole
+        name: homerun2-k8s-pitcher
+      patch: |
+        - op: replace
+          path: /rules
+          value: []
+    - target:
+        kind: Deployment
+        name: homerun2-k8s-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-k8s-pitcher
+        spec:
+          template:
+            spec:
+              containers:
+                - name: homerun2-k8s-pitcher
+                  ports:
+                    - containerPort: 8080
+                      name: webhook
+                      protocol: TCP
+    - target:
+        kind: ConfigMap
+        name: homerun2-k8s-pitcher-profile
+      patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: homerun2-k8s-pitcher-profile
+        data:
+          profile.yaml: |
+            apiVersion: homerun2.sthings.io/v1alpha1
+            kind: K8sPitcherProfile
+            metadata:
+              name: homerun2-dev
+            spec:
+              cluster: homerun2-dev # author k8s-pitcher-homerun2-dev
+              # In-cluster, plain HTTP: no trust bundle needed.
+              pitcher:
+                addr: http://homerun2-omni-pitcher.homerun2.svc.cluster.local/pitch
+              auth:
+                tokenFrom:
+                  secretKeyRef: { name: homerun2-omni-pitcher-token, namespace: homerun2, key: auth-token }
+              # No hmacKey: it would sit in plain text in this ConfigMap, and
+              # the Service is ClusterIP only.
+              webhook:
+                enabled: true
+                port: "8080"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: homerun2
+  labels:
+    app.kubernetes.io/name: homerun2-k8s-pitcher
+    app.kubernetes.io/part-of: homerun2
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: homerun2-k8s-pitcher
+    app.kubernetes.io/instance: homerun2-k8s-pitcher
+  ports:
+    - name: webhook
+      port: 8080
+      targetPort: webhook
+      protocol: TCP
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: flux-system
+spec:
+  type: generic
+  address: http://homerun2-k8s-pitcher.homerun2.svc.cluster.local:8080/flux
+---
+# Errors only: at info Flux sends "Reconciliation finished" on every interval.
+#
+# Alert sources match their namespace exactly (no wildcard). Everything in
+# this cluster dir lives in flux-system; the homerun2 stack's child
+# Kustomizations live in homerun2 and get their own Alert below.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: flux-system
+spec:
+  providerRef:
+    name: homerun2-k8s-pitcher
+  eventSeverity: error
+  eventSources:
+    - kind: Kustomization
+      name: '*'
+    - kind: HelmRelease
+      name: '*'
+    - kind: GitRepository
+      name: '*'
+    - kind: OCIRepository
+      name: '*'
+    - kind: HelmRepository
+      name: '*'
+---
+# The homerun2 components (omni-pitcher, scout, catchers, ...) are Flux
+# Kustomizations in homerun2, rendered by ./homerun2.yaml. Their failure also
+# fails homerun2 in flux-system (wait: true), but only this Alert names the
+# component. A Provider must sit in the Alert's own namespace, hence the
+# second one.
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Provider
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: homerun2
+spec:
+  type: generic
+  address: http://homerun2-k8s-pitcher.homerun2.svc.cluster.local:8080/flux
+---
+apiVersion: notification.toolkit.fluxcd.io/v1beta3
+kind: Alert
+metadata:
+  name: homerun2-k8s-pitcher
+  namespace: homerun2
+spec:
+  providerRef:
+    name: homerun2-k8s-pitcher
+  eventSeverity: error
+  eventSources:
+    - kind: Kustomization
+      name: '*'
+    - kind: OCIRepository
+      name: '*'
+    - kind: HelmRelease
+      name: '*'

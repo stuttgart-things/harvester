@@ -1,0 +1,129 @@
+---
+# The light at the table -- light-catcher-tabletennis' profile, mounted
+# instead of the one in the flux component
+# (HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM, flux#747).
+#
+# THE LAB HAS NO DEVICE: every rule points at the wled-mock homerun2-sops
+# brings (https://wled-mock.<EDGE_DOMAIN> shows what it gets). The real one is
+# wled-matrix.sthings.lab (192.168.10.123, ESP32, WLED 16.0.1, 36 LEDs in one
+# segment -- clusters/homerun2-dev/homerun2-light-catcher-profile.yaml), which
+# LabDA cannot reach. On a cluster that can, swap `endpoint` and nothing else.
+#
+# Beside the LED matrix (hosts/matrix/profile.yaml): the panel holds the score
+# (tabletennis-score, hold) and shows zaehlwerk's banner (SATZ/SIEG <name>,
+# SEITENWECHSEL, ANGABE <name>); the light only adds colour to the moment.
+#
+# What zaehlwerk sends (internal/panel/sink.go): every transition as
+# system: tabletennis, SUCCESS for set_won/match_won, INFO for the rest, with
+# tags transition=<kind> and, where it went to one, side=a|b. Tags here match
+# WHOLE comma-separated elements and ALL must be present (light-catcher
+# v1.1.0+) -- not the notification-catcher's substring match. First match
+# wins, so the specific rules come first. No rule -- undo, confirmed, a
+# correction -- lights nothing (`no matching effect` in the log).
+#
+# Effect names are looked up on the device (GET /json/eff, light-catcher
+# v1.7.0); FxMap is only the fallback, and every name below is in it, so the
+# mock and a device that does not answer get the same IDs. Colours: palettes
+# sunset, beach, forest, ocean, or red, yellow, green, blue, white; any other
+# name is a WLED palette on the device. speed/intensity/brightness 0-255.
+#
+# A newer effect cuts an older one's timer (a point right after a set win ends
+# the rainbow early), after the last one the catcher sends {"on": false}.
+#
+# Re-read on every message -- no restart after a change. No ${VAR}: edge-lab
+# applies this with no substitution of its own (light-profile.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-light-catcher-tabletennis-profile
+  namespace: homerun2-tabletennis
+data:
+  profile.yaml: |
+    effects:
+      # The match: as long as the panel's SIEG banner, give or take.
+      tabletennis-match:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won]
+        fx: Fireworks
+        duration: 10
+        color: forest
+        speed: 200
+        intensity: 200
+        brightness: 255
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      tabletennis-set:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=set_won]
+        fx: Rainbow
+        duration: 4
+        color: forest
+        speed: 180
+        brightness: 255
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      # SEITENWECHSEL done (ends=b:a): a white wipe across the table.
+      tabletennis-ends:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=ends_changed]
+        fx: Wipe
+        duration: 3
+        color: white
+        speed: 160
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      # Who serves first is decided (ANGABE <name>): breathe in the server's
+      # colour.
+      tabletennis-serve-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=serve_decided, side=a]
+        fx: Breathe
+        duration: 3
+        color: blue
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      tabletennis-serve-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=serve_decided, side=b]
+        fx: Breathe
+        duration: 3
+        color: red
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      # Warm-up over, the match starts.
+      tabletennis-warmup-over:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=warmup_over]
+        fx: Scan
+        duration: 2
+        color: green
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      # A point: one second in the side's colour -- the same blue and red as
+      # the component's own profile, and as the panel's sides.
+      tabletennis-point-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, side=a]
+        fx: Solid
+        duration: 1
+        color: blue
+        brightness: 255
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local
+      tabletennis-point-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, side=b]
+        fx: Solid
+        duration: 1
+        color: red
+        brightness: 255
+        segments: [0]
+        endpoint: http://homerun2-wled-mock.homerun2.svc.cluster.local

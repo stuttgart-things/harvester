@@ -1,0 +1,11 @@
+---
+# Collections for the workstation playbooks -- docs/workstation.md.
+# Same pins as clusters/edge/k3s/requirements.yaml.
+collections:
+  - name: community.general
+    version: 13.5.0
+  - name: community.docker
+    version: 5.4.0
+  - name: ansible.posix
+    version: 2.2.2
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1002.1398/sthings-container-26.1002.1398.tar.gz

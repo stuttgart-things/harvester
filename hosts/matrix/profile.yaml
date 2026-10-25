@@ -3,14 +3,14 @@
 # Dagger module mounts this directory at /src). Every run overwrites the file
 # on the Pi and restarts the catcher if it changed, so edit it here, not there.
 #
-# The same rules as the led-catcher simulator on homerun2-dev (the base
-# profile of stuttgart-things/homerun2-led-catcher), so the panel and the
-# simulator agree. The one that matters for table tennis is tabletennis-score:
+# The single source of the display rules: homerun2-dev's simulator mounts
+# the same rules (clusters/homerun2-dev/homerun2-led-catcher-profile.yaml,
+# keep the two identical), so the panel and the simulator agree. The one that matters for table tennis is tabletennis-score:
 # the score stays up (hold) until the next point replaces it.
 #
 # It only fires once the panel reads the `tabletennis` stream. That switch is
 # a human act (clusters/homerun2-dev/README.md, section 9): the `tabletennis`
-# button on https://matrix.sthings.lab, and `messages` -- or `reset` -- after
+# button on https://matrix.sthings.lab/matrix/, and `messages` -- or `reset` -- after
 # the match.
 # Notifications are `card`s (homerun2-led-catcher#121): a header bar in the
 # severity colour with the system, the title wrapped over 3-4 lines, the
@@ -54,10 +54,24 @@ displayRules:
     font: 6x10.bdf
     hold: true
     duration: 3
+  # Green "all fine" cards -- Flux Ready=True flips, mostly -- come in bursts
+  # (one reconcile flips several Kustomizations within seconds). The panel
+  # shows one display at a time and, before led-catcher's DISPLAY_QUEUE, kept
+  # only the newest waiting one: a third flip arriving during a 10 s card
+  # replaced the second, which never reached the panel while the simulator
+  # listed it. 4 s keeps them short so a burst clears quickly.
+  #
+  # Below tabletennis-score, which takes the SUCCESS points of a match.
+  success-all:
+    systems: ["*"]
+    severity: [SUCCESS]
+    kind: card
+    strip_prefix: true
+    duration: 4
   default-info:
     systems: ["*"]
     # DEBUG too: the demo-pitcher sends it, and without a rule nothing shows.
-    severity: [INFO, SUCCESS, DEBUG]
+    severity: [INFO, DEBUG]
     kind: card
     strip_prefix: true
     duration: 10

@@ -1,0 +1,15 @@
+# Flux never reads these: they are run by hand (Ansible from the Mac) or are
+# render input, not Kubernetes objects. Same idea as ../edge/.sourceignore.
+#   ./k3s                inventory, vars and runbook for the k3s install
+#   inventory, inventory-sthingsnet, tools.yaml, edge.yaml   base OS / tools / kiosk runs
+#   ./cluster-apps.yaml  input of blueprints render-cluster-apps (ClusterApps)
+# kustomization.yaml (generated) lists only the Flux objects; this keeps it
+# that way even if that file goes.
+k3s/
+inventory
+inventory-sthingsnet
+tools.yaml
+edge.yaml
+cluster-apps.yaml
+*.md
+kiosk.yaml

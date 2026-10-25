@@ -1,0 +1,4 @@
+# The box in SthingsNet (dd-wrt, DHCP lease 192.168.10.111) -- for kiosk runs there.
+# In the table tennis network use ./inventory (192.168.8.10).
+[edge]
+sthings-edge ansible_host=192.168.10.111 ansible_user=sthings

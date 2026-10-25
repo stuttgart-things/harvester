@@ -1,0 +1,91 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+    name: flux-repo
+    namespace: flux-system
+spec:
+    interval: 1h
+    ref:
+        tag: v1.182.2
+    url: oci://ghcr.io/stuttgart-things/flux/repo
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: apps
+    name: edge-apps
+    namespace: flux-system
+spec:
+    decryption:
+        provider: sops
+        secretRef:
+            name: sops-age
+    dependsOn:
+        - name: edge-infra
+    interval: 1h
+    path: ./clusters/sthings-edge/apps
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 5m
+    wait: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: infrastructure
+    name: edge-infra
+    namespace: flux-system
+spec:
+    interval: 1h
+    path: ./clusters/sthings-edge/infra
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 15m
+    wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+    labels:
+        app.kubernetes.io/managed-by: flux
+        kustomization.stuttgart-things.com/type: apps
+    name: edge-play
+    namespace: flux-system
+spec:
+    dependsOn:
+        - name: edge-infra
+    interval: 1h
+    path: ./clusters/sthings-edge/play
+    postBuild:
+        substituteFrom:
+            - kind: ConfigMap
+              name: cluster-vars
+              optional: false
+    prune: true
+    retryInterval: 1m
+    sourceRef:
+        kind: GitRepository
+        name: flux-system
+    timeout: 10m
+    wait: true
