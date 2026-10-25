@@ -12,6 +12,7 @@ and in Backstage TechDocs.
 
 | Doc | |
 |---|---|
+| [Landscape](./landscape.md) | the whole picture on one page: context, ports and protocols, the two networks, today and the target (incl. the open captive portal) |
 | [Architecture](./architecture.md) | the box, the router, k3s and Cilium, the services, the two name worlds (edge CA / OpenBao vs. Hetzner DNS / Let's Encrypt), the edge CA, what runs and what does not, DNS commands |
 | [Step by step](./step-by-step.md) | a new cluster in phases -- secrets, node, cluster files, Flux files (ClusterApps + render **or** by hand), bootstrap, OpenBao/MinIO -- each with one commit and a check; CLI and Dagger side by side |
 | [Runbook](./runbook.md) (all in one) | who creates which file in a cluster folder; *Recreate from scratch* in ten steps (with the commands); moving to the hardware |

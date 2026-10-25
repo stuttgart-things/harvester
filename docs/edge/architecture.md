@@ -6,7 +6,8 @@ internal one with the edge's own CA (and OpenBao for the devices), and the
 public one at Hetzner DNS with Let's Encrypt. The how-to is in
 [runbook.md](./runbook.md) (layout, *Recreate from scratch*), every hand-written
 file in [from-scratch.md](./from-scratch.md); history in [notes.md](./notes.md);
-tracking issue harvester#364.
+tracking issue harvester#364. The whole landscape -- context, ports, today
+and the target -- is on one page: [landscape.md](./landscape.md).
 
 ## The site
 
