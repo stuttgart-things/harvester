@@ -35,24 +35,56 @@ Once per host. Nothing here is GitOps.
    ```
 
 2. **Enable the `pcidevices-controller` add-on**: Harvester UI → Advanced →
-   Add-ons → `pcidevices-controller` → Enable.
-3. **Enable passthrough** for the GPU **and** its audio function (same IOMMU
-   group): Advanced → PCI Devices → filter `NVIDIA` → select both → *Enable
-   Passthrough*. That creates the `PCIDeviceClaim`s and binds both to
-   `vfio-pci`. The host itself has no display on the card, so nothing is lost.
-4. **Read the resource name** the VM has to ask for:
+   Add-ons → `pcidevices-controller` → Enable, or
+   `kubectl -n harvester-system patch addons.harvesterhci.io pcidevices-controller --type=merge -p '{"spec":{"enabled":true}}'`.
+3. **Enable passthrough for the whole IOMMU group.** VFIO only starts a VM
+   when *every* endpoint in the group is bound to `vfio-pci`. On this host
+   (AMD Granite Ridge, board DRFXI, BIOS 1.12) group 0 holds the GPU
+   `01:00.0`, its audio function `01:00.1` **and the second NVMe `02:00.0`**
+   (WD SN850X 1 TB, behind the neighbouring root port). Harvester does not use
+   that disk (BlockDevice `Unprovisioned`, system and Longhorn are on the
+   Samsung 990 EVO), so it is claimed too and stays unattached; its data
+   (factory Windows + "Data") is untouched while it sits on `vfio-pci`.
+
+   ```bash
+   ssh rancher@192.168.10.110 'g=$(basename $(readlink /sys/bus/pci/devices/0000:01:00.0/iommu_group)); for d in /sys/kernel/iommu_groups/$g/devices/*; do lspci -nnks ${d##*/}; done'
+   ```
+
+   UI: Advanced → PCI Devices → select all three → *Enable Passthrough*. With
+   kubectl, a claim per device; the controller ignores a claim without the
+   `ownerReference` to its PCIDevice ("Cannot find PCIDevice that owns …"):
 
    ```bash
    export KUBECONFIG=~/.kube/harvester
-   kubectl get pcidevices -o custom-columns=NAME:.metadata.name,RESOURCE:.status.resourceName,ADDR:.status.address,DRIVER:.status.kernelDriverInUse | grep -i nvidia
-   kubectl get pcideviceclaims
-   kubectl get node -o jsonpath='{.items[0].status.allocatable}' | tr ',' '\n' | grep -i nvidia
+   for n in harvester-000001000 harvester-000001001 harvester-000002000; do
+     uid=$(kubectl get pcidevice $n -o jsonpath='{.metadata.uid}')
+     addr=$(kubectl get pcidevice $n -o jsonpath='{.status.address}')
+     kubectl apply -f - <<EOF
+   apiVersion: devices.harvesterhci.io/v1beta1
+   kind: PCIDeviceClaim
+   metadata:
+     name: $n
+     ownerReferences:
+       - {apiVersion: devices.harvesterhci.io/v1beta1, kind: PCIDevice, name: $n, uid: $uid}
+   spec: {address: "$addr", nodeName: harvester, userName: admin}
+   EOF
+   done
    ```
 
-   The VGA function's `RESOURCE` goes into the XR's `deviceName`. The XR
-   carries `nvidia.com/GB206_GEFORCE_RTX_5060_TI`, which is the expected
-   form but **not verified**; correct it if the node advertises something
-   else. An unknown name leaves the VMI `Pending` (unschedulable).
+   The first bind attempt may log `device or resource busy`; the controller
+   retries and gets there within a minute or two.
+4. **Read the resource name** the VM has to ask for:
+
+   ```bash
+   kubectl get pcidevices -o custom-columns=NAME:.metadata.name,RESOURCE:.status.resourceName,ADDR:.status.address,DRIVER:.status.kernelDriverInUse | grep -E "0000:0[12]:00"
+   kubectl get pcideviceclaims -o custom-columns=NAME:.metadata.name,ENABLED:.status.passthroughEnabled
+   kubectl get node harvester -o json | jq '.status.allocatable | with_entries(select(.key|test("nvidia|sandisk")))'
+   ```
+
+   Verified 2026-10-26: the VGA function advertises **`nvidia.com/2d04`**.
+   The host's pci.ids does not know the RTX 5060 Ti yet, so the controller
+   falls back to the device ID instead of a `GB206_…` name. That is the XR's
+   `deviceName`; an unknown name leaves the VMI `Pending` (unschedulable).
 
 ## 2. Crossplane: roll virtual-machine v0.1.16
 

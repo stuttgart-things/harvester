@@ -8,8 +8,8 @@
 #
 # hostDevices needs virtual-machine >= v0.1.16 / harvester-vm >= v0.1.14
 # (crossplane-configurations#550). The deviceName is the PCIDevice's
-# .status.resourceName AFTER passthrough is enabled in Harvester -- VERIFY IT
-# before merging:
+# .status.resourceName after passthrough is enabled in Harvester; verified
+# 2026-10-26 (pci.ids on the host does not know the card yet, hence the ID):
 #   kubectl get pcidevices -o custom-columns=NAME:.metadata.name,RESOURCE:.status.resourceName | grep -i nvidia
 # A name the node does not advertise leaves the VMI Pending (unschedulable).
 apiVersion: resources.stuttgart-things.com/v1alpha1
@@ -25,4 +25,4 @@ spec:
   ansible: true
   hostDevices:
     - name: gpu0
-      deviceName: nvidia.com/GB206_GEFORCE_RTX_5060_TI
+      deviceName: nvidia.com/2d04
