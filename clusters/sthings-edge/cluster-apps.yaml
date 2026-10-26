@@ -249,7 +249,7 @@ spec:
         # The latest releases where flux's defaults are older (v1.182.2:
         # led-catcher v0.20.0, notification-catcher v3.13.0), as on
         # homerun2-dev. Drop a pin once the flux default catches up.
-        HOMERUN2_LED_CATCHER_VERSION: v0.22.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+        HOMERUN2_LED_CATCHER_VERSION: v0.23.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
         HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
         HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
