@@ -1,0 +1,21 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ollama-gpu
+  description: Crossplane claim (xr-virtualmachine-harvester) - ollama-gpu, local LLM for Backstage RAG-AI
+  annotations:
+    github.com/project-slug: stuttgart-things/harvester
+    backstage.io/source-location: url:https://github.com/stuttgart-things/harvester/tree/main/clusters/crossplane-mgmt/xrs/infra/ollama-gpu
+    claim-machinery/template: xr-virtualmachine-harvester
+    claim-machinery/category: infra
+  tags:
+    - crossplane
+    - claim
+    - xr-virtualmachine-harvester
+    - infra
+    - gpu
+spec:
+  type: crossplane-claim
+  lifecycle: experimental
+  owner: platform-team
