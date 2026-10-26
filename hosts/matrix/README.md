@@ -164,7 +164,7 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_redis_stream=messages,tabletennis led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.22.0 led_base_path=/matrix \
+led_catcher_version=v0.23.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock led_display_queue=3 \
 run_id=$(date +%s%N)" \
@@ -175,7 +175,7 @@ rm -f ansible.env
 
 | Parameter | |
 |---|---|
-| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses |
+| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146) |
 | `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
@@ -204,7 +204,19 @@ curl -s -X POST https://matrix.sthings.lab/matrix/display -H "Authorization: Bea
 # the clock: switch it or its colour at runtime (not persisted; the unit's LED_IDLE wins after a restart)
 curl -s -X PUT https://matrix.sthings.lab/matrix/display/idle -H "Authorization: Bearer $LED_API_TOKEN" \
   -H 'Content-Type: application/json' -d '{"mode":"clock","color":[255,140,0]}'
+
+# a playlist of GIFs from visual_aid/ or https URLs: shuffled, 20 s each, for 10 min
+# (omit total for endless; messages interrupt it, then it plays on; v0.23.0)
+curl -s -X PUT https://matrix.sthings.lab/matrix/display/playlist -H "Authorization: Bearer $LED_API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"images":["schwarz_stimmung_froehlich.gif","grau40_stimmung_traurig.gif"],"order":"random","duration":20,"total":600}'
+curl -s -X DELETE https://matrix.sthings.lab/matrix/display/playlist -H "Authorization: Bearer $LED_API_TOKEN"
 ```
+
+GIFs for the panel go to `~/homerun2-led-catcher/visual_aid/` on the Pi
+(`scp *.gif sthings@matrix.sthings.lab:~/homerun2-led-catcher/visual_aid/`) and are
+listed in the UI at once. They are untracked in the checkout, so a run of the play
+leaves them alone. Images fetched from URLs are cached in `/tmp/led-catcher-remote`.
 
 The demo UI's **Panel control** does the same with the token typed in.
 
