@@ -131,9 +131,30 @@ Put the IP into [`inventory.ini`](./inventory.ini), and into the system
 inventory once it is final (a static DHCP lease on the DD-WRT is the simplest
 way to keep it).
 
-If the VMI does not start with the device: harvester-vm pins memory hotplug
-headroom (`memory.maxGuest` = 4× guest). Whether that is allowed together with
-a VFIO device is unverified (crossplane-configurations#550, "Open risk").
+`memory.maxGuest` (4× guest, from harvester-vm) together with the VFIO device
+works: verified 2026-10-26, the VMI runs with `maxGuest: 32Gi` and the guest
+sees `GB206 [GeForce RTX 5060 Ti] [10de:2d04]`.
+
+**Check the VMI, not just the VM.** On 2026-10-26 Argo CD applied the XR in
+the same sync that raised `virtual-machine` to v0.1.16, so the first VM
+generation came without `hostDevices`; the second added it and the VM sat on
+`RestartRequired` with a GPU-less VMI. `spec.runStrategy` is `RerunOnFailure`,
+so deleting the VMI *stops* the VM; start it through the subresource instead
+(the run strategy belongs to Crossplane):
+
+```bash
+export KUBECONFIG=~/.kube/harvester
+kubectl -n vms get vm ollama-gpu -o json | jq -c '[.status.conditions[]|select(.type=="RestartRequired")]'
+kubectl -n vms get vmi ollama-gpu -o jsonpath='{.spec.domain.devices.hostDevices}{"\n"}'   # must not be empty
+virtctl -n vms restart ollama-gpu    # or, without virtctl, stop + start:
+echo '{}' > /tmp/empty.json
+kubectl replace --raw /apis/subresources.kubevirt.io/v1/namespaces/vms/virtualmachines/ollama-gpu/stop  -f /tmp/empty.json
+kubectl replace --raw /apis/subresources.kubevirt.io/v1/namespaces/vms/virtualmachines/ollama-gpu/start -f /tmp/empty.json
+```
+
+The restart also moved the DHCP lease (192.168.10.133 → .147). MAC
+`c6:a7:6d:4b:78:1a` wants a static lease on the DD-WRT before Backstage points
+at the IP.
 
 ## 4. Ollama, through Dagger
 
