@@ -24,7 +24,7 @@ data:
   rancherNamespace: fleet-default
   # Distro + Kubernetes version (lab standard; override per XR if needed)
   distro: k3s
-  kubernetesVersion: v1.35.4+k3s1
+  kubernetesVersion: v1.35.9+k3s1
 
   # --- Harvester infrastructure defaults (infrastructure: harvester) ---
   # Harvester cloud credential, cattle-global-data:<name>
