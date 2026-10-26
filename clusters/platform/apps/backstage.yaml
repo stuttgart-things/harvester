@@ -37,13 +37,19 @@ spec:
       GATEWAY_NAME: platform-sthings-gateway
       GATEWAY_NAMESPACE: default
       # RAG-AI ("Ask AI") with its own pgvector Postgres (backstage-rag-postgres.yaml).
-      # LLM endpoint and models are the app's defaults (OpenRouter);
-      # BACKSTAGE_LLM_API_KEY is in backstage-secrets-subst. FIRST ROLLOUT:
+      # LLM: the local Ollama on the GPU VM (harvester#526, hosts/ollama-gpu),
+      # not the app's OpenRouter default. BACKSTAGE_LLM_API_KEY in
+      # backstage-secrets-subst stays: Ollama ignores it, the plugin wants one.
+      # Changing the embeddings model changes the vector size: truncate the
+      # embeddings table and re-index (hosts/ollama-gpu/README.md, step 6). FIRST ROLLOUT:
       # Backstage starts before rag-postgres-creds exists and skips RAG-AI
       # quietly -- restart it once the CNPG Cluster is Ready:
       #   kubectl -n backstage wait cluster.postgresql.cnpg.io/rag-postgres --for=condition=Ready --timeout=15m
       #   kubectl -n backstage rollout restart deploy/backstage-deployment
       BACKSTAGE_RAG_AI_ENABLED: "true"
+      BACKSTAGE_LLM_BASE_URL: http://ollama-gpu.sthings.lab:11434/v1
+      BACKSTAGE_LLM_MODEL: gemma3:12b
+      BACKSTAGE_LLM_EMBEDDINGS_MODEL: bge-m3
     substituteFrom:
       - kind: Secret
         name: backstage-secrets-subst
