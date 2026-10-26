@@ -34,7 +34,7 @@ spec:
   ref:
     # v1.11.0+: the UI serves under BASE_PATH, /schedule for homerun2-portal
     # (patch below); the session cookie is scoped to it.
-    tag: v1.13.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
+    tag: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
