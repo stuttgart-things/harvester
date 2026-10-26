@@ -738,6 +738,7 @@ demo that plays itself (zaehlwerk ADR-0015/16/17, schmetterpause ADR-0027/28):
 | Tournaments, table, ranking | https://schmetterpause.homerun2-dev.sthings.lab |
 | The running match (spectator screen) | https://zaehlwerk.homerun2-dev.sthings.lab/ui/watch |
 | The game itself | https://zaehlwerk-pong.homerun2-dev.sthings.lab (a running game at `/play/<id>`) |
+| The game on the TV, every game one after the other | https://zaehlwerk-pong.homerun2-dev.sthings.lab/live (zaehlwerk v0.35.0+) |
 | Matrix, strip, mock, alerts in one page | https://portal.homerun2-dev.sthings.lab (`matrix`, `table`, `wled`, `notify`) |
 
 A tournament is created by a person on schmetterpause's tournament page --
