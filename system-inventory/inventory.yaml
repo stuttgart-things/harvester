@@ -532,13 +532,13 @@ hosts:
 
   # ---------------------------------------------------------------------------
   # crossplane-mgmt: Crossplane for the VM path, fed by Argo CD on platform.
-  # Node address: static lease in docs/install.md. Distribution not recorded
-  # in this repo, hence kind host.
+  # Node address: static lease in docs/install.md. Distribution read from the
+  # live node on 2026-10-26 (v1.36.1+k3s1).
   # ---------------------------------------------------------------------------
   - system: crossplane-mgmt
     hostname: crossplane-mgmt
     ip: 192.168.10.108
-    kind: host
+    kind: k3s-cluster
     cluster: crossplane-mgmt
     description: >-
       VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28).
@@ -556,9 +556,8 @@ hosts:
           RancherCluster, XVirtualMachine and AnsibleRun claims; reached
           through the Kubernetes API, no ingress.
 
-  # From the Clusterbook seed (clusters/platform-seeds/networkconfig-networks-labul.yaml,
-  # 177:ASSIGNED:DNS:crossplane-mgmt). The seed is not the ledger -- confirm
-  # against the live networks-labul CR on platform.
+  # Clusterbook ledger (networks-labul on platform, read 2026-10-26):
+  # 177:ASSIGNED:DNS:crossplane-mgmt.
   - system: crossplane-mgmt
     hostname: crossplane-mgmt-vip
     ip: 192.168.10.177
@@ -572,9 +571,8 @@ hosts:
   # ---------------------------------------------------------------------------
   # app-dev-hv: the first ClusterStack ordered on machinery-hv
   # (clusters/machinery-hv/xrs/app-dev-hv.yaml). Address from
-  # docs/demo/bare-metal-self-service.md.
-  # TODO: every ClusterStack takes a second Clusterbook address for its
-  # gateway/DNS reservation; app-dev-hv's is not recorded in this repo.
+  # docs/demo/bare-metal-self-service.md. Gateway address from the Clusterbook
+  # ledger (networks-labul on platform, read 2026-10-26).
   # ---------------------------------------------------------------------------
   - system: app-dev-hv
     hostname: app-dev-hv
@@ -597,12 +595,66 @@ hosts:
           s3://app-dev-hv-schmetterpause-cnpg on platform's MinIO) and
           zaehlwerk.
 
-  # TODO: tabletennis -- the k3s cluster ordered as a RancherCluster on
-  # crossplane-mgmt (to be replaced by an order on machinery-hv; never both at once) (clusters/crossplane-mgmt/xrs/infra/tabletennis), names
-  # *.tabletennis.sthings.lab. Clusterbook assigns its address automatically and
-  # no repo file records it; add the node IP and the gateway VIP here once they
-  # are read from the ledger (kubectl get networkconfig networks-labul -n
-  # clusterbook on platform).
+  - system: app-dev-hv
+    hostname: app-dev-hv-gateway
+    ip: 192.168.10.173
+    kind: host
+    cluster: app-dev-hv
+    description: >-
+      Cilium LB VIP (Clusterbook 173:ASSIGNED:DNS:app-dev-hv) of the Gateway
+      app-dev-hv-gateway; *.app-dev-hv.sthings.lab with certificates from the
+      OpenBao PKI on platform.
+    services:
+      - name: schmetterpause
+        fqdn: schmetterpause.app-dev-hv.sthings.lab
+        description: Table tennis app, admin side.
+      - name: Zählwerk
+        fqdn: zaehlwerk.app-dev-hv.sthings.lab
+        description: Score counter.
+      - name: led-catcher
+        fqdn: led-catcher.app-dev-hv.sthings.lab
+        description: homerun2 LED catcher with its web simulator.
+      - name: core-catcher
+        fqdn: core-catcher.app-dev-hv.sthings.lab
+        description: homerun2 core catcher.
+      - name: omni-pitcher
+        fqdn: omni-pitcher.app-dev-hv.sthings.lab
+        description: homerun2 omni pitcher (API).
+      - name: scout
+        fqdn: scout.app-dev-hv.sthings.lab
+        description: homerun2 scout.
+
+  # ---------------------------------------------------------------------------
+  # tabletennis: the k3s cluster ordered as a RancherCluster on crossplane-mgmt
+  # (clusters/crossplane-mgmt/xrs/infra/tabletennis). Still running beside
+  # app-dev-hv on 2026-10-26. Addresses read live: node from the cluster,
+  # gateway from the Clusterbook ledger.
+  # ---------------------------------------------------------------------------
+  - system: tabletennis
+    hostname: tabletennis
+    ip: 192.168.10.114
+    kind: k3s-cluster
+    cluster: tabletennis
+    description: >-
+      Single node (tabletennis-pool1) built by Rancher on Harvester. The
+      address is a DHCP lease from the dynamic pool, not a reservation.
+      homerun2 and tabletennis come from the platform profiles via Argo CD on
+      platform.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: k3s API server, registered in Argo CD on platform.
+
+  - system: tabletennis
+    hostname: tabletennis-gateway
+    ip: 192.168.10.180
+    kind: host
+    cluster: tabletennis
+    description: >-
+      Clusterbook reservation (180:ASSIGNED:DNS:tabletennis) for the Gateway
+      tabletennis-gateway, *.tabletennis.sthings.lab. Not served: the cluster
+      has no Cilium Gateway controller, so the Gateway stays Pending and the
+      VIP never comes up (checked 2026-10-26).
 
   # ---------------------------------------------------------------------------
   # edge (edge-tt-test1): the edge lab cluster in LabDA vSphere, the reference
