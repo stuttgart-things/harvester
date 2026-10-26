@@ -32,7 +32,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
   ref:
-    # v1.11.0+: the UI serves under BASE_PATH, /schedule for homerun2-portal
+    # v1.11.0+: the UI serves under BASE_PATH, /schedule for sthings-portal
     # (patch below); the session cookie is scoped to it.
     tag: v1.13.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
 ---
@@ -140,7 +140,7 @@ spec:
               findings:
                 officeHours: { start: 8, end: 18 }
               checks: []
-    # homerun2-portal serves the UI under /schedule/ (./homerun2-portal.yaml),
+    # sthings-portal serves the UI under /schedule/ (./sthings-portal.yaml),
     # so it answers under that prefix; /ui on schedule-pitcher.<domain>
     # redirects there. /findings, /api, /health and /metrics stay at the root
     # for agents and probes, so the route keeps matching /.

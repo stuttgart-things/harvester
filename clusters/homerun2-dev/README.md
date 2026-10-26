@@ -318,7 +318,7 @@ committed, the FluxInstance syncing `clusters/homerun2-dev` applies it -- no
 | `openebs` | local storage |
 | `headlamp` | `https://headlamp.homerun2-dev.sthings.lab` |
 | `flux-web` | `https://flux.homerun2-dev.sthings.lab` |
-| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- homerun2-portal picks up a new service list without a manual restart |
+| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- sthings-portal picks up a new service list without a manual restart |
 
 The bundle maps one `INFRA_DOMAIN` onto every base that needs a domain, so the
 name is written once. Ordering comes from upstream `dependsOn`, not from the
@@ -612,7 +612,7 @@ kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
 **In the portal** the Pi is the card *LED Matrix (Pi)* under
 https://portal.homerun2-dev.sthings.lab/ui/matrix, next to the simulator under
 `/led`: `matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080` in
-[`homerun2-portal.yaml`](./homerun2-portal.yaml). The portal forwards
+[`sthings-portal.yaml`](./sthings-portal.yaml). The portal forwards
 `/matrix/...` unchanged, so the Pi runs with `BASE_PATH=/matrix`
 (`led_base_path`, led-catcher v0.19.0 or later for the card's fragment). It is
 plain HTTP on 8080, not Caddy's https: the portal image does not carry the
@@ -632,6 +632,42 @@ a fixed table in light-catcher v1.2.0, not the device's own list -- only
 Solid, Blink, Breathe and Wipe are right; the file explains.
 
 ---
+
+### The portal: sthings-portal with ZITADEL login (#560)
+
+[`sthings-portal.yaml`](./sthings-portal.yaml) runs sthings-portal (the
+successor of homerun2-portal) on `portal.homerun2-dev.sthings.lab`. Login:
+**ZITADEL** on the platform cluster (`https://zitadel.platform.sthings.lab`,
+users and roles in [`../platform/zitadel-config`](../platform/zitadel-config/README.md);
+`portal-admin` and `portal-user` get in), the local users as **emergency
+access**. The CA that verifies ZITADEL is
+[`sthings-portal-oidc-ca.yaml`](./sthings-portal-oidc-ca.yaml) (`CN=sthings.lab`).
+
+The Secret `sthings-portal-auth` (`sthings-portal-auth.enc.yaml`) needs the
+client secret from ZITADEL, so it is made after the Terraform apply:
+
+```bash
+cd ~/projects/harvester
+umask 077
+htpasswd -nB emergency > /dev/shm/portal-users && test -s /dev/shm/portal-users || echo "htpasswd FAILED"
+KUBECONFIG=~/.kube/platform.sthings.lab terraform -chdir=clusters/platform/zitadel-config \
+  output -json client_secrets | jq -j '."homerun2-dev"' > /dev/shm/portal-client-secret
+openssl rand -base64 48 | tr -d '\n' > /dev/shm/portal-session-key
+
+kubectl create secret generic sthings-portal-auth -n homerun2 \
+    --from-file=users=/dev/shm/portal-users \
+    --from-file=session-key=/dev/shm/portal-session-key \
+    --from-file=oidc-client-secret=/dev/shm/portal-client-secret \
+    --dry-run=client -o yaml \
+  | sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
+      --encrypted-regex '^(data|stringData)$' --input-type yaml --output-type yaml /dev/stdin \
+  > clusters/homerun2-dev/sthings-portal-auth.enc.yaml
+shred -u /dev/shm/portal-users /dev/shm/portal-client-secret /dev/shm/portal-session-key
+grep -c 'ENC\[' clusters/homerun2-dev/sthings-portal-auth.enc.yaml   # 4
+```
+
+The client ID goes into `AUTH_OIDC_CLIENT_ID` in `sthings-portal.yaml`
+(`terraform output -json client_ids | jq -r '."homerun2-dev"'`, not a secret).
 
 ## What this cluster does not have yet
 
