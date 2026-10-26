@@ -40,6 +40,9 @@ spec:
     # The k8s-pitcher only, pitching to homerun2-dev's omni-pitcher. The -sops
     # variant: this cluster has no external-secrets.
     - ../components/homerun2-k8s-pitcher-remote-sops
+    # The lab IdP for sthings-portal (#560): PostgreSQL, ZITADEL with the
+    # login UI v2 and the `terraform` machine user for ./zitadel-config.
+    - ../components/zitadel
   # The OpenBao agent injector WITHOUT its pod anti-affinity. The chart ships a
   # HARD anti-affinity of the injector against itself plus the default
   # RollingUpdate: on this single node the new pod can never sit beside the old
@@ -131,3 +134,10 @@ spec:
       # CA (CN=sthings.lab) is in trust-manager's cluster-trust-bundle here.
       HOMERUN2_CENTRAL_PITCHER_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch
       CLUSTER_NAME: platform
+
+      # ---- zitadel (#560, as stuttgart-things/stuttgart-things#4118) -------
+      # zitadel.<INFRA_DOMAIN> under the gateway's wildcard (OpenBao PKI,
+      # CN=sthings.lab). Masterkey, DB and initial admin passwords come from
+      # zitadel-secrets (./apps/zitadel-secrets.enc.yaml); the masterkey must
+      # never change. Same storage class as OpenBao.
+      ZITADEL_STORAGE_CLASS: local-path

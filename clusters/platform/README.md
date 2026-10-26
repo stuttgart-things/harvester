@@ -24,6 +24,19 @@ not and cannot do them.
 > that lands, certificates signed by it are valid and rejected everywhere. Only
 > then does the `infra` Vault come down.
 
+## ZITADEL — the lab IdP for sthings-portal
+
+`https://zitadel.platform.sthings.lab` (#560, as in the vSphere labs since
+stuttgart-things/stuttgart-things#4118).
+
+| | |
+|---|---|
+| Deployment | `apps-platform.yaml`, component `../components/zitadel` (PostgreSQL on `local-path`) |
+| Secrets | `apps/zitadel-secrets.enc.yaml` (Secret `zitadel-secrets`): `ZITADEL_MASTERKEY` -- **never changes**, it decrypts the data in PostgreSQL -- DB passwords, initial admin password |
+| Admin | `zitadel-admin@zitadel.zitadel.platform.sthings.lab`, password `ZITADEL_ADMIN_PASSWORD` (`sops -d`), changed at the first login |
+| Terraform | [`zitadel-config/`](zitadel-config/README.md): project, roles, the homerun2-dev portal's OIDC client, users |
+| Backup | none yet -- `pg_dump` plus the masterkey |
+
 <details open>
 <summary>OS-PREREQUISITES FOR ANSIBLE</summary>
 
