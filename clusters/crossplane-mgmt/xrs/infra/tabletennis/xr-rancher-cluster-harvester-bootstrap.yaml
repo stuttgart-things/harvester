@@ -101,6 +101,11 @@ spec:
       # file. The component set is fixed by the bundle.
       homerun2-platform: 'true'
       homerun2-platform/stack: 'true'
+      # notification-catcher (harvester#490), dry-run until the notify config
+      # is known-good. The webhook is property teamsWebhookUrl of the same
+      # vault-tabletennis entry as the rest of homerun2 (secret-key below).
+      homerun2-platform/notification-catcher: 'true'
+      homerun2-platform/notification-catcher-dry-run: 'true'
       # tabletennis: schmetterpause + its database, zaehlwerk, and the LED strip
       # at the table. A platform of its own, beside homerun2.
       tabletennis-platform: 'true'
@@ -199,6 +204,14 @@ spec:
       # and by tabletennis-platform for the light-catcher, which reads the same
       # Redis password because it is the same Redis. Keep them in step.
       homerun2-platform.stuttgart-things.com/secret-key: homerun2
+      homerun2-platform.stuttgart-things.com/shared-teams-webhook-secret-key: homerun2
+      homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
+        outputs:
+          - name: teams-tabletennis
+            type: msteams
+            webhook_url: "${TEAMS_WEBHOOK_URL}"
+            filters:
+              severity_min: warning
       # Everything else is left at its bundle default on purpose:
       #   homerun2 storage-class   -> openebs-hostpath, which this cluster has
       #   homerun2 redis-storage   -> 8Gi
