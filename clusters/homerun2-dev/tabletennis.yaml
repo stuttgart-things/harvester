@@ -102,9 +102,10 @@ spec:
       # zaehlwerk v0.34.0: the panel's stake and tournament tags, which the
       # strip's match-point and final effects match on, and PONG_COURT_SPEED.
       # v0.35.0: Pong's /live, the one address the TV stays on; v0.36.0:
-      # /ui/watch links it while Pong plays (v0.36.1: league matches too).
+      # /ui/watch links it while Pong plays (v0.36.1: league matches too);
+      # v0.37.0: the lobby's Liga card stops and plays the league.
       SCHMETTERPAUSE_VERSION: v0.19.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
-      ZAEHLWERK_VERSION: v0.36.1 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
+      ZAEHLWERK_VERSION: v0.37.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
   patches:
     # SP_PUBLIC_BASE_URL: the base ships a placeholder, and schmetterpause
     # builds its absolute links (login redirects) from it.
