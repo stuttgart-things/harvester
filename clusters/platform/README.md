@@ -84,6 +84,15 @@ helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 -n kub
 
 It rolls the agent, operator and envoy (short traffic gap on the gateway).
 
+**ufw on the node** (configure_rke_node's allow list, `fw_ports_tcp` in
+stuttgart-things/configure-rke-node) has 9100 but not Cilium's metrics ports:
+the four targets timed out until this rule (2026-10-27), limited to the pod
+CIDR Prometheus scrapes from. Re-add it after a node rebuild:
+
+```bash
+ssh sthings@platform.sthings.lab 'sudo ufw allow proto tcp from 10.0.0.0/8 to any port 9962:9965 comment "cilium/hubble/envoy metrics for Prometheus"'
+```
+
 <details open>
 <summary>OS-PREREQUISITES FOR ANSIBLE</summary>
 
