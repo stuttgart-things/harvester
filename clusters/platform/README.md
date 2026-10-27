@@ -111,11 +111,24 @@ the k3s config differs, so a version bump is the upgrade. The rendered
 
 - move the IPAM pool from `10.0.0.0/8` to `10.42.0.0/16` while the node holds
   `10.0.0.0/24`;
-- turn on Gateway ALPN and appProtocol for every route;
 - set the image pullPolicy to `Always`.
 
 None of that belongs in a k8s patch. Cilium stays at 1.18.5 (cilium-cli 0.19.0,
 from the 2026-03-16 build) until that is planned on its own.
+
+Gateway ALPN and appProtocol are on since 2026-10-27 (ZITADEL needs `h2` on the
+TLS listener and h2c to its backend). Only these two values were changed on the
+Helm release, nothing else:
+
+```bash
+helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 \
+  -n kube-system --reuse-values \
+  --set gatewayAPI.enableAlpn=true --set gatewayAPI.enableAppProtocol=true
+```
+
+All routes answered the same before and after (now over HTTP/2). The operator
+logs a burst of `no kind is registered for the type v1alpha2.TLSRouteList` at
+start: there is no TLSRoute CRD here, harmless.
 
 ```bash
 dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
