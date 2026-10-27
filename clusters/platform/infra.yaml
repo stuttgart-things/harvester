@@ -387,7 +387,7 @@ spec:
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
-      LOKI_VERSION: "19.1.0"
+      LOKI_VERSION: "19.4.0" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
       LOKI_STORAGE_CLASS: local-path
       LOKI_STORAGE_SIZE: 30Gi
       LOKI_RETENTION: 168h
@@ -419,6 +419,6 @@ spec:
   postBuild:
     substitute:
       FLUENT_BIT_NAMESPACE: logging
-      FLUENT_BIT_VERSION: "0.58.3"
+      FLUENT_BIT_VERSION: "0.58.3" # datasource=docker depName=ghcr.io/fluent/helm-charts/fluent-bit
       FLUENT_BIT_CLUSTER_NAME: platform
       FLUENT_BIT_LOKI_HOST: loki-gateway.loki.svc.cluster.local
