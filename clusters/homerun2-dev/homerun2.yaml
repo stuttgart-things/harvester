@@ -139,8 +139,8 @@ spec:
       HOMERUN2_LED_CATCHER_DISPLAY_QUEUE: "3"
 
       # Behind sthings-portal (./sthings-portal.yaml): each service answers
-      # under the key the portal serves it at -- on its own hostname too,
-      # e.g. led-catcher.homerun2-dev.sthings.lab/led/.
+      # under the key the portal serves it at. The portal is the only way in:
+      # the direct hostnames are gone (homerun2-routes below, #569).
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
       HOMERUN2_CORE_CATCHER_BASE_PATH: /core
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
@@ -167,9 +167,14 @@ spec:
 # beside the Kustomization that later creates its Service serves HTTP 500 for
 # good, while every Kustomization reports Ready.
 #
-# Eight routes, all under homerun2-dev.sthings.lab: omni-pitcher,
-# core-catcher, scout, led-catcher, light-catcher, wled-mock, demo-pitcher,
-# config-viewer.
+# The profile renders nine routes under homerun2-dev.sthings.lab; only
+# omni-pitcher's survives (#569). The UIs are served behind the sthings-portal
+# login (./sthings-portal.yaml) and their direct hosts bypassed it, so the
+# patches below delete those routes, and this Kustomization's prune takes them
+# off the cluster. omni-pitcher keeps its host for the webhook callers
+# (platform's HOMERUN2_CENTRAL_PITCHER_URL, .../pitch), narrowed to /pitch:
+# no /metrics or / from outside. Mirrors platform-sthings
+# (stuttgart-things#4149).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -195,6 +200,25 @@ spec:
     kind: GitRepository
     name: flux-apps
   path: ./apps/homerun2/profiles/sops-routes
+  # A plain `$patch: delete`: the flux-system Kustomization that applies this
+  # file has no postBuild, so no `$$` escaping as in platform-sthings' bundle.
+  patches:
+    - target:
+        kind: HTTPRoute
+        name: homerun2-(core-catcher|scout|led-catcher|light-catcher|wled-mock|demo-pitcher|config-viewer|notification-catcher)
+      patch: |
+        $patch: delete
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: deleted
+    - target:
+        kind: HTTPRoute
+        name: homerun2-omni-pitcher
+      patch: |
+        - op: replace
+          path: /spec/rules/0/matches/0/path/value
+          value: /pitch
   postBuild:
     substitute:
       HOMERUN2_NAMESPACE: homerun2

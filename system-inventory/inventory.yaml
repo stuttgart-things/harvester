@@ -425,32 +425,22 @@ hosts:
       - name: Flux web
         fqdn: flux.homerun2-dev.sthings.lab
         description: Flux UI.
-      - name: led-catcher
-        fqdn: led-catcher.homerun2-dev.sthings.lab
+      - name: sthings-portal
+        fqdn: portal.homerun2-dev.sthings.lab
         description: >-
-          homerun2 LED catcher with its web simulator; switches between the
-          `messages` and `tabletennis` streams.
-      - name: light-catcher
-        fqdn: light-catcher.homerun2-dev.sthings.lab
-        description: homerun2 light catcher, drives the WLED strip (wled-matrix).
-      - name: wled-mock
-        fqdn: wled-mock.homerun2-dev.sthings.lab
-        description: Stand-in for a WLED device.
-      - name: core-catcher
-        fqdn: core-catcher.homerun2-dev.sthings.lab
-        description: homerun2 core catcher.
+          homerun2 UIs behind the ZITADEL login (core, notify, led, matrix,
+          light, table, wled, schedule, sound, config, pitch); their direct
+          hosts are gone (#569).
       - name: omni-pitcher
         fqdn: omni-pitcher.homerun2-dev.sthings.lab
-        description: homerun2 omni pitcher; zaehlwerk pitches scores here.
-      - name: demo-pitcher
-        fqdn: demo-pitcher.homerun2-dev.sthings.lab
-        description: homerun2 demo pitcher.
-      - name: config-viewer
-        fqdn: config-viewer.homerun2-dev.sthings.lab
-        description: homerun2 config viewer.
-      - name: scout
-        fqdn: scout.homerun2-dev.sthings.lab
-        description: homerun2 scout.
+        description: >-
+          homerun2 omni pitcher, only /pitch (bearer token); platform's
+          k8s-pitcher pitches its events here.
+      - name: schedule-pitcher
+        fqdn: schedule-pitcher.homerun2-dev.sthings.lab
+        description: >-
+          homerun2 schedule pitcher for its agents; the UI is the portal's
+          /schedule.
       - name: schmetterpause
         fqdn: schmetterpause.homerun2-dev.sthings.lab
         description: >-
