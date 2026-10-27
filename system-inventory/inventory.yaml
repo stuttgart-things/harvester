@@ -208,6 +208,11 @@ hosts:
         description: >-
           kube-prometheus-stack of this cluster (Prometheus, Alertmanager,
           Grafana). Alerts go to omni-pitcher on homerun2-dev.
+      - name: Loki
+        fqdn: loki.platform.sthings.lab
+        description: >-
+          Central log store of the lab. fluent-bit on every cluster pushes
+          here; queried through Grafana.
 
   # The sthings-edge box (LattePanda) in SthingsNet: role `kiosk`, no k3s.
   # Address from clusters/sthings-edge/README.md (troubleshooting); inside the

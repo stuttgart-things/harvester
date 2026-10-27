@@ -356,3 +356,69 @@ spec:
       - kind: Secret
         name: homerun2-k8s-pitcher-remote-sops-secrets
         optional: false
+---
+# Loki: the lab's central log store (harvester#490). Monolithic on local-path,
+# 7 days. In-cluster loki-gateway.loki.svc, for the other clusters
+# loki.platform.sthings.lab through the Gateway; fluent-bit there runs the
+# bundle's fluent-bit-remote. Also a datasource in the kube-prometheus-stack
+# Grafana, which is why it waits on that (the ConfigMap goes into its
+# namespace, monitoring).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: loki
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 15m
+  dependsOn:
+    - name: cilium-gateway
+    - name: kube-prometheus-stack
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/loki
+  components:
+    - components/httproute
+    - components/grafana-datasource
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      LOKI_NAMESPACE: loki
+      LOKI_VERSION: "19.4.0" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
+      LOKI_STORAGE_CLASS: local-path
+      LOKI_STORAGE_SIZE: 30Gi
+      LOKI_RETENTION: 168h
+      LOKI_HOSTNAME: loki
+      LOKI_GRAFANA_NAMESPACE: monitoring
+      GATEWAY_NAME: platform-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      DOMAIN: platform.sthings.lab
+---
+# fluent-bit: platform's own container logs into the Loki above, plain HTTP to
+# its gateway Service.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: fluent-bit
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: loki
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/fluent-bit
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      FLUENT_BIT_NAMESPACE: logging
+      FLUENT_BIT_VERSION: "0.58.3" # datasource=docker depName=ghcr.io/fluent/helm-charts/fluent-bit
+      FLUENT_BIT_CLUSTER_NAME: platform
+      FLUENT_BIT_LOKI_HOST: loki-gateway.loki.svc.cluster.local

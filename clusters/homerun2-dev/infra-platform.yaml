@@ -71,9 +71,15 @@ spec:
     # list (envFrom) only at start: without this a new card needed a manual
     # rollout restart. Standalone, no dependency.
     - ../components/reloader
+    # logs -- every container log to the lab's Loki on platform, HTTPS through
+    # its Gateway (harvester#490). CA: logging-trust-bundle.yaml.
+    - ../components/fluent-bit-remote
   postBuild:
     substitute:
       FLUX_SOURCE: flux-infra
+
+      FLUENT_BIT_CLUSTER_NAME: homerun2-dev
+      FLUENT_BIT_LOKI_HOST: loki.platform.sthings.lab
 
       # Set once, read by the Gateway, the wildcard certificate and every
       # HTTPRoute behind it. Keep identical to any apps bundle added later --
