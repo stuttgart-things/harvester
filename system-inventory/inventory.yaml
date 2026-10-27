@@ -397,6 +397,7 @@ hosts:
     hostname: homerun2-dev
     ip: 192.168.10.117
     kind: rke2-cluster
+    vm: harvester
     cluster: homerun2-dev
     description: >-
       VM node of the RKE2 cluster homerun2-dev (12 vCPU / 12Gi / 50Gi,
@@ -496,6 +497,7 @@ hosts:
     hostname: machinery-hv
     ip: 192.168.10.105
     kind: rke2-cluster
+    vm: harvester
     cluster: machinery-hv
     description: >-
       VM node of the RKE2 cluster machinery-hv (8 vCPU / 16Gi / 80Gi, static
@@ -539,6 +541,7 @@ hosts:
     hostname: crossplane-mgmt
     ip: 192.168.10.108
     kind: k3s-cluster
+    vm: harvester
     cluster: crossplane-mgmt
     description: >-
       VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28).
@@ -569,6 +572,28 @@ hosts:
       platform for the Argo CD registration.
 
   # ---------------------------------------------------------------------------
+  # ollama-gpu: the local LLM endpoint for Backstage RAG-AI (harvester#526).
+  # XR clusters/crossplane-mgmt/xrs/infra/ollama-gpu, runbook hosts/ollama-gpu.
+  # ---------------------------------------------------------------------------
+  - system: ollama-gpu
+    hostname: ollama-gpu
+    ip: 192.168.10.147
+    kind: host
+    vm: harvester
+    description: >-
+      Harvester VM (8 vCPU / 8Gi / 128Gi, sthings-u26) with the host's RTX 5060
+      Ti (16 GB) passed through, static lease for MAC c6:a7:6d:4b:78:1a.
+      Ollama serves gemma3:12b (chat) and bge-m3 (embeddings) for Backstage
+      RAG-AI on platform.
+    services:
+      - name: Ollama
+        fqdn: ollama-gpu.sthings.lab
+        port: 11434
+        description: >-
+          OpenAI-compatible API (/v1/chat/completions, /v1/embeddings) for
+          Backstage "Ask AI".
+
+  # ---------------------------------------------------------------------------
   # app-dev-hv: the first ClusterStack ordered on machinery-hv
   # (clusters/machinery-hv/xrs/app-dev-hv.yaml). Address from
   # docs/demo/bare-metal-self-service.md. Gateway address from the Clusterbook
@@ -578,6 +603,7 @@ hosts:
     hostname: app-dev-hv
     ip: 192.168.10.176
     kind: k3s-cluster
+    vm: harvester
     cluster: app-dev-hv
     description: >-
       Cluster built by Rancher on a Harvester machine pool (rancher-k3s,
@@ -634,6 +660,7 @@ hosts:
     hostname: tabletennis
     ip: 192.168.10.114
     kind: k3s-cluster
+    vm: harvester
     cluster: tabletennis
     description: >-
       Single node (tabletennis-pool1) built by Rancher on Harvester. The

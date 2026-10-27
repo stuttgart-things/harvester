@@ -303,6 +303,25 @@ sys_network -> net_192_168_8_0_24: "1 host" {
   }
 }
 
+sys_ollama_gpu: "ollama-gpu" {
+  style.fill: "#f8fafc"
+  style.stroke: "#94a3b8"
+  style.font-size: 20
+  ollama_gpu: "ollama-gpu\n192.168.10.147\n1 service" {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#475569"
+    }
+  }
+}
+sys_ollama_gpu -> net_192_168_10_0_24: "1 host" {
+  style: {
+    stroke: "#0f766e"
+    stroke-width: 2
+  }
+}
+
 sys_platform_sthings: "platform-sthings" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"

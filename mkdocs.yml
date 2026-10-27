@@ -6,6 +6,7 @@ edit_uri: edit/main/docs/
 
 nav:
   - Home: index.md
+  - System inventory: inventory.md
   - Architecture:
       - Overview: architecture/overview.md
       - Claim Lifecycle: architecture/claim-lifecycle.md

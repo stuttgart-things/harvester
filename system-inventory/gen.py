@@ -63,6 +63,9 @@ def validate(data: dict) -> list[str]:
     seen_ip: dict[str, str] = {}
     seen_host: dict[str, str] = {}
     seen_fqdn: dict[str, str] = {}
+    hypervisors = {
+        h.get("system") for h in data.get("hosts", []) or [] if h.get("kind") == "hypervisor"
+    }
 
     for h in data.get("hosts", []) or []:
         name = h.get("hostname", "<ohne hostname>")
@@ -103,6 +106,11 @@ def validate(data: dict) -> list[str]:
         # in the service index.
         if h.get("kind") in CLUSTER_KINDS and not h.get("cluster"):
             problems.append(f"{where}: kind is {h['kind']} but no 'cluster' name is set")
+
+        # `vm` names the system of the hypervisor the host runs on; gen_docs.py
+        # counts the VMs per hypervisor from it.
+        if h.get("vm") and h["vm"] not in hypervisors:
+            problems.append(f"{where}: vm '{h['vm']}' is not the system of any kind: hypervisor host")
 
         problems.extend(
             _check_services(h, where, networks, seen_ip, seen_fqdn)
