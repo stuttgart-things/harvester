@@ -1,0 +1,233 @@
+---
+# "Lab Logs (Loki)": logs of every cluster that ships to platform's Loki
+# (fluent-bit, #499), filtered by the labels fluent-bit sets -- cluster,
+# namespace_name, pod_name, container_name -- plus a regex search. Own, small
+# dashboard: the common grafana.com ones (13639, 15141) expect app/namespace/
+# stream labels that this pipeline does not set. Datasource uid `loki` from
+# flux infra/loki components/grafana-datasource.
+#
+# Picked up by Grafana's dashboard sidecar (label grafana_dashboard: "1", all
+# namespaces). No substitution runs on this file (flux-system has no postBuild),
+# so the $variables stay as they are.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboard-lab-logs
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"
+data:
+  lab-logs.json: |
+    {
+      "title": "Lab Logs (Loki)",
+      "uid": "lab-logs-loki",
+      "tags": [
+        "loki",
+        "logs",
+        "lab"
+      ],
+      "timezone": "browser",
+      "schemaVersion": 39,
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "refresh": "30s",
+      "templating": {
+        "list": [
+          {
+            "name": "cluster",
+            "label": "Cluster",
+            "type": "query",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "query": {
+              "type": 1,
+              "label": "cluster",
+              "stream": "",
+              "refId": "LokiVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values(cluster)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".+",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "sort": 1
+          },
+          {
+            "name": "namespace",
+            "label": "Namespace",
+            "type": "query",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "query": {
+              "type": 1,
+              "label": "namespace_name",
+              "stream": "{cluster=~\"$cluster\"}",
+              "refId": "LokiVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values({cluster=~\"$cluster\"}, namespace_name)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".+",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "sort": 1
+          },
+          {
+            "name": "pod",
+            "label": "Pod",
+            "type": "query",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "query": {
+              "type": 1,
+              "label": "pod_name",
+              "stream": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\"}",
+              "refId": "LokiVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values({cluster=~\"$cluster\", namespace_name=~\"$namespace\"}, pod_name)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".+",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "sort": 1
+          },
+          {
+            "name": "container",
+            "label": "Container",
+            "type": "query",
+            "datasource": {
+              "type": "loki",
+              "uid": "loki"
+            },
+            "query": {
+              "type": 1,
+              "label": "container_name",
+              "stream": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\"}",
+              "refId": "LokiVariableQueryEditor-VariableQuery"
+            },
+            "definition": "label_values({cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\"}, container_name)",
+            "refresh": 2,
+            "includeAll": true,
+            "multi": true,
+            "allValue": ".+",
+            "current": {
+              "text": "All",
+              "value": "$__all"
+            },
+            "sort": 1
+          },
+          {
+            "name": "search",
+            "label": "Search (regex)",
+            "type": "textbox",
+            "query": "",
+            "current": {
+              "text": "",
+              "value": ""
+            }
+          }
+        ]
+      },
+      "panels": [
+        {
+          "id": 1,
+          "type": "timeseries",
+          "title": "Log lines per namespace",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 24,
+            "h": 7
+          },
+          "fieldConfig": {
+            "defaults": {
+              "custom": {
+                "drawStyle": "bars",
+                "fillOpacity": 60,
+                "stacking": {
+                  "mode": "normal"
+                }
+              },
+              "unit": "short"
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "right"
+            },
+            "tooltip": {
+              "mode": "multi"
+            }
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "sum by (cluster, namespace_name) (count_over_time({cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\", container_name=~\"$container\"} |~ \"(?i)$search\" [$__auto]))",
+              "legendFormat": "{{cluster}}/{{namespace_name}}"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "type": "logs",
+          "title": "Logs",
+          "datasource": {
+            "type": "loki",
+            "uid": "loki"
+          },
+          "gridPos": {
+            "x": 0,
+            "y": 7,
+            "w": 24,
+            "h": 20
+          },
+          "options": {
+            "showTime": true,
+            "wrapLogMessage": true,
+            "sortOrder": "Descending",
+            "enableLogDetails": true,
+            "dedupStrategy": "none"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "datasource": {
+                "type": "loki",
+                "uid": "loki"
+              },
+              "expr": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\", container_name=~\"$container\"} |~ \"(?i)$search\"",
+              "maxLines": 1000
+            }
+          ]
+        }
+      ]
+    }

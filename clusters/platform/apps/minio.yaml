@@ -51,6 +51,11 @@ spec:
         spec:
           values:
             extraEnvVarsSecret: minio-oidc-zitadel
+            # /minio/v2/metrics/cluster and /node for the MinIO dashboards
+            # (../infra.yaml); MINIO_PROMETHEUS_AUTH_TYPE is public already.
+            metrics:
+              serviceMonitor:
+                enabled: true
             extraEnvVars:
               - name: MINIO_IDENTITY_OPENID_CONFIG_URL
                 value: https://zitadel.platform.sthings.lab/.well-known/openid-configuration

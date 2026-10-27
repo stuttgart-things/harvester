@@ -1,0 +1,50 @@
+---
+# Flux metrics and dashboards from the flux-operator release that runs here
+# (config/monitoring of controlplaneio-fluxcd/flux-operator): PodMonitor on
+# the controllers (http-prom), ServiceMonitor on the operator (flux_resource_info
+# for every Flux object) and the dashboards "Flux Performance" and "Flux
+# Kubernetes API Performance" as a ConfigMap with grafana_dashboard: "1".
+#
+# NOT fluxcd/flux2-monitoring-example's kube-state-metrics config: it sets
+# --custom-resource-state-only=true and empty collectors, which would switch off
+# the standard kube-state-metrics the bundled Kubernetes dashboards need. The
+# operator exports flux_resource_info itself.
+#
+# Keep the tag at the operator's version (flux-system/flux-operator image).
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-operator-monitoring
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: https://github.com/controlplaneio-fluxcd/flux-operator
+  ref:
+    tag: v0.42.1 # datasource=github-tags depName=controlplaneio-fluxcd/flux-operator
+  ignore: |
+    /*
+    !/config/monitoring/
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: flux-monitoring
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infra
+spec:
+  dependsOn:
+    - name: kube-prometheus-stack # the monitoring.coreos.com CRDs
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-operator-monitoring
+  path: ./config/monitoring
+  # The monitors select flux-system themselves; the dashboard ConfigMap has no
+  # namespace upstream. Grafana's sidecar searches all namespaces.
+  targetNamespace: flux-system
