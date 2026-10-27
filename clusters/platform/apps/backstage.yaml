@@ -50,6 +50,9 @@ spec:
       BACKSTAGE_LLM_BASE_URL: http://ollama-gpu.sthings.lab:11434/v1
       BACKSTAGE_LLM_MODEL: gemma3:12b
       BACKSTAGE_LLM_EMBEDDINGS_MODEL: bge-m3
+      # Chunks per question (default 6, flux#890). 6 hid one of six VMs on
+      # "how many Harvester VMs"; 20 x 1000 chars fits Ollama's 16k context.
+      BACKSTAGE_RAG_AI_AMOUNT: "20"
     substituteFrom:
       - kind: Secret
         name: backstage-secrets-subst
