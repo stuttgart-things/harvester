@@ -1,0 +1,39 @@
+---
+# Default StorageClass with ONE Longhorn replica, for disks and PVCs that do
+# not come from an image (#573). On the single-node Harvester a second or
+# third replica can never be scheduled, so the 3 of harvester-longhorn left
+# every such volume degraded and blocked PVC expansion.
+#
+# Why a new class instead of re-creating harvester-longhorn: that one is
+# rendered by the harvester chart (ManagedChart fleet-local/harvester) with
+# numberOfReplicas "3". Re-created with "1", Fleet would try to patch the
+# immutable parameters back and leave the bundle in error; deleted, Fleet
+# re-creates it with "3". Fleet ignores its annotations (comparePatches), so
+# moving the default flag away from it is the supported way, as the
+# Harvester UI's "Set as default" does.
+#
+# Applied BY HAND on the Harvester cluster -- no Flux syncs this directory.
+# Order matters: Harvester's webhook refuses a second default class, so take
+# the flag off harvester-longhorn first:
+#   kubectl --kubeconfig ~/.kube/harvester annotate sc harvester-longhorn \
+#     storageclass.kubernetes.io/is-default-class=false --overwrite
+#   kubectl --kubeconfig ~/.kube/harvester apply -f clusters/harvester/storageclass-longhorn-single.yaml
+#
+# Image-backed VM disks do not use this class: they get the lh-* class of
+# their image, whose replicas come from the image (#577).
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: harvester-longhorn-single
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
+provisioner: driver.longhorn.io
+allowVolumeExpansion: true
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+parameters:
+  numberOfReplicas: "1"
+  staleReplicaTimeout: "30"
+  migratable: "true"
+  fromBackup: ""
+  baseImage: ""

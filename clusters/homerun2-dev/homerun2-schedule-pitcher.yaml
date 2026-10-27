@@ -36,7 +36,7 @@ spec:
     # (patch below); the session cookie is scoped to it.
     # v1.14.0+: AUTH_TRUST_FORWARDED_USER (patch below); the direct route
     # strips X-Forwarded-User/-Groups.
-    tag: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
+    tag: v1.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
