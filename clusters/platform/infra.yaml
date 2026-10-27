@@ -337,6 +337,47 @@ spec:
           value: ${HOMERUN2_K8S_PITCHER_AUTH_TOKEN}
         - op: remove
           path: /spec/values/grafana/adminPassword
+        # Lab dashboards (harvester#574 follow-up), folder "Lab". Grafana's
+        # init container downloads them at start, pinned: grafana.com by
+        # revision, GitHub by tag of the version that runs here. The metrics
+        # behind them: cert-manager -> apps/cert-manager-servicemonitor.yaml,
+        # ArgoCD -> apps/argocd-platform.yaml, MinIO -> apps/minio.yaml.
+        # Flux and Cilium bring their own dashboard ConfigMaps
+        # (apps/flux-monitoring.yaml, the cilium chart), Loki logs is
+        # apps/grafana-dashboard-lab-logs.yaml.
+        - op: add
+          path: /spec/values/grafana/dashboardProviders
+          value:
+            dashboardproviders.yaml:
+              apiVersion: 1
+              providers:
+                - name: lab
+                  orgId: 1
+                  folder: Lab
+                  type: file
+                  disableDeletion: false
+                  editable: true
+                  options:
+                    path: /var/lib/grafana/dashboards/lab
+        - op: add
+          path: /spec/values/grafana/dashboards
+          value:
+            lab:
+              cert-manager:
+                gnetId: 20842
+                revision: 3
+              argocd:
+                url: https://raw.githubusercontent.com/argoproj/argo-cd/v3.3.4/examples/dashboard.json
+              minio:
+                url: https://raw.githubusercontent.com/minio/minio/RELEASE.2025-04-22T22-12-26Z/docs/metrics/prometheus/grafana/minio-dashboard.json
+                datasource:
+                  - name: DS_PROMETHEUS
+                    value: Prometheus
+              minio-node:
+                url: https://raw.githubusercontent.com/minio/minio/RELEASE.2025-04-22T22-12-26Z/docs/metrics/prometheus/grafana/node/minio-node.json
+                datasource:
+                  - name: DS_PROMETHEUS
+                    value: Prometheus
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring

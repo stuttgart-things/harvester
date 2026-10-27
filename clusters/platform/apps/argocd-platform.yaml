@@ -82,6 +82,33 @@ spec:
                         policy.csv: |
                           g, argocd-admin, role:admin
                           g, argocd-readonly, role:readonly
+                    # Metrics + ServiceMonitors for the ArgoCD dashboard
+                    # (../infra.yaml, argo-cd examples/dashboard.json).
+                    controller:
+                      metrics:
+                        enabled: true
+                        serviceMonitor:
+                          enabled: true
+                    server:
+                      metrics:
+                        enabled: true
+                        serviceMonitor:
+                          enabled: true
+                    repoServer:
+                      metrics:
+                        enabled: true
+                        serviceMonitor:
+                          enabled: true
+                    applicationSet:
+                      metrics:
+                        enabled: true
+                        serviceMonitor:
+                          enabled: true
+                    notifications:
+                      metrics:
+                        enabled: true
+                        serviceMonitor:
+                          enabled: true
   postBuild:
     substitute:
       BUNDLE_NAME: argocd-platform
