@@ -577,7 +577,9 @@ platform-sthings (`stuttgart-things/stuttgart-things`,
 
 schedule-pitcher's own API/UI token is
 [`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
-generated for this cluster; it runs with no checks yet (none of
+generated for this cluster; behind the portal it is not asked for (the pitcher
+trusts the portal's `X-Forwarded-User`, which its direct route strips). It runs
+with no checks yet (none of
 platform-sthings' token checks has a Secret here). k8s-pitcher's error events
 reach Teams through the `teams-homerun2-dev` output.
 
