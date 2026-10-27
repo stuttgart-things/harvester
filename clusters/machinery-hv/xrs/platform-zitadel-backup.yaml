@@ -1,0 +1,39 @@
+---
+# Backup target for platform's ZITADEL (harvester#574): ONE bucket on
+# platform's MinIO with a user scoped to it, for the nightly pg_dump CronJob in
+# clusters/platform/apps/zitadel-backup.yaml.
+#
+#   MinioBucket (storage/minio, ProviderConfig `minio`)
+#     -> bucket + policy + user platform-zitadel-backup-backup on MinIO
+#     -> keys in Secret default/platform-zitadel-backup on this cluster
+#
+# No VaultSecretSet as for app-dev-hv: platform has no external-secrets and no
+# OpenBao-injected workload, so the keys go into platform as the SOPS Secret
+# clusters/platform/apps/zitadel-backup-secrets.enc.yaml (commands in
+# clusters/platform/zitadel-config/README.md, "Backup and restore").
+#
+# Same VM as ZITADEL: covers a deleted namespace, a broken database and a bad
+# upgrade, not the loss of the platform VM.
+#
+# `deletionPolicy` stays at Orphan and pruning is off: deleting this file (or
+# the XR) must not take the backups with it. Rule 1 of README.md applies.
+apiVersion: storage.stuttgart-things.com/v1alpha1
+kind: MinioBucket
+metadata:
+  name: platform-zitadel-backup
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  providerConfigRef:
+    name: minio
+  bucketName: platform-zitadel-backup
+  region: us-east-1
+  access:
+    # Write, list and delete: the CronJob uploads and removes what is older
+    # than its retention.
+    - name: backup
+      scope: bucket
+      connectionSecret:
+        name: platform-zitadel-backup
+        namespace: default

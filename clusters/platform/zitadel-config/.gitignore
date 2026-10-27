@@ -1,0 +1,9 @@
+terraform.tfvars.json
+.terraform/
+.terraform.lock.hcl
+# Service-account keys / PATs / tokens -- never commit
+*.json
+*-key.json
+*-pat.txt
+terraform-key*
+terraform-pat*

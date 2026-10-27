@@ -1,25 +1,17 @@
 ---
-# The CA zaehlwerk trusts for its HTTPS calls: the sthings.lab CA (OpenBao PKI
-# on platform, C=DE, O=sva, CN=sthings.lab), which signs this cluster's
-# wildcard *.homerun2-dev.sthings.lab via the openbao-pki ClusterIssuer.
-#
-# zaehlwerk mounts ConfigMap `cluster-trust-bundle`, key `trust-bundle.pem`,
-# at /etc/ssl/cluster-trust (SSL_CERT_DIR) -- written by trust-manager where
-# there is one. There is none here, and the mount is optional: without this
-# file the pod ran healthy while every call over the Gateway failed with
-# `x509: certificate signed by unknown authority` -- every point's panel pitch
-# to omni-pitcher (seen 2026-09-28), and the handover to schmetterpause would
-# have too.
-#
-# Public material, so a plain ConfigMap. Go reads SSL_CERT_DIR once at start:
-# after changing it, `kubectl -n zaehlwerk rollout restart deploy/zaehlwerk`.
+# The sthings.lab root CA (OpenBao PKI on the platform cluster, the same as
+# ./openbao-pki-ca.yaml) for sthings-portal: it verifies
+# https://zitadel.platform.sthings.lab (AUTH_OIDC_CA_FILE, ./sthings-portal.yaml).
+# Public certificate, no secret. No trust-manager on this cluster.
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: cluster-trust-bundle
-  namespace: zaehlwerk
+  name: sthings-portal-oidc-ca
+  namespace: homerun2
+  labels:
+    app.kubernetes.io/managed-by: flux
 data:
-  trust-bundle.pem: |
+  ca.crt: |
     -----BEGIN CERTIFICATE-----
     MIIFUzCCAzugAwIBAgIUJ+kVrXKhWtqX9u+SvuqmunDsNxowDQYJKoZIhvcNAQEL
     BQAwMTELMAkGA1UEBhMCREUxDDAKBgNVBAoTA3N2YTEUMBIGA1UEAxMLc3RoaW5n

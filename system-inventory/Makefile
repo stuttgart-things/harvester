@@ -4,7 +4,7 @@ D3_VERSION ?= 7.9.0
 # whatever headless Chromium you have.
 CHROME ?= google-chrome
 
-.PHONY: gen diagram html pdf check serve clean d2-install d3-install
+.PHONY: gen diagram docs html pdf check serve clean d2-install d3-install
 
 gen:            ## generate the D2 source from inventory.yaml + validate
 	python3 gen.py --strict
@@ -13,6 +13,9 @@ diagram: gen    ## render the SVG from the D2 source
 	d2 --pad 24 --theme 0 topology.d2 topology.svg
 	@test "$$(grep -c foreignObject topology.svg || true)" -eq 0 \
 	  || { echo "ERROR: topology.svg contains <foreignObject> - check the labels"; exit 1; }
+
+docs: gen       ## write the TechDocs page ../docs/inventory.md (read by Backstage RAG-AI)
+	python3 gen_docs.py
 
 html: gen       ## build the interactive D3 page into site/index.html
 	python3 build_html.py
@@ -30,9 +33,9 @@ pdf: html       ## render site/inventory.pdf with headless Chrome
 	@test -s site/inventory.pdf || { echo "ERROR: no PDF produced"; exit 1; }
 	@echo "wrote: site/inventory.pdf ($$(du -k site/inventory.pdf | cut -f1) KB)"
 
-check: diagram  ## like CI: verify the committed artifacts are up to date
-	git diff --exit-code -- topology.d2 topology.svg \
-	  || { echo "ERROR: topology.d2/.svg are stale - run 'make diagram' and commit"; exit 1; }
+check: diagram docs  ## like CI: verify the committed artifacts are up to date
+	git diff --exit-code -- topology.d2 topology.svg ../docs/inventory.md \
+	  || { echo "ERROR: topology.d2/.svg or docs/inventory.md are stale - run 'make diagram docs' and commit"; exit 1; }
 
 serve: html     ## local preview of the D3 page
 	@echo "http://127.0.0.1:8000"

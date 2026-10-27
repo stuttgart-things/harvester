@@ -248,7 +248,9 @@ ansible-playbook -i inventory sthings.baseos.kiosk -e target_host=edge \
 **What the kiosk shows is declared in [`kiosk.yaml`](./kiosk.yaml)** -- tabs (URL + zoom), tab rotation,
 pause after input, reset to the start URLs after inactivity. The box fetches it from GitHub (raw URL of
 `main`) at every kiosk start and every 5 minutes; a change restarts the kiosk. **Change the file, merge,
-done** -- no Ansible run, in either network. An invalid file is ignored (the last valid copy stays), see
+done** -- no Ansible run, in either network. The homerun2 pages are one tab: homerun2-portal's `/kiosk` (portal v0.8.0+)
+rotates through the services itself, skips the ones that are down and holds on input; the browser only
+switches between it and Flux (#528). An invalid file is ignored (the last valid copy stays), see
 `journalctl -t kiosk -b`. GitHub's raw cache adds up to 5 min.
 
 The play is needed only for the box itself and for the private CA of the pages: `*.homerun2-dev.sthings.lab`

@@ -6,6 +6,7 @@ edit_uri: edit/main/docs/
 
 nav:
   - Home: index.md
+  - System inventory: inventory.md
   - Architecture:
       - Overview: architecture/overview.md
       - Claim Lifecycle: architecture/claim-lifecycle.md
@@ -17,6 +18,7 @@ nav:
       - Claim Status Collector: services/claim-status-collector.md
   - Edge cluster:
       - Overview: edge/index.md
+      - Landscape (today and target): edge/landscape.md
       - Architecture: edge/architecture.md
       - Step by step: edge/step-by-step.md
       - Runbook (all in one): edge/runbook.md

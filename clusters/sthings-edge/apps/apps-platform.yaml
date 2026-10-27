@@ -37,7 +37,7 @@ spec:
       HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
-      HOMERUN2_LED_CATCHER_VERSION: v0.22.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+      HOMERUN2_LED_CATCHER_VERSION: v0.23.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
@@ -49,7 +49,7 @@ spec:
       HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
       HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
       HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
-      HOMERUN2_PORTAL_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
+      HOMERUN2_PORTAL_VERSION: v0.8.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
       HOMERUN2_REDIS_IMAGE_VERSION: '7.4.0-v8'
       HOMERUN2_REDIS_STORAGE_CLASS: local-path
       HOMERUN2_REDIS_STORAGE_SIZE: '1Gi'
@@ -82,6 +82,7 @@ spec:
       TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
       TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
       TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
+      TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.37.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       TABLETENNIS_ZAEHLWERK_PANEL: homerun2
       TABLETENNIS_ZAEHLWERK_PONG: 'on'
       TABLETENNIS_ZAEHLWERK_PORTAL: 'on'

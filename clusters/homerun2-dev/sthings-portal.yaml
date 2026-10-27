@@ -1,0 +1,188 @@
+---
+# sthings-portal on homerun2-dev (#560): replaces homerun2-portal v0.8.0 on
+# portal.homerun2-dev.sthings.lab, login through ZITADEL on the platform
+# cluster (https://zitadel.platform.sthings.lab), the local users as emergency
+# access.
+#
+# A copy of stuttgart-things/flux apps/platform/components/sthings-portal with
+# this cluster's values filled in: homerun2-dev has no apps-platform bundle,
+# so the component's variables are written out here. Keep it in step with the
+# component (version, patches).
+#
+# REQUIRES in namespace homerun2 (owned by ./homerun2.yaml):
+#   * Secret sthings-portal-auth (./sthings-portal-auth.enc.yaml): users
+#     (htpasswd -nB, emergency access), session-key, oidc-client-secret
+#     (Terraform output of ../platform/zitadel-config);
+#   * ConfigMap sthings-portal-oidc-ca (./sthings-portal-oidc-ca.yaml): the
+#     sthings.lab root CA that signs zitadel.platform.sthings.lab. No
+#     trust-manager on this cluster, so not the cluster-trust-bundle.
+# Without the Secret the pod sits in CreateContainerConfigError and this
+# Kustomization times out.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: sthings-portal-kustomize
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  suspend: false
+  url: oci://ghcr.io/stuttgart-things/sthings-portal-kustomize
+  # The artifact pins the image to the same tag: one version for both.
+  ref:
+    tag: v0.13.0
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sthings-portal
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: sthings-portal-kustomize
+  path: ./
+  # The artifact says `homerun2`; this moves every object.
+  targetNamespace: homerun2
+  # No postBuild: the variables below are substituted by the bundle that
+  # renders this object, and the artifact carries none of its own.
+  patches:
+    # The route is sthings-portal-routes (ks-sthings-portal-routes.yaml).
+    - target:
+        kind: HTTPRoute
+        name: sthings-portal
+      patch: |
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: sthings-portal
+        $patch: delete
+    # Settings. PORTAL_SERVICES is `key=url` or `key|Title=url`,
+    # comma-separated, in navigation order; every service runs with
+    # BASE_PATH=/<key>, and a short Service name resolves in the namespace.
+    # An empty AUTH_OIDC_ALLOWED_GROUPS lets in every user the provider lets
+    # through.
+    - target:
+        kind: ConfigMap
+        name: sthings-portal-config
+      patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: sthings-portal-config
+        data:
+          PORTAL_SERVICES: "core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,table|Table Light=http://homerun2-light-catcher.homerun2-tabletennis.svc.cluster.local,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher"
+          PORTAL_THEME: "homerun2"
+          AUTH_MODE: oidc
+          AUTH_USERS_FILE: /etc/portal/auth/users
+          AUTH_SESSION_TTL: "12h"
+          AUTH_OIDC_ISSUER: "https://zitadel.platform.sthings.lab"
+          AUTH_OIDC_CLIENT_ID: "396942816388841722"
+          AUTH_OIDC_REDIRECT_URL: "https://portal.homerun2-dev.sthings.lab/auth/callback"
+          AUTH_OIDC_NAME: "Zitadel"
+          AUTH_OIDC_ALLOWED_GROUPS: "portal-admin,portal-user"
+          AUTH_OIDC_CA_FILE: "/etc/portal/oidc-ca/ca.crt"
+    # The Secret's keys and the two files, as KCL renders them for oidc.
+    # kiosk-token and oidc-client-secret are optional there (a kiosk
+    # display; a public PKCE client) and stay optional here.
+    - target:
+        kind: Deployment
+        name: sthings-portal
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: sthings-portal
+          annotations:
+            reloader.stakater.com/auto: "true"
+        spec:
+          template:
+            spec:
+              containers:
+                - name: sthings-portal
+                  env:
+                    - name: AUTH_SESSION_KEY
+                      valueFrom:
+                        secretKeyRef:
+                          name: sthings-portal-auth
+                          key: session-key
+                    - name: AUTH_KIOSK_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: sthings-portal-auth
+                          key: kiosk-token
+                          optional: true
+                    - name: AUTH_OIDC_CLIENT_SECRET
+                      valueFrom:
+                        secretKeyRef:
+                          name: sthings-portal-auth
+                          key: oidc-client-secret
+                          optional: true
+                  volumeMounts:
+                    - name: auth
+                      mountPath: /etc/portal/auth
+                      readOnly: true
+                    - name: oidc-ca
+                      mountPath: /etc/portal/oidc-ca
+                      readOnly: true
+              volumes:
+                - name: auth
+                  secret:
+                    secretName: sthings-portal-auth # pragma: allowlist secret
+                    items:
+                      - key: users
+                        path: users
+                - name: oidc-ca
+                  configMap:
+                    name: sthings-portal-oidc-ca
+                    items:
+                      - key: ca.crt
+                        path: ca.crt
+---
+# The route, once the portal is Ready: Cilium resolves a route's backendRefs
+# once (see homerun2-routes in ./homerun2.yaml).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sthings-portal-routes
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: sthings-portal
+    - name: cilium-gateway
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/sthings-portal/route
+  postBuild:
+    substitute:
+      STHINGS_PORTAL_NAMESPACE: "homerun2"
+      # Also in the redirect URL (ks-sthings-portal.yaml) and at the provider:
+      # the OIDC client is registered for exactly this origin.
+      STHINGS_PORTAL_HOST: "portal.homerun2-dev.sthings.lab" # REQUIRED (INFRA_DOMAIN)
+      GATEWAY_NAME: "homerun2-dev-sthings-gateway"
+      GATEWAY_NAMESPACE: "default"

@@ -8,6 +8,7 @@ on:
       - 'system-inventory/**'
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'mkdocs.pages.yml'
       - 'pages/**'
       - '.github/workflows/system-inventory.yml'
   pull_request:
@@ -15,6 +16,7 @@ on:
       - 'system-inventory/**'
       - 'docs/**'
       - 'mkdocs.yml'
+      - 'mkdocs.pages.yml'
       - 'pages/**'
       - '.github/workflows/system-inventory.yml'
   workflow_dispatch:
@@ -44,7 +46,7 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - run: pip install -r requirements.txt
 
@@ -90,7 +92,9 @@ jobs:
       #   /inventory/  the system inventory built above (page + PDF; its
       #                links are relative, so it moves as a whole)
       #   /docs/       the repo's TechDocs (mkdocs.yml, docs/) -- same plugin
-      #                as Backstage (techdocs-core)
+      #                as Backstage (techdocs-core), built through
+      #                mkdocs.pages.yml, which adds the look of the other two
+      #                parts; Backstage keeps building plain mkdocs.yml
       - name: Assemble the Pages site (landing page, inventory, docs)
         working-directory: .
         run: |
@@ -99,7 +103,7 @@ jobs:
           cp system-inventory/logo.png _site/logo.png
           cp -r system-inventory/site _site/inventory
           pip install "mkdocs-techdocs-core==1.7.1"
-          mkdocs build --site-dir _site/docs
+          mkdocs build -f mkdocs.pages.yml --site-dir _site/docs
           test -s _site/index.html && test -s _site/inventory/index.html && test -s _site/docs/index.html
 
       - uses: actions/upload-pages-artifact@v5

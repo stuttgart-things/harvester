@@ -1,0 +1,88 @@
+---
+# One run of the Harvester agent (./homerun2-schedule-pitcher-agent.yaml),
+# triggered through git instead of kubectl.
+#
+# To run the check now: bump the number at the end of metadata.name and
+# merge. Flux (flux-system, prune) creates the new Job and deletes the old
+# one -- a Job is immutable, so the new name is what makes it run again.
+# Without a bump nothing happens: Flux sees the same Job and leaves it.
+#
+# No ttlSecondsAfterFinished on purpose: once the Job is gone, Flux would
+# re-create it on its next sync (every 10m) and so run the check again.
+#
+# The pod is the CronJob's (same profile ConfigMap, report token and
+# Harvester kubeconfig); keep the image in step with the agent artifact's tag.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: homerun2-schedule-pitcher-agent-run-1
+  namespace: homerun2-agent
+  labels:
+    app.kubernetes.io/name: homerun2-schedule-pitcher-agent
+    app.kubernetes.io/component: agent-run
+    app.kubernetes.io/part-of: homerun2
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 600
+  template:
+    metadata:
+      labels:
+        # the CiliumNetworkPolicy of the dev instance admits this name
+        app.kubernetes.io/name: homerun2-schedule-pitcher-agent
+        app.kubernetes.io/component: agent-run
+        app.kubernetes.io/part-of: homerun2
+    spec:
+      serviceAccountName: homerun2-schedule-pitcher-agent
+      # the binary takes the in-cluster config before KUBECONFIG
+      automountServiceAccountToken: false
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        fsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: homerun2-schedule-pitcher-agent
+          image: ghcr.io/stuttgart-things/homerun2-schedule-pitcher:v1.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher
+          args: [run]
+          env:
+            - name: PROFILE_PATH
+              value: /etc/homerun2-schedule-pitcher/profile.yaml
+            - name: LOG_FORMAT
+              value: json
+            - name: KUBECONFIG
+              value: /etc/harvester/kubeconfig
+            - name: REPORT_TOKEN
+              valueFrom:
+                secretKeyRef: # pragma: allowlist secret
+                  name: homerun2-schedule-pitcher-agent-report
+                  key: token
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          securityContext:
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: profile
+              mountPath: /etc/homerun2-schedule-pitcher
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: harvester-kubeconfig
+              mountPath: /etc/harvester
+              readOnly: true
+      volumes:
+        - name: profile
+          configMap:
+            name: homerun2-schedule-pitcher-agent-profile
+        - name: tmp
+          emptyDir: {}
+        - name: harvester-kubeconfig
+          secret:
+            secretName: homerun2-schedule-pitcher-agent-harvester # pragma: allowlist secret

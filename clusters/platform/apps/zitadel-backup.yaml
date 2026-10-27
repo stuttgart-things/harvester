@@ -1,0 +1,123 @@
+---
+# Nightly backup of the lab IdP (harvester#574): pg_dump of ZITADEL's database
+# plus the Terraform state of ./zitadel-config, to the bucket
+# platform-zitadel-backup on this cluster's MinIO
+# (clusters/machinery-hv/xrs/platform-zitadel-backup.yaml). 14 days kept.
+#
+# Not in it: the masterkey. It is in ./zitadel-secrets.enc.yaml (git, SOPS)
+# and must be the same on restore -- a dump without it cannot be decrypted.
+#
+# Same VM as ZITADEL: covers a deleted namespace (which also takes the
+# Terraform state), a broken database and a bad upgrade, not the loss of the
+# platform VM. Restore: ../zitadel-config/README.md, "Backup and restore".
+#
+# In the namespace of the zitadel component (apps-platform): removing the
+# component deletes this CronJob with the namespace, not the bucket.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: zitadel-backup
+  namespace: zitadel
+  labels:
+    app.kubernetes.io/name: zitadel-backup
+    app.kubernetes.io/managed-by: flux
+spec:
+  schedule: "30 2 * * *"
+  timeZone: Europe/Berlin
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: zitadel-backup
+        spec:
+          restartPolicy: Never
+          automountServiceAccountToken: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 1001
+            fsGroup: 1001
+            seccompProfile:
+              type: RuntimeDefault
+          initContainers:
+            # The server's own image: pg_dump matches the server version.
+            - name: dump
+              image: docker.io/bitnamilegacy/postgresql:17.6.0-debian-12-r4
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  pg_dump -h zitadel-postgresql -U postgres -d zitadel -Fc -f /work/zitadel.dump
+                  # A dump pg_restore cannot read is no backup.
+                  pg_restore --list /work/zitadel.dump > /dev/null
+                  ls -l /work/zitadel.dump
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: zitadel-credentials
+                      key: db-admin-password
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+          containers:
+            # The MinIO image of this cluster ships mc.
+            - name: upload
+              image: ghcr.io/stuttgart-things/minio:2025.4.22-debian-12-r1
+              command: ["/bin/bash", "-c"]
+              args:
+                - |
+                  set -euo pipefail
+                  ts=$(date -u +%Y%m%dT%H%M%SZ)
+                  mc alias set backup http://minio-deployment.minio.svc.cluster.local:9000 \
+                    "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" > /dev/null
+                  mc cp --quiet /work/zitadel.dump "backup/platform-zitadel-backup/$ts/zitadel.dump"
+                  # gzip, as the kubernetes backend stores it
+                  if [ -f /tfstate/tfstate ]; then
+                    mc cp --quiet /tfstate/tfstate "backup/platform-zitadel-backup/$ts/tfstate-zitadel-config.gz"
+                  else
+                    echo "no Terraform state Secret, skipped"
+                  fi
+                  mc rm --recursive --force --older-than 14d backup/platform-zitadel-backup/
+                  mc ls backup/platform-zitadel-backup/
+              env:
+                - name: MC_CONFIG_DIR
+                  value: /work/.mc
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: zitadel-backup-s3
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: zitadel-backup-s3
+                      key: AWS_SECRET_ACCESS_KEY
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: tfstate
+                  mountPath: /tfstate
+                  readOnly: true
+          volumes:
+            - name: work
+              emptyDir: {}
+            # Optional: the CronJob also runs before the first terraform apply.
+            - name: tfstate
+              secret:
+                secretName: tfstate-default-zitadel-config # pragma: allowlist secret
+                optional: true
