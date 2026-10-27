@@ -25,4 +25,28 @@ apps = {
       someara  = ["argocd-readonly"]
     }
   }
+  # MinIO on platform (artifacts-console): MINIO_IDENTITY_OPENID_* on the
+  # server, claim `groups` -> MinIO policies of the same name, minio-admin and
+  # minio-readonly (Crossplane Policy objects in
+  # clusters/machinery-hv/xrs/platform-minio-oidc-policies.yaml). The console
+  # calls back on /oauth_callback. Root user stays.
+  minio = {
+    url               = "https://artifacts-console.platform.sthings.lab"
+    redirect_paths    = ["/oauth_callback"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "minio-admin"    = "MinIO admin"
+      "minio-readonly" = "MinIO read-only"
+    }
+    users = {
+      sthings  = ["minio-admin"]
+      indy     = ["minio-admin"]
+      tommy    = ["minio-admin"]
+      mcfly    = ["minio-readonly"]
+      mcclane  = ["minio-readonly"]
+      fmcguire = ["minio-readonly"]
+      rdevaney = ["minio-readonly"]
+      someara  = ["minio-readonly"]
+    }
+  }
 }
