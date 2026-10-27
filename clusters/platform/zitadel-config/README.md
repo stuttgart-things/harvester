@@ -68,7 +68,8 @@ export TF_VAR_zitadel_jwt_profile_file=$HOME/.config/zitadel/terraform-key-harve
 export SSL_CERT_FILE=$HOME/.config/zitadel/ca-harvester.pem
 
 # users and their roles come from users.auto.tfvars (no passwords there);
-# initial passwords land in the state and must be changed at the first login
+# initial passwords are write-only (provider v3.8.7): never in the state, so
+# note them down -- they must be changed at the first login
 export TF_VAR_user_initial_passwords="$(jq -nc --arg pw '<initial password>' \
   '[ "sthings","indy","tommy","mcfly","mcclane","fmcguire","rdevaney","someara" ] | map({(.): $pw}) | add')"
 
@@ -81,10 +82,32 @@ terraform output -json client_ids     | jq -r '."homerun2-dev"'
 terraform output -json client_secrets | jq -r '."homerun2-dev"'   # sensitive -- don't paste
 ```
 
-`initial_password` is read at creation only. To give an existing user a new
-initial password, replace it:
+`initial_password` is write-only and used at creation only: `terraform show`
+returns `null` for it, there is no way to look it up afterwards. To give an
+existing user a new initial password (again with a forced change at the first
+login), replace it:
 `terraform apply -replace='module.zitadel_portal.zitadel_human_user.user["<name>"]'`
 (its grant is replaced with it).
+
+### One password for all users, no forced change
+
+The module always sets `initial_skip_password_change = false`. To set a
+password that the users keep, [`set-passwords.py`](./set-passwords.py) calls
+the ZITADEL API directly: it logs in as the machine user `terraform` (key and
+CA from the bootstrap above, PyJWT), reads the user IDs from
+`terraform show -json` and sets the same password for every
+`zitadel_human_user` with `changeRequired: false` (`POST /v2/users/{id}/password`).
+The password is asked twice on the terminal and ends up neither in the repo
+nor in the state.
+
+```bash
+python3 clusters/platform/zitadel-config/set-passwords.py   # <name>: ok per user
+```
+
+ZITADEL's default password age policy has no expiry; the default complexity
+policy (8+ chars, upper, lower, number, symbol) applies. Terraform does not
+undo it (`initial_password` is in `ignore_changes`); only a `-replace` makes the
+password an initial one again.
 
 ### Common pitfalls
 
@@ -119,6 +142,7 @@ A new app: client ID **and** secret change. Update both in the portal.
 ## State
 
 Kubernetes Secret `tfstate-default-zitadel-config` in the `zitadel` namespace
-on platform: it holds the client secrets and initial passwords in cleartext.
+on platform: it holds the client secrets in cleartext (user passwords are
+write-only and not in it).
 Removing the `zitadel` component from `apps-platform` deletes the namespace --
 and this state with it.
