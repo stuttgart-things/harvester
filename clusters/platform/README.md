@@ -60,7 +60,7 @@ ConfigMaps (`grafana_dashboard: "1"`) from every namespace.
 | Cert-manager-Kubernetes (Lab) | `apps/cert-manager-servicemonitor.yaml` | grafana.com 20842 rev 3, `infra.yaml` |
 | ArgoCD (Lab) | `apps/argocd-platform.yaml`: `*.metrics.serviceMonitor` | argo-cd `examples/dashboard.json` @ v3.3.4, `infra.yaml` |
 | MinIO Dashboard, MinIO Node Dashboard (Lab) | `apps/minio.yaml`: `metrics.serviceMonitor` | minio `docs/metrics/prometheus/grafana` @ RELEASE.2025-04-22T22-12-26Z, `infra.yaml` |
-| Lab Logs (Loki) | Loki (#499), fluent-bit labels `cluster`, `namespace_name`, `pod_name`, `container_name` | `apps/grafana-dashboard-lab-logs.yaml` (own) |
+| Lab Logs (Loki) | Loki (#499), fluent-bit labels `cluster`, `kubernetes_namespace_name`, `kubernetes_pod_name`, `kubernetes_container_name` | `apps/grafana-dashboard-lab-logs.yaml` (own) |
 | Cilium Metrics, Cilium Operator, Hubble | Cilium Helm values (below) | the cilium chart, ConfigMaps in `monitoring` |
 
 Grafana downloads the `infra.yaml` ones at pod start (init container) -- bump
