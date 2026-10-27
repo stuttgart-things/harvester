@@ -345,6 +345,44 @@ spec:
         # Flux and Cilium bring their own dashboard ConfigMaps
         # (apps/flux-monitoring.yaml, the cilium chart), Loki logs is
         # apps/grafana-dashboard-lab-logs.yaml.
+        # ZITADEL login (harvester#574) NEXT TO the local admin, which stays
+        # (login form on, `admin` + generated password). Client ID/secret as
+        # GF_AUTH_GENERIC_OAUTH_* env from the SOPS Secret
+        # apps/grafana-oidc-zitadel.enc.yaml; the cluster trust bundle for
+        # ZITADEL's OpenBao-PKI certificate. Roles from the flat `groups`
+        # claim (zitadel-config/groups-claim.tf): grafana-admin => Admin,
+        # grafana-readonly => Viewer; role_attribute_strict refuses anyone
+        # else. Callback /login/generic_oauth (zitadel-config/apps.auto.tfvars).
+        - op: add
+          path: /spec/values/grafana/envFromSecret
+          value: grafana-oidc-zitadel
+        - op: add
+          path: /spec/values/grafana/extraConfigmapMounts
+          value:
+            - name: trust-bundle
+              mountPath: /etc/grafana/ca
+              configMap: cluster-trust-bundle
+              readOnly: true
+        - op: add
+          path: /spec/values/grafana/grafana.ini/auth.generic_oauth
+          value:
+            enabled: true
+            name: ZITADEL
+            allow_sign_up: true
+            auto_login: false
+            scopes: openid profile email
+            auth_url: https://zitadel.platform.sthings.lab/oauth/v2/authorize
+            token_url: https://zitadel.platform.sthings.lab/oauth/v2/token
+            api_url: https://zitadel.platform.sthings.lab/oidc/v1/userinfo
+            auth_style: InHeader
+            use_pkce: true
+            login_attribute_path: preferred_username
+            name_attribute_path: name
+            email_attribute_path: email
+            groups_attribute_path: groups
+            role_attribute_path: contains(groups[*], 'grafana-admin') && 'Admin' || contains(groups[*], 'grafana-readonly') && 'Viewer'
+            role_attribute_strict: true
+            tls_client_ca: /etc/grafana/ca/trust-bundle.pem
         - op: add
           path: /spec/values/grafana/dashboardProviders
           value:

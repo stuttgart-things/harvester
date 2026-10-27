@@ -49,4 +49,27 @@ apps = {
       someara  = ["minio-readonly"]
     }
   }
+  # Grafana on platform (kube-prometheus-stack): auth.generic_oauth in
+  # grafana.ini (../infra.yaml), role_attribute_path on the groups claim:
+  # grafana-admin => Admin, grafana-readonly => Viewer, nothing else gets in
+  # (role_attribute_strict). Callback /login/generic_oauth. Local admin stays.
+  grafana = {
+    url               = "https://grafana.platform.sthings.lab"
+    redirect_paths    = ["/login/generic_oauth"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "grafana-admin"    = "Grafana admin"
+      "grafana-readonly" = "Grafana viewer"
+    }
+    users = {
+      sthings  = ["grafana-admin"]
+      indy     = ["grafana-admin"]
+      tommy    = ["grafana-admin"]
+      mcfly    = ["grafana-readonly"]
+      mcclane  = ["grafana-readonly"]
+      fmcguire = ["grafana-readonly"]
+      rdevaney = ["grafana-readonly"]
+      someara  = ["grafana-readonly"]
+    }
+  }
 }
