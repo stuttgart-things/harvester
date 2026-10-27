@@ -46,8 +46,8 @@ data:
   # is per image -- look it up rather than copying:
   #   kubectl get virtualmachineimages -n default \
   #     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName'
-  imageId: default/sthings-u26-26.928.0903
-  storageClassName: lh-ed436c27-9813-4e94-bbcb-b9f56a6fb11e
+  imageId: default/sthings-u26-26.928.0903-r1
+  storageClassName: lh-6b5018b3-df9f-409c-b82f-3a34a0cf7f74
 ---
 # The ansible-run defaults every AnsibleRun composes against. Label `default`
 # whatever the lab: ansible-run resolves its OWN label and fleet-wide only
@@ -139,7 +139,7 @@ data:
   # k3s is not needed in the image: Rancher's system-agent installs it.
   # Same image as cluster-vault-sthings-lab above; move both together. pin-bot
   # does NOT move these (it edits crossplane-mgmt's pin file only).
-  imageName: default/sthings-u26-26.928.0903
+  imageName: default/sthings-u26-26.928.0903-r1
   networkName: default/vms
   vmNamespace: default
   sshUser: sthings
