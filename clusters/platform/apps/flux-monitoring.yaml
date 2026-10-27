@@ -20,7 +20,7 @@ spec:
   interval: 12h
   url: https://github.com/controlplaneio-fluxcd/flux-operator
   ref:
-    tag: v0.42.1 # datasource=github-tags depName=controlplaneio-fluxcd/flux-operator
+    tag: v0.62.1 # datasource=github-tags depName=controlplaneio-fluxcd/flux-operator
   ignore: |
     /*
     !/config/monitoring/
