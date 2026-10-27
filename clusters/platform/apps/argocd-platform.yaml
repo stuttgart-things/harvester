@@ -48,7 +48,10 @@ spec:
     - target:
         group: kustomize.toolkit.fluxcd.io
         kind: Kustomization
-        name: argocd-platform-argo-cd
+        # A regex: patches apply before postBuild substitution, and in the
+        # source the name is still ${BUNDLE_NAME:-argocd-platform}-argo-cd --
+        # the literal argocd-platform-argo-cd matched nothing.
+        name: .*-argo-cd
       patch: |
         - op: add
           path: /spec/patches
