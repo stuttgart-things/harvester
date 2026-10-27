@@ -109,14 +109,9 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 - **`homerun2-dev-gateway`** 192.168.10.171: Cilium LB VIP (Clusterbook 171:ASSIGNED:DNS:homerun2-dev) of the Gateway homerun2-dev-sthings-gateway; *.homerun2-dev.sthings.lab with certificates from the OpenBao PKI on platform.
     - Headlamp (`headlamp.homerun2-dev.sthings.lab`): Kubernetes UI.
     - Flux web (`flux.homerun2-dev.sthings.lab`): Flux UI.
-    - led-catcher (`led-catcher.homerun2-dev.sthings.lab`): homerun2 LED catcher with its web simulator; switches between the `messages` and `tabletennis` streams.
-    - light-catcher (`light-catcher.homerun2-dev.sthings.lab`): homerun2 light catcher, drives the WLED strip (wled-matrix).
-    - wled-mock (`wled-mock.homerun2-dev.sthings.lab`): Stand-in for a WLED device.
-    - core-catcher (`core-catcher.homerun2-dev.sthings.lab`): homerun2 core catcher.
-    - omni-pitcher (`omni-pitcher.homerun2-dev.sthings.lab`): homerun2 omni pitcher; zaehlwerk pitches scores here.
-    - demo-pitcher (`demo-pitcher.homerun2-dev.sthings.lab`): homerun2 demo pitcher.
-    - config-viewer (`config-viewer.homerun2-dev.sthings.lab`): homerun2 config viewer.
-    - scout (`scout.homerun2-dev.sthings.lab`): homerun2 scout.
+    - sthings-portal (`portal.homerun2-dev.sthings.lab`): homerun2 UIs behind the ZITADEL login (core, notify, led, matrix, light, table, wled, schedule, sound, config, pitch); their direct hosts are gone (#569).
+    - omni-pitcher (`omni-pitcher.homerun2-dev.sthings.lab`): homerun2 omni pitcher, only /pitch (bearer token); platform's k8s-pitcher pitches its events here.
+    - schedule-pitcher (`schedule-pitcher.homerun2-dev.sthings.lab`): homerun2 schedule pitcher for its agents; the UI is the portal's /schedule.
     - schmetterpause (`schmetterpause.homerun2-dev.sthings.lab`): Table tennis league app; CNPG database backed up to MinIO on platform.
     - Zählwerk (`zaehlwerk.homerun2-dev.sthings.lab`): Scoring API and panel.
 - **`homerun2-dev-redis`** 192.168.10.179: Cilium LB address of redis-stack-lb (clusters/homerun2-dev/redis-lb.yaml), own pool with only this IP; Clusterbook 179:ASSIGNED:homerun2-dev-redis, deliberately without DNS.
