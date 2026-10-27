@@ -584,7 +584,9 @@ no checks of its own (none of platform-sthings' token checks has a Secret
 here), but receives the findings of the Harvester agent (source
 `checks-harvester`): a CronJob in `homerun2-agent` that lists the Longhorn
 volumes on Harvester every 6 hours and reports the ones that are not healthy
-(#573). Harvester has no Flux, so the agent runs here and reads Harvester with
+(#573); to run it now, bump the number in the Job name of
+[`homerun2-schedule-pitcher-agent-run.yaml`](./homerun2-schedule-pitcher-agent-run.yaml)
+and merge. Harvester has no Flux, so the agent runs here and reads Harvester with
 a read-only ServiceAccount
 ([`../harvester/homerun2-schedule-pitcher-reader.yaml`](../harvester/homerun2-schedule-pitcher-reader.yaml),
 kubeconfig in
