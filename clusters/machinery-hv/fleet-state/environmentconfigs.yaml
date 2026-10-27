@@ -139,7 +139,10 @@ data:
   # k3s is not needed in the image: Rancher's system-agent installs it.
   # Same image as cluster-vault-sthings-lab above; move both together. pin-bot
   # does NOT move these (it edits crossplane-mgmt's pin file only).
-  imageName: default/sthings-u26-26.928.0903-r1
+  # CAUTION: this is part of the machine template of RUNNING clusters
+  # (app-dev-hv). Changing it makes Rancher replace their nodes -- #590 did,
+  # reverted in this file. Move it only as a planned node replacement.
+  imageName: default/sthings-u26-26.928.0903
   networkName: default/vms
   vmNamespace: default
   sshUser: sthings
