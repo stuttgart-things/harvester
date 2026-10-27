@@ -36,7 +36,10 @@ spec:
   # The whole oidc.config comes from the SOPS Secret argocd-oidc-zitadel
   # (./argocd-oidc-zitadel.enc.yaml) via valuesFrom: it carries the client
   # secret literally, no `$secret:key` reference -- a `$` would be eaten by the
-  # two postBuild substitutions on the way (this one and the child's).
+  # two postBuild substitutions on the way (this one and the child's). Its key
+  # values.yaml is a values document (configs.cm."oidc.config"), merged as is:
+  # NOT valuesKey + targetPath, which parses the value as --set syntax and
+  # breaks on the commas in requestedScopes.
   #
   # url: ArgoCD builds the redirect URI from it (<url>/auth/callback, as
   # registered in ../zitadel-config/apps.auto.tfvars); it said
@@ -68,8 +71,7 @@ spec:
                   valuesFrom:
                     - kind: Secret
                       name: argocd-oidc-zitadel
-                      valuesKey: oidc.config
-                      targetPath: configs.cm.oidc\.config
+                      valuesKey: values.yaml
                   values:
                     configs:
                       cm:
