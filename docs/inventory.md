@@ -159,7 +159,7 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 
 ### ollama-gpu
 
-- **`ollama-gpu`** 192.168.10.147 (VM on Harvester): Harvester VM (8 vCPU / 8Gi / 128Gi, sthings-u26) with the host's RTX 5060 Ti (16 GB) passed through, static lease for MAC c6:a7:6d:4b:78:1a. Ollama serves gemma3:12b (chat) and bge-m3 (embeddings) for Backstage RAG-AI on platform.
+- **`ollama-gpu`** 192.168.10.147 (VM on Harvester): Harvester VM (16 vCPU / 16Gi / 256Gi, sthings-u26) with the host's RTX 5060 Ti (16 GB) passed through, static lease for MAC c6:a7:6d:4b:78:1a. Ollama serves gemma3:12b (chat) and bge-m3 (embeddings) for Backstage RAG-AI on platform.
     - Ollama (`ollama-gpu.sthings.lab:11434`): OpenAI-compatible API (/v1/chat/completions, /v1/embeddings) for Backstage "Ask AI".
 
 ### platform-sthings

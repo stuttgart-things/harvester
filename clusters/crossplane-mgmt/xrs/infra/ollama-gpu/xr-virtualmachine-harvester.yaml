@@ -1,8 +1,11 @@
 # Ollama on the Harvester host's RTX 5060 Ti (16 GB), the local LLM endpoint for
 # Backstage RAG-AI (harvester#526). Runbook: hosts/ollama-gpu/README.md.
 #
-# large = 8 vCPU / 8 GiB / 128 GiB: the models live in VRAM, RAM only stages
-# them; the disk holds the model files (~10 GB for the default pair).
+# xlarge = 16 vCPU / 16 GiB / 256 GiB. The models live in VRAM, but RAM stages
+# them: under memory pressure Ollama disables mmap and copies a model into RAM
+# before it moves to the GPU. With large (8 GiB) a model swap (gemma3 <->
+# qwen3) got llama-server OOM-killed on 2026-10-27. The disk holds the model
+# files (~16 GB for gemma3:12b, bge-m3 and qwen3:8b).
 # sthings-u26 (golden) because ansible: true logs in with the baked password;
 # the AnsibleRun does the base OS only, Ollama comes from the Dagger run.
 #
@@ -18,7 +21,7 @@ metadata:
   name: ollama-gpu
   namespace: default
 spec:
-  size: large
+  size: xlarge
   provider: harvester
   environment: harvester
   os: sthings-u26
