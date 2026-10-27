@@ -9,7 +9,7 @@ embedding model behind its OpenAI-compatible `/v1` API. Tracking:
 
 | | |
 |---|---|
-| VM | `XVirtualMachine` [`ollama-gpu`](../../clusters/crossplane-mgmt/xrs/infra/ollama-gpu/xr-virtualmachine-harvester.yaml) on crossplane-mgmt: `large` (8 vCPU / 8 GiB / 128 GiB), `sthings-u26`, GPU as `hostDevices` |
+| VM | `XVirtualMachine` [`ollama-gpu`](../../clusters/crossplane-mgmt/xrs/infra/ollama-gpu/xr-virtualmachine-harvester.yaml) on crossplane-mgmt: `xlarge` (16 vCPU / 16 GiB / 256 GiB; 8 GiB was too little to swap models, see the XR), `sthings-u26`, GPU as `hostDevices` |
 | Software | [`sthings.container.ollama_gpu`](https://github.com/stuttgart-things/ansible/blob/main/collections/container/ollama_gpu.yaml): NVIDIA driver (open modules), Ollama as a systemd service, models |
 | Models | `gemma3:12b` (chat, ~8 GB) + `bge-m3` (embeddings, ~1.2 GB), both kept loaded |
 | Endpoint | `http://<vm-ip>:11434/v1` (`/v1/chat/completions`, `/v1/embeddings`, `/v1/models`) |

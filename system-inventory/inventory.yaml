@@ -581,7 +581,7 @@ hosts:
     kind: host
     vm: harvester
     description: >-
-      Harvester VM (8 vCPU / 8Gi / 128Gi, sthings-u26) with the host's RTX 5060
+      Harvester VM (16 vCPU / 16Gi / 256Gi, sthings-u26) with the host's RTX 5060
       Ti (16 GB) passed through, static lease for MAC c6:a7:6d:4b:78:1a.
       Ollama serves gemma3:12b (chat) and bge-m3 (embeddings) for Backstage
       RAG-AI on platform.
