@@ -105,7 +105,7 @@ spec:
           value:
             name: harvester-kubeconfig
             secret:
-              secretName: homerun2-schedule-pitcher-agent-harvester
+              secretName: homerun2-schedule-pitcher-agent-harvester # pragma: allowlist secret
     - target:
         kind: ConfigMap
         name: homerun2-schedule-pitcher-agent-profile
