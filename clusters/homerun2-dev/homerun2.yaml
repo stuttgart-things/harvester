@@ -138,7 +138,7 @@ spec:
       # value must be a string.
       HOMERUN2_LED_CATCHER_DISPLAY_QUEUE: "3"
 
-      # Behind homerun2-portal (./homerun2-portal.yaml): each service answers
+      # Behind sthings-portal (./sthings-portal.yaml): each service answers
       # under the key the portal serves it at -- on its own hostname too,
       # e.g. led-catcher.homerun2-dev.sthings.lab/led/.
       HOMERUN2_LED_CATCHER_BASE_PATH: /led

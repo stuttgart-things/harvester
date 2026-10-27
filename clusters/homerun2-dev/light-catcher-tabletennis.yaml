@@ -42,7 +42,7 @@ spec:
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
       # ../homerun2-dev-light/profile.yaml, applied by ./light-profile.yaml.
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
-      # Under the portal's key (./homerun2-portal.yaml), like the others.
+      # Under the portal's key (./sthings-portal.yaml), like the others.
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
       HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
       HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize

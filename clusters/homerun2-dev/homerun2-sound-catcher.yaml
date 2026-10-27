@@ -2,7 +2,7 @@
 # homerun2-sound-catcher (stuttgart-things/homerun2-sound-catcher): messages
 # as clips and spoken announcements, heard on its browser player page --
 # browser sink only, one replica. Served under /sound/ for
-# ./homerun2-portal.yaml; / on sound-catcher.homerun2-dev.sthings.lab
+# ./sthings-portal.yaml; / on sound-catcher.homerun2-dev.sthings.lab
 # redirects there, /health stays at the root.
 #
 # stuttgart-things/flux → ./apps/homerun2/profiles/base-sound-catcher, the sops
