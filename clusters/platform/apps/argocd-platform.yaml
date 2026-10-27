@@ -27,6 +27,56 @@ spec:
   path: ./cicd/argocd-platform/overlays/sthings-lab
   prune: true
   wait: true
+  # ZITADEL login (harvester#574) NEXT TO the local admin, which stays
+  # (admin.enabled is the chart default, ARGO_CD_SERVER_ADMIN_PASSWORD as
+  # before). Nested, as openbao's in ../apps-platform.yaml: the HelmRelease
+  # argocd-deployment comes from the child Kustomization argocd-platform-argo-cd,
+  # so this adds a patch to the child's own patch list.
+  #
+  # The whole oidc.config comes from the SOPS Secret argocd-oidc-zitadel
+  # (./argocd-oidc-zitadel.enc.yaml) via valuesFrom: it carries the client
+  # secret literally, no `$secret:key` reference -- a `$` would be eaten by the
+  # two postBuild substitutions on the way (this one and the child's).
+  #
+  # url: ArgoCD builds the redirect URI from it (<url>/auth/callback, as
+  # registered in ../zitadel-config/apps.auto.tfvars); it said
+  # https://argocd.example.com. RBAC: the flat `groups` claim
+  # (../zitadel-config/groups-claim.tf), argocd-admin => role:admin,
+  # argocd-readonly => role:readonly; no default role -- ZITADEL's role check
+  # refuses users without either anyway.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: argocd-platform-argo-cd
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                kind: HelmRelease
+                name: argocd-deployment
+              patch: |
+                apiVersion: helm.toolkit.fluxcd.io/v2
+                kind: HelmRelease
+                metadata:
+                  name: argocd-deployment
+                spec:
+                  valuesFrom:
+                    - kind: Secret
+                      name: argocd-oidc-zitadel
+                      valuesKey: oidc.config
+                      targetPath: configs.cm.oidc\.config
+                  values:
+                    configs:
+                      cm:
+                        url: https://argocd.platform.sthings.lab
+                      rbac:
+                        policy.default: ""
+                        scopes: "[groups]"
+                        policy.csv: |
+                          g, argocd-admin, role:admin
+                          g, argocd-readonly, role:readonly
   postBuild:
     substitute:
       BUNDLE_NAME: argocd-platform
