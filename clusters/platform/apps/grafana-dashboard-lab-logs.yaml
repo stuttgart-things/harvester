@@ -1,7 +1,9 @@
 ---
 # "Lab Logs (Loki)": logs of every cluster that ships to platform's Loki
 # (fluent-bit, #499), filtered by the labels fluent-bit sets -- cluster,
-# namespace_name, pod_name, container_name -- plus a regex search. Own, small
+# kubernetes_namespace_name, kubernetes_pod_name, kubernetes_container_name
+# (label_keys $kubernetes['namespace_name'] etc. become kubernetes_<key>) --
+# plus a regex search. Own, small
 # dashboard: the common grafana.com ones (13639, 15141) expect app/namespace/
 # stream labels that this pipeline does not set. Datasource uid `loki` from
 # flux infra/loki components/grafana-datasource.
@@ -70,11 +72,11 @@ data:
             },
             "query": {
               "type": 1,
-              "label": "namespace_name",
+              "label": "kubernetes_namespace_name",
               "stream": "{cluster=~\"$cluster\"}",
               "refId": "LokiVariableQueryEditor-VariableQuery"
             },
-            "definition": "label_values({cluster=~\"$cluster\"}, namespace_name)",
+            "definition": "label_values({cluster=~\"$cluster\"}, kubernetes_namespace_name)",
             "refresh": 2,
             "includeAll": true,
             "multi": true,
@@ -95,11 +97,11 @@ data:
             },
             "query": {
               "type": 1,
-              "label": "pod_name",
-              "stream": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\"}",
+              "label": "kubernetes_pod_name",
+              "stream": "{cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\"}",
               "refId": "LokiVariableQueryEditor-VariableQuery"
             },
-            "definition": "label_values({cluster=~\"$cluster\", namespace_name=~\"$namespace\"}, pod_name)",
+            "definition": "label_values({cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\"}, kubernetes_pod_name)",
             "refresh": 2,
             "includeAll": true,
             "multi": true,
@@ -120,11 +122,11 @@ data:
             },
             "query": {
               "type": 1,
-              "label": "container_name",
-              "stream": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\"}",
+              "label": "kubernetes_container_name",
+              "stream": "{cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\", kubernetes_pod_name=~\"$pod\"}",
               "refId": "LokiVariableQueryEditor-VariableQuery"
             },
-            "definition": "label_values({cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\"}, container_name)",
+            "definition": "label_values({cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\", kubernetes_pod_name=~\"$pod\"}, kubernetes_container_name)",
             "refresh": 2,
             "includeAll": true,
             "multi": true,
@@ -191,8 +193,8 @@ data:
                 "type": "loki",
                 "uid": "loki"
               },
-              "expr": "sum by (cluster, namespace_name) (count_over_time({cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\", container_name=~\"$container\"} |~ \"(?i)$search\" [$__auto]))",
-              "legendFormat": "{{cluster}}/{{namespace_name}}"
+              "expr": "sum by (cluster, kubernetes_namespace_name) (count_over_time({cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\", kubernetes_pod_name=~\"$pod\", kubernetes_container_name=~\"$container\"} |~ \"(?i)$search\" [$__auto]))",
+              "legendFormat": "{{cluster}}/{{kubernetes_namespace_name}}"
             }
           ]
         },
@@ -224,7 +226,7 @@ data:
                 "type": "loki",
                 "uid": "loki"
               },
-              "expr": "{cluster=~\"$cluster\", namespace_name=~\"$namespace\", pod_name=~\"$pod\", container_name=~\"$container\"} |~ \"(?i)$search\"",
+              "expr": "{cluster=~\"$cluster\", kubernetes_namespace_name=~\"$namespace\", kubernetes_pod_name=~\"$pod\", kubernetes_container_name=~\"$container\"} |~ \"(?i)$search\"",
               "maxLines": 1000
             }
           ]
