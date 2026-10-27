@@ -11,7 +11,7 @@ provider "zitadel" {
 # The module of the vSphere labs (stuttgart-things/stuttgart-things#4118),
 # pinned to a commit: a change there must not reach this instance unreviewed.
 module "zitadel_portal" {
-  source = "git::https://github.com/stuttgart-things/stuttgart-things.git//terraform/modules/zitadel-portal?ref=ddf3c6539a1c4d2100dee7274dd5cafad8fed3d4"
+  source = "git::https://github.com/stuttgart-things/stuttgart-things.git//terraform/modules/zitadel-portal?ref=8aea99169e139ac82e976bbed21fb31b06022e1d"
 
   zitadel_domain         = var.zitadel_domain
   org_id                 = var.org_id
