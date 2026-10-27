@@ -16,3 +16,5 @@ resources:
   - app-dev-hv.yaml
   # its CloudNativePG backup target (bucket per source cluster) -- see the file
   - app-dev-hv-backup.yaml
+  # platform's ZITADEL pg_dump target (harvester#574) -- see the file
+  - platform-zitadel-backup.yaml
