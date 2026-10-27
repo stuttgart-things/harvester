@@ -1,7 +1,7 @@
 # State on platform, in the namespace of the ZITADEL it describes
-# (apps-platform → zitadel). It holds the portal client secrets and any
-# initial user passwords in cleartext, so it sits next to the instance and
-# nowhere else.
+# (apps-platform → zitadel). It holds the portal client secrets in cleartext
+# (initial user passwords are write-only, never in it), so it sits next to the
+# instance and nowhere else.
 terraform {
   required_version = ">= 1.5"
   backend "kubernetes" {

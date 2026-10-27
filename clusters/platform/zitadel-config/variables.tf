@@ -36,7 +36,7 @@ variable "users" {
 
 variable "user_initial_passwords" {
   type        = map(string)
-  description = "Optional initial passwords, user_name => password; stored in the state, changed at the first login. Pass via TF_VAR_user_initial_passwords."
+  description = "Optional initial passwords, user_name => password; write-only (never in the state), changed at the first login. Pass via TF_VAR_user_initial_passwords."
   default     = {}
   sensitive   = true
 }
