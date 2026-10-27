@@ -32,9 +32,11 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
   ref:
-    # v1.11.0+: the UI serves under BASE_PATH, /schedule for homerun2-portal
+    # v1.11.0+: the UI serves under BASE_PATH, /schedule for sthings-portal
     # (patch below); the session cookie is scoped to it.
-    tag: v1.13.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
+    # v1.14.0+: AUTH_TRUST_FORWARDED_USER (patch below); the direct route
+    # strips X-Forwarded-User/-Groups.
+    tag: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -140,10 +142,15 @@ spec:
               findings:
                 officeHours: { start: 8, end: 18 }
               checks: []
-    # homerun2-portal serves the UI under /schedule/ (./homerun2-portal.yaml),
+    # sthings-portal serves the UI under /schedule/ (./sthings-portal.yaml),
     # so it answers under that prefix; /ui on schedule-pitcher.<domain>
     # redirects there. /findings, /api, /health and /metrics stay at the root
     # for agents and probes, so the route keeps matching /.
+    # AUTH_TRUST_FORWARDED_USER: users logged in at sthings-portal (ZITADEL or
+    # its local users) are not asked for the token again under /schedule/. The
+    # portal strips and re-sets X-Forwarded-User/-Groups; the artifact's direct
+    # route strips them. AUTH_FORWARDED_GROUPS stays empty: the portal only
+    # admits portal-admin/portal-user. As stuttgart-things/stuttgart-things#4144.
     - target:
         kind: Deployment
         name: homerun2-schedule-pitcher
@@ -160,6 +167,8 @@ spec:
                   env:
                     - name: BASE_PATH
                       value: /schedule
+                    - name: AUTH_TRUST_FORWARDED_USER
+                      value: "true"
     # The route is a separate Kustomization below that waits for this one:
     # a route applied before its Service serves HTTP 500 for good (Cilium
     # resolves backends once), see homerun2-routes in ./homerun2.yaml.

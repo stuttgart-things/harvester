@@ -13,7 +13,7 @@ own Flux objects here. `SOPS_AGE_KEY` is the only thing that is not.
 | Cluster / VM name | `homerun2-dev` (the name is load-bearing: DNS, `cluster_name`, and the file names in `vms/`) |
 | LB address | `192.168.10.171`, reserved in Clusterbook -- the Cilium VIP for Services, **not** the node's address (that is a DHCP lease, see step 3) |
 | Domain | `homerun2-dev.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy, no Canal |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy, no Canal |
 | GitOps | Flux, syncing `clusters/homerun2-dev` |
 | Harvester image | `sthings-u26`, 12 vCPU / 12Gi / 50Gi root disk |
 
@@ -96,7 +96,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/homerun2-dev.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -318,7 +318,7 @@ committed, the FluxInstance syncing `clusters/homerun2-dev` applies it -- no
 | `openebs` | local storage |
 | `headlamp` | `https://headlamp.homerun2-dev.sthings.lab` |
 | `flux-web` | `https://flux.homerun2-dev.sthings.lab` |
-| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- homerun2-portal picks up a new service list without a manual restart |
+| `reloader` | stakater Reloader (chart 2.2.18): rolls Deployments annotated `reloader.stakater.com/auto` when their ConfigMap/Secret changes -- sthings-portal picks up a new service list without a manual restart |
 
 The bundle maps one `INFRA_DOMAIN` onto every base that needs a domain, so the
 name is written once. Ordering comes from upstream `dependsOn`, not from the
@@ -376,6 +376,46 @@ archive was again the slow step, roughly half of the 21 minutes.
 
 The node took `192.168.10.117` from DHCP. `192.168.10.171` stays the LB VIP and
 is not reachable until `cilium-lb` and `cilium-gateway` have reconciled.
+
+### Upgrading Kubernetes in place
+
+`bake-harvester` is for building. On a running node, use `execute-ansible`
+with the same parameters and only the RKE2 play. `sthings.rke.rke2_cluster`
+re-runs the RKE2 install script on every run (no "already installed" guard),
+which drops in the binaries for `rke2_k8s_version`. It then restarts
+`rke2-server` (`restart_rke2_already_running: true`), and that is the upgrade.
+
+```bash
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/homerun2-dev.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/homerun2-dev.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+  execute-ansible \
+  --playbooks "sthings.rke.rke2_cluster" \
+  --hosts 192.168.10.117 \
+  --inventory-type cluster \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ssh-user env:ANSIBLE_USER \
+  --ssh-password env:ANSIBLE_PASSWORD \
+  --cache-buster "upgrade-$(date +%s)" \
+  --progress plain
+```
+
+- **Read the node IP first** (step 3). `--hosts` must be the node, not the VIP.
+- **Cilium moves too.** Without `cilium_chart_version`, the role installs the
+  Cilium its cilium-cli build defaults to (cli 0.19.7 -> 1.19.5). Pin
+  `cilium_chart_version` if that is not wanted.
+- **Single node: the restart is downtime** for everything on the cluster,
+  including omni-pitcher, which platform's k8s-pitcher posts to. Expect a few
+  minutes.
+- RKE2 keeps local etcd snapshots (`kubectl get etcdsnapshotfiles`). Check that
+  a recent one exists before the run.
+
+Last upgrade: `2026-10-23`, `v1.35.3+rke2r1` -> `v1.35.9+rke2r1` (#491), Cilium
+1.19.3 -> 1.19.5. `Ansible.execute DONE [9m17s]`, recap
+`ok=135 changed=21 unreachable=0 failed=0 skipped=85`. Afterwards: node `Ready` on
+`v1.35.9+rke2r1`, only `cilium`/`cilium-envoy` as DaemonSets, the
+`helm-install-rke2-*` jobs `Complete`, all Flux Kustomizations Ready.
 
 Steps 4-6 followed on the same day. All nine Kustomizations Ready, four Helm
 releases installed (cert-manager v1.21.2, headlamp 0.45.0, openebs 4.6.1,
@@ -514,7 +554,7 @@ Two things to expect when reading the cluster back:
   not the `INFRA_*` names. Same values, different spelling; see the trap above.
 - **`UI_STREAM_PRESETS` is a variable now**
   (`HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS`), no longer a patch on the
-  led-catcher's child Kustomization; see section 9.
+  led-catcher's child Kustomization; see section 9, "The demo".
 
 One operational note on config-viewer: it reads Deployments and ConfigMaps in
 its own namespace through the Kubernetes API (`get` and `list`, nothing more --
@@ -534,12 +574,24 @@ platform-sthings (`stuttgart-things/stuttgart-things`,
 | sound-catcher (browser player) | [`homerun2-sound-catcher.yaml`](./homerun2-sound-catcher.yaml) | `profiles/base-sound-catcher` (+ `-routes`) | `/sound` |
 | schedule-pitcher | [`homerun2-schedule-pitcher.yaml`](./homerun2-schedule-pitcher.yaml) | released kustomize artifact (OCI) | `/schedule` |
 | k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
+| schedule-pitcher agent for Harvester (Longhorn volumes) | [`homerun2-schedule-pitcher-agent.yaml`](./homerun2-schedule-pitcher-agent.yaml) | released agent kustomize artifact (OCI) | -- |
 
 schedule-pitcher's own API/UI token is
 [`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
-generated for this cluster; it runs with no checks yet (none of
-platform-sthings' token checks has a Secret here). k8s-pitcher's error events
-reach Teams through the `teams-homerun2-dev` output.
+generated for this cluster; behind the portal it is not asked for (the pitcher
+trusts the portal's `X-Forwarded-User`, which its direct route strips). It runs
+no checks of its own (none of platform-sthings' token checks has a Secret
+here), but receives the findings of the Harvester agent (source
+`checks-harvester`): a CronJob in `homerun2-agent` that lists the Longhorn
+volumes on Harvester every 6 hours and reports the ones that are not healthy
+(#573); to run it now, bump the number in the Job name of
+[`homerun2-schedule-pitcher-agent-run.yaml`](./homerun2-schedule-pitcher-agent-run.yaml)
+and merge. Harvester has no Flux, so the agent runs here and reads Harvester with
+a read-only ServiceAccount
+([`../harvester/homerun2-schedule-pitcher-reader.yaml`](../harvester/homerun2-schedule-pitcher-reader.yaml),
+kubeconfig in
+[`homerun2-schedule-pitcher-agent-harvester.enc.yaml`](./homerun2-schedule-pitcher-agent-harvester.enc.yaml)).
+k8s-pitcher's error events reach Teams through the `teams-homerun2-dev` output.
 
 **Every version is pinned in this directory** -- `*_VERSION` substitutes,
 OCIRepository `tag` and `newTag`, each annotated `# datasource=docker depName=…`
@@ -553,8 +605,8 @@ Two pieces of hardware hang off this stack since 2026-09-28:
 
 | Device | Address | Fed by |
 |---|---|---|
-| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` stream from this cluster's Redis over the LAN; in the portal as `/matrix` |
-| WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the light-catcher here, via [`homerun2-light-catcher-profile.yaml`](./homerun2-light-catcher-profile.yaml) |
+| 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` and `tabletennis` streams from this cluster's Redis over the LAN; in the portal as `/matrix` |
+| WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the table tennis demo's light-catcher ([`light-catcher-tabletennis.yaml`](./light-catcher-tabletennis.yaml), profile in [`../homerun2-dev-light`](../homerun2-dev-light/profile.yaml)); the cluster's alerts go to the wled-mock |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
 `redis-stack-lb` on `192.168.10.179:6379`, with a Cilium pool of its own that
@@ -572,7 +624,7 @@ kubectl -n homerun2 exec redis-stack-node-0 -c redis -- sh -c \
 **In the portal** the Pi is the card *LED Matrix (Pi)* under
 https://portal.homerun2-dev.sthings.lab/ui/matrix, next to the simulator under
 `/led`: `matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080` in
-[`homerun2-portal.yaml`](./homerun2-portal.yaml). The portal forwards
+[`sthings-portal.yaml`](./sthings-portal.yaml). The portal forwards
 `/matrix/...` unchanged, so the Pi runs with `BASE_PATH=/matrix`
 (`led_base_path`, led-catcher v0.19.0 or later for the card's fragment). It is
 plain HTTP on 8080, not Caddy's https: the portal image does not carry the
@@ -592,6 +644,42 @@ a fixed table in light-catcher v1.2.0, not the device's own list -- only
 Solid, Blink, Breathe and Wipe are right; the file explains.
 
 ---
+
+### The portal: sthings-portal with ZITADEL login (#560)
+
+[`sthings-portal.yaml`](./sthings-portal.yaml) runs sthings-portal (the
+successor of homerun2-portal) on `portal.homerun2-dev.sthings.lab`. Login:
+**ZITADEL** on the platform cluster (`https://zitadel.platform.sthings.lab`,
+users and roles in [`../platform/zitadel-config`](../platform/zitadel-config/README.md);
+`portal-admin` and `portal-user` get in), the local users as **emergency
+access**. The CA that verifies ZITADEL is
+[`sthings-portal-oidc-ca.yaml`](./sthings-portal-oidc-ca.yaml) (`CN=sthings.lab`).
+
+The Secret `sthings-portal-auth` (`sthings-portal-auth.enc.yaml`) needs the
+client secret from ZITADEL, so it is made after the Terraform apply:
+
+```bash
+cd ~/projects/harvester
+umask 077
+htpasswd -nB emergency > /dev/shm/portal-users && test -s /dev/shm/portal-users || echo "htpasswd FAILED"
+KUBECONFIG=~/.kube/platform.sthings.lab terraform -chdir=clusters/platform/zitadel-config \
+  output -json client_secrets | jq -j '."homerun2-dev"' > /dev/shm/portal-client-secret
+openssl rand -base64 48 | tr -d '\n' > /dev/shm/portal-session-key
+
+kubectl create secret generic sthings-portal-auth -n homerun2 \
+    --from-file=users=/dev/shm/portal-users \
+    --from-file=session-key=/dev/shm/portal-session-key \
+    --from-file=oidc-client-secret=/dev/shm/portal-client-secret \
+    --dry-run=client -o yaml \
+  | sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
+      --encrypted-regex '^(data|stringData)$' --input-type yaml --output-type yaml /dev/stdin \
+  > clusters/homerun2-dev/sthings-portal-auth.enc.yaml
+shred -u /dev/shm/portal-users /dev/shm/portal-client-secret /dev/shm/portal-session-key
+grep -c 'ENC\[' clusters/homerun2-dev/sthings-portal-auth.enc.yaml   # 4
+```
+
+The client ID goes into `AUTH_OIDC_CLIENT_ID` in `sthings-portal.yaml`
+(`terraform output -json client_ids | jq -r '."homerun2-dev"'`, not a secret).
 
 ## What this cluster does not have yet
 
@@ -666,146 +754,134 @@ curl -sk -v https://headlamp.homerun2-dev.sthings.lab/ 2>&1 | grep -E 'subject:|
 
 ---
 
-## 9. The table tennis stack
+## 9. The demo: Pong plays tournaments on the TV, the matrix and the strip
 
-[`tabletennis.yaml`](./tabletennis.yaml) runs **schmetterpause** (players, TTR,
-tournaments, history) and **zaehlwerk** (the scoring API and its panel) from
-`apps/tabletennis/profiles/sops` in stuttgart-things/flux -- one Kustomization,
-with the credentials substituted from
-[`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml).
+homerun2-dev stands in the office next to a TV, the real LED matrix and the
+real WLED strip, and nobody plays at it. Since 2026-10-25 its table tennis is a
+demo that plays itself (zaehlwerk ADR-0015/16/17, schmetterpause ADR-0027/28):
 
-### From the upstream profile, not a copy of it
+- **schmetterpause** with eight bot players and an observer `Pong`, every
+  result counted at once ([`tabletennis.yaml`](./tabletennis.yaml), flux
+  `apps/tabletennis/profiles/sandbox`, namespace `schmetterpause-demo`);
+- **zaehlwerk** taking Pong's matches through `MATCHES_TOKEN` and reporting
+  them, the score straight into this cluster's Redis on `tabletennis`
+  (namespace `zaehlwerk-demo`);
+- **zaehlwerk-pong** in league mode with tournaments on: the open places of a
+  tournament first, oldest tournament first, the final once the table decides
+  it, a random pair when nothing is open. The court runs three times as fast
+  as real time (`PONG_COURT_SPEED`, zaehlwerk v0.34.0+), so a best of three
+  takes about five minutes;
+- **the matrix** (Pi and simulator) reads `messages` and `tabletennis` at once:
+  the score stays up, cluster cards pass over it;
+- **the strip** belongs to the table
+  ([`light-catcher-tabletennis.yaml`](./light-catcher-tabletennis.yaml),
+  profile [`../homerun2-dev-light/profile.yaml`](../homerun2-dev-light/profile.yaml)):
+  a point on the scorer's half, set and match point pulsing on the holder's
+  half, a won set wiped across, a won match in fireworks, a tournament match
+  louder, the final loudest, quiet in the evening and at the weekend. The
+  cluster's alerts go to the wled-mock, on the TV in the portal (`wled`).
 
-Until flux#483 the upstream profile took every credential from ExternalSecrets,
-so this cluster assembled the stack by hand and upstream changes did not reach
-it. `profiles/sops` is the same pair with plain Secrets instead. It deletes the
-three ExternalSecrets, because without ESO their CRD does not exist here and
-they would fail the dry-run. It also builds `schmetterpause-db` with all three
-keys, `SP_DATABASE_URL` included. That key is what cost a second outage here
-when only `spec.data[]` was copied.
+| What | Where |
+|---|---|
+| Tournaments, table, ranking | https://schmetterpause.homerun2-dev.sthings.lab |
+| The running match (spectator screen) | https://zaehlwerk.homerun2-dev.sthings.lab/ui/watch |
+| The game itself | https://zaehlwerk-pong.homerun2-dev.sthings.lab (a running game at `/play/<id>`) |
+| The game on the TV, every game one after the other | https://zaehlwerk-pong.homerun2-dev.sthings.lab/live (zaehlwerk v0.35.0+) |
+| Stop or play the league (TV, matrix and strip go quiet) | the *Liga* card in the lobby, https://zaehlwerk-pong.homerun2-dev.sthings.lab (zaehlwerk v0.37.0+; a restart plays it again) |
+| Matrix, strip, mock, alerts in one page | https://portal.homerun2-dev.sthings.lab (`matrix`, `table`, `wled`, `notify`) |
 
-What stays local is only what the profile does not know: the domain and gateway,
-the database size (`2Gi`, the size the Cluster was created at; the profile's
-`1Gi` would be a shrink), the pinned versions, and two patches that go into the
-child Kustomizations: `SP_PUBLIC_BASE_URL` and zaehlwerk's `OMNI_PITCHER_URL`
-over the gateway (see below for why not the in-cluster panel component).
+A tournament is created by a person on schmetterpause's tournament page --
+sign in, pick the bots, best of 1 or 3, *mit Finale* for the final. Pong takes
+it from there and plays the league again when it is done; close it there too.
 
-The CloudNativePG `Cluster` comes from the profile too. It used to sit in a
-sibling directory (`homerun2-dev-seeds`) because a CNPG object applied directly
-by `flux-system` deadlocks on its own CRD. That blocked every object in
-`clusters/homerun2-dev` on 2026-09-17. Inside `tabletennis`, which
-`dependsOn: infra-platform`, that cannot happen. The `Cluster` and the
-`schmetterpause` Namespace both carry `prune: disabled`, because the PVC hangs
-off the `Cluster` by ownerReference and CNPG has no retention of its own.
+### Once, before the switch (2026-10-25)
 
-### `tabletennis` is a stream nobody reads, and that is the decision
+1. **Dump the office copy.** Until this change, schmetterpause here held a
+   database of its own (restored from the office 2026-09-28, recreated
+   2026-10-03; at the switch 3 players, 10 matches, PIN hashes), backed up
+   nightly into
+   `s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/` (kept 30 days). A
+   last dump stays with whoever takes it -- never in git, never on shared
+   storage:
 
-config-viewer reports it as an unread stream. The report is correct and the
-configuration is deliberate.
+   ```bash
+   export KUBECONFIG=~/.kube/homerun2-dev
+   kubectl -n schmetterpause exec schmetterpause-db-1 -c postgres -- \
+     pg_dump -d schmetterpause --no-owner > schmetterpause-homerun2-dev-$(date +%F).sql
+   ```
 
-zaehlwerk pitches scores through omni-pitcher, which routes `system: tabletennis`
-onto a stream of that name (rule 3). zaehlwerk *can* then switch the led-catcher
-onto that stream for the match and back to `messages` afterwards -- upstream
-ADR-0003, with override tracking and a 20m idle timeout -- but only by calling
-the catcher directly, which needs `CATCHER_URL`. **On this cluster zaehlwerk
-reaches nothing but omni-pitcher**, so that variable is left unset and zaehlwerk
-logs `panel stream switching disabled, no CATCHER_URL configured`. There is no
-indirect path: omni-pitcher offers only `/pitch*` and has no catcher control, and
-the led-catcher's switch is HTTP-only -- a message in a stream cannot trigger it.
+2. **The matches token** into [`homerun2-secrets-subst.enc.yaml`](./homerun2-secrets-subst.enc.yaml):
+   `ZAEHLWERK_MATCHES_TOKEN` (`openssl rand -hex 32`). zaehlwerk opens its
+   door for Pong with it, and Pong sends it; `tabletennis` does not render
+   without it.
 
-So the switch is a human act. The led-catcher's web simulator carries it, and
-[`homerun2.yaml`](./homerun2.yaml) sets `UI_STREAM_PRESETS=messages,tabletennis`
-(as `HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS`)
-so the control actually offers both -- unset, it offers only the configured
-stream and there is no way to reach `tabletennis` from the table. The header's
-`overridden` badge and `reset` button are what stop a panel sitting on a dead
-scoreboard after an abandoned match. From a terminal:
+   ```bash
+   sops clusters/homerun2-dev/homerun2-secrets-subst.enc.yaml   # add ZAEHLWERK_MATCHES_TOKEN
+   ```
 
-```bash
-curl -s https://led-catcher.homerun2-dev.sthings.lab/streams
-curl -s -X POST https://led-catcher.homerun2-dev.sthings.lab/streams \
-  -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
-```
+### Once, after the merge
 
-**That endpoint is unauthenticated.** Upstream calls it "fine while the port is
-cluster-internal" -- which is not true here, because the shipped HTTPRoute
-publishes it on the lab network. Accepted for now, knowingly: anyone who can
-reach the hostname can take the panel over. Removing the HTTPRoute would also
-remove the browser control that is currently the only way to switch.
+3. **Delete the old pair.** The `schmetterpause` namespace and its
+   CloudNativePG `Cluster` carried `prune: disabled` (the office copy), so they
+   outlive the change; `zaehlwerk` goes with the old Kustomization. After the
+   dump:
 
----
+   ```bash
+   kubectl delete namespace schmetterpause
+   kubectl get ns zaehlwerk 2>/dev/null && kubectl delete namespace zaehlwerk
+   ```
 
-### zaehlwerk -> schmetterpause, and zaehlwerk's CA
+   The bucket path `schmetterpause-db-homerun2-dev/` ages out by its 30-day
+   retention; nothing writes to it any more.
 
-Since 2026-09-28 a won match goes from zaehlwerk to schmetterpause
-(`schmetterpause-scoreboard-sops` + `zaehlwerk-handover-sops`, one token:
-`SCHMETTERPAUSE_SCOREBOARD_TOKEN` in `homerun2-secrets-subst`). zaehlwerk calls
-both schmetterpause and omni-pitcher through the Gateway, whose certificate the
-sthings.lab CA signs. It trusts that CA only through
-[`zaehlwerk-trust-bundle.yaml`](./zaehlwerk-trust-bundle.yaml) -- trust-manager
-would write that ConfigMap elsewhere, and there is none here. Before it
-existed every panel pitch failed with `x509: certificate signed by unknown
-authority`, and no score ever reached the LED matrix.
+4. **Name the bots** after the seed Job has run (`kubectl -n schmetterpause-demo
+   get job` shows it `Complete`). The seed's names are Ada .. Hanna; here they
+   carry table tennis legends, strongest first, and `ZAEHLWERK_PONG_PLAYER_SKILL`
+   in [`tabletennis.yaml`](./tabletennis.yaml) gives the strengths by these
+   names. A later seed run changes nothing -- it refuses a database with
+   players.
 
-```bash
-kubectl -n zaehlwerk logs deploy/zaehlwerk | grep -E 'authenticated|x509|handover|result'
-```
+   ```bash
+   kubectl -n schmetterpause-demo exec -i schmetterpause-db-1 -c postgres -- psql -d schmetterpause -v ON_ERROR_STOP=1 <<'SQL'
+   update players set display_name = v.legend
+   from (values ('Ada','Waldner'), ('Bert','Ma Long'), ('Cleo','Boll'), ('Dino','Ovtcharov'),
+                ('Emil','Zhang Jike'), ('Frida','Persson'), ('Gero','Samsonov'), ('Hanna','Saive'))
+        as v(seed, legend)
+   where players.display_name = v.seed;
+   SQL
+   kubectl -n zaehlwerk-demo logs deploy/zaehlwerk-pong | grep -E 'league mode on|PONG_PLAYER_SKILL'
+   ```
 
-The admin page of schmetterpause shows the Zählwerk as configured once the
-token is set.
+   Until the rename, Pong plays the seed's names at `mittel` and logs each
+   legend it cannot find, once.
 
-## 10. schmetterpause's data: restored from the office, backed up to platform
+5. **Two segments on the strip**, so a point lights one half: in the WLED UI
+   (http://wled-matrix.sthings.lab) under *Segments*, segment 0 = LEDs 0-17
+   (the left, side a) and segment 1 = LEDs 18-35 (side b), then *Save* the
+   layout into the boot preset. While you are there, give the boot preset a
+   calm scene -- the profile restores whatever the strip showed before each
+   effect, so that scene is what the strip shows between points.
 
-**Restored 2026-09-28 from a `pg_dump`** of the office's schmetterpause
-(homerun2-test1, v0.14.0), with schmetterpause's own
-`scripts/db.sh restore kubernetes` from a v0.14.0 checkout: it refuses a
-database that already has players, resets the schema and loads the dump as
-`schmetterpause` in one transaction. The app has to be scaled to 0 first.
+6. **The matrix Pi** reads both streams: re-run its play with
+   `led_redis_stream=messages,tabletennis` and led-catcher v0.22.0
+   ([`hosts/matrix/README.md`](../../hosts/matrix/README.md)). Needs the
+   `container` collection 26.1025.1511 or later, which `hosts/matrix/requirements.yml`
+   pins (stuttgart-things/ansible#1421).
 
-```bash
-export KUBECONFIG=~/.kube/homerun2-dev
-kubectl -n schmetterpause scale deployment/schmetterpause --replicas=0
-sh scripts/db.sh restore kubernetes schmetterpause-<time>.sql     # in the schmetterpause repo
-kubectl -n schmetterpause scale deployment/schmetterpause --replicas=1
-kubectl -n schmetterpause exec -i schmetterpause-db-1 -c postgres -- \
-  psql -d schmetterpause -X -q -A -t < scripts/db-counts.sql
-```
+### Versions
 
-The dump came without its `.counts` file, so the script compared nothing; the
-counts were compared by hand against the dump's COPY blocks, all equal:
-18 players, 77 matches (72 confirmed, 5 pending), 140 sets, 144 TTR entries,
-36 identities, 31 credentials, 11 kiosk grants, 1 tournament with 5 players,
-goose at `20260916170000`. The dump holds PIN and recovery-code hashes: it
-does not go into git, and not onto shared storage.
+schmetterpause and zaehlwerk are pinned in [`tabletennis.yaml`](./tabletennis.yaml).
+zaehlwerk v0.34.0 is the first with the panel's stake and tournament tags
+(what the strip's match-point and final effects match on) and
+`PONG_COURT_SPEED`; on an older one only the plain point, set and match
+effects play, and the court runs in real time.
 
-The Barman route prepared for this (`schmetterpause-db-recovery`, flux#573,
-#299) was not needed and is deselected again: the office handed over a dump,
-not an archive.
+### History
 
-**Backups** go through `schmetterpause-db-backup-sops` (flux#573) into
-`s3://schmetterpause-cnpg/schmetterpause-db-homerun2-dev/` on the MinIO on
-platform (`https://artifacts.platform.sthings.lab`): WAL continuously, a base
-backup every night at 03:00 UTC and once immediately, 30 days kept.
-Credentials in [`schmetterpause-db-backup.enc.yaml`](./schmetterpause-db-backup.enc.yaml):
-user `schmetterpause-cnpg`, read/write on that bucket only (created
-2026-09-28). The `serverName` is deliberately not `schmetterpause-db` --
-that path stays free for a copy of the office's own archive, and the plugin
-refuses to archive into a non-empty path.
-
-```bash
-kubectl -n schmetterpause get cluster schmetterpause-db \
-  -o jsonpath='{.status.conditions[?(@.type=="ContinuousArchiving")]}'
-kubectl -n schmetterpause get backups.postgresql.cnpg.io
-```
-
-`ContinuousArchiving=True` alone proves nothing (it shows True without a
-plugin, too); a Backup in phase `completed` does.
-
-**Only one environment takes results at a time** (schmetterpause ADR-0016).
-Results entered in the office after the dump are not in this copy, and
-nothing merges the two; which one is the writer is a decision, not a sync.
-
----
+Until 2026-10-25 this section described the office's pair running here from
+`profiles/sops`, with the office's data restored into it on 2026-09-28 and
+backed up nightly (flux#573, harvester#305). That pair is gone; the demo above
+replaced it. The office's own instance is homerun2-test1.
 
 ## The predecessor, and why it is gone
 

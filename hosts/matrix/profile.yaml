@@ -8,10 +8,9 @@
 # keep the two identical), so the panel and the simulator agree. The one that matters for table tennis is tabletennis-score:
 # the score stays up (hold) until the next point replaces it.
 #
-# It only fires once the panel reads the `tabletennis` stream. That switch is
-# a human act (clusters/homerun2-dev/README.md, section 9): the `tabletennis`
-# button on https://matrix.sthings.lab/matrix/, and `messages` -- or `reset` -- after
-# the match.
+# The panel reads `messages` and `tabletennis` at once (led_redis_stream in
+# ./README.md): the demo's score stays up while cards for the cluster pass over
+# it (clusters/homerun2-dev/README.md, "The demo").
 # Notifications are `card`s (homerun2-led-catcher#121): a header bar in the
 # severity colour with the system, the title wrapped over 3-4 lines, the
 # message as a ticker, tags, and author + HH:MM of the event. strip_prefix
@@ -19,9 +18,9 @@
 # -- the header already says both. No `text`: on a card it would replace the
 # message in the ticker line.
 #
-# duration 10 matches the WLED (clusters/homerun2-dev/homerun2-light-catcher-
-# profile.yaml), which stays on for 10 s per event. A card, unlike `text`,
-# honours it -- also mid-scroll: a long message does not finish in 10 s.
+# duration 10 matches the wled-mock's base profile, which stays on for 10 s
+# per event. A card, unlike `text`, honours it -- also mid-scroll: a long
+# message does not finish in 10 s.
 displayRules:
   error-all:
     systems: ["*"]

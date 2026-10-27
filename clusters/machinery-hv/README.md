@@ -15,7 +15,7 @@ has open points listed at the end.
 | Cluster / VM name | `machinery-hv` |
 | LB address | `192.168.10.178`, reserved in Clusterbook (`178:ASSIGNED:DNS:machinery-hv`) -- the Cilium VIP, not the node address |
 | Domain | `machinery-hv.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.3+rke2r1`, Cilium, no kube-proxy |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
 | GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
@@ -203,7 +203,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/machinery-hv.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.3 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -652,4 +652,49 @@ kubectl get pkg                                  # 51/51 Healthy
 kubectl get configuration.pkg | grep -E 'cluster' # cluster v0.12.3, rancher-cluster v0.11.0, both Healthy
 kubectl get lock lock -o json | jq -r '.packages[].source' | sort | uniq -d   # empty
 kubectl get environmentconfigs | grep harvester-vm-defaults                   # nothing
+```
+
+### 13. RKE2 v1.35.3 → v1.35.9 in place (2026-10-23)
+
+#491, same procedure as homerun2-dev (its README, "Upgrading Kubernetes in
+place"): `execute-ansible` with only `sthings.rke.rke2_cluster` and the
+parameters of `vms/machinery-hv.rke2.ansible-vars.yaml`. The role re-runs the
+RKE2 install script and restarts `rke2-server`. That is the upgrade. Read the
+node IP from the VMI first; the run aborts if it is not `.105`.
+
+```bash
+NODE_IP=$(kubectl --kubeconfig ~/.kube/harvester get vmi machinery-hv -n default \
+  -o jsonpath='{.status.interfaces[0].ipAddress}')       # 192.168.10.105
+export ANSIBLE_USER=$(sops -d --extract '["cloudInitUsername"]' ./vms/machinery-hv.params.enc.yaml)
+export ANSIBLE_PASSWORD=$(sops -d --extract '["cloudInitPassword"]' ./vms/machinery-hv.params.enc.yaml)
+
+dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
+  execute-ansible \
+  --playbooks "sthings.rke.rke2_cluster" \
+  --hosts "$NODE_IP" \
+  --inventory-type cluster \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ssh-user env:ANSIBLE_USER \
+  --ssh-password env:ANSIBLE_PASSWORD \
+  --cache-buster "upgrade-$(date +%s)" \
+  --progress plain
+# PLAY RECAP  192.168.10.105 : ok=135 changed=21 unreachable=0 failed=0 skipped=85   [8m3s]
+```
+
+Cilium moved along, 1.19.3 → 1.19.5: without `cilium_chart_version` the role
+installs its cilium-cli default (0.19.7). Gateway API CRDs stay v1.4.1. The
+restart is a few minutes without Crossplane reconciling. app-dev-hv runs on its
+own VMs and stayed `Ready` in Rancher throughout.
+
+Before and after, identical except the versions:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl get nodes                       # Ready, v1.35.9+rke2r1, 192.168.10.105, containerd 2.2.7
+kubectl -n kube-system get ds           # cilium (v1.19.5), cilium-envoy -- no kube-proxy
+kubectl -n kube-system get jobs         # helm-install-rke2-{coredns,metrics-server,runtimeclasses} Complete
+kubectl get pkg                         # 51/51 Installed + Healthy
+kubectl get clusterstack app-dev-hv     # Synced True, Ready True
+kubectl -n flux-system get kustomizations   # all Ready
+# machinery / headlamp / flux / tekton .machinery-hv.sthings.lab -> 200
 ```

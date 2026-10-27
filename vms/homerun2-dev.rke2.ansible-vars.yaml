@@ -16,7 +16,7 @@
 manage_filesystem: false
 
 rke_state: present
-rke2_k8s_version: 1.35.3
+rke2_k8s_version: 1.35.9
 rke2_release_kind: rke2r1
 
 cluster_setup: singlenode

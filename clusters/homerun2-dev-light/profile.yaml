@@ -1,0 +1,268 @@
+---
+# The demo table's light -- light-catcher-tabletennis' profile on homerun2-dev,
+# mounted instead of the flux component's
+# (HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM in
+# ../homerun2-dev/light-catcher-tabletennis.yaml). Every rule drives the REAL
+# strip, wled-matrix.sthings.lab (192.168.10.123, ESP32, WLED 16, 36 LEDs). The
+# cluster's alerts go to the wled-mock instead (../homerun2-dev/homerun2.yaml):
+# a point every few seconds would otherwise bury every warning.
+#
+# THE STRIP NEEDS TWO SEGMENTS, set up once on the device: 0 = LEDs 0-17, the
+# left half, side a; 1 = LEDs 18-35, side b (../homerun2-dev/README.md, "The
+# demo"). A point lights its scorer's half, a set or a match the whole strip.
+# On a strip with one segment, segment 1 does not exist and side b's halves
+# stay dark -- the whole-strip effects still work.
+#
+# restore: true everywhere, so the strip returns to its own scene afterwards --
+# the ambient preset the device boots into -- instead of going dark after
+# every point.
+#
+# What zaehlwerk sends (internal/panel/sink.go): system tabletennis, SUCCESS
+# for set_won and match_won, INFO for the rest, tags transition=<kind>,
+# side=a|b, winner=a|b on the won match, and from v0.34.0 stake=set_point|
+# match_point with stake_side=a|b, tournament=1,round=N and final=1. A tag
+# rule matches WHOLE comma-separated elements and ALL must be present; first
+# match wins, so the specific rules come first. Before v0.34.0 the stake and
+# tournament rules simply never match, and the plain ones below them do.
+#
+# Effect names and the palette Party are looked up on the device (light-catcher
+# v1.7.0+). Colours: red, yellow, orange, green, blue, white, or a palette.
+# speed/intensity/brightness 0-255.
+#
+# Quiet hours: evenings and weekends nothing table-related reaches the strip
+# (only error and critical would, and this stream has neither).
+#
+# Re-read on every message -- no restart after a change. No ${VAR}: the
+# Kustomization that applies this (light-profile.yaml) substitutes nothing.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-light-catcher-tabletennis-profile
+  namespace: homerun2-tabletennis
+data:
+  profile.yaml: |
+    quietHours:
+      from: "19:00"
+      to: "07:00"
+      weekends: true
+      timezone: Europe/Berlin
+    effects:
+      # The tournament's final: the longest and the loudest.
+      tabletennis-final-won:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won, final=1]
+        fx: Fireworks
+        duration: 15
+        color: Party
+        speed: 220
+        intensity: 220
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # A tournament match, in the winner's colour.
+      tabletennis-tournament-won-a:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won, tournament=1, winner=a]
+        fx: Fireworks
+        duration: 10
+        color: blue
+        speed: 200
+        intensity: 200
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-tournament-won-b:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won, tournament=1, winner=b]
+        fx: Fireworks
+        duration: 10
+        color: red
+        speed: 200
+        intensity: 200
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # A league match: shorter.
+      tabletennis-match-won-a:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won, winner=a]
+        fx: Fireworks
+        duration: 6
+        color: blue
+        speed: 180
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-match-won-b:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=match_won, winner=b]
+        fx: Fireworks
+        duration: 6
+        color: red
+        speed: 180
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # A set, wiped across the table in the colour of who took it.
+      tabletennis-set-won-a:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=set_won, side=a]
+        fx: Wipe
+        duration: 4
+        color: blue
+        speed: 180
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-set-won-b:
+        systems: [tabletennis]
+        severity: [success]
+        tags: [transition=set_won, side=b]
+        fx: Wipe
+        duration: 4
+        color: red
+        speed: 180
+        brightness: 255
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # Match point: the holder's half pulses fast until the next point.
+      tabletennis-match-point-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, stake=match_point, stake_side=a]
+        fx: Breathe
+        duration: 20
+        color: blue
+        speed: 240
+        brightness: 255
+        segments: [0]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-match-point-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, stake=match_point, stake_side=b]
+        fx: Breathe
+        duration: 20
+        color: red
+        speed: 240
+        brightness: 255
+        segments: [1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # Set point: slower, dimmer.
+      tabletennis-set-point-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, stake=set_point, stake_side=a]
+        fx: Breathe
+        duration: 20
+        color: blue
+        speed: 150
+        brightness: 160
+        segments: [0]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-set-point-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, stake=set_point, stake_side=b]
+        fx: Breathe
+        duration: 20
+        color: red
+        speed: 150
+        brightness: 160
+        segments: [1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # SEITENWECHSEL done: a white wipe across the table.
+      tabletennis-ends:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=ends_changed]
+        fx: Wipe
+        duration: 3
+        color: white
+        speed: 160
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # Who serves first is decided: their half breathes.
+      tabletennis-serve-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=serve_decided, side=a]
+        fx: Breathe
+        duration: 3
+        color: blue
+        segments: [0]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-serve-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=serve_decided, side=b]
+        fx: Breathe
+        duration: 3
+        color: red
+        segments: [1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # Warm-up over, the match starts.
+      tabletennis-warmup-over:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=warmup_over]
+        fx: Scan
+        duration: 2
+        color: green
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # A point: one second on the scorer's half.
+      tabletennis-point-a:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, side=a]
+        fx: Solid
+        duration: 1
+        color: blue
+        brightness: 255
+        segments: [0]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      tabletennis-point-b:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=point, side=b]
+        fx: Solid
+        duration: 1
+        color: red
+        brightness: 255
+        segments: [1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab
+      # A point taken back.
+      tabletennis-undo:
+        systems: [tabletennis]
+        severity: [info]
+        tags: [transition=undo]
+        fx: Blink
+        duration: 1
+        color: orange
+        segments: [0, 1]
+        restore: true
+        endpoint: http://wled-matrix.sthings.lab

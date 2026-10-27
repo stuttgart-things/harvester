@@ -55,7 +55,7 @@
 # DELIBERATELY NOT GRANTED:
 #   - Any other Secret in cattle-global-data (the other cloud credentials).
 #   - Secrets in c-m-<id> (1f): only Rancher >= 2.15 writes the registration
-#     token Secret there. This Rancher is 2.14.2.
+#     token Secret there. This Rancher is 2.14.3.
 # Each shows up as `forbidden` on the composed Object when it is needed.
 #
 # Applied by this cluster's root sync (config.yaml, sync.path clusters/platform,

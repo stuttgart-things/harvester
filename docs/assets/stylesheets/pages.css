@@ -1,0 +1,260 @@
+/* The look of the landing page and the system inventory (pages/index.html,
+   system-inventory/template.html), carried over to Material for MkDocs.
+   Loaded by mkdocs.pages.yml only -- the GitHub Pages build -- never by
+   Backstage. Dark only, like those two pages: techdocs-core empties the
+   palette, so there is no scheme toggle to honour, and every colour Material
+   would take from a scheme is set here on :root. */
+
+@import url("https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&display=swap");
+
+:root {
+  color-scheme: dark;
+
+  /* The tokens of the two pages, under the same names. */
+  --ground:      #131a26;
+  --surface:     #1b2432;
+  --sunken:      #212c3c;
+  --rule:        #2b3646;
+  --rule-strong: #3d4a5d;
+  --ink:         #e8edf5;
+  --ink-2:       #95a3b8;
+  --ink-3:       #6b7a90;
+  --accent:      #8b7cf0;
+  --accent-deep: #a99bf6;
+  --accent-wash: #262a4d;
+  --green:       #4ade80;
+  --orange:      #fb923c;
+  --yellow:      #facc15;
+  --pink:        #f489fb;
+  --r-card: 14px;
+  --r-ctl: 10px;
+
+  /* Material, mapped onto them. */
+  --md-default-bg-color:           var(--ground);
+  --md-default-bg-color--light:    rgba(19, 26, 38, .7);
+  --md-default-bg-color--lighter:  rgba(19, 26, 38, .3);
+  --md-default-bg-color--lightest: rgba(19, 26, 38, .12);
+  --md-default-fg-color:           var(--ink);
+  --md-default-fg-color--light:    var(--ink-2);
+  --md-default-fg-color--lighter:  var(--ink-3);
+  --md-default-fg-color--lightest: var(--rule);
+
+  --md-primary-fg-color:        var(--surface);
+  --md-primary-fg-color--light: var(--sunken);
+  --md-primary-fg-color--dark:  var(--ground);
+  --md-primary-bg-color:        var(--ink);
+  --md-primary-bg-color--light: var(--ink-2);
+
+  --md-accent-fg-color:              var(--accent-deep);
+  --md-accent-fg-color--transparent: rgba(139, 124, 240, .12);
+  --md-accent-bg-color:              var(--ground);
+  --md-accent-bg-color--light:       rgba(19, 26, 38, .7);
+
+  --md-typeset-color:       var(--ink);
+  --md-typeset-a-color:     var(--accent-deep);
+  --md-typeset-mark-color:  rgba(250, 204, 21, .25);
+  --md-typeset-table-color: var(--rule);
+  --md-typeset-table-color--light: rgba(43, 54, 70, .45);
+  --md-typeset-kbd-color:        var(--sunken);
+  --md-typeset-kbd-accent-color: var(--rule-strong);
+  --md-typeset-kbd-border-color: var(--ground);
+
+  --md-code-fg-color:          #d6deeb;
+  --md-code-bg-color:          var(--sunken);
+  --md-code-bg-color--light:   rgba(33, 44, 60, .7);
+  --md-code-bg-color--lighter: rgba(33, 44, 60, .3);
+  --md-code-hl-color:          rgba(139, 124, 240, .3);
+  --md-code-hl-color--light:   rgba(139, 124, 240, .15);
+  --md-code-hl-number-color:   var(--orange);
+  --md-code-hl-special-color:  var(--pink);
+  --md-code-hl-function-color: var(--accent-deep);
+  --md-code-hl-constant-color: var(--yellow);
+  --md-code-hl-keyword-color:  #7dd3fc;
+  --md-code-hl-string-color:   var(--green);
+  --md-code-hl-name-color:     var(--md-code-fg-color);
+  --md-code-hl-operator-color: var(--ink-2);
+  --md-code-hl-punctuation-color: var(--ink-2);
+  --md-code-hl-comment-color:  var(--ink-3);
+  --md-code-hl-generic-color:  var(--ink-2);
+  --md-code-hl-variable-color: var(--ink-2);
+
+  --md-admonition-fg-color: var(--ink);
+  --md-admonition-bg-color: var(--surface);
+  --md-footer-fg-color:         var(--ink);
+  --md-footer-fg-color--light:  var(--ink-2);
+  --md-footer-fg-color--lighter: var(--ink-3);
+  --md-footer-bg-color:         var(--surface);
+  --md-footer-bg-color--dark:   var(--ground);
+  --md-shadow-z1: 0 1px 2px rgba(0, 0, 0, .5);
+  --md-shadow-z2: 0 1px 3px rgba(0, 0, 0, .5), 0 12px 32px -10px rgba(0, 0, 0, .7);
+  --md-shadow-z3: 0 1px 3px rgba(0, 0, 0, .6), 0 18px 40px -10px rgba(0, 0, 0, .8);
+
+  /* Mermaid: Material draws the diagrams from these, so the boxes sit on
+     the dark like the inventory's nodes instead of as pale cards. */
+  --md-mermaid-font-family:     "IBM Plex Sans", ui-sans-serif, sans-serif;
+  --md-mermaid-edge-color:      var(--ink-3);
+  --md-mermaid-node-bg-color:   var(--accent-wash);
+  --md-mermaid-node-fg-color:   var(--accent-deep);
+  --md-mermaid-label-bg-color:  var(--ground);
+  --md-mermaid-label-fg-color:  var(--ink-2);
+  --md-mermaid-sequence-actor-bg-color:     var(--accent-wash);
+  --md-mermaid-sequence-actor-fg-color:     var(--ink);
+  --md-mermaid-sequence-actor-border-color: var(--accent);
+  --md-mermaid-sequence-actor-line-color:   var(--rule-strong);
+  --md-mermaid-sequence-actorman-bg-color:  var(--accent-wash);
+  --md-mermaid-sequence-actorman-line-color: var(--accent);
+  --md-mermaid-sequence-box-bg-color:       var(--surface);
+  --md-mermaid-sequence-box-fg-color:       var(--ink);
+  --md-mermaid-sequence-label-bg-color:     var(--surface);
+  --md-mermaid-sequence-label-fg-color:     var(--ink);
+  --md-mermaid-sequence-loop-bg-color:      var(--surface);
+  --md-mermaid-sequence-loop-fg-color:      var(--ink);
+  --md-mermaid-sequence-loop-border-color:  var(--rule-strong);
+  --md-mermaid-sequence-message-fg-color:   var(--ink);
+  --md-mermaid-sequence-message-line-color: var(--ink-3);
+  --md-mermaid-sequence-note-bg-color:      var(--sunken);
+  --md-mermaid-sequence-note-fg-color:      var(--ink);
+  --md-mermaid-sequence-note-border-color:  var(--rule-strong);
+  --md-mermaid-sequence-number-bg-color:    var(--accent);
+  --md-mermaid-sequence-number-fg-color:    var(--ground);
+}
+
+body {
+  background: var(--ground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* ---------- Header: the masthead's title, in a bar ---------- */
+
+.md-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--rule);
+  box-shadow: none;
+}
+.md-header--shadow { box-shadow: 0 1px 3px rgba(0, 0, 0, .5); }
+/* The logo at the root of the Pages site (pages/index.html shows it too).
+   The path is relative to this file: /docs/assets/stylesheets/ -> /. A local
+   `mkdocs serve` has no logo there and shows the book icon behind it. */
+.md-header__button.md-logo {
+  width: 64px;
+  background: url("../../../logo.png") center / contain no-repeat;
+}
+.md-header__button.md-logo img,
+.md-header__button.md-logo svg { visibility: hidden; }
+.md-header__title {
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  text-shadow: 0 0 14px rgba(139, 124, 240, .45);
+}
+.md-header__topic:last-child,
+.md-header__title--active .md-header__topic + .md-header__topic {
+  font-family: "IBM Plex Sans", ui-sans-serif, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  text-shadow: none;
+  color: var(--ink);
+}
+.md-search__form { background: var(--sunken); border-radius: var(--r-ctl); }
+.md-search__input::placeholder { color: var(--ink-3); }
+
+/* ---------- Navigation ---------- */
+
+.md-nav__title { color: var(--ink-2); }
+.md-nav__link { color: var(--ink-2); }
+.md-nav__item--section > .md-nav__link {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+.md-nav__link--active,
+.md-nav__link:is(:focus, :hover) { color: var(--accent-deep); }
+@media screen and (max-width: 76.234375em) {
+  .md-nav--primary .md-nav__title { background: var(--surface); }
+  .md-nav--primary,
+  .md-nav--primary .md-nav { background: var(--ground); }
+}
+
+/* ---------- Content ---------- */
+
+.md-typeset h1 {
+  font-family: "Silkscreen", "IBM Plex Mono", monospace;
+  font-weight: 700;
+  font-size: 1.55rem;
+  line-height: 1.3;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  text-shadow: 0 0 18px rgba(139, 124, 240, .5), 0 0 42px rgba(139, 124, 240, .2);
+  text-wrap: balance;
+}
+.md-typeset h2 {
+  font-weight: 600;
+  color: var(--ink);
+  padding-bottom: .3em;
+  border-bottom: 1px solid var(--rule);
+}
+.md-typeset h3 { font-weight: 600; color: var(--ink); }
+.md-typeset h4,
+.md-typeset h5,
+.md-typeset h6 { color: var(--ink-2); }
+.md-typeset strong { color: var(--ink); }
+.md-typeset a:hover { color: var(--pink); }
+
+.md-typeset code {
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+}
+.md-typeset pre > code {
+  border: 1px solid var(--rule);
+  border-radius: var(--r-ctl);
+}
+
+/* Tables as the inventory's cards: surface, a hairline, rounded. */
+.md-typeset table:not([class]) {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  box-shadow: var(--md-shadow-z1);
+  font-size: .72rem;
+  overflow: hidden;
+}
+.md-typeset table:not([class]) th {
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: .62rem;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.md-typeset table:not([class]) tbody tr:hover {
+  background: var(--accent-wash);
+  box-shadow: none;
+}
+
+/* Diagrams on a card of their own, so a wide one has an edge to sit in. */
+.md-typeset .mermaid {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: var(--r-card);
+  padding: .8rem;
+}
+
+.md-typeset .admonition,
+.md-typeset details {
+  border-radius: var(--r-ctl);
+  border-width: 1px;
+  box-shadow: none;
+}
+
+/* ---------- Footer ---------- */
+
+.md-footer { border-top: 1px solid var(--rule); }
+.md-footer-meta { background: var(--ground); }

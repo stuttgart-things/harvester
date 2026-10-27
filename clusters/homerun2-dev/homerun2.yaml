@@ -68,18 +68,18 @@ spec:
       # PR here (renovate.json, clusters/ manager), not as a silent change
       # whenever someone bumps the default upstream. Where a component has a
       # *_KUSTOMIZE_VERSION, image and kustomize artifact share the tag.
-      HOMERUN2_OMNI_PITCHER_VERSION: v2.3.3 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
+      HOMERUN2_OMNI_PITCHER_VERSION: v2.4.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-omni-pitcher
       HOMERUN2_CORE_CATCHER_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher
       HOMERUN2_CORE_CATCHER_KUSTOMIZE_VERSION: v1.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-core-catcher-kustomize
       HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
       HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       HOMERUN2_SCOUT_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout
       HOMERUN2_SCOUT_KUSTOMIZE_VERSION: v0.12.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-scout-kustomize
-      HOMERUN2_LED_CATCHER_VERSION: v0.22.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+      HOMERUN2_LED_CATCHER_VERSION: v0.23.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
       HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
       HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
       HOMERUN2_WLED_MOCK_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-wled-mock
-      HOMERUN2_DEMO_PITCHER_VERSION: v2.3.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-demo-pitcher
+      HOMERUN2_DEMO_PITCHER_VERSION: v2.3.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-demo-pitcher
       HOMERUN2_CONFIG_VIEWER_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-config-viewer
       HOMERUN2_CONFIG_VIEWER_KUSTOMIZE_VERSION: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-config-viewer-kustomize
 
@@ -107,26 +107,23 @@ spec:
       # confirm the right outputs match, flip again.
       HOMERUN2_NOTIFICATION_CATCHER_DRYRUN: "false"
 
-      # UI_STREAM_PRESETS -- the two buttons in the led-catcher's web
-      # simulator. Before the profile switch this was a patch appended to the
-      # led-catcher's child Kustomization; the component now reads it as a
-      # variable (apps/homerun2/README.md), so no patch.
-      #
-      # zaehlwerk CAN switch this catcher onto the `tabletennis` stream for a
-      # match and back again, but only by calling the catcher directly, which
-      # needs CATCHER_URL. That is deliberately not set -- see the note in
-      # ./tabletennis.yaml -- so on this cluster the switch is a human act.
-      # Unset, the control offers only the configured stream (`messages`) and
-      # no way to reach `tabletennis`. The header's `overridden` badge plus
-      # `reset` keep a panel from sitting in scoreboard mode after an
-      # abandoned match.
+      # The simulator reads both streams all the time, as the real matrix does
+      # (../../hosts/matrix, led_streams): `messages` for the cluster and
+      # `tabletennis` for the demo's score (./tabletennis.yaml), which its
+      # tabletennis-score rule holds on the panel while cards for the cluster
+      # pass over it. Nothing switches the panel -- zaehlwerk has no
+      # CATCHER_URL -- because Pong plays almost without a pause, and a panel
+      # switched to the score would never show a cluster message again.
+      HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis
+      # The web control's buttons, for looking at one stream alone.
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
 
-      # The light-catcher's profile, from ./homerun2-light-catcher-profile.yaml:
-      # every effect on the real WLED (wled-matrix.sthings.lab) instead of the
-      # wled-mock (flux#570). Unset, or on a flux-apps revision before #570,
-      # the base's mock profile is mounted. Either merge order is safe.
-      HOMERUN2_LIGHT_CATCHER_PROFILE_CM: homerun2-light-catcher-profile-wled
+      # No HOMERUN2_LIGHT_CATCHER_PROFILE_CM: this light-catcher reads
+      # `messages` and drives the wled-mock with the base's profile again, so
+      # the cluster's alerts show on the TV (portal key `wled`). The real
+      # strip belongs to the table now (./light-catcher-tabletennis.yaml): a
+      # point every few seconds would bury every warning on it, and two
+      # catchers on one strip cut each other's effects off.
 
       # The led-catcher simulator's profile, from
       # ./homerun2-led-catcher-profile.yaml: the real matrix's rules
@@ -141,9 +138,9 @@ spec:
       # value must be a string.
       HOMERUN2_LED_CATCHER_DISPLAY_QUEUE: "3"
 
-      # Behind homerun2-portal (./homerun2-portal.yaml): each service answers
-      # under the key the portal serves it at -- on its own hostname too,
-      # e.g. led-catcher.homerun2-dev.sthings.lab/led/.
+      # Behind sthings-portal (./sthings-portal.yaml): each service answers
+      # under the key the portal serves it at. The portal is the only way in:
+      # the direct hostnames are gone (homerun2-routes below, #569).
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
       HOMERUN2_CORE_CATCHER_BASE_PATH: /core
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
@@ -170,9 +167,14 @@ spec:
 # beside the Kustomization that later creates its Service serves HTTP 500 for
 # good, while every Kustomization reports Ready.
 #
-# Eight routes, all under homerun2-dev.sthings.lab: omni-pitcher,
-# core-catcher, scout, led-catcher, light-catcher, wled-mock, demo-pitcher,
-# config-viewer.
+# The profile renders nine routes under homerun2-dev.sthings.lab; only
+# omni-pitcher's survives (#569). The UIs are served behind the sthings-portal
+# login (./sthings-portal.yaml) and their direct hosts bypassed it, so the
+# patches below delete those routes, and this Kustomization's prune takes them
+# off the cluster. omni-pitcher keeps its host for the webhook callers
+# (platform's HOMERUN2_CENTRAL_PITCHER_URL, .../pitch), narrowed to /pitch:
+# no /metrics or / from outside. Mirrors platform-sthings
+# (stuttgart-things#4149).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -198,6 +200,25 @@ spec:
     kind: GitRepository
     name: flux-apps
   path: ./apps/homerun2/profiles/sops-routes
+  # A plain `$patch: delete`: the flux-system Kustomization that applies this
+  # file has no postBuild, so no `$$` escaping as in platform-sthings' bundle.
+  patches:
+    - target:
+        kind: HTTPRoute
+        name: homerun2-(core-catcher|scout|led-catcher|light-catcher|wled-mock|demo-pitcher|config-viewer|notification-catcher)
+      patch: |
+        $patch: delete
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        metadata:
+          name: deleted
+    - target:
+        kind: HTTPRoute
+        name: homerun2-omni-pitcher
+      patch: |
+        - op: replace
+          path: /spec/rules/0/matches/0/path/value
+          value: /pitch
   postBuild:
     substitute:
       HOMERUN2_NAMESPACE: homerun2

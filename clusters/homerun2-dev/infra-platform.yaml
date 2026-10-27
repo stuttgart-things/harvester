@@ -67,7 +67,7 @@ spec:
     - ../components/headlamp
     - ../components/flux-web
     # rollouts -- rolls Deployments annotated reloader.stakater.com/auto when a
-    # ConfigMap/Secret they mount changes. homerun2-portal reads its service
+    # ConfigMap/Secret they mount changes. sthings-portal reads its service
     # list (envFrom) only at start: without this a new card needed a manual
     # rollout restart. Standalone, no dependency.
     - ../components/reloader

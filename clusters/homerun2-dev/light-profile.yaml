@@ -1,0 +1,27 @@
+---
+# The demo table light's profile (../homerun2-dev-light), in the namespace of
+# the light-catcher-tabletennis instance, which that app creates -- so a
+# Kustomization of its own that retries until the namespace exists.
+#
+# No dependsOn: homerun2-light-catcher-tabletennis waits for its pod, and the
+# pod waits for this ConfigMap -- depending on it would never become ready. On
+# a fresh cluster the pod sits in ContainerCreating until the first retry here
+# after the namespace exists. Same pattern as clusters/edge/lab/light-profile.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: light-profile
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  interval: 1h
+  retryInterval: 30s
+  timeout: 2m
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/homerun2-dev-light

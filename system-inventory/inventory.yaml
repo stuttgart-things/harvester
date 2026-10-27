@@ -35,8 +35,8 @@ networks:
     description: >-
       Table tennis network behind the GL.iNet Opal (Wi-Fi `sthings-edge`),
       travels with the sthings-edge box. Gateway, DNS and DHCP on the Opal
-      (.1); uplink is a Wi-Fi repeater. The VIPs .20-.22 sit outside the
-      DHCP pool .100-.249.
+      (.1); uplink is a Wi-Fi repeater. The VIPs .20-.23 and the static
+      leases (.10, .30, .31) sit outside the DHCP pool .100-.249.
   - cidr: 10.100.136.0/24
     name: labda
     # foreign: another site's network. Only the addresses this lab uses there
@@ -203,6 +203,11 @@ hosts:
         description: >-
           Map of the lab's clusters from clusters/ in this repo, with live
           status and endpoint probes for platform itself.
+      - name: Grafana
+        fqdn: grafana.platform.sthings.lab
+        description: >-
+          kube-prometheus-stack of this cluster (Prometheus, Alertmanager,
+          Grafana). Alerts go to omni-pitcher on homerun2-dev.
       - name: Loki
         fqdn: loki.platform.sthings.lab
         description: >-
@@ -243,8 +248,8 @@ hosts:
       - name: DHCP
         port: 67
         description: >-
-          Dynamic pool .100-.249 plus static leases for the box (.10) and the
-          LED matrix Pi (.30).
+          Dynamic pool .100-.249 plus static leases for the box (.10), the
+          LED matrix Pi (.30) and the WLED (.31).
 
   - system: sthings-edge
     hostname: sthings-edge
@@ -298,11 +303,16 @@ hosts:
       - name: light-catcher-tabletennis
         fqdn: light-catcher-tabletennis.edge.sthings.lab
         description: >-
-          homerun2 light catcher for the table; still sends to wled-mock
-          until there is a real LED strip.
+          homerun2 light catcher for the table (stream `tabletennis`);
+          drives the WLED at wled-matrix.sthings.lab (.31).
       - name: wled-mock
         fqdn: wled-mock.edge.sthings.lab
         description: Stand-in for the WLED strip.
+      - name: log-sink
+        fqdn: log-sink.edge.sthings.lab
+        description: >-
+          Viewer of the firmware's log sink: sessions and games the board sent
+          to edge-log-sink (.23), read-only, no login.
       - name: config-viewer
         fqdn: config-viewer.edge.sthings.lab
         description: homerun2 config viewer.
@@ -348,6 +358,23 @@ hosts:
           The `messages` stream the LED matrix Pi consumes when it is in the
           table tennis network.
 
+  - system: sthings-edge
+    hostname: edge-log-sink
+    ip: 192.168.8.23
+    kind: host
+    cluster: sthings-edge
+    description: >-
+      Cilium LB address of the firmware's log sink (clusters/sthings-edge/log-sink),
+      own pool with exactly this IP. The piezo board sends its diagnostic log
+      here directly, without a name.
+    services:
+      - name: log sink (UDP)
+        port: 9000
+        description: >-
+          One JSON line per event over UDP (zaehlwerk-firmware ADR-0004); one
+          file per session and per game. The viewer is log-sink.edge.sthings.lab
+          on edge-gateway.
+
   - system: matrix
     hostname: matrix-edge
     ip: 192.168.8.30
@@ -357,6 +384,21 @@ hosts:
       box: Wi-Fi `sthings-edge`, static lease on the Opal, Redis from
       edge-redis. matrix.sthings.lab points here via the Opal's dnsmasq.
 
+  - system: wled-matrix
+    hostname: wled-edge
+    ip: 192.168.8.31
+    kind: host
+    description: >-
+      The same WLED (MAC d4:e9:f4:c3:e9:dc) when it travels with the box: WLED
+      keeps both Wi-Fi networks and joins `sthings-edge` here, static lease on
+      the Opal. wled-matrix.sthings.lab points here via the Opal's dnsmasq;
+      driven by the box's light-catcher-tabletennis (clusters/sthings-edge/README.md,
+      section 13).
+    services:
+      - name: WLED UI
+        url: http://192.168.8.31
+        description: The device's own web UI and JSON API.
+
   # ---------------------------------------------------------------------------
   # homerun2-dev: single-node RKE2 VM on Harvester. clusters/homerun2-dev/README.md,
   # static lease in docs/install.md.
@@ -365,6 +407,7 @@ hosts:
     hostname: homerun2-dev
     ip: 192.168.10.117
     kind: rke2-cluster
+    vm: harvester
     cluster: homerun2-dev
     description: >-
       VM node of the RKE2 cluster homerun2-dev (12 vCPU / 12Gi / 50Gi,
@@ -392,32 +435,22 @@ hosts:
       - name: Flux web
         fqdn: flux.homerun2-dev.sthings.lab
         description: Flux UI.
-      - name: led-catcher
-        fqdn: led-catcher.homerun2-dev.sthings.lab
+      - name: sthings-portal
+        fqdn: portal.homerun2-dev.sthings.lab
         description: >-
-          homerun2 LED catcher with its web simulator; switches between the
-          `messages` and `tabletennis` streams.
-      - name: light-catcher
-        fqdn: light-catcher.homerun2-dev.sthings.lab
-        description: homerun2 light catcher, drives the WLED strip (wled-matrix).
-      - name: wled-mock
-        fqdn: wled-mock.homerun2-dev.sthings.lab
-        description: Stand-in for a WLED device.
-      - name: core-catcher
-        fqdn: core-catcher.homerun2-dev.sthings.lab
-        description: homerun2 core catcher.
+          homerun2 UIs behind the ZITADEL login (core, notify, led, matrix,
+          light, table, wled, schedule, sound, config, pitch); their direct
+          hosts are gone (#569).
       - name: omni-pitcher
         fqdn: omni-pitcher.homerun2-dev.sthings.lab
-        description: homerun2 omni pitcher; zaehlwerk pitches scores here.
-      - name: demo-pitcher
-        fqdn: demo-pitcher.homerun2-dev.sthings.lab
-        description: homerun2 demo pitcher.
-      - name: config-viewer
-        fqdn: config-viewer.homerun2-dev.sthings.lab
-        description: homerun2 config viewer.
-      - name: scout
-        fqdn: scout.homerun2-dev.sthings.lab
-        description: homerun2 scout.
+        description: >-
+          homerun2 omni pitcher, only /pitch (bearer token); platform's
+          k8s-pitcher pitches its events here.
+      - name: schedule-pitcher
+        fqdn: schedule-pitcher.homerun2-dev.sthings.lab
+        description: >-
+          homerun2 schedule pitcher for its agents; the UI is the portal's
+          /schedule.
       - name: schmetterpause
         fqdn: schmetterpause.homerun2-dev.sthings.lab
         description: >-
@@ -464,6 +497,7 @@ hosts:
     hostname: machinery-hv
     ip: 192.168.10.105
     kind: rke2-cluster
+    vm: harvester
     cluster: machinery-hv
     description: >-
       VM node of the RKE2 cluster machinery-hv (8 vCPU / 16Gi / 80Gi, static
@@ -500,13 +534,14 @@ hosts:
 
   # ---------------------------------------------------------------------------
   # crossplane-mgmt: Crossplane for the VM path, fed by Argo CD on platform.
-  # Node address: static lease in docs/install.md. Distribution not recorded
-  # in this repo, hence kind host.
+  # Node address: static lease in docs/install.md. Distribution read from the
+  # live node on 2026-10-26 (v1.36.1+k3s1).
   # ---------------------------------------------------------------------------
   - system: crossplane-mgmt
     hostname: crossplane-mgmt
     ip: 192.168.10.108
-    kind: host
+    kind: k3s-cluster
+    vm: harvester
     cluster: crossplane-mgmt
     description: >-
       VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28).
@@ -524,9 +559,8 @@ hosts:
           RancherCluster, XVirtualMachine and AnsibleRun claims; reached
           through the Kubernetes API, no ingress.
 
-  # From the Clusterbook seed (clusters/platform-seeds/networkconfig-networks-labul.yaml,
-  # 177:ASSIGNED:DNS:crossplane-mgmt). The seed is not the ledger -- confirm
-  # against the live networks-labul CR on platform.
+  # Clusterbook ledger (networks-labul on platform, read 2026-10-26):
+  # 177:ASSIGNED:DNS:crossplane-mgmt.
   - system: crossplane-mgmt
     hostname: crossplane-mgmt-vip
     ip: 192.168.10.177
@@ -538,16 +572,38 @@ hosts:
       platform for the Argo CD registration.
 
   # ---------------------------------------------------------------------------
+  # ollama-gpu: the local LLM endpoint for Backstage RAG-AI (harvester#526).
+  # XR clusters/crossplane-mgmt/xrs/infra/ollama-gpu, runbook hosts/ollama-gpu.
+  # ---------------------------------------------------------------------------
+  - system: ollama-gpu
+    hostname: ollama-gpu
+    ip: 192.168.10.147
+    kind: host
+    vm: harvester
+    description: >-
+      Harvester VM (16 vCPU / 16Gi / 256Gi, sthings-u26) with the host's RTX 5060
+      Ti (16 GB) passed through, static lease for MAC c6:a7:6d:4b:78:1a.
+      Ollama serves gemma3:12b (chat) and bge-m3 (embeddings) for Backstage
+      RAG-AI on platform.
+    services:
+      - name: Ollama
+        fqdn: ollama-gpu.sthings.lab
+        port: 11434
+        description: >-
+          OpenAI-compatible API (/v1/chat/completions, /v1/embeddings) for
+          Backstage "Ask AI".
+
+  # ---------------------------------------------------------------------------
   # app-dev-hv: the first ClusterStack ordered on machinery-hv
   # (clusters/machinery-hv/xrs/app-dev-hv.yaml). Address from
-  # docs/demo/bare-metal-self-service.md.
-  # TODO: every ClusterStack takes a second Clusterbook address for its
-  # gateway/DNS reservation; app-dev-hv's is not recorded in this repo.
+  # docs/demo/bare-metal-self-service.md. Gateway address from the Clusterbook
+  # ledger (networks-labul on platform, read 2026-10-26).
   # ---------------------------------------------------------------------------
   - system: app-dev-hv
     hostname: app-dev-hv
     ip: 192.168.10.176
     kind: k3s-cluster
+    vm: harvester
     cluster: app-dev-hv
     description: >-
       Cluster built by Rancher on a Harvester machine pool (rancher-k3s,
@@ -565,12 +621,67 @@ hosts:
           s3://app-dev-hv-schmetterpause-cnpg on platform's MinIO) and
           zaehlwerk.
 
-  # TODO: tabletennis -- the k3s cluster ordered as a RancherCluster on
-  # crossplane-mgmt (to be replaced by an order on machinery-hv; never both at once) (clusters/crossplane-mgmt/xrs/infra/tabletennis), names
-  # *.tabletennis.sthings.lab. Clusterbook assigns its address automatically and
-  # no repo file records it; add the node IP and the gateway VIP here once they
-  # are read from the ledger (kubectl get networkconfig networks-labul -n
-  # clusterbook on platform).
+  - system: app-dev-hv
+    hostname: app-dev-hv-gateway
+    ip: 192.168.10.173
+    kind: host
+    cluster: app-dev-hv
+    description: >-
+      Cilium LB VIP (Clusterbook 173:ASSIGNED:DNS:app-dev-hv) of the Gateway
+      app-dev-hv-gateway; *.app-dev-hv.sthings.lab with certificates from the
+      OpenBao PKI on platform.
+    services:
+      - name: schmetterpause
+        fqdn: schmetterpause.app-dev-hv.sthings.lab
+        description: Table tennis app, admin side.
+      - name: Zählwerk
+        fqdn: zaehlwerk.app-dev-hv.sthings.lab
+        description: Score counter.
+      - name: led-catcher
+        fqdn: led-catcher.app-dev-hv.sthings.lab
+        description: homerun2 LED catcher with its web simulator.
+      - name: core-catcher
+        fqdn: core-catcher.app-dev-hv.sthings.lab
+        description: homerun2 core catcher.
+      - name: omni-pitcher
+        fqdn: omni-pitcher.app-dev-hv.sthings.lab
+        description: homerun2 omni pitcher (API).
+      - name: scout
+        fqdn: scout.app-dev-hv.sthings.lab
+        description: homerun2 scout.
+
+  # ---------------------------------------------------------------------------
+  # tabletennis: the k3s cluster ordered as a RancherCluster on crossplane-mgmt
+  # (clusters/crossplane-mgmt/xrs/infra/tabletennis). Still running beside
+  # app-dev-hv on 2026-10-26. Addresses read live: node from the cluster,
+  # gateway from the Clusterbook ledger.
+  # ---------------------------------------------------------------------------
+  - system: tabletennis
+    hostname: tabletennis
+    ip: 192.168.10.114
+    kind: k3s-cluster
+    vm: harvester
+    cluster: tabletennis
+    description: >-
+      Single node (tabletennis-pool1) built by Rancher on Harvester. The
+      address is a DHCP lease from the dynamic pool, not a reservation.
+      homerun2 and tabletennis come from the platform profiles via Argo CD on
+      platform.
+    services:
+      - name: Kubernetes API
+        port: 6443
+        description: k3s API server, registered in Argo CD on platform.
+
+  - system: tabletennis
+    hostname: tabletennis-gateway
+    ip: 192.168.10.180
+    kind: host
+    cluster: tabletennis
+    description: >-
+      Clusterbook reservation (180:ASSIGNED:DNS:tabletennis) for the Gateway
+      tabletennis-gateway, *.tabletennis.sthings.lab. Not served: the cluster
+      has no Cilium Gateway controller, so the Gateway stays Pending and the
+      VIP never comes up (checked 2026-10-26).
 
   # ---------------------------------------------------------------------------
   # edge (edge-tt-test1): the edge lab cluster in LabDA vSphere, the reference

@@ -27,11 +27,11 @@ cd system-inventory
 make d2-install          # once, fetches the d2 binary into ~/.local/bin
 make d3-install          # once, fetches vendor/d3.min.js from the npm registry
 $EDITOR inventory.yaml
-make diagram             # writes topology.d2 + topology.svg
+make diagram docs        # writes topology.d2 + topology.svg + ../docs/inventory.md
 make serve               # builds the D3 page and serves it on :8000
 ```
 
-Commit `topology.d2` and `topology.svg` along with your change — CI verifies
+Commit `topology.d2`, `topology.svg` and `docs/inventory.md` along with your change — CI verifies
 they match `inventory.yaml`. The HTML page is **not** committed; CI builds it.
 It is 95 % embedded d3 bundle, so every inventory change would otherwise be a
 300 KB diff.
@@ -73,6 +73,15 @@ The host is named on a row only where it adds something — a cluster served by
 more than one host, or a service outside any cluster. Setting
 `kind: k3s-cluster` or `rke2-cluster` without a `cluster` name is a validation error.
 
+`vm` marks a host that runs as a virtual machine and names the `system` of
+its hypervisor (`vm: harvester`); a value that is no `kind: hypervisor`
+system is a validation error. `gen_docs.py` (`make docs`) turns it into the
+VM count at the top of the TechDocs page `docs/inventory.md`, which Backstage
+RAG-AI ("Ask AI") reads: per question it only sees a handful of ~1000-character
+chunks, too few to count one catalog entity per VM, so the page puts the
+number and the names into one paragraph. The page is committed and `make
+check` fails when it is stale, like the diagram.
+
 **Services nest under the host that serves them and inherit its IP.** That is
 the point of the nesting: Vault and Clusterbook are both published on the same
 Cilium LB VIP and told apart by FQDN, not by address — as separate `hosts`
@@ -101,6 +110,7 @@ Chart and app versions are deliberately **not** tracked here. They live in
 - IPs outside every network defined under `networks`
 - a missing description or hostname, or a service without a description
 - `kind: k3s-cluster` / `rke2-cluster` without a `cluster` name
+- a `vm` that names no `kind: hypervisor` system
 
 `make check` additionally does what CI does: render, then diff against the
 committed artifacts. That way `topology.svg` cannot silently fall behind
