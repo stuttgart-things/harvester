@@ -125,12 +125,16 @@ spec:
   # places first, PONG_TOURNAMENTS=on (flux#857, zaehlwerk ADR-0017);
   # v1.194.1: zaehlwerk v0.32.0 + schmetterpause v0.19.0 (flux#849), which
   # actually play them, and the MATCHES_TOKEN env from zaehlwerk's base
-  # (flux#858).
+  # (flux#858); v1.200.2: schmetterpause v0.20.0, players build their own
+  # figure and see it beside the live score (flux#896, schmetterpause
+  # ADR-0029), with zaehlwerk v0.37.0, the zaehlwerk panel's CATCHER_URL
+  # behind homerun2-portal's BASE_PATH (flux#836, #875), demo-pitcher v2.3.1
+  # and cert-manager v1.21.3 picked up on the way.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.194.1
+    tag: v1.200.2
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
