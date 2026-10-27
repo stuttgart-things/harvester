@@ -123,6 +123,36 @@ password an initial one again.
 
 ---
 
+## Further apps (harvester#574)
+
+[`apps.tf`](./apps.tf) adds OIDC clients next to the portal, from
+[`apps.auto.tfvars`](./apps.auto.tfvars) -- per app:
+
+- **project** `<app>` with role check (no role on it, no login) and role
+  assertion; its **roles**, keys prefixed with the app name (`argocd-admin`)
+- **OIDC web app** `<app>`: redirect/post-logout paths on its base URL, code
+  flow, basic auth, roles and profile claims in the ID token
+- **grants** for users of `users.auto.tfvars` (ids from the module output
+  `user_ids`)
+
+[`groups-claim.tf`](./groups-claim.tf): an Actions-v1 script on the
+customise-token flow (userinfo + access token) sets a flat **`groups`** claim
+with every role key the user holds on any project. ArgoCD, Grafana, MinIO and
+OpenBao read that; each matches only its own keys. Actions v1 is deprecated in
+ZITADEL v4 -- check it before a major upgrade.
+
+**Every app keeps its local admin** -- these clients add a login, they replace
+none (harvester#574).
+
+```bash
+terraform output -json app_client_ids     | jq -r '.argocd'
+terraform output -json app_client_secrets | jq -r '.argocd'   # sensitive -- don't paste
+```
+
+| App | URL | Roles | Local fallback |
+|---|---|---|---|
+| `argocd` | `https://argocd.platform.sthings.lab` | `argocd-admin`, `argocd-readonly` | `admin` |
+
 ## Wiring into the portal (homerun2-dev)
 
 `clusters/homerun2-dev` (#560): issuer `https://zitadel.platform.sthings.lab`,
