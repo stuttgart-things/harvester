@@ -1,0 +1,147 @@
+---
+# homerun2-schedule-pitcher agent for the Harvester cluster
+# (stuttgart-things/homerun2-schedule-pitcher#64, harvester#573).
+#
+# Lists the Longhorn volumes on Harvester and reports the ones that are not
+# healthy, as findings, to the dev instance next to it
+# (./homerun2-schedule-pitcher.yaml): degraded is error, faulted critical,
+# unknown (detached) ok. On the single-node Harvester a volume with 3
+# replicas stays degraded and blocks PVC expansion; images still create such
+# volumes until they are rebuilt (#577).
+#
+# It runs HERE, not on Harvester: Harvester has no Flux, so this is the
+# GitOps path. It reads Harvester remotely with the read-only ServiceAccount
+# of ../harvester/homerun2-schedule-pitcher-reader.yaml (get/list on
+# volumes.longhorn.io, nothing else), whose kubeconfig is
+# ./homerun2-schedule-pitcher-agent-harvester.enc.yaml. The pod gets no
+# token of its own cluster (automountServiceAccountToken: false): the binary
+# takes the in-cluster config before KUBECONFIG, so without that it would list
+# volumes on homerun2-dev.
+#
+# Report: in-cluster to the dev instance, with its API token
+# (HOMERUN2_SCHEDULE_PITCHER_AUTH_TOKEN from ./homerun2-schedule-pitcher-secrets.enc.yaml);
+# ./homerun2-schedule-pitcher-networkpolicy.yaml lets this pod in.
+#
+# CronJob (`run`), so no minAge -- it needs state between runs.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: homerun2-agent
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: homerun2-schedule-pitcher-agent-kustomize
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/homerun2-schedule-pitcher-agent-kustomize
+  ref:
+    # v1.15.0+: check type k8s-resource
+    tag: v1.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-schedule-pitcher-agent-kustomize
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-schedule-pitcher-agent
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2-schedule-pitcher
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: homerun2-schedule-pitcher-agent-kustomize
+  path: ./
+  targetNamespace: homerun2-agent
+  postBuild:
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-schedule-pitcher-secrets
+        optional: false
+  patches:
+    - target:
+        kind: Secret
+        name: homerun2-schedule-pitcher-agent-report
+      patch: |
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: homerun2-schedule-pitcher-agent-report
+        stringData:
+          token: "${HOMERUN2_SCHEDULE_PITCHER_AUTH_TOKEN}"
+    - target:
+        kind: CronJob
+        name: homerun2-schedule-pitcher-agent
+      patch: |
+        - op: replace
+          path: /spec/schedule
+          value: "21 */6 * * *"
+        - op: add
+          path: /spec/jobTemplate/spec/template/spec/automountServiceAccountToken
+          value: false
+        - op: add
+          path: /spec/jobTemplate/spec/template/spec/containers/0/env/-
+          value:
+            name: KUBECONFIG
+            value: /etc/harvester/kubeconfig
+        - op: add
+          path: /spec/jobTemplate/spec/template/spec/containers/0/volumeMounts/-
+          value:
+            name: harvester-kubeconfig
+            mountPath: /etc/harvester
+            readOnly: true
+        - op: add
+          path: /spec/jobTemplate/spec/template/spec/volumes/-
+          value:
+            name: harvester-kubeconfig
+            secret:
+              secretName: homerun2-schedule-pitcher-agent-harvester
+    - target:
+        kind: ConfigMap
+        name: homerun2-schedule-pitcher-agent-profile
+      patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: homerun2-schedule-pitcher-agent-profile
+        data:
+          profile.yaml: |
+            apiVersion: homerun2.sthings.io/v1alpha1
+            kind: SchedulePitcherProfile
+            metadata:
+              name: harvester # findings source: checks-harvester
+            spec:
+              report:
+                addr: http://homerun2-schedule-pitcher.homerun2.svc.cluster.local/findings
+              defaults:
+                assignee: patrick.hermann
+              checks:
+                - id: harvester-longhorn-volumes
+                  type: k8s-resource
+                  description: Longhorn volumes on Harvester that are not healthy
+                  resource:
+                    group: longhorn.io
+                    version: v1beta2
+                    resource: volumes
+                  selector:
+                    namespaces: [longhorn-system]
+                  rules:
+                    - path: .status.robustness
+                      notIn: [healthy, unknown] # unknown = detached
+                      band: error
+                    - path: .status.robustness
+                      in: [faulted]
+                      band: critical
+                  displayPath: .status.kubernetesStatus.pvcName
+                  url: https://github.com/stuttgart-things/harvester/issues/573
+                  tags: [longhorn, storage, harvester]

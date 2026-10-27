@@ -10,7 +10,8 @@
 #  * ingress: the Cilium Gateway (Envoy) -- browsers and agents via the direct
 #    route schedule-pitcher.homerun2-dev.sthings.lab;
 #  * host: the kubelet's probes (and the kube-apiserver proxy);
-#  * sthings-portal: the proxied UI under /schedule, /health, manifests.
+#  * sthings-portal: the proxied UI under /schedule, /health, manifests;
+#  * the Harvester agent (./homerun2-schedule-pitcher-agent.yaml): POST /findings.
 # No Prometheus entry as on platform-sthings: this cluster has no monitoring
 # namespace. Only this pod is selected: the rest of the namespace stays
 # without policy (none of the other homerun2 services reads the headers).
@@ -36,6 +37,14 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: homerun2
             app.kubernetes.io/name: sthings-portal
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: homerun2-agent
+            app.kubernetes.io/name: homerun2-schedule-pitcher-agent
       toPorts:
         - ports:
             - port: "8080"
