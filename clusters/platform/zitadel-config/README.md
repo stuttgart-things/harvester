@@ -1,0 +1,124 @@
+# ZITADEL config (platform) — sthings-portal OIDC clients
+
+Declarative ZITADEL setup for sthings-portal's OIDC login against the
+Harvester lab IdP at `https://zitadel.platform.sthings.lab` (Flux:
+`apps-platform` → `zitadel` on this cluster, #560). A root over the module
+[`terraform/modules/zitadel-portal`](https://github.com/stuttgart-things/stuttgart-things/tree/main/terraform/modules/zitadel-portal)
+of the vSphere labs (stuttgart-things/stuttgart-things#4118), pinned to a
+commit in `main.tf`.
+
+## What it creates
+
+In the default org `ZITADEL`:
+
+- **Project** `sthings-portal` with role check (no role, no login) and role
+  assertion; **roles** `portal-admin`, `portal-user`
+- **OIDC web app** per entry of `portals`, by default
+  `homerun2-dev` → `https://portal.homerun2-dev.sthings.lab`: redirect
+  `/auth/callback`, post-logout `/auth/login`, code flow, basic auth, roles +
+  `preferred_username` in the ID token
+- **Users** with grants from `users.auto.tfvars` (a copy of the vSphere labs'
+  list -- keep them in step)
+
+Outputs `issuer`, `client_ids`, `client_secrets` (maps by portal name),
+`project_id`, `org_id`.
+
+---
+
+## Bootstrap (no console)
+
+The Flux component creates everything Terraform needs: the setup job makes
+the machine user **`terraform`** with **IAM_OWNER** and writes its JSON key to
+the Secret `terraform` in the `zitadel` namespace.
+
+### 1. Fetch the key -- OUTSIDE the repo
+
+```bash
+export KUBECONFIG=/home/sthings/.kube/platform.sthings.lab
+mkdir -p ~/.config/zitadel
+(umask 077; kubectl -n zitadel get secret terraform \
+  -o jsonpath='{.data.terraform\.json}' | base64 -d \
+  > ~/.config/zitadel/terraform-key-harvester.json)
+jq -r '.type, .userId' ~/.config/zitadel/terraform-key-harvester.json   # serviceaccount, <id>
+```
+
+### 2. The CA for the TLS handshake
+
+ZITADEL is served under the gateway's wildcard certificate from the OpenBao
+PKI (`CN=sthings.lab`). The provider's `insecure` means "http", not "skip
+verify", so Go has to trust that CA via `SSL_CERT_FILE`. The root CA is
+committed in `../openbao-pki-ca.yaml`:
+
+```bash
+yq '.data."ca.crt"' ../openbao-pki-ca.yaml | base64 -d > ~/.config/zitadel/ca-harvester.pem
+openssl x509 -in ~/.config/zitadel/ca-harvester.pem -noout -subject      # CN=sthings.lab
+curl -s -o /dev/null -w '%{http_code}\n' --cacert ~/.config/zitadel/ca-harvester.pem \
+  https://zitadel.platform.sthings.lab/.well-known/openid-configuration   # 200
+```
+
+---
+
+## Apply
+
+```bash
+cd clusters/platform/zitadel-config
+
+export KUBECONFIG=/home/sthings/.kube/platform.sthings.lab          # state backend
+export TF_VAR_zitadel_jwt_profile_file=$HOME/.config/zitadel/terraform-key-harvester.json
+export SSL_CERT_FILE=$HOME/.config/zitadel/ca-harvester.pem
+
+# users and their roles come from users.auto.tfvars (no passwords there);
+# initial passwords land in the state and must be changed at the first login
+export TF_VAR_user_initial_passwords="$(jq -nc --arg pw '<initial password>' \
+  '[ "sthings","indy","tommy","mcfly","mcclane","fmcguire","rdevaney","someara" ] | map({(.): $pw}) | add')"
+
+terraform init
+terraform plan      # 1 project, 2 roles, 1 OIDC app, 8 users, 8 grants
+terraform apply
+
+terraform output -raw issuer
+terraform output -json client_ids     | jq -r '."homerun2-dev"'
+terraform output -json client_secrets | jq -r '."homerun2-dev"'   # sensitive -- don't paste
+```
+
+`initial_password` is read at creation only. To give an existing user a new
+initial password, replace it:
+`terraform apply -replace='module.zitadel_portal.zitadel_human_user.user["<name>"]'`
+(its grant is replaced with it).
+
+### Common pitfalls
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `failed to start zitadel client: open <token>: file name too long` | `TF_VAR_zitadel_jwt_profile_file` set to the key's content | Point it at the file path |
+| `x509: certificate signed by unknown authority` | `SSL_CERT_FILE` unset or not the `sthings.lab` CA | Step 2 |
+| `credentials: cannot check peer: missing selected ALPN property`; the console shows `[unknown] missing trailer` | Cilium Gateway without `gatewayAPI.enableAlpn` / `enableAppProtocol`: no `h2` on the TLS listener, HTTP/1.1 to ZITADEL's h2c port | Both `true` in the Cilium values (deploy-configure-rke default since #35); stopgap for Terraform: `export GRPC_ENFORCE_ALPN_ENABLED=false` |
+| `issuer does not match` | `port = 443` or `insecure = true` on the provider | Neither is set here; do not add them |
+| `namespaces "zitadel" not found` at init | The Flux component is not deployed yet | Deploy first; the state lives in that namespace |
+| Plan wants to destroy all users | Run from a checkout without `users.auto.tfvars` | Apply from a branch/commit that has it |
+| Login stops right after the password with a project / grant error | `project_role_check`: the user has no role on `sthings-portal` | Add the user to `users.auto.tfvars` with a role |
+
+---
+
+## Wiring into the portal (homerun2-dev)
+
+`clusters/homerun2-dev` (#560): issuer `https://zitadel.platform.sthings.lab`,
+client ID from `client_ids`, allowed groups `portal-admin,portal-user`, the
+client secret as key `oidc-client-secret` of the portal's SOPS Secret. The
+redirect URL must be exactly
+`https://portal.homerun2-dev.sthings.lab/auth/callback`.
+
+## Rotating the client secret
+
+```bash
+terraform apply -replace='module.zitadel_portal.zitadel_application_oidc.portal["homerun2-dev"]'
+```
+
+A new app: client ID **and** secret change. Update both in the portal.
+
+## State
+
+Kubernetes Secret `tfstate-default-zitadel-config` in the `zitadel` namespace
+on platform: it holds the client secrets and initial passwords in cleartext.
+Removing the `zitadel` component from `apps-platform` deletes the namespace --
+and this state with it.
