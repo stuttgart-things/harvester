@@ -203,6 +203,11 @@ hosts:
         description: >-
           Map of the lab's clusters from clusters/ in this repo, with live
           status and endpoint probes for platform itself.
+      - name: Grafana
+        fqdn: grafana.platform.sthings.lab
+        description: >-
+          kube-prometheus-stack of this cluster (Prometheus, Alertmanager,
+          Grafana). Alerts go to omni-pitcher on homerun2-dev.
 
   # The sthings-edge box (LattePanda) in SthingsNet: role `kiosk`, no k3s.
   # Address from clusters/sthings-edge/README.md (troubleshooting); inside the

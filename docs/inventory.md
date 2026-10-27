@@ -171,6 +171,7 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
     - Clusterbook (`clusterbook.platform.sthings.lab`): Reserves IP and FQDN for new clusters and writes the DNS records to the DD-WRT router. Moved here from the infra cluster.
     - Clusterbook operator (`192.168.10.160`): Reconciles ClusterbookCluster resources against the Clusterbook API on this cluster. No ingress.
     - clusterscope (`clusterscope.platform.sthings.lab`): Map of the lab's clusters from clusters/ in this repo, with live status and endpoint probes for platform itself.
+    - Grafana (`grafana.platform.sthings.lab`): kube-prometheus-stack of this cluster (Prometheus, Alertmanager, Grafana). Alerts go to omni-pitcher on homerun2-dev.
 
 ### sthings-edge
 
