@@ -40,3 +40,15 @@ variable "user_initial_passwords" {
   default     = {}
   sensitive   = true
 }
+
+variable "apps" {
+  type = map(object({
+    url               = string
+    redirect_paths    = list(string)
+    post_logout_paths = optional(list(string), [])
+    roles             = map(string)                     # role key => display name
+    users             = optional(map(list(string)), {}) # user name (var.users) => role keys
+  }))
+  description = "OIDC clients next to the portal (apps.tf), app name => base URL, redirect paths, roles and who has which. Set in apps.auto.tfvars."
+  default     = {}
+}
