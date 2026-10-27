@@ -70,6 +70,14 @@ build {
     ]
   }
 
+  # inotify limits for Kubernetes nodes (Ubuntu's 128 instances per UID are
+  # too few once containerd, kubelet and log shippers run as root): written to
+  # /etc/sysctl.d/90-inotify.conf. fluent-bit crash-looped on 2026-10-27
+  # without it. See the script.
+  provisioner "shell" {
+    script = "inotify-limits.sh"
+  }
+
   # Upload the committed sthings-lab CA so the trust install needs no network
   # (Vault may be down). Only runs when ca_cert_file is set; otherwise the
   # script falls back to ca_cert_url (or skips).
