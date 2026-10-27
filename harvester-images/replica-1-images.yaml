@@ -1,0 +1,164 @@
+# Re-imports of the images new VMs are provisioned from, with ONE Longhorn
+# replica (#573). Same artifacts, no rebuild: each image's lh-* StorageClass
+# takes its replica count from spec.storageClassParameters, and that cannot
+# change on an existing class -- so the only way to 1 replica is a new image.
+#
+# Name: <image>-<build version>-r1. The build version is the replaced image's
+# (or, for images that were uploaded without one, the artifact's Last-Modified
+# time, YY.MDD.HHMM). "-r1" = 1 replica. The images they replace stay as long as
+# a VM still boots from them (Harvester refuses to delete them).
+#
+# Applied BY HAND (no Flux on Harvester), like golden-images.yaml:
+#   kubectl --kubeconfig ~/.kube/harvester apply -f harvester-images/replica-1-images.yaml
+#   kubectl --kubeconfig ~/.kube/harvester -n default get virtualmachineimages \
+#     -o custom-columns='NAME:.metadata.name,SC:.status.storageClassName,PROGRESS:.status.progress'
+# The new lh-* classes are pinned in
+# clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml
+# and the other env configs.
+---
+# replaces default/sthings-u26-26.928.0903
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-u26-26.928.0903-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-u26-26.928.0903-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-u26/sthings-u26-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/sthings-u26-k3s
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-u26-k3s-26.610.0656-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-u26-k3s-26.610.0656-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-u26-k3s/sthings-u26-k3s-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/sthings-rocky9
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-rocky9-26.609.2001-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-rocky9-26.609.2001-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-rocky9/sthings-rocky9-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/sthings-leap
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: sthings-leap-26.609.2020-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: sthings-leap-26.609.2020-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/golden/sthings-leap/sthings-leap-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/u26-dev-26.930.0720
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: u26-dev-26.930.0720-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: u26-dev-26.930.0720-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/dev/u26-dev/u26-dev-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/leap-dev-26.930.0912
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: leap-dev-26.930.0912-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: leap-dev-26.930.0912-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/dev/leap-dev/leap-dev-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'
+---
+# replaces default/rocky9-dev
+apiVersion: harvesterhci.io/v1beta1
+kind: VirtualMachineImage
+metadata:
+  name: rocky9-dev-26.924.1212-r1
+  namespace: default
+  annotations:
+    harvesterhci.io/storageClassName: harvester-longhorn-single
+  labels:
+    harvesterhci.io/image-type: raw_qcow2
+    harvesterhci.io/os-type: linux
+spec:
+  displayName: rocky9-dev-26.924.1212-r1
+  sourceType: download
+  url: https://artifacts.platform.sthings.lab/packer/dev/rocky9-dev/rocky9-dev-amd64.img
+  retry: 3
+  storageClassParameters:
+    migratable: 'true'
+    numberOfReplicas: '1'
+    staleReplicaTimeout: '30'

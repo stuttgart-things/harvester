@@ -30,7 +30,7 @@ data:
   # Harvester cloud credential, cattle-global-data:<name>
   cloudCredentialSecretName: cattle-global-data:cc-cl944  # pragma: allowlist secret
   # Harvester VM image, <namespace>/<image>
-  imageName: default/sthings-u26-k3s
+  imageName: default/sthings-u26-k3s-26.610.0656-r1
   # Harvester network, <namespace>/<network>
   networkName: default/vms
   # Harvester namespace the VMs are created in
