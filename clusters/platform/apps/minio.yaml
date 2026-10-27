@@ -43,14 +43,14 @@ spec:
     - target:
         kind: HelmRelease
         name: minio-deployment
-      patch: |
+      patch: | # pragma: allowlist secret
         apiVersion: helm.toolkit.fluxcd.io/v2
         kind: HelmRelease
         metadata:
           name: minio-deployment
         spec:
           values:
-            extraEnvVarsSecret: minio-oidc-zitadel # pragma: allowlist secret
+            extraEnvVarsSecret: minio-oidc-zitadel
             extraEnvVars:
               - name: MINIO_IDENTITY_OPENID_CONFIG_URL
                 value: https://zitadel.platform.sthings.lab/.well-known/openid-configuration
