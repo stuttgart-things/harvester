@@ -91,7 +91,7 @@ spec:
           AUTH_USERS_FILE: /etc/portal/auth/users
           AUTH_SESSION_TTL: "12h"
           AUTH_OIDC_ISSUER: "https://zitadel.platform.sthings.lab"
-          AUTH_OIDC_CLIENT_ID: "TODO-client-id" # TODO(#560): terraform -chdir=../platform/zitadel-config output -json client_ids | jq -r '."homerun2-dev"'
+          AUTH_OIDC_CLIENT_ID: "396942816388841722"
           AUTH_OIDC_REDIRECT_URL: "https://portal.homerun2-dev.sthings.lab/auth/callback"
           AUTH_OIDC_NAME: "Zitadel"
           AUTH_OIDC_ALLOWED_GROUPS: "portal-admin,portal-user"
