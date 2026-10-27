@@ -22,7 +22,9 @@ spec:
   retry: 3
   sourceType: download
   url:
+  # Single-node Harvester: a second or third replica can never be scheduled,
+  # so 3 left every disk "degraded" and blocked PVC expansion (#573).
   storageClassParameters:
     migratable: 'true'
-    numberOfReplicas: '3'
+    numberOfReplicas: '1'
     staleReplicaTimeout: '30'
