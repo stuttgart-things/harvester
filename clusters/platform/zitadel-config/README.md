@@ -158,7 +158,9 @@ terraform output -json app_client_secrets | jq -r '.argocd'   # sensitive -- don
 `../apps/argocd-platform.yaml` patches the HelmRelease `argocd-deployment`:
 `url`, RBAC (`argocd-admin` => `role:admin`, `argocd-readonly` =>
 `role:readonly`, scopes `[groups]`) and `oidc.config` via `valuesFrom` from the
-SOPS Secret `argocd-oidc-zitadel` in `argocd` (`../apps/argocd-oidc-zitadel.enc.yaml`).
+SOPS Secret `argocd-oidc-zitadel` in `argocd` (`../apps/argocd-oidc-zitadel.enc.yaml`),
+key `values.yaml`: a values document with `configs.cm."oidc.config"` (no
+`targetPath` -- that parses as `--set` and breaks on commas).
 It holds the client secret literally -- a `$secret:key` reference would not
 survive the two Flux substitutions. Make it after an apply that changed the
 argocd client:
@@ -174,12 +176,13 @@ terraform output -json app_client_secrets | jq -j '.argocd' > /dev/shm/argocd-cs
   echo "requestedScopes: [openid, profile, email]"
   echo "rootCA: |"; yq '.data."ca.crt"' ../openbao-pki-ca.yaml | base64 -d | sed 's/^/  /'
 } > /dev/shm/argocd-oidc.config
+yq -n '.configs.cm."oidc.config" = load_str("/dev/shm/argocd-oidc.config")' > /dev/shm/argocd-values.yaml
 kubectl create secret generic argocd-oidc-zitadel -n argocd \
-    --from-file=oidc.config=/dev/shm/argocd-oidc.config --dry-run=client -o yaml \
+    --from-file=values.yaml=/dev/shm/argocd-values.yaml --dry-run=client -o yaml \
   | sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
       --encrypted-regex '^(data|stringData)$' --input-type yaml --output-type yaml /dev/stdin \
   > ../apps/argocd-oidc-zitadel.enc.yaml
-shred -u /dev/shm/argocd-cs /dev/shm/argocd-oidc.config
+shred -u /dev/shm/argocd-cs /dev/shm/argocd-oidc.config /dev/shm/argocd-values.yaml
 ```
 
 Check both logins: "LOG IN VIA ZITADEL" with a ZITADEL user, and the local
