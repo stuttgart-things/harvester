@@ -146,3 +146,105 @@ on platform: it holds the client secrets in cleartext (user passwords are
 write-only and not in it).
 Removing the `zitadel` component from `apps-platform` deletes the namespace --
 and this state with it.
+The nightly backup below keeps a copy of it.
+
+---
+
+## Backup and restore
+
+[`../apps/zitadel-backup.yaml`](../apps/zitadel-backup.yaml): CronJob
+`zitadel-backup` in `zitadel`, 02:30 Europe/Berlin. It writes
+`<UTC timestamp>/zitadel.dump` (`pg_dump -Fc` of the database `zitadel`,
+checked with `pg_restore --list`) and `<UTC timestamp>/tfstate-zitadel-config.gz`
+(this Terraform state, gzip as the backend stores it) to the bucket
+`platform-zitadel-backup` on platform's MinIO, and removes what is older than
+14 days. The bucket and its user come from
+[`clusters/machinery-hv/xrs/platform-zitadel-backup.yaml`](../../machinery-hv/xrs/platform-zitadel-backup.yaml).
+
+**The masterkey is not in it.** It is `ZITADEL_MASTERKEY` in
+`../apps/zitadel-secrets.enc.yaml` (git, SOPS) and must be the same on the
+instance a dump is restored into -- without it the encrypted data in the dump
+(keys, secrets) is lost.
+
+Same VM as ZITADEL: this covers a deleted namespace, a broken database and a
+bad upgrade, not the loss of the platform VM.
+
+### The bucket keys (once, after the bucket exists)
+
+The keys live in Secret `default/platform-zitadel-backup` on machinery-hv and go
+into platform as `../apps/zitadel-backup-secrets.enc.yaml` (Secret
+`zitadel-backup-s3`):
+
+```bash
+cd /home/sthings/harvester
+kubectl --kubeconfig ~/.kube/machinery-hv -n default get secret platform-zitadel-backup -o json \
+  | jq '{apiVersion: "v1", kind: "Secret", type: "Opaque",
+         metadata: {name: "zitadel-backup-s3", namespace: "zitadel"},
+         data: {AWS_ACCESS_KEY_ID: .data.AWS_ACCESS_KEY_ID,
+                AWS_SECRET_ACCESS_KEY: .data.AWS_SECRET_ACCESS_KEY}}' \
+  | yq -P \
+  | sops --encrypt --age age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
+      --encrypted-regex '^(data|stringData)$' --input-type yaml --output-type yaml /dev/stdin \
+  > clusters/platform/apps/zitadel-backup-secrets.enc.yaml
+grep -c 'ENC\[' clusters/platform/apps/zitadel-backup-secrets.enc.yaml   # 3 (2 keys + the sops mac)
+```
+
+### Check a run
+
+```bash
+export KUBECONFIG=~/.kube/platform.sthings.lab
+kubectl -n zitadel create job --from=cronjob/zitadel-backup zitadel-backup-manual
+kubectl -n zitadel logs job/zitadel-backup-manual -c dump
+kubectl -n zitadel logs job/zitadel-backup-manual -c upload    # mc ls of the bucket
+kubectl -n zitadel delete job zitadel-backup-manual
+```
+
+### Fetch a dump
+
+```bash
+kubectl --kubeconfig ~/.kube/platform.sthings.lab -n minio port-forward svc/minio-deployment 9000 &
+eval "$(kubectl --kubeconfig ~/.kube/machinery-hv -n default get secret platform-zitadel-backup -o json \
+  | jq -r '.data | "export MC_HOST_zb=http://\(.AWS_ACCESS_KEY_ID|@base64d):\(.AWS_SECRET_ACCESS_KEY|@base64d)@localhost:9000"')"
+mc ls zb/platform-zitadel-backup/
+mc cp --recursive zb/platform-zitadel-backup/<timestamp>/ /dev/shm/zitadel-restore/
+```
+
+### Restore the database
+
+Into the running instance (database broken, bad upgrade), or after the
+namespace was recreated by Flux (same masterkey from SOPS; ZITADEL's setup
+created a fresh database, the dump replaces it):
+
+```bash
+export KUBECONFIG=~/.kube/platform.sthings.lab
+flux suspend ks zitadel                         # keeps Flux from scaling back up
+flux suspend hr zitadel -n zitadel
+kubectl -n zitadel scale deploy zitadel zitadel-login --replicas=0
+
+kubectl -n zitadel cp /dev/shm/zitadel-restore/zitadel.dump zitadel-postgresql-0:/tmp/zitadel.dump
+kubectl -n zitadel exec zitadel-postgresql-0 -- bash -c \
+  'PGPASSWORD="$(cat "$POSTGRES_POSTGRES_PASSWORD_FILE")" pg_restore -U postgres -d zitadel --clean --if-exists --no-owner --role=zitadel /tmp/zitadel.dump; rm /tmp/zitadel.dump'
+
+kubectl -n zitadel scale deploy zitadel zitadel-login --replicas=1
+flux resume hr zitadel -n zitadel               # no drift detection: does not scale by itself
+flux resume ks zitadel
+curl -s -o /dev/null -w '%{http_code}\n' https://zitadel.platform.sthings.lab/debug/healthz   # 200
+```
+
+Then log in with a ZITADEL user and run `terraform plan` here: no changes.
+
+### Restore the Terraform state
+
+Only when the Secret is gone (namespace deleted). The backend finds it by name
+and labels:
+
+```bash
+kubectl -n zitadel create secret generic tfstate-default-zitadel-config \
+  --from-file=tfstate=/dev/shm/zitadel-restore/tfstate-zitadel-config.gz
+kubectl -n zitadel label secret tfstate-default-zitadel-config \
+  app.kubernetes.io/managed-by=terraform tfstate=true \
+  tfstateSecretSuffix=zitadel-config tfstateWorkspace=default
+kubectl -n zitadel annotate secret tfstate-default-zitadel-config encoding=gzip
+terraform plan   # after the database restore: no changes
+shred -u /dev/shm/zitadel-restore/*
+```
