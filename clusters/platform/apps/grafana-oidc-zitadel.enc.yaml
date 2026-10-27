@@ -1,0 +1,24 @@
+apiVersion: v1
+data:
+    GF_AUTH_GENERIC_OAUTH_CLIENT_ID: ENC[AES256_GCM,data:bvSY6yjbI0+fFm2XAY+oivY3LPydEUnO,iv:9LDdts3ZvjKiGSaOKaKjZcvtIlRHqEg+iXfS5Hdrr/0=,tag:9FSkP5bVFmwVfDQpligjmw==,type:str]
+    GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET: ENC[AES256_GCM,data:O/GrGfiQ7i3skR8foU5f66i0xa/RMnMRGpBGueT1dqPjeUqtuznof9nk8QQXCh5o15S3sKCVcI+l0IrFUx1wRXoDDN0RyGQ88Ir9kzRXqlxMaDFifAMgSA==,iv:muE8EgiTbe1aumCbTJmcey5I0trzOFPSjci+mSeUmZ8=,tag:Bss71Vn7uKAwgzfNBcUMbA==,type:str]
+kind: Secret
+metadata:
+    creationTimestamp: null
+    name: grafana-oidc-zitadel
+    namespace: monitoring
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSArZEFaUWNwZk90VFlQSCtH
+            RWNySFlNQXNQc0s3UEl2K2w4YTVOYkRkK0IwCmo3STU1dFA1Sjk1dGYwQ0hPSnFo
+            TUlTeFhZY3FCUUFOQ3dPMlkxZC8zRHMKLS0tIHRCT1Fnbzc3bUhYMnVROHBNMTR1
+            VXE0cmpUY3ZhWkRQcFo1V0EwanEyTjAKZ9dg18FiXsDovxURVZFRfga7SdccPM0A
+            vLTfr8zn+MJ5RB0fu1DNvUxxc8IZ1KOX3jJokPhhXCyEKFeZl9/eRg==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-10-27T16:21:40Z"
+    mac: ENC[AES256_GCM,data:2hcTpreDNot0p5XtiTsabYINrFha6GzFYSMkcTLZBzzvBYctd6557p6ZMA+dVIjA54DIV9mRkyswUxBgtS4uYSMD/ni+wCbcMXzm4+wsOHzrlIHLC2P3s+gi2V+R3JNcYMimJEh+baTsP7IlhnCvU0lh08I67h2PODJWBIrIV9M=,iv:NIjUhbTPR83ba2ulAEaDLwDx0uxSlRm2IHJVFbWTuuI=,tag:4CW+4vRhEXQmf66x5unPKw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

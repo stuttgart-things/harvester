@@ -153,6 +153,7 @@ terraform output -json app_client_secrets | jq -r '.argocd'   # sensitive -- don
 |---|---|---|---|
 | `argocd` | `https://argocd.platform.sthings.lab` | `argocd-admin`, `argocd-readonly` | `admin` |
 | `minio` | `https://artifacts-console.platform.sthings.lab` | `minio-admin`, `minio-readonly` (MinIO policies of the same name) | root user |
+| `grafana` | `https://grafana.platform.sthings.lab` | `grafana-admin` (Admin), `grafana-readonly` (Viewer) | `admin` |
 
 ### Wiring ArgoCD
 
