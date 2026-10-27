@@ -1,0 +1,57 @@
+---
+# MinIO policies for the ZITADEL login on platform's MinIO (harvester#574).
+# MinIO maps each value of the OIDC claim `groups` to the policy of the same
+# name; values without a policy (portal-admin, argocd-admin, ...) are skipped.
+# The names equal the ZITADEL role keys of the `minio` app in
+# clusters/platform/zitadel-config/apps.auto.tfvars -- rename both or neither.
+#
+# Plain managed resources of provider-minio (ProviderConfig `minio`, the one
+# the MinioBucket XRs use); the external name is the policy name.
+#
+# minio-admin: what MinIO's built-in consoleAdmin grants. minio-readonly: list
+# and read every bucket, enough for the console's object browser.
+#
+# The root user (minio-secrets) stays the local fallback.
+apiVersion: minio.crossplane.io/v1
+kind: Policy
+metadata:
+  name: minio-admin
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  providerConfigRef:
+    name: minio
+  forProvider:
+    rawPolicy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {"Effect": "Allow", "Action": ["admin:*"]},
+          {"Effect": "Allow", "Action": ["kms:*"]},
+          {"Effect": "Allow", "Action": ["s3:*"], "Resource": ["arn:aws:s3:::*"]}
+        ]
+      }
+---
+apiVersion: minio.crossplane.io/v1
+kind: Policy
+metadata:
+  name: minio-readonly
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  providerConfigRef:
+    name: minio
+  forProvider:
+    rawPolicy: |
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Effect": "Allow",
+            "Action": ["s3:ListAllMyBuckets", "s3:GetBucketLocation", "s3:ListBucket", "s3:GetObject"],
+            "Resource": ["arn:aws:s3:::*"]
+          }
+        ]
+      }

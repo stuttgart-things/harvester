@@ -1,0 +1,24 @@
+apiVersion: v1
+data:
+    MINIO_IDENTITY_OPENID_CLIENT_ID: ENC[AES256_GCM,data:tW5xHiGZoCS0TktMmQmRKa368OFTMdGR,iv:B1cLCtTYZulA028+ISe77T4PVQqLpJsPChAU4KuZ40s=,tag:yJORhnEM5b2MRxNkVuoywA==,type:str]
+    MINIO_IDENTITY_OPENID_CLIENT_SECRET: ENC[AES256_GCM,data:dvTLT2PonmTMxsyWU2FSNBetMCj9Qfqq3RLghP6toXEoQE348NbkKv30CehzSB8mShgGKPgq5BbKi2vKmo7DkW+7LtDQXVMopsK3yCaBwNY9bogFEl/oeg==,iv:SUlyNiNDPP74ssaoDJCfTQA1+R2dNise/s7ZhXF/w7A=,tag:AZH4CaK3coSeKlx5N1RPEg==,type:str]
+kind: Secret
+metadata:
+    creationTimestamp: null
+    name: minio-oidc-zitadel
+    namespace: minio
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBNcnN0YVRJNXZRQURCYkJS
+            bHNCTzlZMlU3eHB0ME54UmxxVWFYNWFEK1ZvCjVEcVc2UWpaN29qc2dIREEzd296
+            Vi9zVEVRdXhhWGluSGx0eDNCZmpKUm8KLS0tIE5Hbjd3SnJUZ0p0VWRLOEZVOTJi
+            bFFYV3p1VU9ab0JwdDc1V000WWF2UmMKlK7SJ2tvIvzvNbl9O530qC1IMDeedQzN
+            ug84KZ1VGFIL2aBd2Sq7F4C+W2tf3gsnIKoAIay1gBbn6bv9Rrwazg==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-10-27T13:47:30Z"
+    mac: ENC[AES256_GCM,data:YbBChFGBy5dQmMFMC5+3e0hCZUTM0P9Am+otZMa4QlxLpF2H89vjvg1fL7KvnZROhl/v06W4xROKdaIVOdIdDZNjFVdCJ3nlRqkiLf9Zh/DddInqGOPcLL3ascWjQTFs95sWt0v5uvCm+/jwUwntdwQecLIxWp8m/sXuNdK0SdM=,iv:MED9gRNzMni2BTr1pGpOiTOlKqhTS89j3QyxM3kfVXQ=,tag:oAl6ZCxK/kiJa14a0LWwIw==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
