@@ -269,18 +269,37 @@ spec:
 # kube-state-metrics for this cluster (harvester#490). The first monitoring in
 # the Harvester lab; Grafana at grafana.platform.sthings.lab.
 #
-# ALERTS go to homerun2-dev's omni-pitcher (this cluster runs no homerun2),
-# through its Gateway, so Alertmanager has to trust the OpenBao PKI that signed
-# it: alertmanager-webhook-ca mounts the cluster-trust-bundle ConfigMap
-# trust-manager writes into every namespace (OpenBao root included). From the
-# pitcher the notification-catcher on homerun2-dev fans them out (Teams,
-# severity >= warning).
+# CRDs: the prometheus-operator CRDs come with the chart (crds subchart,
+# install/upgrade crds: CreateReplace in the flux release), so they exist before
+# anything of this release uses ServiceMonitor/PrometheusRule.
 #
-# SECRETS: Secret kube-prometheus-stack-secrets in flux-system with # pragma: allowlist secret
-# KPS_GRAFANA_ADMIN_PASSWORD and HOMERUN2_OMNI_PITCHER_AUTH_TOKEN (homerun2-dev's
-# omni-pitcher token), committed SOPS-encrypted like apps/rancher-secrets.enc.yaml.
-# Not optional: a missing Secret stops this Kustomization instead of rolling
-# out the chart defaults.
+# ALERTS (warning|critical) go to homerun2-dev's omni-pitcher (this cluster
+# runs no homerun2), on its native Alertmanager endpoint /pitch/alertmanager
+# (omni-pitcher >= v2.4.0: one message per alert, tags status=firing|resolved
+# and fingerprint=...; routed to the `alerts` stream like /pitch/grafana).
+# Through homerun2-dev's Gateway, so Alertmanager has to trust the OpenBao PKI
+# that signed it: alertmanager-webhook-ca mounts the cluster-trust-bundle
+# ConfigMap trust-manager writes into every namespace. From the pitcher the
+# notification-catcher on homerun2-dev fans them out (Teams, severity >= warning).
+#
+# TOKEN: omni-pitcher has one bearer token (AUTH_TOKEN). It is already here as
+# HOMERUN2_K8S_PITCHER_AUTH_TOKEN in the Secret homerun2-k8s-pitcher-remote-sops-secrets # pragma: allowlist secret
+# (./apps/homerun2-k8s-pitcher-remote-sops-secrets.enc.yaml, the k8s-pitcher
+# pilot), so this reads that Secret instead of keeping a second copy; the patch
+# points the receiver at that variable instead of the flux release's
+# HOMERUN2_OMNI_PITCHER_AUTH_TOKEN. Rotating the pitcher token = updating that
+# one file. The patch runs before postBuild, so ${...} in it is substituted.
+# Not optional: without the Secret this Kustomization stops instead of rolling
+# out the release's `changeme` token.
+#
+# GRAFANA keeps its local admin (lab rule, #574): user `admin`, the password is
+# the one the grafana chart generates into the Secret kube-prometheus-stack-grafana
+# (key admin-password, kept across upgrades by the chart's lookup) -- the patch
+# drops the flux release's adminPassword, whose fallback is the public
+# `prom-operator`. Read it with
+#   kubectl -n monitoring get secret kube-prometheus-stack-grafana \
+#     -o jsonpath='{.data.admin-password}' | base64 -d
+# SSO (ZITADEL) comes later as another patch on /spec/values/grafana/grafana.ini.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -301,15 +320,32 @@ spec:
     - components/alertmanager-webhook-ca
   prune: true
   wait: true
+  # The `test` op pins receiver index 1 to `msteams`, like the flux components
+  # do: a reordered release.yaml fails the build instead of patching the wrong
+  # receiver.
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+        name: kube-prometheus-stack
+      patch: |  # pragma: allowlist secret -- names a variable, holds no secret
+        - op: test
+          path: /spec/values/alertmanager/config/receivers/1/name
+          value: msteams
+        - op: replace
+          path: /spec/values/alertmanager/config/receivers/1/webhook_configs/0/http_config/authorization/credentials
+          value: ${HOMERUN2_K8S_PITCHER_AUTH_TOKEN}
+        - op: remove
+          path: /spec/values/grafana/adminPassword
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
-      KPS_VERSION: "92.10.1"
+      KPS_VERSION: "92.11.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
       KPS_PROMETHEUS_STORAGE_CLASS: local-path
       KPS_PROMETHEUS_STORAGE_SIZE: 20Gi
       KPS_PROMETHEUS_RETENTION: 15d
       KPS_SCRAPE_INTERVAL: 60s
-      KPS_ALERTMANAGER_WEBHOOK_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/grafana
+      KPS_ALERTMANAGER_WEBHOOK_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
       KPS_ALERTMANAGER_CA_CONFIGMAP: cluster-trust-bundle
       KPS_ALERTMANAGER_CA_KEY: trust-bundle.pem
       GATEWAY_NAME: platform-sthings-gateway
@@ -318,5 +354,5 @@ spec:
       DOMAIN: platform.sthings.lab
     substituteFrom:
       - kind: Secret
-        name: kube-prometheus-stack-secrets
+        name: homerun2-k8s-pitcher-remote-sops-secrets
         optional: false
