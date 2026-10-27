@@ -574,14 +574,22 @@ platform-sthings (`stuttgart-things/stuttgart-things`,
 | sound-catcher (browser player) | [`homerun2-sound-catcher.yaml`](./homerun2-sound-catcher.yaml) | `profiles/base-sound-catcher` (+ `-routes`) | `/sound` |
 | schedule-pitcher | [`homerun2-schedule-pitcher.yaml`](./homerun2-schedule-pitcher.yaml) | released kustomize artifact (OCI) | `/schedule` |
 | k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
+| schedule-pitcher agent for Harvester (Longhorn volumes) | [`homerun2-schedule-pitcher-agent.yaml`](./homerun2-schedule-pitcher-agent.yaml) | released agent kustomize artifact (OCI) | -- |
 
 schedule-pitcher's own API/UI token is
 [`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
 generated for this cluster; behind the portal it is not asked for (the pitcher
 trusts the portal's `X-Forwarded-User`, which its direct route strips). It runs
-with no checks yet (none of
-platform-sthings' token checks has a Secret here). k8s-pitcher's error events
-reach Teams through the `teams-homerun2-dev` output.
+no checks of its own (none of platform-sthings' token checks has a Secret
+here), but receives the findings of the Harvester agent (source
+`checks-harvester`): a CronJob in `homerun2-agent` that lists the Longhorn
+volumes on Harvester every 6 hours and reports the ones that are not healthy
+(#573). Harvester has no Flux, so the agent runs here and reads Harvester with
+a read-only ServiceAccount
+([`../harvester/homerun2-schedule-pitcher-reader.yaml`](../harvester/homerun2-schedule-pitcher-reader.yaml),
+kubeconfig in
+[`homerun2-schedule-pitcher-agent-harvester.enc.yaml`](./homerun2-schedule-pitcher-agent-harvester.enc.yaml)).
+k8s-pitcher's error events reach Teams through the `teams-homerun2-dev` output.
 
 **Every version is pinned in this directory** -- `*_VERSION` substitutes,
 OCIRepository `tag` and `newTag`, each annotated `# datasource=docker depName=…`
