@@ -340,6 +340,11 @@ spec:
         # (Before: https://schmetterpause.<EDGE_DOMAIN>, the default.)
         TABLETENNIS_SCOREBOARD_HANDOVER: sops
         TABLETENNIS_ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
+        # The winner's figure on the LED panel after a won set or match (flux
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030). The flux
+        # default is schmetterpause.<EDGE_DOMAIN>, which the edge CA signs and
+        # the catcher, mounting no CA, refuses; the players' name it accepts.
+        TABLETENNIS_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
         # The pages' links -- zaehlwerk's Buttons and Pong, the buttons page's
         # way back to zaehlwerk -- go to the players' names (./lab/play-routes),
         # which a phone reaches without the edge CA. Read from the flux release
@@ -441,10 +446,9 @@ spec:
         TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
         TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
         # The winner's figure on the panel after a won set or match (flux
-        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030). This zaehlwerk
-        # reaches schmetterpause over the Service, which the catcher cannot
-        # fetch from; the players' name has a certificate it trusts. The
-        # office needs nothing: its SCHMETTERPAUSE_URL is that name already.
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030), from the
+        # players' name: the catcher mounts no edge CA, and this zaehlwerk
+        # reaches schmetterpause over the Service, which it cannot fetch from.
         TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN}
       secrets:
         tabletennis-sandbox-secrets:
