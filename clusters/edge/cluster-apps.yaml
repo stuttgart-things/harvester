@@ -133,12 +133,15 @@ spec:
   # v0.38.0, the players' faces from the game on the live score and their
   # figures on the spectator view (flux#898, zaehlwerk ADR-0018), with
   # homerun2 led-catcher v0.23.0 (flux#889) picked up on the way; v1.200.5:
-  # zaehlwerk v0.39.0, the figures on the scoring page too (flux#902).
+  # zaehlwerk v0.39.0, the figures on the scoring page too (flux#902);
+  # v1.200.6: the winner's figure on the LED panel after a won set or match
+  # -- schmetterpause v0.21.0, led-catcher v0.24.0, zaehlwerk v0.40.0 -- and
+  # the sandbox's bots dressed in random figures (flux#903).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.5
+    tag: v1.200.6
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -437,6 +440,12 @@ spec:
         TABLETENNIS_SANDBOX_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
         TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
         TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
+        # The winner's figure on the panel after a won set or match (flux
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030). This zaehlwerk
+        # reaches schmetterpause over the Service, which the catcher cannot
+        # fetch from; the players' name has a certificate it trusts. The
+        # office needs nothing: its SCHMETTERPAUSE_URL is that name already.
+        TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN}
       secrets:
         tabletennis-sandbox-secrets:
           # NEW KEYS in secrets/edge/app-values.enc.yaml, the sandbox's own:
