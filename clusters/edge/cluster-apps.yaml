@@ -132,12 +132,13 @@ spec:
   # and cert-manager v1.21.3 picked up on the way; v1.200.4: zaehlwerk
   # v0.38.0, the players' faces from the game on the live score and their
   # figures on the spectator view (flux#898, zaehlwerk ADR-0018), with
-  # homerun2 led-catcher v0.23.0 (flux#889) picked up on the way.
+  # homerun2 led-catcher v0.23.0 (flux#889) picked up on the way; v1.200.5:
+  # zaehlwerk v0.39.0, the figures on the scoring page too (flux#902).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.4
+    tag: v1.200.5
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
