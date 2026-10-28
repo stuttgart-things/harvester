@@ -133,12 +133,15 @@ spec:
   # v0.38.0, the players' faces from the game on the live score and their
   # figures on the spectator view (flux#898, zaehlwerk ADR-0018), with
   # homerun2 led-catcher v0.23.0 (flux#889) picked up on the way; v1.200.5:
-  # zaehlwerk v0.39.0, the figures on the scoring page too (flux#902).
+  # zaehlwerk v0.39.0, the figures on the scoring page too (flux#902);
+  # v1.200.6: the winner's figure on the LED panel after a won set or match
+  # -- schmetterpause v0.21.0, led-catcher v0.24.0, zaehlwerk v0.40.0 -- and
+  # the sandbox's bots dressed in random figures (flux#903).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.5
+    tag: v1.200.6
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -337,6 +340,11 @@ spec:
         # (Before: https://schmetterpause.<EDGE_DOMAIN>, the default.)
         TABLETENNIS_SCOREBOARD_HANDOVER: sops
         TABLETENNIS_ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
+        # The winner's figure on the LED panel after a won set or match (flux
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030). The flux
+        # default is schmetterpause.<EDGE_DOMAIN>, which the edge CA signs and
+        # the catcher, mounting no CA, refuses; the players' name it accepts.
+        TABLETENNIS_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
         # The pages' links -- zaehlwerk's Buttons and Pong, the buttons page's
         # way back to zaehlwerk -- go to the players' names (./lab/play-routes),
         # which a phone reaches without the edge CA. Read from the flux release
@@ -437,6 +445,11 @@ spec:
         TABLETENNIS_SANDBOX_LINK_DOMAIN: ${EDGE_PLAY_DOMAIN}
         TABLETENNIS_SANDBOX_SCHMETTERPAUSE_ZAEHLWERK_URL: https://zaehlwerk-sandbox.${EDGE_PLAY_DOMAIN}
         TABLETENNIS_SANDBOX_ZAEHLWERK_ALLOWED_ORIGINS: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN},https://schmetterpause-sandbox.${EDGE_DOMAIN}
+        # The winner's figure on the panel after a won set or match (flux
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030), from the
+        # players' name: the catcher mounts no edge CA, and this zaehlwerk
+        # reaches schmetterpause over the Service, which it cannot fetch from.
+        TABLETENNIS_SANDBOX_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause-sandbox.${EDGE_PLAY_DOMAIN}
       secrets:
         tabletennis-sandbox-secrets:
           # NEW KEYS in secrets/edge/app-values.enc.yaml, the sandbox's own:
