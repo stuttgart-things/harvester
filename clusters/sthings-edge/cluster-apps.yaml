@@ -335,7 +335,7 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
         # The sim's image: the bundle still defaults to v0.28.0 (flux v1.182.2),
         # the component itself to v0.30.0, with zaehlwerk. Drop once the bundle catches up.
-        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.39.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
+        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.40.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
