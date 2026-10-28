@@ -165,7 +165,7 @@ spec:
 
       # ---- reloader --------------------------------------------------------
       # Chart version, pinned like the homerun2 components (renovate.json).
-      RELOADER_VERSION: "2.2.18" # datasource=helm depName=reloader registryUrl=https://stakater.github.io/stakater-charts
+      RELOADER_VERSION: "2.2.19" # datasource=helm depName=reloader registryUrl=https://stakater.github.io/stakater-charts
 
       # Ready on this issuer proves the LOGIN worked and nothing more --
       # cert-manager never re-checks the ability to SIGN. A role bound to a
