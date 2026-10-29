@@ -44,7 +44,7 @@ spec:
       HOMERUN2_NAMESPACE: homerun2
       HOMERUN2_NOTIFICATION_CATCHER_BASE_PATH: /notify
       HOMERUN2_NOTIFICATION_CATCHER_DRY_RUN: 'off'
-      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
+      HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       HOMERUN2_NOTIFICATION_CATCHER_STREAMS: tabletennis
       HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
       HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
