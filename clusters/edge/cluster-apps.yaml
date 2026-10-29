@@ -138,12 +138,13 @@ spec:
   # -- schmetterpause v0.21.0, led-catcher v0.24.0, zaehlwerk v0.40.0 -- and
   # the sandbox's bots dressed in random figures (flux#903); v1.200.7:
   # zaehlwerk v0.41.0, the players' figures on the Pong board and the table
-  # mock (flux#907).
+  # mock (flux#907); v1.200.8: the table mock defaults to zaehlwerk's
+  # version, v0.41.0, on the tabletennis-sops* bundles too (flux#909).
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.7
+    tag: v1.200.8
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -380,11 +381,6 @@ spec:
         # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
         # The page switches at runtime; a restart comes back to this value.
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
-        # The table mock's image: the tabletennis-sops* bundles default it to
-        # v0.28.0 (flux v1.200.7), not to zaehlwerk's version, and the page's
-        # fobs, undo and figures follow zaehlwerk's. Drop once the bundle's
-        # default catches up.
-        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.41.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
         # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
         # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
         # player links a fob in schmetterpause, the hub (here the table mock's
