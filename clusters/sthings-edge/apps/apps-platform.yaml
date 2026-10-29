@@ -37,7 +37,7 @@ spec:
       HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
-      HOMERUN2_LED_CATCHER_VERSION: v0.23.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+      HOMERUN2_LED_CATCHER_VERSION: v0.24.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_WLED_ENDPOINT: http://wled-matrix.sthings.lab
