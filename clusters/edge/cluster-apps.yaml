@@ -312,6 +312,11 @@ spec:
         HOMERUN2_WLED_MOCK_BASE_PATH: /wled
         HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
         HOMERUN2_CONFIG_VIEWER_BASE_PATH: /config
+        # The latest notification-catcher where flux's default is older
+        # (v1.200.6: v3.15.0), as on sthings-edge and homerun2-dev. Drop the
+        # pin once the flux default catches up.
+        HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
+        HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
@@ -373,6 +378,10 @@ spec:
         # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
         # The page switches at runtime; a restart comes back to this value.
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
+        # The table mock's image: the bundle still defaults to v0.28.0 (flux
+        # v1.200.6), behind zaehlwerk; the page's fobs and undo follow
+        # zaehlwerk's version. Drop once the bundle catches up.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.40.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
         # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
         # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
         # player links a fob in schmetterpause, the hub (here the table mock's
