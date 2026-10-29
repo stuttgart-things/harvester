@@ -251,7 +251,7 @@ spec:
         # homerun2-dev. Drop a pin once the flux default catches up.
         HOMERUN2_LED_CATCHER_VERSION: v0.24.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
         HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
-        HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
+        HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
