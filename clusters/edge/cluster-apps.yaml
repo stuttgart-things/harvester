@@ -380,6 +380,11 @@ spec:
         # short/long), keys (two keys per half, zaehlwerk v0.28.0+) or display.
         # The page switches at runtime; a restart comes back to this value.
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
+        # The table mock's image: the tabletennis-sops* bundles default it to
+        # v0.28.0 (flux v1.200.7), not to zaehlwerk's version, and the page's
+        # fobs, undo and figures follow zaehlwerk's. Drop once the bundle's
+        # default catches up.
+        TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.41.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
         # LAB: check-in at the table (flux#697; schmetterpause ADR-0025/0026,
         # zaehlwerk ADR-0010/0011), to test before any hardware. By fob: a
         # player links a fob in schmetterpause, the hub (here the table mock's
