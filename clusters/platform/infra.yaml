@@ -466,7 +466,7 @@ spec:
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
-      LOKI_VERSION: "20.0.1" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
+      LOKI_VERSION: "20.0.3" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
       LOKI_STORAGE_CLASS: local-path
       LOKI_STORAGE_SIZE: 30Gi
       LOKI_RETENTION: 168h
