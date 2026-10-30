@@ -322,9 +322,12 @@ spec:
         # cluster's panel, instead of green dashes (led-catcher#150); v0.27.0
         # the scoreboard from zaehlwerk v0.43.0's tags -- names in the
         # players' colours, BIS 11 for one set, +1 <name> under the score,
-        # a pointed A and a round O (led-catcher#151, #153-#155). Drop once
+        # a pointed A and a round O (led-catcher#151, #153-#155); v0.27.1
+        # draws it by table end (ends=b:a after a change of ends puts b on
+        # the left), maps the players' colours onto bright panel ones (a grey
+        # blade turns yellow) and gives A a roof (led-catcher#156). Drop once
         # the bundle catches up.
-        HOMERUN2_LED_CATCHER_VERSION: v0.27.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+        HOMERUN2_LED_CATCHER_VERSION: v0.27.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
         HOMERUN2_CORE_CATCHER_BASE_PATH: /core
         HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
         HOMERUN2_WLED_MOCK_BASE_PATH: /wled
