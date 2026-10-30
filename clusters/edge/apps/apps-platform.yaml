@@ -39,7 +39,7 @@ spec:
       HOMERUN2_LED_CATCHER_BASE_PATH: /led
       HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis-sandbox
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis,tabletennis-sandbox
-      HOMERUN2_LED_CATCHER_VERSION: v0.24.1
+      HOMERUN2_LED_CATCHER_VERSION: v0.27.0
       HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
