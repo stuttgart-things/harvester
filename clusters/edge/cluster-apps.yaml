@@ -144,14 +144,15 @@ spec:
   # figures, and Pong's series, pause, late presses and live faults
   # (flux#915); v1.200.9's Tekton fix (flux#913) picked up on the way;
   # v1.200.11: zaehlwerk v0.43.0, the players' colours and the match's length
-  # on the panel (flux#916).
+  # on the panel (flux#916); v1.200.12: zaehlwerk v0.44.0, one colour per
+  # player for the panel and Pong's paddles (flux#917).
   # Bump ./lab/esp-mock/piezo-a.yaml's zaehlwerk-piezo to the bundle's zaehlwerk
   # in the same step (Renovate tracks it); it is not part of the bundle.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.11
+    tag: v1.200.12
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -317,7 +318,7 @@ spec:
         # portal serves it at -- on its own hostname too, e.g.
         # led-catcher.<EDGE_DOMAIN>/led/.
         HOMERUN2_LED_CATCHER_BASE_PATH: /led
-        # led-catcher ahead of the bundle (v0.24.0 in flux v1.200.11): v0.24.1
+        # led-catcher ahead of the bundle (v0.24.0 in flux v1.200.12): v0.24.1
         # draws the winner's figure in the web simulator, which is this
         # cluster's panel, instead of green dashes (led-catcher#150); v0.27.0
         # the scoreboard from zaehlwerk v0.43.0's tags -- names in the
@@ -325,9 +326,10 @@ spec:
         # a pointed A and a round O (led-catcher#151, #153-#155); v0.27.1
         # draws it by table end (ends=b:a after a change of ends puts b on
         # the left), maps the players' colours onto bright panel ones (a grey
-        # blade turns yellow) and gives A a roof (led-catcher#156). Drop once
-        # the bundle catches up.
-        HOMERUN2_LED_CATCHER_VERSION: v0.27.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
+        # blade turns yellow) and gives A a roof (led-catcher#156); v0.27.2
+        # tells two players on one colour apart by hue, and its blue is a
+        # light one (led-catcher#157). Drop once the bundle catches up.
+        HOMERUN2_LED_CATCHER_VERSION: v0.27.2 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
         HOMERUN2_CORE_CATCHER_BASE_PATH: /core
         HOMERUN2_LIGHT_CATCHER_BASE_PATH: /light
         HOMERUN2_WLED_MOCK_BASE_PATH: /wled
