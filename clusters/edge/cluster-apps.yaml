@@ -139,12 +139,15 @@ spec:
   # the sandbox's bots dressed in random figures (flux#903); v1.200.7:
   # zaehlwerk v0.41.0, the players' figures on the Pong board and the table
   # mock (flux#907); v1.200.8: the table mock defaults to zaehlwerk's
-  # version, v0.41.0, on the tabletennis-sops* bundles too (flux#909).
+  # version, v0.41.0, on the tabletennis-sops* bundles too (flux#909);
+  # v1.200.10: zaehlwerk v0.42.0, a match by names shows its players'
+  # figures, and Pong's series, pause, late presses and live faults
+  # (flux#915); v1.200.9's Tekton fix (flux#913) picked up on the way.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.8
+    tag: v1.200.10
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
