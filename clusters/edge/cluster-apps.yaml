@@ -143,6 +143,8 @@ spec:
   # v1.200.10: zaehlwerk v0.42.0, a match by names shows its players'
   # figures, and Pong's series, pause, late presses and live faults
   # (flux#915); v1.200.9's Tekton fix (flux#913) picked up on the way.
+  # Bump ./lab/esp-mock/piezo-a.yaml's zaehlwerk-piezo to the bundle's zaehlwerk
+  # in the same step (Renovate tracks it); it is not part of the bundle.
   source:
     kind: OCIRepository
     name: flux-repo

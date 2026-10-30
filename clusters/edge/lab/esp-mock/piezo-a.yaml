@@ -65,7 +65,10 @@ spec:
             limits: {memory: 128Mi}
       containers:
         - name: piezo
-          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.28.0
+          # Same version as zaehlwerk in the flux bundle (cluster-apps.yaml):
+          # Renovate opens a PR with every zaehlwerk release -- merge it in
+          # the same step as the bundle bump.
+          image: ghcr.io/stuttgart-things/zaehlwerk-piezo:v0.42.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-piezo
           env:
             - name: ZAEHLWERK_URL
               value: https://zaehlwerk.${EDGE_DOMAIN}
