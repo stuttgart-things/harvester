@@ -147,16 +147,17 @@ spec:
   # on the panel (flux#916); v1.200.12: zaehlwerk v0.44.0, one colour per
   # player for the panel and Pong's paddles (flux#917); v1.200.13: zaehlwerk
   # v0.45.0, Pong takes the figures from zaehlwerk's match, so a guest's
-  # paddle has the panel's colour (flux#921); v1.200.14: zaehlwerk v0.45.1, two
+  # paddle has the panel's colour (flux#921); v1.200.15: zaehlwerk v0.45.1, two
   # players with one blade get one pair of colours on panel and board
-  # (flux#923).
+  # (flux#923), on top of v1.200.14's Renovate bumps, led-catcher v0.27.2
+  # among them (flux#905).
   # Bump ./lab/esp-mock/piezo-a.yaml's zaehlwerk-piezo to the bundle's zaehlwerk
   # in the same step (Renovate tracks it); it is not part of the bundle.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.200.14
+    tag: v1.200.15
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -322,7 +323,7 @@ spec:
         # portal serves it at -- on its own hostname too, e.g.
         # led-catcher.<EDGE_DOMAIN>/led/.
         HOMERUN2_LED_CATCHER_BASE_PATH: /led
-        # led-catcher ahead of the bundle (v0.24.0 in flux v1.200.14): v0.24.1
+        # led-catcher ahead of the bundle (caught up: v0.27.2 in flux v1.200.15): v0.24.1
         # draws the winner's figure in the web simulator, which is this
         # cluster's panel, instead of green dashes (led-catcher#150); v0.27.0
         # the scoreboard from zaehlwerk v0.43.0's tags -- names in the
