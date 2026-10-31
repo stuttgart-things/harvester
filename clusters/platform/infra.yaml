@@ -419,7 +419,7 @@ spec:
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
-      KPS_VERSION: "92.14.1" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
+      KPS_VERSION: "92.17.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
       KPS_PROMETHEUS_STORAGE_CLASS: local-path
       KPS_PROMETHEUS_STORAGE_SIZE: 20Gi
       KPS_PROMETHEUS_RETENTION: 15d
