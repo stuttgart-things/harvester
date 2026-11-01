@@ -33,6 +33,14 @@ spec:
       # below replaces that ConfigMap's content anyway; this keeps the app's
       # default (sthings-dev) out even if the patch is ever dropped.
       BACKSTAGE_CATALOG_ORG: sthings-harvester
+      # Guest sign-in off (image >= v1.22.0, sthings-backstage#202): guest
+      # counts as a developer and could run developer templates without a
+      # login. Every GitHub user who signs in now needs a User entity in
+      # backstage-resources/org/sthings-harvester.
+      # WITH the inner quotes: the flux base turns it into a container env var,
+      # which must be a string, and kustomize strips the outer ones
+      # (flux apps/backstage README, stuttgart-things/flux#935).
+      BACKSTAGE_AUTH_GUEST_ENABLED: '"false"'
       DOMAIN: platform.sthings.lab
       GATEWAY_NAME: platform-sthings-gateway
       GATEWAY_NAMESPACE: default
