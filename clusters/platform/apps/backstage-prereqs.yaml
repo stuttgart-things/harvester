@@ -22,8 +22,12 @@ data:
   # v1.7.2 the VM entity provider, v1.9.0 RAG-AI with LLM_* names, v1.13.0
   # per-entity embedding hashes, v1.17.0 its Harvester source -- used by
   # backstage-vms-config below -- v1.18.0 VM details (OS, network, disks,
-  # image) and a VM entity page.
-  imageTag: "v1.18.0"
+  # image) and a VM entity page. v1.19.0-v1.20.1 MachineryClaimPicker on
+  # machinery's live inventory (/machinery proxy, MACHINERY_URL), v1.21.0
+  # worker-step templates grouped last, v1.22.0 platform-team separated from
+  # developers in the permission policy and guest switchable
+  # (BACKSTAGE_AUTH_GUEST_ENABLED in backstage.yaml, sthings-backstage#202).
+  imageTag: "v1.22.0"
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
