@@ -34,10 +34,27 @@ displayRules:
     kind: card
     strip_prefix: true
     duration: 10
+  # The winner's figure, cheering, after a won set or match
+  # (homerun2-led-catcher#148, v0.24.0 and later). zaehlwerk names it in the
+  # message's tags as figure=<URL>, a GIF Schmetterpause draws for this panel.
+  # A message without one -- every point -- renders an empty image and this
+  # rule does not match. `overlay`: once the GIF has run, the same message goes
+  # on the panel as tabletennis-score draws it, so the board stays, not the
+  # clock. Must stay above tabletennis-score. Same rule as the catcher's own
+  # base profile.
+  tabletennis-figure:
+    systems: [tabletennis]
+    severity: [INFO, SUCCESS]
+    kind: gif
+    image: "{{ tag('figure') }}"
+    overlay: true
+    duration: 4.6
   # A live score, not a notification: it should stay readable between points
   # rather than scroll past once. `hold` keeps it up until the next point
-  # replaces it, and `static` renders the title alone — the panel is 64x64 and
-  # a "tabletennis: " prefix would push the score off the edge.
+  # replaces it. `score` draws the whole board from the tags zaehlwerk sends
+  # (points=, serve=, player_a=, color_a=, ...): points, sets, the names in the
+  # players' colours, the serve, who took the point (v0.25.0 to v0.27.2). A
+  # message with the title only falls back to it, as `static` drew it before.
   #
   # Must stay above default-info: first match wins, and the wildcard there
   # would otherwise take it.
@@ -48,8 +65,8 @@ displayRules:
   tabletennis-score:
     systems: [tabletennis]
     severity: [INFO, SUCCESS]
-    kind: static
-    text: "{{ title }}"
+    kind: score
+    text: "{{ tags if 'points=' in tags else title }}"
     font: 6x10.bdf
     hold: true
     duration: 3
