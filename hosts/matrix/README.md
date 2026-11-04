@@ -164,9 +164,9 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_redis_stream=messages,tabletennis led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.23.0 led_base_path=/matrix \
+led_catcher_version=v0.27.3 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
-led_idle=clock led_display_queue=3 \
+led_idle=clock led_display_queue=3 led_redis_startup_timeout=0 \
 run_id=$(date +%s%N)" \
   --progress plain
 
@@ -175,11 +175,12 @@ rm -f ansible.env
 
 | Parameter | |
 |---|---|
-| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146) |
+| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146). v0.24.0 to v0.27.2 add a picture chosen by the message, overlays, and the scoreboard's colours, header and point marker (#149 to #157). v0.27.3 accepts `REDIS_STARTUP_TIMEOUT=0` ([#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158)) |
 | `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
 | `led_display_queue=3` | up to 3 finite displays wait their turn, first in first out, instead of the newest waiting one replacing the rest: a burst (three Flux `Ready=True` flips within seconds) reaches the panel in full. A held display (the table-tennis score) is still replaced at once. Needs led-catcher v0.21.0 ([#142](https://github.com/stuttgart-things/homerun2-led-catcher/issues/142)); every drop is logged (`display dropped before reaching the panel`) and `GET /matrix/display` reports the queue |
+| `led_redis_startup_timeout=0` | retry homerun2-dev's Redis without a limit instead of exiting after the default 120s. The Pi usually boots before the cluster: after the power cut on 2026-11-04 the catcher gave up, and the page showed 502 until systemd restarted it. Needs led-catcher v0.27.3 and collection 26.1104.1523 ([homerun2-led-catcher#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158), stuttgart-things/ansible#1438) |
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's streams from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
 | `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
 | `led_profile_src` | [`profile.yaml`](./profile.yaml) in this directory, at `/src` inside the Dagger container. Installed on every run, and the catcher restarts when it changes: edit it here, not on the Pi |
