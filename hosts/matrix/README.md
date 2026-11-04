@@ -164,7 +164,7 @@ led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
 led_profile_src=/src/profile.yaml led_redis_stream=messages,tabletennis led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.27.3 led_base_path=/matrix \
+led_catcher_version=v0.28.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock led_display_queue=3 led_redis_startup_timeout=0 \
 run_id=$(date +%s%N)" \
@@ -175,7 +175,7 @@ rm -f ansible.env
 
 | Parameter | |
 |---|---|
-| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146). v0.24.0 to v0.27.2 add a picture chosen by the message, overlays, and the scoreboard's colours, header and point marker (#149 to #157). v0.27.3 accepts `REDIS_STARTUP_TIMEOUT=0` ([#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158)) |
+| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146). v0.24.0 to v0.27.2 add a picture chosen by the message, overlays, and the scoreboard's colours, header and point marker (#149 to #157). v0.27.3 accepts `REDIS_STARTUP_TIMEOUT=0` ([#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158)). v0.28.0: the scoreboard says LIVE behind a red dot instead of "BIS 11", in bigger 12x24 digits (#160) |
 | `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
