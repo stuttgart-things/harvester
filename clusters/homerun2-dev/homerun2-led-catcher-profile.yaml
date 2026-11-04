@@ -41,11 +41,18 @@ data:
         kind: card
         strip_prefix: true
         duration: 10
+      tabletennis-figure:
+        systems: [tabletennis]
+        severity: [INFO, SUCCESS]
+        kind: gif
+        image: "{{ tag('figure') }}"
+        overlay: true
+        duration: 4.6
       tabletennis-score:
         systems: [tabletennis]
         severity: [INFO, SUCCESS]
-        kind: static
-        text: '{{ title }}'
+        kind: score
+        text: "{{ tags if 'points=' in tags else title }}"
         font: 6x10.bdf
         hold: true
         duration: 3
