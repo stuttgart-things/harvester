@@ -88,3 +88,37 @@ zaehlwerk, schmetterpause, led-catcher, wled-mock, light-catcher-tabletennis,
 demo-pitcher, config-viewer, openbao, minio-console -- what each shows:
 [lab testing](../../docs/edge/lab-testing.md). schmetterpause's admin is
 `timoboll`, an observer.
+
+## Renovate Flux bundle promotions
+
+The edge reads the Flux catalogue from two matching pins:
+`spec.source.tag` in `cluster-apps.yaml` (generator input), and
+`spec.ref.tag` of `flux-repo` in the generated `apps.yaml`.
+`renovate.json` extracts both as `ghcr.io/stuttgart-things/flux/repo` and
+updates them together in the **edge Flux bundle** PR group. No inline
+annotation needs to be added to generated YAML. Only these two edge files
+are selected; the hardware box under `clusters/sthings-edge` is separate.
+
+This is a version-only mirror update. For structural changes, continue to
+re-render from `cluster-apps.yaml` as described above; future renders use the
+promoted input tag. Do not change encrypted output or hand-edit other
+generated content as part of a version promotion.
+
+A new application release alone does not move a pinned cluster. Once the
+application is included in a published Flux catalogue release, Renovate can
+propose that catalogue update. After the grouped PR is merged, Flux applies
+it on reconciliation. A catalogue promotion can update other bundled apps,
+not just Schmetterpause; review the Flux release notes in the update PR.
+
+The `Validate Renovate` workflow checks the schema and that both actual
+pins are found exactly once, agree, stay scoped to edge and share an update
+group. The tests also simulate a future tag replacement and verify that it
+changes no unrelated generated content. Run them locally with:
+
+```sh
+npx --yes --package renovate@44.235.2 renovate-config-validator --strict renovate.json
+node --test tests/renovate-edge-flux.mjs
+```
+
+The automation change deliberately leaves the current version pins alone;
+the next Renovate run proposes the available update through its normal PR flow.
