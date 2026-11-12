@@ -15,12 +15,12 @@ users_file    = "../golden/sthings-u26-k3s/users.yaml"
 packages_file = "../golden/sthings-u26-k3s/packages.yaml"
 
 # Stage airgap image tarballs (images only — no binary/unit) from the S3
-# 'images' bucket into the k3s agent images dir. k3s pinned to v1.35.4+k3s1 (the
+# 'images' bucket into the k3s agent images dir. k3s pinned to v1.35.9+k3s1 (the
 # version Rancher supports) under its versioned path; cilium so the CNI also
 # comes up airgapped. k3s/containerd imports every tarball in the dir on start.
 airgap_images_base_url = "https://artifacts.platform.sthings.lab/images"
 airgap_image_tars = [
-  "k3s/v1.35.4+k3s1/k3s-airgap-images-amd64.tar.zst",
+  "k3s/v1.35.9+k3s1/k3s-airgap-images-amd64.tar.zst",
   "cilium-images.tar",
 ]
 airgap_images_dir = "/var/lib/rancher/k3s/agent/images"
