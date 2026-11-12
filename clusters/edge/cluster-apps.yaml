@@ -336,7 +336,7 @@ spec:
         # The latest notification-catcher where flux's default is older
         # (v1.200.6: v3.15.0), as on sthings-edge and homerun2-dev. Drop the
         # pin once the flux default catches up.
-        HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
+        HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.18.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
         HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.16.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
         homerun2-sops-secrets:
