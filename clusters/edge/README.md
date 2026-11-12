@@ -122,3 +122,27 @@ node --test tests/renovate-edge-flux.mjs
 
 The automation change deliberately leaves the current version pins alone;
 the next Renovate run proposes the available update through its normal PR flow.
+
+### Tool coverage
+
+| Dependencies | Renovate promotion |
+| --- | --- |
+| Zaehlwerk, Schmetterpause, Pong, Buttons, portal and catalogue defaults | Grouped Flux bundle release |
+| Notification catcher image and Kustomize component | One group across annotated generator input and generated platform substitutions |
+| Redis Stack image | Both platform pins together; preserves the complete `7.4.0-v8` tag format |
+| MinIO chart | Both platform pins together; chart versions remain below 17 |
+| Zaehlwerk piezo and ACME lego | Annotated container releases |
+| Zaehlwerk log sink and mock sender | One release group for both workloads |
+
+The version-only mirror exception also covers the explicit substitutions in
+`apps/apps-platform.yaml`. Structural edits still require regeneration. There is
+pre-existing notification-catcher drift (input image v3.18.0, generated image
+v3.16.0); its grouped update must align the input and output, including the
+Kustomize component. Tests deliberately verify extraction rather than conceal
+that drift by asserting the existing versions agree.
+
+The log sink previously used a commit tag. Both workloads now use the published
+firmware release v0.5.0 so Renovate can follow stable releases. This is a real
+image upgrade, unlike the other tracking-only changes; verify ingestion and the
+mock sender after Flux reconciliation. These checks do not replace a physical
+LED-panel check or an end-to-end device test.

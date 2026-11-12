@@ -6,7 +6,9 @@ on:
     branches: [main]
     paths:
       - renovate.json
-      - tests/renovate-edge-flux.mjs
+      - 'tests/renovate-edge-*.mjs'
+      - clusters/edge/apps/apps-platform.yaml
+      - 'clusters/edge/lab/**/*.yaml'
       - clusters/edge/cluster-apps.yaml
       - clusters/edge/apps.yaml
       - .github/workflows/renovate-config.yml
@@ -14,7 +16,9 @@ on:
     branches: [main]
     paths:
       - renovate.json
-      - tests/renovate-edge-flux.mjs
+      - 'tests/renovate-edge-*.mjs'
+      - clusters/edge/apps/apps-platform.yaml
+      - 'clusters/edge/lab/**/*.yaml'
       - clusters/edge/cluster-apps.yaml
       - clusters/edge/apps.yaml
       - .github/workflows/renovate-config.yml
@@ -40,4 +44,4 @@ jobs:
       - name: Validate Renovate configuration
         run: npx --yes --package renovate@44.235.2 renovate-config-validator --strict renovate.json
       - name: Verify extraction and grouped edge pins
-        run: node --test tests/renovate-edge-flux.mjs
+        run: node --test tests/renovate-edge-*.mjs
