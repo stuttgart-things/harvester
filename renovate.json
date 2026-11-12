@@ -29,6 +29,58 @@
       "datasourceTemplate": "docker",
       "depNameTemplate": "ghcr.io/stuttgart-things/flux/repo",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Track Edge HOMERUN2_NOTIFICATION_CATCHER_VERSION in its version-only mirror.",
+      "managerFilePatterns": [
+        "/^clusters/edge/apps/apps-platform\\.yaml$/"
+      ],
+      "matchStrings": [
+        "\\bHOMERUN2_NOTIFICATION_CATCHER_VERSION:\\s*[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+(?:-v\\d+)?)[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/homerun2-notification-catcher",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Track Edge HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION in its version-only mirror.",
+      "managerFilePatterns": [
+        "/^clusters/edge/apps/apps-platform\\.yaml$/"
+      ],
+      "matchStrings": [
+        "\\bHOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION:\\s*[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+(?:-v\\d+)?)[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize",
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "Track Edge HOMERUN2_REDIS_IMAGE_VERSION in its version-only mirror.",
+      "managerFilePatterns": [
+        "/^clusters/edge/(?:cluster-apps|apps/apps-platform)\\.yaml$/"
+      ],
+      "matchStrings": [
+        "\\bHOMERUN2_REDIS_IMAGE_VERSION:\\s*[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+(?:-v\\d+)?)[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/redis-stack-server",
+      "versioningTemplate": "regex:^(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)-v(?<build>\\d+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "Track Edge MINIO_VERSION in its version-only mirror.",
+      "managerFilePatterns": [
+        "/^clusters/edge/(?:cluster-apps|apps/apps-platform)\\.yaml$/"
+      ],
+      "matchStrings": [
+        "\\bMINIO_VERSION:\\s*[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+(?:-v\\d+)?)[\"']?"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/charts/minio/minio",
+      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
@@ -46,6 +98,66 @@
       ],
       "groupName": "edge Flux bundle",
       "groupSlug": "edge-flux-bundle"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/homerun2-notification-catcher",
+        "ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize"
+      ],
+      "matchFileNames": [
+        "clusters/edge/**"
+      ],
+      "groupName": "edge notification catcher",
+      "groupSlug": "edge-notification-catcher"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/redis-stack-server"
+      ],
+      "matchFileNames": [
+        "clusters/edge/**"
+      ],
+      "groupName": "edge Redis Stack",
+      "groupSlug": "edge-redis-stack"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/charts/minio/minio"
+      ],
+      "matchFileNames": [
+        "clusters/edge/**"
+      ],
+      "groupName": "edge MinIO",
+      "groupSlug": "edge-minio"
+    },
+    {
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/zaehlwerk-log-sink"
+      ],
+      "matchFileNames": [
+        "clusters/edge/**"
+      ],
+      "groupName": "edge Zaehlwerk log sink",
+      "groupSlug": "edge-zaehlwerk-log-sink"
+    },
+    {
+      "description": "Chart 17 needs a separate console image and licensing review; retain the Flux catalogue hold.",
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/charts/minio/minio"
+      ],
+      "allowedVersions": "<17.0.0"
     }
   ]
 }

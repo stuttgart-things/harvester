@@ -61,7 +61,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: log-sink
-          image: ghcr.io/stuttgart-things/zaehlwerk-log-sink:sha-4c4f846e8e039f0c2bb12e6e048753ce2f267589
+          image: ghcr.io/stuttgart-things/zaehlwerk-log-sink:v0.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-log-sink
           args: ["-listen", ":9000", "-viewer", ":9001", "-dir", "/data"]
           ports:
             - name: diag
@@ -143,7 +143,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: mock
-              image: ghcr.io/stuttgart-things/zaehlwerk-log-sink:sha-4c4f846e8e039f0c2bb12e6e048753ce2f267589
+              image: ghcr.io/stuttgart-things/zaehlwerk-log-sink:v0.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-log-sink
               args: ["mock", "-to", "log-sink.log-sink.svc.cluster.local:9000",
                      "-rallies", "30", "-seed", "0", "-loss", "0.01"]
               securityContext:

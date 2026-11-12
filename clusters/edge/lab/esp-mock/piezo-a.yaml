@@ -43,7 +43,7 @@ spec:
       automountServiceAccountToken: false
       initContainers:
         - name: enrol
-          image: goacme/lego:v4.35.2
+          image: goacme/lego:v4.35.2 # datasource=docker depName=goacme/lego
           env:
             - name: LEGO_CA_CERTIFICATES
               value: /ca/root.crt
