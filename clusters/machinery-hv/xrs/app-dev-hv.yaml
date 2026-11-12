@@ -109,7 +109,19 @@ spec:
         networkKey: '192.168.10'
       labels:
         env: sthings-lab
+        # notification-catcher (harvester#490): homerun2 stream entries with
+        # severity >= warning to Teams. Dry-run until the notify config is
+        # known-good -- flip notification-catcher-dry-run to 'false' then.
+        homerun2-platform/notification-catcher: 'true'
+        homerun2-platform/notification-catcher-dry-run: 'true'
       annotations:
+        homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
+          outputs:
+            - name: teams-app-dev-hv
+              type: msteams
+              webhook_url: "${TEAMS_WEBHOOK_URL}"
+              filters:
+                severity_min: warning
         # CloudNativePG backups of schmetterpause-db into THIS cluster's bucket
         # (app-dev-hv-backup.yaml: MinioBucket + VaultSecretSet), not the
         # shared schmetterpause/_backup.
