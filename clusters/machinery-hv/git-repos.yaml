@@ -38,6 +38,23 @@
 # CROSSPLANE_OPENTOFU_PROVIDER_VERSION (v1.1.8 -> v1.1.9), which the machinery
 # profile's own provider pin overrides (v1.1.6 runs), as before.
 #
+# v1.179.0 (2026-10-22), harvester#490. Rendered at both tags with every path
+# and bundle this cluster pulls (infra-platform, cicd-platform and their
+# children); NOT byte-identical this time:
+#   crossplane chart 2.3.3 -> 2.4.2; configurations cluster v0.12.3 -> v0.16.4,
+#     platform v0.8.0 -> v0.9.0, packer-build v0.4.1 -> v0.7.0, packer-release
+#     v0.4.2 -> v0.6.0, proxmoxvm v0.16.0 -> v0.19.0, vspherevm v0.12.0 ->
+#     v0.13.0, scheduled-run v0.1.1 -> v0.2.0; rancher-cluster (v0.12.0) and
+#     cni (v0.1.5) now listed under their derived names, i.e. the lock node the
+#     resolver already created; provider-kubernetes v1.2.1 -> v1.4.1,
+#     provider-proxmox-bpg v1.18.0 -> v1.22.0; functions auto-ready v0.6.9,
+#     environment-configs v0.7.6, go-templating v0.12.6; helm/k8s provider
+#     defaults v1.5.0 / v1.4.1; flux-operator EnvironmentConfig 0.61.0.
+#   tekton-operator v0.79.0 -> v0.81.2 (TektonHub CRD dropped, PAC role added).
+#   headlamp 0.45.0 -> 0.46.0, flux-web 0.60.0 -> 0.61.0, openebs 4.6.1 -> 4.6.2.
+#   Unchanged: cert-manager, cilium-lb/-gateway, coredns-lab-zone,
+#   crossplane-provider-configs, tekton-dashboard.
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -51,7 +68,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.95.0
+    tag: v1.179.0
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -62,5 +79,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.95.0
+    tag: v1.179.0
   url: https://github.com/stuttgart-things/flux.git
