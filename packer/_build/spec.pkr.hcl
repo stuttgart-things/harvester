@@ -57,6 +57,18 @@ build {
     ]
   }
 
+  # boot-finished is written even when a module failed, so check the result:
+  # cloud-init's own status, then every package from packages.yaml. One unknown
+  # package name used to give a green build and an image without ANY of the
+  # listed packages, qemu-guest-agent included (harvester#314). Entries can be
+  # a name or a [name, version] pair -- only the name is checked.
+  provisioner "shell" {
+    script = "verify-cloud-init.sh"
+    environment_vars = [
+      "PACKAGES=${join(" ", [for p in try(local.packages_config.packages, []) : try(p[0], p)])}",
+    ]
+  }
+
   # Prefer IPv4 for dual-stack destinations before anything reaches the network.
   # The lab RA hands out several simultaneous global IPv6 prefixes; a source
   # address from a stale one resets large transfers mid-copy while small requests
