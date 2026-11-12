@@ -7,14 +7,45 @@
     {
       "customType": "regex",
       "description": "Annotated pins in the cluster dirs: Flux postBuild *_VERSION substitutes, OCIRepository ref.tag and Kustomization images[].newTag, and container image: <dep>:<version> lines, each followed by `# datasource=<ds> depName=<dep>` on the same line. Same convention as stuttgart-things/stuttgart-things. Nothing may stand between value and annotation -- an unmatched pin is not an error, it is silence. Helm charts add `registryUrl=<repo>`.",
-      "fileMatch": [
-        "^clusters/.+\\.ya?ml$"
-      ],
       "matchStrings": [
         "\\s*(?<binName>[A-Za-z0-9_]+_VERSION|tag|newTag):\\s[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\"']?\\s*#\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)(?:\\s+registryUrl=(?<registryUrl>[^\\s]+))?",
         "\\s*image:\\s[^\\s:]+:(?<currentValue>v?\\d+\\.\\d+\\.\\d+)\\s*#\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)"
       ],
+      "versioningTemplate": "semver",
+      "managerFilePatterns": [
+        "/^clusters/.+\\.ya?ml$/"
+      ]
+    },
+    {
+      "customType": "regex",
+      "description": "Track both edge Flux repo pins without modifying generated YAML just to add annotations. ClusterApps lists url before tag; the generated OCIRepository lists ref.tag before url.",
+      "managerFilePatterns": [
+        "/^clusters/edge/(?:cluster-apps|apps)\\.yaml$/"
+      ],
+      "matchStrings": [
+        "url:\\s*oci://ghcr\\.io/stuttgart-things/flux/repo\\s+tag:\\s*(?<currentValue>v?\\d+\\.\\d+\\.\\d+)",
+        "ref:\\s+tag:\\s*(?<currentValue>v?\\d+\\.\\d+\\.\\d+)\\s+url:\\s*oci://ghcr\\.io/stuttgart-things/flux/repo(?:\\s|$)"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/flux/repo",
       "versioningTemplate": "semver"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Keep the edge ClusterApps input and generated OCIRepository pin together in one reviewed promotion.",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/flux/repo"
+      ],
+      "matchFileNames": [
+        "clusters/edge/cluster-apps.yaml",
+        "clusters/edge/apps.yaml"
+      ],
+      "groupName": "edge Flux bundle",
+      "groupSlug": "edge-flux-bundle"
     }
   ]
 }

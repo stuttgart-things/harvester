@@ -4,6 +4,9 @@
 # bundle Kustomizations. NOT a Kubernetes object -- Flux never reads it
 # (.sourceignore). LIVE since harvester#364 phase 4b step 2: the files listed
 # under Output are generated -- change this file and re-render, never edit them.
+# The version-only exception is Renovate's grouped Flux repo promotion: it
+# updates spec.source.tag here and the generated apps.yaml ref.tag together.
+# Structural changes still use the renderer; no encrypted output is touched.
 #
 # Re-render (from the repo root) with blueprints/flux v3.10.0 or newer
 # (blueprints#212-#216; bundle module claim-flux-kustomizations 0.5.0, kcl#338).

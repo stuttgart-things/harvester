@@ -1,0 +1,43 @@
+---
+name: Validate Renovate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - renovate.json
+      - tests/renovate-edge-flux.mjs
+      - clusters/edge/cluster-apps.yaml
+      - clusters/edge/apps.yaml
+      - .github/workflows/renovate-config.yml
+  push:
+    branches: [main]
+    paths:
+      - renovate.json
+      - tests/renovate-edge-flux.mjs
+      - clusters/edge/cluster-apps.yaml
+      - clusters/edge/apps.yaml
+      - .github/workflows/renovate-config.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Renovate config and edge pins
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Validate Renovate configuration
+        run: npx --yes --package renovate@44.235.2 renovate-config-validator --strict renovate.json
+      - name: Verify extraction and grouped edge pins
+        run: node --test tests/renovate-edge-flux.mjs
