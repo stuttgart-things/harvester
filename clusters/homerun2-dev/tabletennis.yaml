@@ -107,7 +107,7 @@ spec:
       # v0.41.0..v0.47.0: the players' figures and colours on Pong's board
       # (paddles, names) and on the panel, the match's length to the panel;
       # v0.47.1: ends change only between sets, never at five (zaehlwerk#232).
-      SCHMETTERPAUSE_VERSION: v0.21.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
+      SCHMETTERPAUSE_VERSION: v0.23.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
       ZAEHLWERK_VERSION: v0.47.1 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
   patches:
     # SP_PUBLIC_BASE_URL: the base ships a placeholder, and schmetterpause
