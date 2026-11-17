@@ -725,12 +725,9 @@ PR). rancher-cluster, platform and cni compose identically for app-dev-hv,
 but **`cluster` v0.16.4 (xplane-cluster 0.27.4) appends `local-storage` to
 app-dev-hv's `machineGlobalConfig.disable`**: on the running cluster Rancher
 re-plans the node, restarts k3s and k3s deletes the local-path provisioner.
-That is a live change of a Rancher cluster, so this step waits for an explicit
-OK. Note the change is currently held back by an unrelated error: the
-ClusterStack has been `Synced=False` since the homerun2 AppSecretProfile
-reads `shared: teams-webhook` (#498) and `cluster-vault-sthings-lab` has no
-`vault.shared.teams-webhook` entry; whoever fixes that releases the k3s
-re-plan too, if this tag is merged.
+That is a live change of a Rancher cluster; it was taken with an explicit OK
+(2026-11-17), after the teams-webhook entry (#702/#703) had made the
+ClusterStack `Synced=True` again -- so the new Composition composes on merge.
 
 Before merging: VM snapshots of app-dev-hv on Harvester, no PVCs on
 `local-path` on app-dev-hv, then:
