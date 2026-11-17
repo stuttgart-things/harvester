@@ -43,9 +43,11 @@ claim_machinery_portals = {
   "machinery-portal-machinery-hv" = "https://machinery-portal.machinery-hv.sthings.lab"
 }
 
-# vault project: none yet. OpenBao's OIDC login (vault-oidc-zitadel) is a
-# separate step (#574).
-vaults = {}
+# vault project (#719 step 1): OpenBao on platform. The OpenBao side (OIDC
+# auth method, roles admin/reader) is ../openbao/oidc.tf.
+vaults = {
+  "openbao-platform" = "https://openbao.platform.sthings.lab"
+}
 
 # argocd project: none yet. ArgoCD on platform logs in through the `argocd`
 # app of harvester-extras.tf (flat groups claim, argocd-readonly); it moves

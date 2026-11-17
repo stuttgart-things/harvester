@@ -458,3 +458,17 @@ pod, un-suspend Flux. Confirm `bao status` answers normally again.
   awk 'BEGIN{d=1} /^---$/{d++} d==3' clusters/platform/secrets.yaml \
     | sed '1{/^---$/d}' > /tmp/doc3.yaml && sops -d /tmp/doc3.yaml
   ```
+
+## Personal login via ZITADEL (OIDC, #719)
+
+`oidc.tf`: UI → method **OIDC**, role `admin` (ZITADEL role `vault-admin`,
+policy `oidc-admin`: everything except `sudo` paths) or `reader`
+(`vault-reader`). 8h tokens, UI only (ZITADEL registers just the UI callback;
+copy the token for CLI work). Who gets which role: `vault_roles` in
+`../zitadel-config/users.auto.tfvars`.
+
+**Break-glass stays the root token** — this instance has no userpass. Mounting
+or unmounting auth methods and mounts still needs root.
+
+Apply order: `../zitadel-config` first (it creates the client), then here with
+the three `TF_VAR_*` from its outputs, as shown at the top of `oidc.tf`.

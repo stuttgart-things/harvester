@@ -29,7 +29,12 @@ backstage_roles = {
   someara  = ["backstage-developer"]
 }
 
-# No vault / argocd project yet (lab.auto.tfvars): ArgoCD's roles are in
+# OpenBao OIDC login (#719), as on LabUL/LabDA: only the admin. vault-admin =
+# OpenBao role admin (policy oidc-admin); the root token stays break-glass.
+vault_roles = {
+  sthings = ["vault-admin"]
+}
+
+# No argocd project yet (lab.auto.tfvars): ArgoCD's roles are in
 # apps.auto.tfvars (harvester-extras.tf) until #677.
-vault_roles  = {}
 argocd_roles = {}
