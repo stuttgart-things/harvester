@@ -29,6 +29,13 @@ metadata:
 data:
   profile.yaml: |
     displayRules:
+      radio:
+        systems: [radio]
+        severity: [INFO]
+        kind: card
+        strip_prefix: true
+        duration: 12
+        ambient: true
       error-all:
         systems: ['*']
         severity: [ERROR, CRITICAL]

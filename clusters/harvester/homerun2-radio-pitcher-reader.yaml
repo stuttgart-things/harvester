@@ -1,0 +1,51 @@
+---
+# Read access for homerun2-radio-pitcher on homerun2-dev
+# (clusters/homerun2-dev/homerun2-radio-pitcher.yaml), whose infra-facts
+# segment airs the number of VMs on Harvester, how many run, and the oldest
+# one on the office LED matrix.
+#
+# Applied BY HAND on the Harvester cluster -- no Flux syncs this directory:
+#   kubectl --kubeconfig ~/.kube/harvester apply -f clusters/harvester/homerun2-radio-pitcher-reader.yaml
+#
+# list on KubeVirt VirtualMachines, nothing else: no get, no Secrets, no
+# write (the pitcher's README, "RBAC for the kubeconfigs"). The token Secret
+# below is the long-lived ServiceAccount token Kubernetes fills in; it goes,
+# as a kubeconfig, into
+# clusters/homerun2-dev/homerun2-radio-pitcher-kubeconfigs.enc.yaml.
+# Deleting the Secret revokes it.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: homerun2-radio-pitcher-reader
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: homerun2-radio-pitcher-reader
+rules:
+  - apiGroups: [kubevirt.io]
+    resources: [virtualmachines]
+    verbs: [list]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: homerun2-radio-pitcher-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: homerun2-radio-pitcher-reader
+subjects:
+  - kind: ServiceAccount
+    name: homerun2-radio-pitcher-reader
+    namespace: kube-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: homerun2-radio-pitcher-reader-token
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: homerun2-radio-pitcher-reader
+type: kubernetes.io/service-account-token
