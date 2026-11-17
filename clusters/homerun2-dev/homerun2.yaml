@@ -51,6 +51,33 @@ spec:
     kind: GitRepository
     name: flux-apps
   path: ./apps/homerun2/profiles/sops
+  # harvester#523: a second webhook for the Teams channel harvester-ops-alerts.
+  # The flux notification-catcher component maps only TEAMS_WEBHOOK_URL into
+  # homerun2-notification-catcher-secrets (components/notification-catcher/
+  # sops); this adds TEAMS_OPS_WEBHOOK_URL the same way -- a patch appended to
+  # the nested Kustomization, its ${VAR} filled by the postBuild below from
+  # homerun2-secrets-subst. The catcher reads both via envFrom; a missing or
+  # empty value is a fatal startup error there, so the SOPS key must exist
+  # before this is applied.
+  patches:
+    - target:
+        group: kustomize.toolkit.fluxcd.io
+        kind: Kustomization
+        name: homerun2-notification-catcher
+      patch: | # pragma: allowlist secret
+        - op: add
+          path: /spec/patches/-
+          value:
+            target:
+              kind: Secret
+              name: homerun2-notification-catcher-secrets
+            patch: |
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: homerun2-notification-catcher-secrets
+              stringData:
+                TEAMS_OPS_WEBHOOK_URL: ${TEAMS_OPS_WEBHOOK_URL}
   postBuild:
     # homerun2-secrets-subst.enc.yaml, decrypted by Flux with the sops-age key
     # the FluxInstance mounts. optional:false on purpose -- left optional, Flux
@@ -158,7 +185,8 @@ spec:
       #   HOMERUN2_OMNI_PITCHER_AUTH_TOKEN  <- Secret
       #   HOMERUN2_SCOUT_AUTH_TOKEN         <- Secret
       #   HOMERUN2_REDIS_PASSWORD_B64       <- Secret (no default at all)
-      #   TEAMS_WEBHOOK_URL                 <- Secret (no default at all)
+      #   TEAMS_WEBHOOK_URL                 <- Secret (no default at all) -- Teams harvester-apps
+      #   TEAMS_OPS_WEBHOOK_URL             <- Secret (no default at all) -- Teams harvester-ops-alerts (#523)
 ---
 # The HTTPRoutes for the stack above, applied only once it is Ready.
 #
