@@ -20,6 +20,17 @@ has open points listed at the end.
 | GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.233.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
 
+## Kernel pinned to 7.0.0-38-generic (#697)
+
+The node boots **7.0.0-38-generic** on purpose. On 7.0.0-42, the containerd AppArmor
+profile `cri-containerd.apparmor.d` denies signals between Postgres processes,
+and CNPG databases hang (logins stuck in `authentication`, "too many clients").
+The node never booted -42. The pin keeps it from doing so. The same pin is set on the node of **app-dev-hv** (192.168.10.176), which machinery-hv orders as a ClusterStack and which was rolled back from -42 with a reboot.
+
+- `/etc/default/grub`: `GRUB_DEFAULT` points at the -38 entry (original: `/etc/default/grub.bak-697`).
+- `apt-mark hold linux-virtual linux-image-virtual linux-headers-virtual linux-headers-generic`: no new kernels, and no kernel security updates.
+- Remove the pin only after #697 is fixed: restore the backup, run `update-grub` and `apt-mark unhold` on the same packages, then reboot. Kured (#674) waits for this.
+
 ## Why not upgrade crossplane-mgmt
 
 crossplane-mgmt runs Crossplane v2.4.1, so the core is not the problem. Its

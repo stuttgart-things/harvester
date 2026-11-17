@@ -50,6 +50,17 @@ on that run.
 >
 > If both are there, delete `harvester-vm-remote-defaults` — nothing manages it.
 
+## Kernel pinned to 7.0.0-38-generic (#697)
+
+The node boots **7.0.0-38-generic** on purpose. On 7.0.0-42, the containerd AppArmor
+profile `cri-containerd.apparmor.d` denies signals between Postgres processes,
+and CNPG databases hang (logins stuck in `authentication`, "too many clients").
+The node never booted -42 or -43 (-43 was already installed). The pin keeps it from doing so.
+
+- `/etc/default/grub`: `GRUB_DEFAULT` points at the -38 entry (original: `/etc/default/grub.bak-697`).
+- `apt-mark hold linux-virtual linux-image-virtual linux-headers-virtual linux-headers-generic`: no new kernels, and no kernel security updates.
+- Remove the pin only after #697 is fixed: restore the backup, run `update-grub` and `apt-mark unhold` on the same packages, then reboot. Kured (#674) waits for this.
+
 ## Manual one-offs
 
 ### TLSRoute CRD (2026-11-17, #671)
