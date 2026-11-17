@@ -68,9 +68,8 @@ address, the same OpenBao mounts and the same Argo CD registration.
 
 | File | Listed | |
 |---|---|---|
-| `app-dev-hv.yaml` | yes | the first order (2026-09-28), admin credential as creator; homerun2 + tabletennis |
+| `app-dev-hv.yaml` | yes | the first order (2026-09-28), admin credential as creator; homerun2 + tabletennis; Gateway API CRDs incl. experimental TLSRoute via `platform.cni.gatewayAPI.chart.name: gateway-api-crds-tlsroute` (harvester#671) |
 | `app-dev-hv-backup.yaml` | yes | app-dev-hv's CNPG backup bucket |
-| `app-dev-hv-tlsroute-crd.yaml` | yes | app-dev-hv's experimental TLSRoute CRD (Gateway API v1.4.1, cilium/cilium#47819, harvester#671); the `cni` Composition brings only the standard channel |
 
 ## Build log: demo-hv (2026-09-30, harvester#309 block 4)
 
