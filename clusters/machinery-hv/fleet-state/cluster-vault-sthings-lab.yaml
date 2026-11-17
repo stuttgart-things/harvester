@@ -54,6 +54,16 @@ data:
       object-store-backup:
         mount: schmetterpause
         entry: _backup
+      # The notification-catcher's Teams webhook (property teamsWebhookUrl),
+      # read by the `homerun2` profile as `shared: teams-webhook`. Without
+      # this entry the `cluster` Composition fails for every order with that
+      # profile ("shared teams-webhook has no vault.shared entry"; app-dev-hv
+      # Synced=False from 2026-11-17, harvester#673). Written from SOPS by
+      # ../../platform/openbao/machinery-fleet/shared.tf (harvester#523),
+      # Teams channel harvester-apps.
+      teams-webhook:
+        mount: homerun2
+        entry: _teams-webhook
     # Entries hand-seeded clusters still read. homerun2-dev runs from SOPS in
     # this repo, not from OpenBao, so nothing is reserved yet -- add the name of
     # any cluster that gets a hand-written entry before a ClusterStack could
