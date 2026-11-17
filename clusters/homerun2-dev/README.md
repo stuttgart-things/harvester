@@ -607,6 +607,14 @@ and k8s-pitcher mirror their counterparts on platform-sthings
 | k8s-pitcher (Flux errors → omni-pitcher) | [`homerun2-k8s-pitcher.yaml`](./homerun2-k8s-pitcher.yaml) | released kustomize artifact (OCI) | -- |
 | schedule-pitcher agent for Harvester (Longhorn volumes) | [`homerun2-schedule-pitcher-agent.yaml`](./homerun2-schedule-pitcher-agent.yaml) | released agent kustomize artifact (OCI) | -- |
 
+radio-pitcher's UI token (session controls in `/ui/radio`) is
+[`homerun2-radio-pitcher-ui.enc.yaml`](./homerun2-radio-pitcher-ui.enc.yaml);
+read it with
+`sops -d --extract '["stringData"]["ui-token"]' clusters/homerun2-dev/homerun2-radio-pitcher-ui.enc.yaml`.
+A new one: `openssl rand -base64 36 | tr -d '\n/+=' | head -c 40` into a
+Secret `homerun2-radio-pitcher-ui` (key `ui-token`), encrypted like the others
+(`sops --encrypt --age age19vgz… --encrypted-regex '^(data|stringData)$'`).
+
 schedule-pitcher's own API/UI token is
 [`homerun2-schedule-pitcher-secrets.enc.yaml`](./homerun2-schedule-pitcher-secrets.enc.yaml),
 generated for this cluster; behind the portal it is not asked for (the pitcher

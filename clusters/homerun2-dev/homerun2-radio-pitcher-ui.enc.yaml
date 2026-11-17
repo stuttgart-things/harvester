@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: homerun2-radio-pitcher-ui
+    namespace: homerun2
+type: Opaque
+stringData:
+    ui-token: ENC[AES256_GCM,data:rbE/al4YbX6eZmjmDr9+1cYKsiBfJKRQuZcI2s3bhM9eccDPg2MZlQ==,iv:pE7Grn8hJfi+I1u6pJl3SSc+idn7GbYRSZpZlvMigRw=,tag:wZPs/4gPhTKl3nux/ZGoNg==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBHeS9tTUxEdHFNSnZFa2JX
+            R1pzRjZ0YlZCYmxVUFFtQm5EVUZiWHNDU3pJCm5nVWovYlNDRWZ3R01uUWJUdCtq
+            ckt2U3lBSEFub1pSc0xlWWFRbW5VZEUKLS0tIEF0OWRwNUtSTXJ2U1NiZytTZ2kr
+            bTZuVkpDKzRYTEwxL1NUcEMvbGJpK2cKnrk+JijgXFV1+QdgNU7svr/mYlo2I3NC
+            OTa2N6FfzaOOSwWhJI51yRM7VIhaXRd8/TRXAtROTtsXP6cjIkr0AQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-17T20:49:47Z"
+    mac: ENC[AES256_GCM,data:bw8HeAZvMKSBEGTluQ4zZi6uWoyQJSsYSly6QdURumkpIj0u0s9DztFFc3S9mesO8s2c1I2/woZwvoup5AKBtVO/AJSYoq+6QBycRXqomb01jDpoC2ememdUMSBMVBCe8WgNdfT5nUjWOZKnKrFreg759ywNwcZfw+/ZdptHETg=,iv:aD7JlfmAZBiUean/11wali+YI6WR8SJUbAlo28sMAmw=,tag:AvD7BrpgiiJueuR5OAgkKA==,type:str]
+    version: 3.13.3
