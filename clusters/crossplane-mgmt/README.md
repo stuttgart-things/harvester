@@ -25,6 +25,12 @@ the Kyverno gate came along as
 which still reads its policies out of the other repo so there is one source for
 them.
 
+The cluster itself (k8s, CNI) is not built from this repo. It runs **Cilium
+1.19.3** (live 2026-11-17, #679); nothing here pins that. A rebuild without an
+explicit `cilium_chart_version` gets whatever the cilium-cli default is at that
+time -- set `cilium_chart_version="1.19.3"` (or a deliberately chosen version)
+on that run.
+
 > [!WARNING]
 > **`env-config-harvester.yaml` collides with `platform/virtual-machine/env-config-harvestervm.yaml`.**
 > Different names (`harvester-vm-remote-defaults` vs `harvestervm-defaults`),
