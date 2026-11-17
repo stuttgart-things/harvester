@@ -686,6 +686,19 @@ installs its cilium-cli default (0.19.7). Gateway API CRDs stay v1.4.1. The
 restart is a few minutes without Crossplane reconciling. app-dev-hv runs on its
 own VMs and stayed `Ready` in Rancher throughout.
 
+The experimental **TLSRoute CRD v1.4.1** was applied by hand on 2026-11-17
+(#671), it is not in git and the rke2 role does not bring it. Without it the
+cilium-operator logs `no kind is registered for the type v1alpha2.TLSRouteList`
+and never re-resolves HTTPRoutes: a route created before its Service stays at
+`BackendNotFound` (cilium/cilium#47819). Raise it with every Gateway API upgrade:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+```
+
+Before: 48 errors/h, after: 0; 4/4 HTTPRoutes `ResolvedRefs=True`, all 200.
+
 Before and after, identical except the versions:
 
 ```bash

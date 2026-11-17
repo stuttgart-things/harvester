@@ -346,6 +346,21 @@ No `kube-proxy` DaemonSet and no Canal are what confirm `disableKubeProxy=true`
 and `rke2_cni=none` + `install_cilium=true` actually took. Both fail into a
 working-looking cluster with the wrong CNI.
 
+**TLSRoute CRD (2026-11-17, #671).** The rke2 role installs only the standard
+Gateway API CRDs (v1.4.1). Without the experimental TLSRoute CRD the
+cilium-operator logs `no kind is registered for the type v1alpha2.TLSRouteList`
+and never re-resolves HTTPRoutes: a route Flux creates before its Service stays
+at `BackendNotFound` (cilium/cilium#47819). Applied by hand, not in git; raise
+it with every Gateway API upgrade:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+kubectl -n kube-system logs deploy/cilium-operator --since=10m | grep -c TLSRouteList   # 0
+```
+
+Before: 125 errors/h, after: 0; 10/10 HTTPRoutes `ResolvedRefs=True`.
+
 ### Last verified run
 
 `2026-09-17`, steps 1-3 with the calls above. `Vm.bakeHarvester DONE [21m16s]`,

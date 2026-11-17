@@ -182,9 +182,24 @@ helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 \
   --set gatewayAPI.enableAlpn=true --set gatewayAPI.enableAppProtocol=true
 ```
 
-All routes answered the same before and after (now over HTTP/2). The operator
-logs a burst of `no kind is registered for the type v1alpha2.TLSRouteList` at
-start: there is no TLSRoute CRD here, harmless.
+All routes answered the same before and after (now over HTTP/2).
+
+**TLSRoute CRD (2026-11-17, #671).** `no kind is registered for the type
+v1alpha2.TLSRouteList` in the operator log is **not** harmless: the operator
+lists TLSRoutes on every Service event without checking the CRD exists
+(cilium/cilium#47819), fails, and never re-resolves HTTPRoutes. A route created
+before its Service then stays `ResolvedRefs=False / BackendNotFound` and the
+hostname answers 500, with no alert. The experimental TLSRoute CRD v1.4.1 (same
+bundle as the standard CRDs) was applied by hand, it is not in git:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+kubectl -n kube-system logs deploy/cilium-operator --since=10m | grep -c TLSRouteList   # 0
+```
+
+Before: 103 errors/h. After: 0, 14/14 HTTPRoutes `ResolvedRefs=True`. Raise it
+together with the Gateway API CRDs.
 
 ```bash
 dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
