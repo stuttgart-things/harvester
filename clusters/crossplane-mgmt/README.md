@@ -25,6 +25,12 @@ the Kyverno gate came along as
 which still reads its policies out of the other repo so there is one source for
 them.
 
+The cluster itself (k8s, CNI) is not built from this repo. It runs **Cilium
+1.19.3** (live 2026-11-17, #679); nothing here pins that. A rebuild without an
+explicit `cilium_chart_version` gets whatever the cilium-cli default is at that
+time -- set `cilium_chart_version="1.19.3"` (or a deliberately chosen version)
+on that run.
+
 > [!WARNING]
 > **`env-config-harvester.yaml` collides with `platform/virtual-machine/env-config-harvestervm.yaml`.**
 > Different names (`harvester-vm-remote-defaults` vs `harvestervm-defaults`),
@@ -51,7 +57,7 @@ them.
 The Provider is installed as a Configuration dependency and is not in git, so
 its `runtimeConfigRef` is set by hand. The DeploymentRuntimeConfig it points at
 is GitOps'd: [`platform/providers/drc-provider-kubernetes.yaml`](./platform/providers/drc-provider-kubernetes.yaml)
-(`--poll=1m`, see the comment there). After Argo CD has synced it:
+(`--poll=1m`, `--enable-watches`, see the comment there). After Argo CD has synced it:
 
 ```bash
 export KUBECONFIG=~/.kube/crossplane-mgmt

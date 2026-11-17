@@ -13,7 +13,7 @@ own Flux objects here. `SOPS_AGE_KEY` is the only thing that is not.
 | Cluster / VM name | `homerun2-dev` (the name is load-bearing: DNS, `cluster_name`, and the file names in `vms/`) |
 | LB address | `192.168.10.171`, reserved in Clusterbook -- the Cilium VIP for Services, **not** the node's address (that is a DHCP lease, see step 3) |
 | Domain | `homerun2-dev.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy, no Canal |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5 (pinned: `cilium_chart_version`), no kube-proxy, no Canal |
 | GitOps | Flux, syncing `clusters/homerun2-dev` |
 | Harvester image | `sthings-u26`, 12 vCPU / 12Gi / 50Gi root disk |
 
@@ -96,7 +96,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/homerun2-dev.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -394,7 +394,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --playbooks "sthings.rke.rke2_cluster" \
   --hosts 192.168.10.117 \
   --inventory-type cluster \
-  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=homerun2-dev rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --ssh-user env:ANSIBLE_USER \
   --ssh-password env:ANSIBLE_PASSWORD \
   --cache-buster "upgrade-$(date +%s)" \
@@ -402,9 +402,12 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
 ```
 
 - **Read the node IP first** (step 3). `--hosts` must be the node, not the VIP.
-- **Cilium moves too.** Without `cilium_chart_version`, the role installs the
-  Cilium its cilium-cli build defaults to (cli 0.19.7 -> 1.19.5). Pin
-  `cilium_chart_version` if that is not wanted.
+- **Cilium is pinned: `cilium_chart_version=1.19.5`** (the running version,
+  live 2026-11-17, #679). Without it the role installs the Cilium its
+  cilium-cli build defaults to (cli 0.19.7 -> 1.19.5) and moves along with the
+  next cli bump. Raise the pin only for a planned Cilium upgrade. Needs
+  `sthings.rke` >= 26.1003.1399; older collections ignore it silently, so
+  check `kubectl -n kube-system get ds cilium -o wide` afterwards.
 - **Single node: the restart is downtime** for everything on the cluster,
   including omni-pitcher, which platform's k8s-pitcher posts to. Expect a few
   minutes.

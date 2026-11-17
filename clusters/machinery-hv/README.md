@@ -15,7 +15,7 @@ has open points listed at the end.
 | Cluster / VM name | `machinery-hv` |
 | LB address | `192.168.10.178`, reserved in Clusterbook (`178:ASSIGNED:DNS:machinery-hv`) -- the Cilium VIP, not the node address |
 | Domain | `machinery-hv.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5 (pinned: `cilium_chart_version`), no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
 | GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
@@ -203,7 +203,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/machinery-hv.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -673,7 +673,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --playbooks "sthings.rke.rke2_cluster" \
   --hosts "$NODE_IP" \
   --inventory-type cluster \
-  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --ssh-user env:ANSIBLE_USER \
   --ssh-password env:ANSIBLE_PASSWORD \
   --cache-buster "upgrade-$(date +%s)" \
@@ -682,7 +682,11 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
 ```
 
 Cilium moved along, 1.19.3 → 1.19.5: without `cilium_chart_version` the role
-installs its cilium-cli default (0.19.7). Gateway API CRDs stay v1.4.1. The
+installs its cilium-cli default (0.19.7). Since #679 both calls above pin
+`cilium_chart_version=1.19.5` (the running version, live 2026-11-17), so a
+rebuild or k8s upgrade keeps it; raise the pin only for a planned Cilium
+upgrade. Needs `sthings.rke` >= 26.1003.1399, older collections ignore it
+silently. Gateway API CRDs stay v1.4.1. The
 restart is a few minutes without Crossplane reconciling. app-dev-hv runs on its
 own VMs and stayed `Ready` in Rancher throughout.
 
