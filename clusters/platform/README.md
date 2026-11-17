@@ -35,7 +35,7 @@ stuttgart-things/stuttgart-things#4118).
 | Secrets | `apps/zitadel-secrets.enc.yaml` (Secret `zitadel-secrets`): `ZITADEL_MASTERKEY` -- **never changes**, it decrypts the data in PostgreSQL -- DB passwords, initial admin password |
 | Admin | `zitadel-admin@zitadel.zitadel.platform.sthings.lab`, password `ZITADEL_ADMIN_PASSWORD` (`sops -d`), changed at the first login |
 | Terraform | [`zitadel-config/`](zitadel-config/README.md): project, roles, the homerun2-dev portal's OIDC client, users |
-| Backup | none yet -- `pg_dump` plus the masterkey |
+| Backup | [`apps/zitadel-backup.yaml`](apps/zitadel-backup.yaml) (#575/#576): CronJob `zitadel-backup`, nightly 02:30 Europe/Berlin -- `pg_dump -Fc` (checked with `pg_restore --list`) plus the `zitadel-config` Terraform state to bucket `platform-zitadel-backup` on platform's MinIO, 14 days kept. **Not** in it: the masterkey (Git, SOPS) -- needed for any restore. Same VM, so no protection against losing it. Restore: [`zitadel-config/README.md`](zitadel-config/README.md#backup-and-restore) |
 
 ## Monitoring -- kube-prometheus-stack
 
@@ -67,8 +67,23 @@ Grafana downloads the `infra.yaml` ones at pod start (init container) -- bump
 the revision/tag there together with the component's version.
 
 **Cilium** is not in Git (cilium-cli/Helm since the 2026-03-16 build, see
-"UPGRADE K3S IN PLACE"). Metrics, ServiceMonitors and dashboards were added on
-the release with `--reuse-values` only:
+"UPGRADE K3S IN PLACE"). The version is pinned by hand: **1.18.5** -- every
+`helm upgrade` below names `--version 1.18.5`, and the k3s upgrade runs with
+`install_cilium=false`. Change it only as a planned upgrade (#679), always with
+`--reuse-values`, or Metrics, ALPN and appProtocol are lost.
+
+Cilium across the lab (live 2026-11-17, #679) -- no common version yet:
+
+| Cluster | Cilium | Pinned where |
+|---|---|---|
+| platform | 1.18.5 | Helm by hand, this README |
+| homerun2-dev | 1.19.5 | `cilium_chart_version=1.19.5` in [`../homerun2-dev/README.md`](../homerun2-dev/README.md) |
+| machinery-hv | 1.19.5 | `cilium_chart_version=1.19.5` in [`../machinery-hv/README.md`](../machinery-hv/README.md) |
+| crossplane-mgmt | 1.19.3 | not built from this repo -- documented in [`../crossplane-mgmt/README.md`](../crossplane-mgmt/README.md) only |
+| edge (Lab-VM) | 1.20.2 | `cilium_chart_version` in [`../edge/k3s/k3s-vars.yaml`](../edge/k3s/k3s-vars.yaml) |
+
+Metrics, ServiceMonitors and dashboards were added on the release with
+`--reuse-values` only:
 
 ```bash
 helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 -n kube-system --reuse-values \
@@ -182,9 +197,24 @@ helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 \
   --set gatewayAPI.enableAlpn=true --set gatewayAPI.enableAppProtocol=true
 ```
 
-All routes answered the same before and after (now over HTTP/2). The operator
-logs a burst of `no kind is registered for the type v1alpha2.TLSRouteList` at
-start: there is no TLSRoute CRD here, harmless.
+All routes answered the same before and after (now over HTTP/2).
+
+**TLSRoute CRD (2026-11-17, #671).** `no kind is registered for the type
+v1alpha2.TLSRouteList` in the operator log is **not** harmless: the operator
+lists TLSRoutes on every Service event without checking the CRD exists
+(cilium/cilium#47819), fails, and never re-resolves HTTPRoutes. A route created
+before its Service then stays `ResolvedRefs=False / BackendNotFound` and the
+hostname answers 500, with no alert. The experimental TLSRoute CRD v1.4.1 (same
+bundle as the standard CRDs) was applied by hand, it is not in git:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+kubectl -n kube-system logs deploy/cilium-operator --since=10m | grep -c TLSRouteList   # 0
+```
+
+Before: 103 errors/h. After: 0, 14/14 HTTPRoutes `ResolvedRefs=True`. Raise it
+together with the Gateway API CRDs.
 
 ```bash
 dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \

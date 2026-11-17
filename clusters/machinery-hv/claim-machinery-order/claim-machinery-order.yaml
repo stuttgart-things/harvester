@@ -1,0 +1,28 @@
+---
+# Order auth of claim-machinery-api on machinery-hv (harvester#676), the keys
+# LabUL machinery-labul / LabDA machinery use. Read by the Deployment through
+# envFrom (optional) -- restart it after a change, there is no Reloader here
+# (../claim-machinery-api.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: claim-machinery-order
+  namespace: claim-machinery
+  labels:
+    app.kubernetes.io/part-of: claim-machinery
+data:
+  AUTH_OIDC_ISSUER: https://zitadel.platform.sthings.lab
+  # The sthings-backstage project of the platform ZITADEL (#680), not a project
+  # of its own:
+  #   terraform -chdir=clusters/platform/zitadel-config output -raw claim_machinery_audience
+  # Quoted: digits only.
+  AUTH_OIDC_AUDIENCE: "399985216216629471"
+  # ./trust-bundle.yaml, mounted by the flux base.
+  AUTH_OIDC_CA_FILE: /etc/ssl/custom/trust-bundle.pem
+  # NOT set yet, unlike LabUL:
+  #   AUTH_TRUST_FORWARDED_USER -- no machinery-portal on this cluster yet
+  #     (#681); nothing should be able to send X-Forwarded-User past it.
+  #   AUTH_ADMIN_ROLES -- machinery-order-service ordering for other owners
+  #     (#681).
+  #   AUTH_ORDER_ROLES -- LabUL does not set it either: any valid token orders.
+  #   GITHUB_DISPATCH_* -- order as PR needs the GitHub App (#681).

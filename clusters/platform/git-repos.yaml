@@ -3,6 +3,18 @@
 # bootstrapped by hand (see README); committing them here brings them under
 # GitOps, matching clusters/homerun2-dev. argocd-catalog is the
 # source consumed by the argocd-platform catalog components (./platforms/*).
+#
+# PINNED TO TAGS (harvester#672), like clusters/machinery-hv. On `branch:
+# main` every merge in stuttgart-things/flux or stuttgart-things/argocd reached
+# this cluster -- OpenBao, ZITADEL, ArgoCD, Backstage, Rancher -- without a PR
+# here; with tags each step arrives as a Renovate PR with a visible diff.
+# flux-infra and flux-apps carry the same tag -- keep them in step.
+#
+# flux v1.233.0 (2026-11): rendered against the previously deployed
+# main@1d455dda, which is v1.233.0 plus one commit (apps/infisical image tag;
+# infisical is not deployed here). Every path this cluster's Kustomizations
+# read is byte-identical.
+# argocd v0.114.0: the same commit as the previously deployed main@51e15494.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -11,7 +23,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -22,7 +34,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -33,5 +45,5 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: v0.114.0 # datasource=github-tags depName=stuttgart-things/argocd
   url: https://github.com/stuttgart-things/argocd.git

@@ -15,9 +15,9 @@ has open points listed at the end.
 | Cluster / VM name | `machinery-hv` |
 | LB address | `192.168.10.178`, reserved in Clusterbook (`178:ASSIGNED:DNS:machinery-hv`) -- the Cilium VIP, not the node address |
 | Domain | `machinery-hv.sthings.lab` |
-| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5, no kube-proxy |
+| Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5 (pinned: `cilium_chart_version`), no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
-| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
+| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.233.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
 
 ## Why not upgrade crossplane-mgmt
@@ -38,16 +38,19 @@ crossplane-mgmt keeps running `tabletennis` until its successor is built here.
 ```
 clusters/machinery-hv/              flux-system syncs this -- only what kustomization.yaml lists
   kustomization.yaml                the Flux objects below, NOT the subdirectories
-  git-repos.yaml                    flux-infra / flux-apps @ v1.95.0
+  git-repos.yaml                    flux-infra / flux-apps @ v1.233.0
   infra-platform.yaml               cilium, cert-manager + OpenBao issuer, openebs, UIs
   cicd-platform.yaml                crossplane (profile machinery) + tekton
   fleet-state.yaml                  -> ./fleet-state   prune: true
   xrs.yaml                          -> ./xrs           prune: FALSE
+  claim-machinery-api.yaml          claim-machinery-api v0.30.0 (claims.machinery-hv.sthings.lab)
+                                    + -> ./claim-machinery-order (order auth, trust bundle)
   pki.yaml                          -> ./pki  (the OpenBao CA, after cert-manager)
   openbao/                          the cert-manager auth mount, as homerun2-dev
   fleet-state/                      provider configs, EnvironmentConfigs, secrets
   xrs/                              the ClusterStacks this cluster owns
   pki/                              openbao-pki-ca, in cert-manager's namespace
+  claim-machinery-order/            ZITADEL order auth + sthings.lab CA for claim-machinery-api
 vms/machinery-hv.*                  the VM shape and the RKE2 vars
 ```
 
@@ -203,7 +206,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --encrypted-file ./vms/machinery-hv.params.enc.yaml \
   --sops-key env:SOPS_AGE_KEY \
   --ansible-playbooks "sthings.baseos.setup,sthings.rke.rke2_cluster" \
-  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --ansible-parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --inventory-type cluster \
   --ansible-user env:ANSIBLE_USER \
   --ansible-password env:ANSIBLE_PASSWORD \
@@ -673,7 +676,7 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
   --playbooks "sthings.rke.rke2_cluster" \
   --hosts "$NODE_IP" \
   --inventory-type cluster \
-  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
+  --parameters "manage_filesystem=false rke_state=present rke2_k8s_version=1.35.9 rke2_release_kind=rke2r1 cluster_setup=singlenode cluster_name=machinery-hv rke2_cni=none install_cilium=true cilium_chart_version=1.19.5 disableKubeProxy=true rke2_airgapped_installation=true prepare_rancher_ha_nodes=true install_helm_diff=false registry_mirror_url=https://registry-1.docker.io fetched_kubeconfig_path=/tmp/kubeconfig" \
   --ssh-user env:ANSIBLE_USER \
   --ssh-password env:ANSIBLE_PASSWORD \
   --cache-buster "upgrade-$(date +%s)" \
@@ -682,9 +685,26 @@ dagger call -m github.com/stuttgart-things/blueprints/vm@v3.2.2 \
 ```
 
 Cilium moved along, 1.19.3 → 1.19.5: without `cilium_chart_version` the role
-installs its cilium-cli default (0.19.7). Gateway API CRDs stay v1.4.1. The
+installs its cilium-cli default (0.19.7). Since #679 both calls above pin
+`cilium_chart_version=1.19.5` (the running version, live 2026-11-17), so a
+rebuild or k8s upgrade keeps it; raise the pin only for a planned Cilium
+upgrade. Needs `sthings.rke` >= 26.1003.1399, older collections ignore it
+silently. Gateway API CRDs stay v1.4.1. The
 restart is a few minutes without Crossplane reconciling. app-dev-hv runs on its
 own VMs and stayed `Ready` in Rancher throughout.
+
+The experimental **TLSRoute CRD v1.4.1** was applied by hand on 2026-11-17
+(#671), it is not in git and the rke2 role does not bring it. Without it the
+cilium-operator logs `no kind is registered for the type v1alpha2.TLSRouteList`
+and never re-resolves HTTPRoutes: a route created before its Service stays at
+`BackendNotFound` (cilium/cilium#47819). Raise it with every Gateway API upgrade:
+
+```bash
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+```
+
+Before: 48 errors/h, after: 0; 4/4 HTTPRoutes `ResolvedRefs=True`, all 200.
 
 Before and after, identical except the versions:
 
@@ -698,3 +718,41 @@ kubectl get clusterstack app-dev-hv     # Synced True, Ready True
 kubectl -n flux-system get kustomizations   # all Ready
 # machinery / headlamp / flux / tekton .machinery-hv.sthings.lab -> 200
 ```
+
+### 14. flux v1.95.0 → v1.233.0 (#673, #698, 2026-11-17)
+
+One tag, 138 releases on (#495's v1.179.0 is superseded). Rendered at both
+tags, every Kustomization recursively, then `crossplane composition render`
+of the live app-dev-hv XRs with old and new Compositions (diff table in the
+PR). rancher-cluster, platform and cni compose identically for app-dev-hv,
+but **`cluster` v0.16.4 (xplane-cluster 0.27.4) appends `local-storage` to
+app-dev-hv's `machineGlobalConfig.disable`**: on the running cluster Rancher
+re-plans the node, restarts k3s and k3s deletes the local-path provisioner.
+That is a live change of a Rancher cluster; it was taken with an explicit OK
+(2026-11-17), after the teams-webhook entry (#702/#703) had made the
+ClusterStack `Synced=True` again -- so the new Composition composes on merge.
+
+Before the merge: Harvester snapshot `pre-698-app-dev-hv-20261117` (VirtualMachineBackup
+type snapshot, readyToUse), no PVCs on
+`local-path` on app-dev-hv, then:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n flux-system get gitrepository flux-infra flux-apps -o custom-columns=NAME:.metadata.name,REF:.spec.ref.tag
+flux get all -A --status-selector ready=false                               # empty
+kubectl get pkg                                                             # all Installed + Healthy
+kubectl get lock lock -o json | jq -r '.packages[].source' | sort | uniq -d # empty
+kubectl get clusterstack app-dev-hv                                         # Synced True, Ready True
+```
+
+Result (merged 10:29Z, sources on v1.233.0 at 10:30Z): 22/22 Kustomizations
+Ready, 51/51 packages Healthy (cluster v0.16.4, rancher-cluster v0.12.0, platform
+v0.9.0, cni v0.1.5), Crossplane v2.4.2, no lock duplicates, ClusterStack
+Synced/Ready. Rancher cluster `app-dev-hv` gen 3 → 4 at 10:31:51Z with
+`local-storage` in `machineGlobalConfig.disable`, plan applied 10:32:12Z, no
+failures. The node stayed `Ready` and **was not replaced** (same machine and
+VM, VMI created 07:30:41Z). On app-dev-hv `local-path-provisioner` and the
+`local-path` StorageClass are gone, and `openebs-hostpath` is the only
+default; no pod restarted, all Argo apps unchanged. On machinery-hv the
+tekton-operator v0.81.2 also rolls out pipelines-as-code (3 new pods,
+Running). machinery/headlamp/flux/tekton → 200.

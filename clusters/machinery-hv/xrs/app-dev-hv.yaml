@@ -110,10 +110,11 @@ spec:
       labels:
         env: sthings-lab
         # notification-catcher (harvester#490): homerun2 stream entries with
-        # severity >= warning to Teams. Dry-run until the notify config is
-        # known-good -- flip notification-catcher-dry-run to 'false' then.
+        # severity >= warning to Teams channel harvester-apps (shared
+        # homerun2/_teams-webhook, harvester#523). Live since 2026-11-17, after
+        # the routing test on homerun2-dev reached the channel.
         homerun2-platform/notification-catcher: 'true'
-        homerun2-platform/notification-catcher-dry-run: 'true'
+        homerun2-platform/notification-catcher-dry-run: 'false'
       annotations:
         homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
           outputs:
@@ -134,6 +135,23 @@ spec:
         tabletennis-platform.stuttgart-things.com/storage-class: openebs-hostpath
   platformEnabled: true
   platform:
+    # Gateway API CRDs with the experimental TLSRoute CRD (harvester#671):
+    # cilium-operator 1.19 lists TLSRoutes without checking the CRD exists
+    # (cilium/cilium#47819); without it an HTTPRoute created before its Service
+    # stays BackendNotFound. gateway-api-crds-tlsroute 1.4.1 is gateway-api-crds
+    # 1.4.1 plus that one CRD (stuttgart-things#4725), so the same Helm release
+    # `kube-system/gateway-api-crds` just switches chart. Rendered before the
+    # change: only the cni Release's chart.name moves, nothing on the
+    # RancherCluster. Drop it with cilium 1.20 / Gateway API 1.6.1, where
+    # TLSRoute is standard. The CRD carries helm.sh/resource-policy: keep, so
+    # removing this block leaves it in place.
+    # `enabled: true` is restated: the distribution default sets it, and this
+    # block must not depend on whether the catalog merge is deep or shallow.
+    cni:
+      gatewayAPI:
+        enabled: true
+        chart:
+          name: gateway-api-crds-tlsroute
     fluxInit:
       enabled: false
     clusterSecrets:
