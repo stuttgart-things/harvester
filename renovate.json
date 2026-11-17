@@ -158,6 +158,13 @@
         "ghcr.io/stuttgart-things/charts/minio/minio"
       ],
       "allowedVersions": "<17.0.0"
+    },
+    {
+      "description": "Freeze bis Aufbau vor Ort, #683; am Aufbautag entfernen. sthings-edge (Edge-TT-Box) pulls main as soon as it has uplink, so no updates under this path until the on-site rollout.",
+      "matchFileNames": [
+        "clusters/sthings-edge/**"
+      ],
+      "enabled": false
     }
   ]
 }
