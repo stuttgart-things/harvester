@@ -1,11 +1,48 @@
+# HARVESTER-ONLY -- not part of the shared root (stuttgart-things#4612).
+#
+# main.tf, variables.tf and outputs.tf here are the LabUL/LabDA files (module
+# sources pinned to a commit). This file and ./groups-claim.tf are the one
+# exception to "only the tfvars differ" (harvester#680): ArgoCD, MinIO and
+# Grafana on platform were wired before the shared root existed and read the
+# flat `groups` claim with their own role keys (argocd-readonly, minio-*,
+# grafana-*). They stay here, unchanged, until they move to the role map /
+# the shared root's argocd project (argo-cd-oidc + `argocd_roles`, #677).
+# Until then `argocds` in lab.auto.tfvars stays empty: the shared root's
+# zitadel_trigger_actions.pre_userinfo would own the same trigger as
+# groups-claim.tf and the two would overwrite each other.
+#
 # Further OIDC clients next to the portal (harvester#574): one project per
 # app, so each app has its own roles and ZITADEL refuses a user without a
-# role on it (role check) before the app sees a token. The users are the
-# module's (users.auto.tfvars); which of them get which role on which app is
-# in apps.auto.tfvars.
+# role on it (role check) before the app sees a token. The users are
+# module.users' (users.auto.tfvars); which of them get which role on which
+# app is in apps.auto.tfvars.
 #
 # Every app keeps its local admin (harvester#574, "Grundregel"): these clients
 # add a login, they replace none.
+
+variable "apps" {
+  type = map(object({
+    url               = string
+    redirect_paths    = list(string)
+    post_logout_paths = optional(list(string), [])
+    roles             = map(string)                     # role key => display name
+    users             = optional(map(list(string)), {}) # user name (var.users) => role keys
+  }))
+  description = "OIDC clients next to the portal (harvester-extras.tf), app name => base URL, redirect paths, roles and who has which. Set in apps.auto.tfvars."
+  default     = {}
+}
+
+output "app_client_ids" {
+  description = "App name (var.apps) => OIDC client ID."
+  value       = { for name, app in zitadel_application_oidc.app : name => app.client_id }
+  sensitive   = true
+}
+
+output "app_client_secrets" {
+  description = "App name (var.apps) => OIDC client secret."
+  value       = { for name, app in zitadel_application_oidc.app : name => app.client_secret }
+  sensitive   = true
+}
 
 locals {
   # Base URL without a trailing slash, as in the module.
@@ -30,7 +67,7 @@ locals {
 resource "zitadel_project" "app" {
   for_each = local.apps
 
-  org_id                   = module.zitadel_portal.org_id
+  org_id                   = module.users.org_id
   name                     = each.key
   project_role_assertion   = true
   project_role_check       = true
@@ -56,7 +93,7 @@ resource "zitadel_project_role" "app" {
     }
   ]...)
 
-  org_id       = module.zitadel_portal.org_id
+  org_id       = module.users.org_id
   project_id   = zitadel_project.app[each.value.app].id
   role_key     = each.value.key
   display_name = each.value.display
@@ -68,7 +105,7 @@ resource "zitadel_project_role" "app" {
 resource "zitadel_application_oidc" "app" {
   for_each = local.apps
 
-  org_id     = module.zitadel_portal.org_id
+  org_id     = module.users.org_id
   project_id = zitadel_project.app[each.key].id
   name       = each.key
 
@@ -90,9 +127,9 @@ resource "zitadel_application_oidc" "app" {
 resource "zitadel_user_grant" "app" {
   for_each = local.app_grants
 
-  org_id     = module.zitadel_portal.org_id
+  org_id     = module.users.org_id
   project_id = zitadel_project.app[each.value.app].id
-  user_id    = module.zitadel_portal.user_ids[each.value.user]
+  user_id    = module.users.user_ids[each.value.user]
   role_keys  = each.value.roles
 
   depends_on = [zitadel_project_role.app]
