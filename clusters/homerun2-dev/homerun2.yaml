@@ -117,7 +117,9 @@ spec:
       HOMERUN2_REDIS_STORAGE_SIZE: 8Gi
       # Held at 7.2 on purpose: the library default moves to 7.4, which writes
       # RDB v12 that 7.2 cannot load -- one-way. This cluster moves when someone
-      # decides to, after a backup (stuttgart-things#3923).
+      # decides to, after a backup (stuttgart-things#3923). Decided again
+      # 2026-11-17 (#678): stay on 7.2 -- the streams are short-lived, 7.2
+      # runs, and there is no backup path for this Redis yet (#601).
       HOMERUN2_REDIS_IMAGE_VERSION: 7.2.0-v18
 
       # notification-catcher posts for real from here on. It ships
