@@ -52,6 +52,22 @@ on that run.
 
 ## Manual one-offs
 
+### TLSRoute CRD (2026-11-17, #671)
+
+Cilium 1.19.3, Gateway API CRDs v1.4.1. The experimental TLSRoute CRD v1.4.1
+was applied by hand; without it the cilium-operator logs `no kind is registered
+for the type v1alpha2.TLSRouteList` and never re-resolves HTTPRoutes, so a route
+created before its Service stays at `BackendNotFound` (cilium/cilium#47819).
+Raise it with every Gateway API upgrade:
+
+```bash
+export KUBECONFIG=~/.kube/crossplane-mgmt
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+```
+
+Before: 42 errors/h, after: 0; 2/2 HTTPRoutes `ResolvedRefs=True`, both 200.
+
 ### provider-kubernetes runtime config (2026-09-30)
 
 The Provider is installed as a Configuration dependency and is not in git, so

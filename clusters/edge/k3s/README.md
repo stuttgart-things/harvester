@@ -88,3 +88,18 @@ took the upgrade path (Helm revision 2 → 3), still 1.20.2. The 7 `changed` tas
 Cilium health 4240 / hubble 4244. `cilium status` is OK on a single node.
 Whether the Gateway VIP on 80 is reachable through UFW is checked with the first
 HTTPRoute.
+
+**TLSRoute CRD (#671):** the role installs only the `standard` channel, so there
+is no TLSRoute CRD. On the Harvester-lab clusters the cilium-operator then logs
+`no kind is registered for the type v1alpha2.TLSRouteList` and never
+re-resolves HTTPRoutes (a route created before its Service stays at
+`BackendNotFound`, cilium/cilium#47819). Not yet checked here (the VM is not
+reachable from the Harvester lab). If the error shows up, apply the experimental
+CRD of the **same bundle (v1.6.1)** and restart the operator:
+
+```bash
+export KUBECONFIG=~/.kube/edge-tt-test1
+kubectl -n kube-system logs deploy/cilium-operator --since=1h | grep -c TLSRouteList
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.6.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+```
