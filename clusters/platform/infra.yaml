@@ -509,6 +509,13 @@ spec:
         spec:
           values:
             minio: null
+            # One node: the chart's required gateway anti-affinity lets no
+            # surge pod schedule, so a RollingUpdate never finishes (first
+            # seen on the 21.3.1 upgrade). Recreate: a few seconds without
+            # the gateway on a rollout instead.
+            gateway:
+              deploymentStrategy:
+                type: Recreate
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
