@@ -188,6 +188,20 @@
       "groupSlug": "platform-flux-sources"
     },
     {
+      "description": "machinery-hv's two stuttgart-things/flux GitRepositories (flux-infra, flux-apps) move together, in a PR of their own -- not bundled with other clusters that pin the same repo (harvester#672, #673). Every bump can change the machinery Crossplane profile on a live management cluster: render it first (clusters/machinery-hv/git-repos.yaml).",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "stuttgart-things/flux"
+      ],
+      "matchFileNames": [
+        "clusters/machinery-hv/**"
+      ],
+      "groupName": "machinery-hv Flux sources",
+      "groupSlug": "machinery-hv-flux-sources"
+    },
+    {
       "description": "Freeze bis Aufbau vor Ort, #683; am Aufbautag entfernen. sthings-edge (Edge-TT-Box) pulls main as soon as it has uplink, so no updates under this path until the on-site rollout.",
       "matchFileNames": [
         "clusters/sthings-edge/**"

@@ -17,7 +17,7 @@ has open points listed at the end.
 | Domain | `machinery-hv.sthings.lab` |
 | Kubernetes | RKE2 `v1.35.9+rke2r1`, Cilium 1.19.5 (pinned: `cilium_chart_version`), no kube-proxy |
 | Harvester image | `sthings-u26-26.924.1008`, 8 vCPU / 16Gi / 80Gi |
-| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.95.0` |
+| GitOps | Flux, syncing `clusters/machinery-hv`; flux bundles pinned to `v1.233.0` |
 | Crossplane | profile `machinery` (catalog 0.10.0) |
 
 ## Why not upgrade crossplane-mgmt
@@ -38,7 +38,7 @@ crossplane-mgmt keeps running `tabletennis` until its successor is built here.
 ```
 clusters/machinery-hv/              flux-system syncs this -- only what kustomization.yaml lists
   kustomization.yaml                the Flux objects below, NOT the subdirectories
-  git-repos.yaml                    flux-infra / flux-apps @ v1.95.0
+  git-repos.yaml                    flux-infra / flux-apps @ v1.233.0
   infra-platform.yaml               cilium, cert-manager + OpenBao issuer, openebs, UIs
   cicd-platform.yaml                crossplane (profile machinery) + tekton
   fleet-state.yaml                  -> ./fleet-state   prune: true
@@ -714,4 +714,32 @@ kubectl get pkg                         # 51/51 Installed + Healthy
 kubectl get clusterstack app-dev-hv     # Synced True, Ready True
 kubectl -n flux-system get kustomizations   # all Ready
 # machinery / headlamp / flux / tekton .machinery-hv.sthings.lab -> 200
+```
+
+### 14. flux v1.95.0 → v1.233.0 (#673, pending)
+
+One tag, 138 releases on (#495's v1.179.0 is superseded). Rendered at both
+tags, every Kustomization recursively, then `crossplane composition render`
+of the live app-dev-hv XRs with old and new Compositions (diff table in the
+PR). rancher-cluster, platform and cni compose identically for app-dev-hv,
+but **`cluster` v0.16.4 (xplane-cluster 0.27.4) appends `local-storage` to
+app-dev-hv's `machineGlobalConfig.disable`**: on the running cluster Rancher
+re-plans the node, restarts k3s and k3s deletes the local-path provisioner.
+That is a live change of a Rancher cluster, so this step waits for an explicit
+OK. Note the change is currently held back by an unrelated error: the
+ClusterStack has been `Synced=False` since the homerun2 AppSecretProfile
+reads `shared: teams-webhook` (#498) and `cluster-vault-sthings-lab` has no
+`vault.shared.teams-webhook` entry; whoever fixes that releases the k3s
+re-plan too, if this tag is merged.
+
+Before merging: VM snapshots of app-dev-hv on Harvester, no PVCs on
+`local-path` on app-dev-hv, then:
+
+```bash
+export KUBECONFIG=~/.kube/machinery-hv
+kubectl -n flux-system get gitrepository flux-infra flux-apps -o custom-columns=NAME:.metadata.name,REF:.spec.ref.tag
+flux get all -A --status-selector ready=false                               # empty
+kubectl get pkg                                                             # all Installed + Healthy
+kubectl get lock lock -o json | jq -r '.packages[].source' | sort | uniq -d # empty
+kubectl get clusterstack app-dev-hv                                         # Synced True, Ready True
 ```
