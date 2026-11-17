@@ -26,10 +26,25 @@ which still reads its policies out of the other repo so there is one source for
 them.
 
 The cluster itself (k8s, CNI) is not built from this repo. It runs **Cilium
-1.19.3** (live 2026-11-17, #679); nothing here pins that. A rebuild without an
-explicit `cilium_chart_version` gets whatever the cilium-cli default is at that
-time -- set `cilium_chart_version="1.19.3"` (or a deliberately chosen version)
-on that run.
+1.19.5** (Helm revision 3, upgraded from 1.19.3 on 2026-11-17, #679); nothing
+here pins that. A rebuild without an explicit `cilium_chart_version` gets
+whatever the cilium-cli default is at that time -- set
+`cilium_chart_version="1.19.5"` (or a deliberately chosen version) on that run.
+
+The release has `image.pullPolicy: Never` (agent, operator, envoy): the node
+never pulls Cilium images itself. Before any Cilium upgrade, pull the new images
+on the node first, or the agent ends in `ErrImageNeverPull` and the node loses
+its CNI. Take the digests from the target chart's `values.yaml`:
+
+```bash
+ssh sthings@192.168.10.108 'sudo k3s crictl pull quay.io/cilium/cilium:v1.19.5@sha256:20fbbc14ac20b55a292c0dcda5571bf31cde30a7dbc68c29db3e709390ab0732'
+# same for operator-generic and cilium-envoy
+helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.19.5 \
+  -n kube-system --reset-then-reuse-values
+```
+
+`--reset-then-reuse-values`, not `--reuse-values`: the latter keeps the old
+chart's defaults, image tags included, so the "upgrade" renders the old images.
 
 > [!WARNING]
 > **`env-config-harvester.yaml` collides with `platform/virtual-machine/env-config-harvestervm.yaml`.**
@@ -65,8 +80,8 @@ The node never booted -42 or -43 (-43 was already installed). The pin keeps it f
 
 ### TLSRoute CRD (2026-11-17, #671)
 
-Cilium 1.19.3, Gateway API CRDs v1.4.1. The experimental TLSRoute CRD v1.4.1
-was applied by hand; without it the cilium-operator logs `no kind is registered
+Cilium 1.19.3 (now 1.19.5), Gateway API CRDs v1.4.1. The experimental
+TLSRoute CRD v1.4.1 was applied by hand; without it the cilium-operator logs `no kind is registered
 for the type v1alpha2.TLSRouteList` and never re-resolves HTTPRoutes, so a route
 created before its Service stays at `BackendNotFound` (cilium/cilium#47819).
 Raise it with every Gateway API upgrade:
