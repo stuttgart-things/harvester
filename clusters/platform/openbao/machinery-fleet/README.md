@@ -61,6 +61,36 @@ Each AppRole logged in and was tried against what it must and must not reach
 | crossplane (new secret_id) | `GET sys/auth` | 200 |
 | | read `homerun2/…` | 403 |
 
+## Shared entries (`_<name>`) from SOPS
+
+`shared.tf` writes the shared `_` entries that are plain configuration, not a
+person's credential, from `shared.tfvars.sops.json` (harvester#523):
+
+| Entry | Property | Read by |
+|---|---|---|
+| `homerun2/_teams-webhook` | `teamsWebhookUrl` | notification-catcher on every built cluster (`shared: teams-webhook` in the `homerun2` AppSecretProfile), Teams channel `harvester-apps` |
+
+```bash
+cd clusters/platform/openbao/machinery-fleet
+# add or change a value
+# --value-stdin takes a JSON value, so quote it with jq; read -rs keeps it off
+# the screen and out of the history
+read -rs URL; printf '%s' "$URL" | jq -Rs . | sops set --value-stdin shared.tfvars.sops.json \
+  '["shared_entries"]["homerun2/_teams-webhook"]["data"]["teamsWebhookUrl"]'; unset URL
+# (the first time, create the parent first:
+#  echo '{"data":{}}' | sops set --value-stdin shared.tfvars.sops.json '["shared_entries"]["homerun2/_teams-webhook"]')
+
+export VAULT_TOKEN=…   # as for the rest of this root
+sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform plan  -var-file={}'
+sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform apply -var-file={}'
+```
+
+> [!IMPORTANT]
+> **Every run of this root needs the `-var-file` now**, including AppRole
+> rotation. `shared_entries` has no default on purpose: with an empty default, a
+> plain `terraform apply` would delete every shared entry. `--filename` must
+> end in `.json`, or Terraform parses the decrypted file as HCL.
+
 ## Not here
 
 - **`homerun2/_git-pat`**, the shared entry the `homerun2` AppSecretProfile's
