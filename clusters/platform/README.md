@@ -67,23 +67,37 @@ Grafana downloads the `infra.yaml` ones at pod start (init container) -- bump
 the revision/tag there together with the component's version.
 
 **Cilium** is not in Git (cilium-cli/Helm since the 2026-03-16 build, see
-"UPGRADE K3S IN PLACE"). The version is pinned by hand: **1.18.5** -- every
-`helm upgrade` below names `--version 1.18.5`, and the k3s upgrade runs with
-`install_cilium=false`. Change it only as a planned upgrade (#679), always with
-`--reuse-values`, or Metrics, ALPN and appProtocol are lost.
+"UPGRADE K3S IN PLACE"). The version is pinned by hand: **1.19.5** (Helm
+revision 5, upgraded from 1.18.5 on 2026-11-17, #679), and the k3s upgrade runs
+with `install_cilium=false`. Change it only as a planned upgrade (#679).
 
-Cilium across the lab (live 2026-11-17, #679) -- no common version yet:
+Upgrade with **`--reset-then-reuse-values`**: new chart defaults plus every
+value set on this release before (Metrics, ALPN, appProtocol). Plain
+`--reuse-values` keeps the *old* chart's defaults: across 1.18.5 -> 1.19.5 it
+failed to render (`standaloneDnsProxy` nil pointer), and on a patch upgrade it
+silently keeps the old image tags. Cilium's upgrade notes say the same. Compare
+first with `--dry-run=server`, and check `helm get values` is identical after:
+
+```bash
+helm get values cilium -n kube-system -o yaml > /tmp/cilium-values-before.yaml
+helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.19.5 \
+  -n kube-system --reset-then-reuse-values
+helm get values cilium -n kube-system -o yaml | diff /tmp/cilium-values-before.yaml -
+```
+
+Cilium across the lab (live 2026-11-17, #679) -- all on **1.19.5**, except the
+edge VM:
 
 | Cluster | Cilium | Pinned where |
 |---|---|---|
-| platform | 1.18.5 | Helm by hand, this README |
+| platform | 1.19.5 | Helm by hand, this README |
 | homerun2-dev | 1.19.5 | `cilium_chart_version=1.19.5` in [`../homerun2-dev/README.md`](../homerun2-dev/README.md) |
 | machinery-hv | 1.19.5 | `cilium_chart_version=1.19.5` in [`../machinery-hv/README.md`](../machinery-hv/README.md) |
-| crossplane-mgmt | 1.19.3 | not built from this repo -- documented in [`../crossplane-mgmt/README.md`](../crossplane-mgmt/README.md) only |
+| crossplane-mgmt | 1.19.5 | not built from this repo -- documented in [`../crossplane-mgmt/README.md`](../crossplane-mgmt/README.md) only |
 | edge (Lab-VM) | 1.20.2 | `cilium_chart_version` in [`../edge/k3s/k3s-vars.yaml`](../edge/k3s/k3s-vars.yaml) |
 
-Metrics, ServiceMonitors and dashboards were added on the release with
-`--reuse-values` only:
+Metrics, ServiceMonitors and dashboards were added on the release (then 1.18.5,
+same minor, so `--reuse-values` was fine there):
 
 ```bash
 helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 -n kube-system --reuse-values \
@@ -184,12 +198,12 @@ the k3s config differs, so a version bump is the upgrade. The rendered
   `10.0.0.0/24`;
 - set the image pullPolicy to `Always`.
 
-None of that belongs in a k8s patch. Cilium stays at 1.18.5 (cilium-cli 0.19.0,
-from the 2026-03-16 build) until that is planned on its own.
+None of that belongs in a k8s patch. Cilium is upgraded on its own, by Helm
+(see above; 1.19.5 since 2026-11-17, #679).
 
 Gateway ALPN and appProtocol are on since 2026-10-27 (ZITADEL needs `h2` on the
 TLS listener and h2c to its backend). Only these two values were changed on the
-Helm release, nothing else:
+Helm release (then 1.18.5), nothing else:
 
 ```bash
 helm upgrade cilium cilium --repo https://helm.cilium.io --version 1.18.5 \
