@@ -145,12 +145,14 @@ spec:
       # The web control's buttons, for looking at one stream alone.
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
 
-      # No HOMERUN2_LIGHT_CATCHER_PROFILE_CM: this light-catcher reads
-      # `messages` and drives the wled-mock with the base's profile again, so
-      # the cluster's alerts show on the TV (portal key `wled`). The real
-      # strip belongs to the table now (./light-catcher-tabletennis.yaml): a
-      # point every few seconds would bury every warning on it, and two
-      # catchers on one strip cut each other's effects off.
+      # This light-catcher reads `messages` (the cluster's alerts). Since
+      # 2026-11-17 it drives a strip of its own, wled-strip.sthings.lab
+      # (192.168.10.148), with ../homerun2-dev-light/profile-strip.yaml
+      # instead of the base's wled-mock profile. The table's strip
+      # (wled-matrix) stays with ./light-catcher-tabletennis.yaml: a point
+      # every few seconds would bury every warning on it, and two catchers on
+      # one strip cut each other's effects off.
+      HOMERUN2_LIGHT_CATCHER_PROFILE_CM: homerun2-light-catcher-profile-strip
 
       # The led-catcher simulator's profile, from
       # ./homerun2-led-catcher-profile.yaml: the real matrix's rules
