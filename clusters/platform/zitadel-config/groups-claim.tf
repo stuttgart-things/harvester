@@ -11,7 +11,7 @@
 #
 # The function name must equal the action name.
 resource "zitadel_action" "groups_claim" {
-  org_id          = module.zitadel_portal.org_id
+  org_id          = module.users.org_id
   name            = "groupsClaim"
   timeout         = "10s"
   allowed_to_fail = true
@@ -41,7 +41,7 @@ resource "zitadel_trigger_actions" "groups_claim" {
     "TRIGGER_TYPE_PRE_ACCESS_TOKEN_CREATION",
   ])
 
-  org_id       = module.zitadel_portal.org_id
+  org_id       = module.users.org_id
   flow_type    = "FLOW_TYPE_CUSTOMISE_TOKEN"
   trigger_type = each.key
   action_ids   = [zitadel_action.groups_claim.id]

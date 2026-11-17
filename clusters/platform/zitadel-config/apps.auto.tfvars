@@ -1,4 +1,4 @@
-# OIDC clients next to the portal (apps.tf, harvester#574). Role keys carry the
+# OIDC clients next to the portal (harvester-extras.tf, harvester#574). Role keys carry the
 # app name: the flat `groups` claim (groups-claim.tf) holds the roles of all
 # projects, and each app matches only its own. Users must be in
 # users.auto.tfvars. Every app keeps its local admin.
