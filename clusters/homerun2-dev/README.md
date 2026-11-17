@@ -624,8 +624,8 @@ Three pieces of hardware hang off this stack (since 2026-09-28; the second WLED 
 | Device | Address | Fed by |
 |---|---|---|
 | 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` and `tabletennis` streams from this cluster's Redis over the LAN; in the portal as `/matrix` |
-| WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the table tennis demo's light-catcher ([`light-catcher-tabletennis.yaml`](./light-catcher-tabletennis.yaml), profile in [`../homerun2-dev-light`](../homerun2-dev-light/profile.yaml)); the cluster's alerts go to the wled-mock |
-| WLED, ESP32, 144 LEDs | `wled-strip.sthings.lab` (.148) | this cluster's own light-catcher (stream `messages`: alerts, warning and up; profile [`../homerun2-dev-light/profile-strip.yaml`](../homerun2-dev-light/profile-strip.yaml)), since 2026-11-17 instead of the wled-mock |
+| WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the table tennis demo's light-catcher ([`light-catcher-tabletennis.yaml`](./light-catcher-tabletennis.yaml), profile in [`../homerun2-dev-light`](../homerun2-dev-light/profile.yaml)); the cluster's alerts go to the strip below and the wled-mock |
+| WLED, ESP32, 144 LEDs | `wled-strip.sthings.lab` (.148) | this cluster's own light-catcher (stream `messages`: alerts, warning and up; profile [`../homerun2-dev-light/profile-strip.yaml`](../homerun2-dev-light/profile-strip.yaml)), since 2026-11-17; every rule also lists the wled-mock in `endpoints` (light-catcher v1.15.0+), so the TV's `wled` card shows the same alerts |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
 `redis-stack-lb` on `192.168.10.179:6379`, with a Cilium pool of its own that
@@ -798,7 +798,8 @@ demo that plays itself (zaehlwerk ADR-0015/16/17, schmetterpause ADR-0027/28):
   a point on the scorer's half, set and match point pulsing on the holder's
   half, a won set wiped across, a won match in fireworks, a tournament match
   louder, the final loudest, quiet in the evening and at the weekend. The
-  cluster's alerts go to the wled-mock, on the TV in the portal (`wled`).
+  cluster's alerts go to the 144-LED strip (`wled-strip.sthings.lab`) and the
+  wled-mock, on the TV in the portal (`wled`).
 
 | What | Where |
 |---|---|
