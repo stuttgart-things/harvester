@@ -214,14 +214,15 @@ sudo swapoff -a && sudo sed -i '/swap.img/d' /etc/fstab && sudo rm -f /swap.img
 **Time: the Opal as a fallback NTP source (#683).** The box's RTC loses its time whenever
 the box has no power (missing or dead coin cell: `journalctl -k -b | grep "PM: RTC"` shows
 `2023-01-01` after every cold start). Until chrony reaches an NTP server, the clock sits at
-systemd's minimum date, so certificates count as not yet valid. Besides the Ubuntu pools,
-chrony also asks the Opal, which serves NTP (stratum 2) from its own uplink:
+systemd's minimum date, so certificates count as not yet valid. Besides the Ubuntu pools
+(NTS, kept), chrony also asks the Opal, which serves NTP (stratum 2) from its own uplink.
+`sthings.baseos.time_sync` (baseos >= 26.1116.1538) writes it to
+`/etc/chrony/sources.d/sthings.sources` and fails unless the clock is synchronized:
 
 ```bash
-printf '%s\n' '# Opal as a local NTP source next to the Ubuntu pools (#683).' \
-  'server 192.168.8.1 iburst minpoll 6 maxpoll 10' \
-  | sudo tee /etc/chrony/sources.d/opal.sources
-sudo chronyc reload sources && chronyc -n sources   # 192.168.8.1 listed, Reach > 0
+ansible-playbook -i inventory sthings.baseos.time_sync \
+  -e @k3s/time-sync-vars.yaml -vv
+chronyc -n sources   # on the box: 192.168.8.1 listed, Reach > 0
 ```
 
 The Opal has no RTC either, so this helps only while the Opal itself has time (the box
