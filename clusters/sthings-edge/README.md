@@ -48,6 +48,17 @@ This README is the run book for this box, in build order. The general edge docs
 Shared with the lab, not in this folder: `secrets/edge/` (SOPS values, seal key, root key) and
 `clusters/edge/terraform/` (OpenBao, MinIO; this box uses `env/box.auto.tfvars.json`).
 
+## Kernel pinned to 7.0.0-38-generic (#697)
+
+The box boots **7.0.0-38-generic** on purpose. On 7.0.0-42 and later, the containerd AppArmor
+profile `cri-containerd.apparmor.d` denies signals between Postgres processes,
+and CNPG databases hang (logins stuck in `authentication`, "too many clients").
+The box never booted -42 or -43. unattended-upgrades installed -43 on 2026-11-17 (#683), and the pin was set the same day before any reboot.
+
+- `/etc/default/grub`: `GRUB_DEFAULT` points at the -38 entry (original: `/etc/default/grub.bak-697`).
+- `apt-mark hold linux-generic linux-image-generic linux-headers-generic` (bare metal, not `-virtual`): no new kernels, and no kernel security updates.
+- Remove the pin only after #697 is fixed: restore the backup, run `update-grub` and `apt-mark unhold` on the same packages, then reboot.
+
 ## 1. Router (Opal, GL firmware 4.8.3 / OpenWrt 18.06)
 
 | | |
