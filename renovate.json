@@ -100,6 +100,20 @@
       "groupSlug": "edge-flux-bundle"
     },
     {
+      "description": "homerun2-dev's two stuttgart-things/flux GitRepositories (flux-infra, flux-apps) move together, in a PR of their own -- not bundled with other clusters that pin the same repo (harvester#672).",
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "stuttgart-things/flux"
+      ],
+      "matchFileNames": [
+        "clusters/homerun2-dev/**"
+      ],
+      "groupName": "homerun2-dev Flux sources",
+      "groupSlug": "homerun2-dev-flux-sources"
+    },
+    {
       "matchManagers": [
         "custom.regex"
       ],
