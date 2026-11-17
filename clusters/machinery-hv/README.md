@@ -43,11 +43,14 @@ clusters/machinery-hv/              flux-system syncs this -- only what kustomiz
   cicd-platform.yaml                crossplane (profile machinery) + tekton
   fleet-state.yaml                  -> ./fleet-state   prune: true
   xrs.yaml                          -> ./xrs           prune: FALSE
+  claim-machinery-api.yaml          claim-machinery-api v0.30.0 (claims.machinery-hv.sthings.lab)
+                                    + -> ./claim-machinery-order (order auth, trust bundle)
   pki.yaml                          -> ./pki  (the OpenBao CA, after cert-manager)
   openbao/                          the cert-manager auth mount, as homerun2-dev
   fleet-state/                      provider configs, EnvironmentConfigs, secrets
   xrs/                              the ClusterStacks this cluster owns
   pki/                              openbao-pki-ca, in cert-manager's namespace
+  claim-machinery-order/            ZITADEL order auth + sthings.lab CA for claim-machinery-api
 vms/machinery-hv.*                  the VM shape and the RKE2 vars
 ```
 
