@@ -51,7 +51,7 @@ them.
 The Provider is installed as a Configuration dependency and is not in git, so
 its `runtimeConfigRef` is set by hand. The DeploymentRuntimeConfig it points at
 is GitOps'd: [`platform/providers/drc-provider-kubernetes.yaml`](./platform/providers/drc-provider-kubernetes.yaml)
-(`--poll=1m`, see the comment there). After Argo CD has synced it:
+(`--poll=1m`, `--enable-watches`, see the comment there). After Argo CD has synced it:
 
 ```bash
 export KUBECONFIG=~/.kube/crossplane-mgmt
