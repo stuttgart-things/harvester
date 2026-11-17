@@ -173,7 +173,7 @@ spec:
 # patches below delete those routes, and this Kustomization's prune takes them
 # off the cluster. omni-pitcher keeps its host for the webhook callers
 # (platform's HOMERUN2_CENTRAL_PITCHER_URL, .../pitch), narrowed to /pitch:
-# no /metrics or / from outside. Mirrors platform-sthings
+# plus Exact /health for the k8s-pitcher startup probe; no /metrics or / from outside. Mirrors platform-sthings
 # (stuttgart-things#4149).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -219,6 +219,15 @@ spec:
         - op: replace
           path: /spec/rules/0/matches/0/path/value
           value: /pitch
+        # /health too (Exact): platform's homerun2-k8s-pitcher probes
+        # <pitcher host>/health before it starts and crashloops on 404 (seen
+        # after the 2026-11-17 reboot). It only returns status/version/commit.
+        - op: add
+          path: /spec/rules/0/matches/-
+          value:
+            path:
+              type: Exact
+              value: /health
   postBuild:
     substitute:
       HOMERUN2_NAMESPACE: homerun2
