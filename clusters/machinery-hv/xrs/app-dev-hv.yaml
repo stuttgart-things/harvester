@@ -110,10 +110,11 @@ spec:
       labels:
         env: sthings-lab
         # notification-catcher (harvester#490): homerun2 stream entries with
-        # severity >= warning to Teams. Dry-run until the notify config is
-        # known-good -- flip notification-catcher-dry-run to 'false' then.
+        # severity >= warning to Teams channel harvester-apps (shared
+        # homerun2/_teams-webhook, harvester#523). Live since 2026-11-17, after
+        # the routing test on homerun2-dev reached the channel.
         homerun2-platform/notification-catcher: 'true'
-        homerun2-platform/notification-catcher-dry-run: 'true'
+        homerun2-platform/notification-catcher-dry-run: 'false'
       annotations:
         homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
           outputs:
