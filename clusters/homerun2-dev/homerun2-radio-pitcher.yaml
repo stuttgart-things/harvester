@@ -1,0 +1,144 @@
+---
+# homerun2-radio-pitcher (stuttgart-things/homerun2-radio-pitcher): the
+# office LED matrix as a radio station. Between notifications the panel plays
+# a programme -- time check, tech news, facts about the lab -- and every
+# notification cuts in (homerun-library#146).
+#
+# The pitcher is the control room: it works through the schedule below and,
+# when a slot comes due, pitches a card into its own stream `ambient`
+# (system radio, severity INFO, tags segment=<name>). Priority is the
+# catcher's job: the matrix Pi reads `ambient` next to `messages` and
+# `tabletennis` (../../hosts/matrix/README.md), and the `radio` rule in its
+# profile (../../hosts/matrix/profile.yaml, ./homerun2-led-catcher-profile.yaml)
+# has `ambient: true` -- shown only on a free panel, dropped when busy,
+# pre-empted by any notification (homerun2-led-catcher#161, v0.31.0+).
+#
+# One replica only: two directors would air every slot twice (the artifact
+# uses Recreate).
+#
+# Infra facts: this cluster in-cluster (the artifact's read-only ClusterRole:
+# list pods, nodes, namespaces, Flux objects), Harvester's VMs remotely with
+# the list-only ServiceAccount of ../harvester/homerun2-radio-pitcher-reader.yaml,
+# whose kubeconfig is ./homerun2-radio-pitcher-kubeconfigs.enc.yaml. Every
+# number comes from a live query; the model only rewords.
+#
+# Moderation: the local Ollama on the GPU VM (hosts/ollama-gpu, as Backstage's
+# RAG-AI), not OpenRouter -- the shared free key runs into
+# 429 free-models-per-day. An answer with a number that is not in the input,
+# or one too long for the card, is rejected and the fixed text airs. Ollama
+# down = fixed texts, nothing else changes. Switched OFF for now (below):
+# numbers spelled out as words slip past the guard (radio-pitcher#11).
+#
+# The schedule is re-read when the ConfigMap changes, without a restart; a
+# broken one is logged, /ready reports it and the last good one stays on air.
+# Try a segment on the real panel:
+#   kubectl -n homerun2 exec deploy/homerun2-radio-pitcher -- /ko-app/homerun2-radio-pitcher once news
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: homerun2-radio-pitcher-kustomize
+  namespace: flux-system
+spec:
+  interval: 1h
+  url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+  ref:
+    tag: v0.1.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: homerun2-radio-pitcher
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: homerun2 # redis-stack and its redis-stack-auth Secret
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: OCIRepository
+    name: homerun2-radio-pitcher-kustomize
+  path: ./
+  targetNamespace: homerun2
+  patches:
+    # Roll the pod when the kubeconfig Secret changes. The schedule needs no
+    # restart (the pitcher watches the file), but a roll does no harm.
+    - target:
+        kind: Deployment
+        name: homerun2-radio-pitcher
+      patch: |
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: homerun2-radio-pitcher
+          annotations:
+            reloader.stakater.com/auto: "true"
+        spec:
+          template:
+            spec:
+              containers:
+                - name: homerun2-radio-pitcher
+                  env:
+                    - name: RADIO_NEWS_FEEDS
+                      value: cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml,hn=https://hnrss.org/frontpage?points=300
+                    # Off until homerun2-radio-pitcher#11: the number guard
+                    # checks digits only, and gemma3 wrote "Six of the
+                    # sixty-four VMs" for 6 VMs. The rest stays set, so
+                    # switching it on is this one line.
+                    - name: RADIO_LLM_ENABLED
+                      value: "false"
+                    - name: OLLAMA_URL
+                      value: http://ollama-gpu.sthings.lab:11434
+                    - name: OLLAMA_MODEL
+                      value: gemma3:12b
+                    - name: OLLAMA_API
+                      value: openai
+                    - name: OLLAMA_TIMEOUT
+                      value: 60s
+    - target:
+        kind: ConfigMap
+        name: homerun2-radio-pitcher-config
+      patch: |
+        apiVersion: v1
+        kind: ConfigMap
+        metadata:
+          name: homerun2-radio-pitcher-config
+        data:
+          schedule.yaml: |
+            # The format clock, every hour. Minute -> segment; a minute
+            # without a slot leaves the panel to the idle clock (rotate /
+            # daylight, ../../hosts/matrix/README.md). Each item is a 12 s
+            # card; items of one slot come 15 s apart.
+            clock:
+              ":00": { segment: time-check }
+              ":05": { segment: news, count: 2 }
+              ":15": { segment: infra-facts, count: 2 }
+              ":25": { segment: news, count: 2, feeds: [cncf, kubernetes] }
+              ":30": { segment: time-check }
+              ":35": { segment: news, count: 2 }
+              ":45": { segment: infra-facts, count: 2, sources: [harvester] }
+              ":55": { segment: news, count: 1, feeds: [hn] }
+              default: { segment: idle-clock, style: rotate }
+            # Day windows: parsed, not aired yet
+            # (stuttgart-things/homerun2-radio-pitcher#3, night mode #5).
+            programme:
+              "07:00-10:00": { show: morning-show }
+              "10:00-17:00": { show: daytime }
+              "17:00-19:00": { show: after-work }
+              "19:00-07:00": { show: night }
+          sources.yaml: |
+            sources:
+              - name: homerun2-dev
+                type: kubernetes
+              - name: homerun2-dev
+                type: flux
+              - name: harvester
+                type: harvester
+                kubeconfig: /etc/homerun2-radio-pitcher/kubeconfigs/harvester

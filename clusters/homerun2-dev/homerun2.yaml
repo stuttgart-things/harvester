@@ -141,7 +141,9 @@ spec:
       # pass over it. Nothing switches the panel -- zaehlwerk has no
       # CATCHER_URL -- because Pong plays almost without a pause, and a panel
       # switched to the score would never show a cluster message again.
-      HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis
+      # `ambient` is the radio programme (./homerun2-radio-pitcher.yaml),
+      # which the profile's `radio` rule shows only on a free panel.
+      HOMERUN2_LED_CATCHER_STREAMS: messages,tabletennis,ambient
       # The web control's buttons, for looking at one stream alone.
       HOMERUN2_LED_CATCHER_UI_STREAM_PRESETS: messages,tabletennis
 

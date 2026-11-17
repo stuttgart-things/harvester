@@ -22,6 +22,23 @@
 # per event. A card, unlike `text`, honours it -- also mid-scroll: a long
 # message does not finish in 10 s.
 displayRules:
+  # The radio programme between notifications: time check, tech news, infra
+  # facts, pitched by homerun2-radio-pitcher onto the `ambient` stream
+  # (clusters/homerun2-dev/homerun2-radio-pitcher.yaml). `ambient`: shown only
+  # while the panel is free, dropped when it is busy, cut off by any
+  # notification -- never held (homerun2-led-catcher#161, v0.31.0+). The
+  # pitcher spaces the items of a slot 15 s apart, a little longer than this
+  # duration, since the catcher keeps only the newest ambient card.
+  #
+  # Must stay above default-info: first match wins, and the wildcard there
+  # would otherwise take it without `ambient`.
+  radio:
+    systems: [radio]
+    severity: [INFO]
+    kind: card
+    strip_prefix: true
+    duration: 12
+    ambient: true
   error-all:
     systems: ["*"]
     severity: [ERROR, CRITICAL]
