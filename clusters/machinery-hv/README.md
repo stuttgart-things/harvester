@@ -716,7 +716,7 @@ kubectl -n flux-system get kustomizations   # all Ready
 # machinery / headlamp / flux / tekton .machinery-hv.sthings.lab -> 200
 ```
 
-### 14. flux v1.95.0 → v1.233.0 (#673, pending)
+### 14. flux v1.95.0 → v1.233.0 (#673, #698, 2026-11-17)
 
 One tag, 138 releases on (#495's v1.179.0 is superseded). Rendered at both
 tags, every Kustomization recursively, then `crossplane composition render`
@@ -729,7 +729,8 @@ That is a live change of a Rancher cluster; it was taken with an explicit OK
 (2026-11-17), after the teams-webhook entry (#702/#703) had made the
 ClusterStack `Synced=True` again -- so the new Composition composes on merge.
 
-Before merging: VM snapshots of app-dev-hv on Harvester, no PVCs on
+Before the merge: Harvester snapshot `pre-698-app-dev-hv-20261117` (VirtualMachineBackup
+type snapshot, readyToUse), no PVCs on
 `local-path` on app-dev-hv, then:
 
 ```bash
@@ -740,3 +741,15 @@ kubectl get pkg                                                             # al
 kubectl get lock lock -o json | jq -r '.packages[].source' | sort | uniq -d # empty
 kubectl get clusterstack app-dev-hv                                         # Synced True, Ready True
 ```
+
+Result (merged 10:29Z, sources on v1.233.0 at 10:30Z): 22/22 Kustomizations
+Ready, 51/51 packages Healthy (cluster v0.16.4, rancher-cluster v0.12.0, platform
+v0.9.0, cni v0.1.5), Crossplane v2.4.2, no lock duplicates, ClusterStack
+Synced/Ready. Rancher cluster `app-dev-hv` gen 3 → 4 at 10:31:51Z with
+`local-storage` in `machineGlobalConfig.disable`, plan applied 10:32:12Z, no
+failures. The node stayed `Ready` and **was not replaced** (same machine and
+VM, VMI created 07:30:41Z). On app-dev-hv `local-path-provisioner` and the
+`local-path` StorageClass are gone, and `openebs-hostpath` is the only
+default; no pod restarted, all Argo apps unchanged. On machinery-hv the
+tekton-operator v0.81.2 also rolls out pipelines-as-code (3 new pods,
+Running). machinery/headlamp/flux/tekton → 200.
