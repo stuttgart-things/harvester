@@ -2,6 +2,8 @@ apiVersion: v1
 data:
     MINIO_IDENTITY_OPENID_CLIENT_ID: ENC[AES256_GCM,data:tW5xHiGZoCS0TktMmQmRKa368OFTMdGR,iv:B1cLCtTYZulA028+ISe77T4PVQqLpJsPChAU4KuZ40s=,tag:yJORhnEM5b2MRxNkVuoywA==,type:str]
     MINIO_IDENTITY_OPENID_CLIENT_SECRET: ENC[AES256_GCM,data:dvTLT2PonmTMxsyWU2FSNBetMCj9Qfqq3RLghP6toXEoQE348NbkKv30CehzSB8mShgGKPgq5BbKi2vKmo7DkW+7LtDQXVMopsK3yCaBwNY9bogFEl/oeg==,iv:SUlyNiNDPP74ssaoDJCfTQA1+R2dNise/s7ZhXF/w7A=,tag:AZH4CaK3coSeKlx5N1RPEg==,type:str]
+    MINIO_IDENTITY_OPENID_CLIENT_ID_READONLY: ENC[AES256_GCM,data:dXAJqH/+v8rvsOm5bcH0bLlsLFYMANz/,iv:7dKYtcAV5u7kGlOrUDiiUpReb0hLokiRj/6KDPzNqhU=,tag:TisWdvXXkJY+j5h0VKBqHg==,type:str]
+    MINIO_IDENTITY_OPENID_CLIENT_SECRET_READONLY: ENC[AES256_GCM,data:7FdUt1u2mrPgYp9FDIsf223qJTrj6rZjdhJY976uTfPlVJatucfcgG1qGKAK1hSf52ZDLreN9+y8jt01s85/vBE7nlO6cgQDxYkWew3iQDOtzLa/20bP8Q==,iv:7cTsq7UpsoxBajyX76EwioHlMDQRhJ07BBLc4zD6kVA=,tag:KDLY/qrjMQ/ZO9ynnQ+fsg==,type:str]
 kind: Secret
 metadata:
     creationTimestamp: null
@@ -18,7 +20,7 @@ sops:
             bFFYV3p1VU9ab0JwdDc1V000WWF2UmMKlK7SJ2tvIvzvNbl9O530qC1IMDeedQzN
             ug84KZ1VGFIL2aBd2Sq7F4C+W2tf3gsnIKoAIay1gBbn6bv9Rrwazg==
             -----END AGE ENCRYPTED FILE-----
-    lastmodified: "2026-10-27T13:47:30Z"
-    mac: ENC[AES256_GCM,data:YbBChFGBy5dQmMFMC5+3e0hCZUTM0P9Am+otZMa4QlxLpF2H89vjvg1fL7KvnZROhl/v06W4xROKdaIVOdIdDZNjFVdCJ3nlRqkiLf9Zh/DddInqGOPcLL3ascWjQTFs95sWt0v5uvCm+/jwUwntdwQecLIxWp8m/sXuNdK0SdM=,iv:MED9gRNzMni2BTr1pGpOiTOlKqhTS89j3QyxM3kfVXQ=,tag:oAl6ZCxK/kiJa14a0LWwIw==,type:str]
+    lastmodified: "2026-11-17T14:37:29Z"
+    mac: ENC[AES256_GCM,data:O0Z3FG7/tcp7vmgvvzvsbcddNKG6ynqtbOw2q6kP5KbMOoWcuh9cEgWVHNMW48O9VU+IVCOXY3kOttrH0nrtboppt8aE0xQgwsfTJPRTmjOfv1ps59p/nkhI8F4aXMKMH9CZagm8aRKSAZnx0JquIa1VkewAXUjDjHrCrqKnJcw=,iv:c58CK14x/+K+4V/ZfNccOXZosUON0uiCgStY9VCivqs=,tag:mtQ8KeyEqJdLIO41oWPrZA==,type:str]
     encrypted_regex: ^(data|stringData)$
     version: 3.11.0
