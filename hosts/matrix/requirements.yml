@@ -6,6 +6,7 @@
 # 26.1023.1506 and later: led_display_queue, stuttgart-things/ansible#1413.
 # 26.1025.1511 and later: a comma in led_redis_stream writes REDIS_STREAMS, stuttgart-things/ansible#1421.
 # 26.1104.1523 and later: led_redis_startup_timeout, stuttgart-things/ansible#1438.
+# 26.1117.1539 and later: led_idle_style, led_idle_color_mode, led_idle_interval, stuttgart-things/ansible#1458.
 collections:
-  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1104.1523/sthings-container-26.1104.1523.tar.gz
+  - name: https://github.com/stuttgart-things/ansible/releases/download/sthings-container-26.1117.1539/sthings-container-26.1117.1539.tar.gz
     type: url
