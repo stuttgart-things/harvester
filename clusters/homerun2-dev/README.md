@@ -619,12 +619,13 @@ default upstream, unannounced.
 
 ### The real devices: LED matrix and WLED
 
-Two pieces of hardware hang off this stack since 2026-09-28:
+Three pieces of hardware hang off this stack (since 2026-09-28; the second WLED since 2026-11-17):
 
 | Device | Address | Fed by |
 |---|---|---|
 | 64x64 LED matrix, Raspberry Pi ([`hosts/matrix`](../../hosts/matrix/README.md)) | `matrix.sthings.lab` (.120) | its own led-catcher, reading the `messages` and `tabletennis` streams from this cluster's Redis over the LAN; in the portal as `/matrix` |
 | WLED, ESP32, 36 LEDs | `wled-matrix.sthings.lab` (.123) | the table tennis demo's light-catcher ([`light-catcher-tabletennis.yaml`](./light-catcher-tabletennis.yaml), profile in [`../homerun2-dev-light`](../homerun2-dev-light/profile.yaml)); the cluster's alerts go to the wled-mock |
+| WLED, ESP32, 144 LEDs | `wled-strip.sthings.lab` (.148) | this cluster's own light-catcher (stream `messages`: alerts, warning and up; profile [`../homerun2-dev-light/profile-strip.yaml`](../homerun2-dev-light/profile-strip.yaml)), since 2026-11-17 instead of the wled-mock |
 
 **Redis on the LAN** is [`redis-lb.yaml`](./redis-lb.yaml): a Service
 `redis-stack-lb` on `192.168.10.179:6379`, with a Cilium pool of its own that

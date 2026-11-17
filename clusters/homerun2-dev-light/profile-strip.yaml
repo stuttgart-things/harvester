@@ -1,0 +1,71 @@
+---
+# The cluster's alerts on a real strip -- the profile of homerun2-dev's own
+# light-catcher (the one reading `messages`), mounted instead of the base's
+# wled-mock profile via HOMERUN2_LIGHT_CATCHER_PROFILE_CM in
+# ../homerun2-dev/homerun2.yaml.
+#
+# Device: wled-strip.sthings.lab (192.168.10.148, ESP32, WLED 16.0.1, 144 LEDs,
+# one segment 0 = LEDs 0-143). Since 2026-11-17; before that these rules drove
+# the wled-mock (the TV's `wled` portal card no longer gets effects).
+#
+# What reaches `messages`: Alertmanager (platform), k8s-pitcher, schedule-
+# pitcher, homerun2's own components -- the same senders the Teams routing in
+# ../homerun2-dev/homerun2-notification-catcher-notify.yaml sees. info is left
+# out on purpose: heartbeats and routine pitches would keep the strip busy and
+# hide the warnings. Short and calm except for error/critical.
+#
+# Quiet hours: evenings, nights and weekends only error and critical light it
+# (light-catcher skips everything else inside quietHours).
+#
+# restore: true, so the strip goes back to its own scene afterwards instead of
+# going dark. Effect names are looked up on the device (light-catcher v1.7.0+);
+# Solid, Blink and Breathe exist on every WLED.
+#
+# Re-read on every message -- no restart after a change. No ${VAR}: the
+# Kustomization that applies this (light-profile.yaml) substitutes nothing.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-light-catcher-profile-strip
+  namespace: homerun2
+data:
+  profile.yaml: |
+    quietHours:
+      from: "19:00"
+      to: "07:00"
+      weekends: true
+      timezone: Europe/Berlin
+    effects:
+      error:
+        systems: ["*"]
+        severity: [error, critical]
+        fx: Blink
+        duration: 8
+        color: red
+        speed: 200
+        intensity: 128
+        brightness: 255
+        segments: [0]
+        restore: true
+        endpoint: http://wled-strip.sthings.lab
+      warning:
+        systems: ["*"]
+        severity: [warning]
+        fx: Breathe
+        duration: 5
+        color: orange
+        speed: 128
+        brightness: 200
+        segments: [0]
+        restore: true
+        endpoint: http://wled-strip.sthings.lab
+      success:
+        systems: ["*"]
+        severity: [success]
+        fx: Solid
+        duration: 2
+        color: green
+        brightness: 160
+        segments: [0]
+        restore: true
+        endpoint: http://wled-strip.sthings.lab
