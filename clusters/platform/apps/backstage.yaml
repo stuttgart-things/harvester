@@ -25,6 +25,9 @@ spec:
       BACKSTAGE_VERSION: "2.10.2"
       BACKSTAGE_IMAGE_REGISTRY: ghcr.io
       BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
+      # Only a fallback: imageTag in backstage-helm-overrides
+      # (backstage-prereqs.yaml) wins. Keep both on the same tag.
+      BACKSTAGE_IMAGE_TAG: v1.30.0
       BACKSTAGE_STORAGE_CLASS: local-path
       BACKSTAGE_REPLICAS: "1"
       BACKSTAGE_APP_TITLE: Stuttgart Things Backstage
@@ -41,6 +44,22 @@ spec:
       # which must be a string, and kustomize strips the outer ones
       # (flux apps/backstage README, stuttgart-things/flux#935).
       BACKSTAGE_AUTH_GUEST_ENABLED: '"false"'
+      # ZITADEL sign-in (image >= v1.23.0, sthings-backstage#203, harvester#675)
+      # next to GitHub, which stays as the fallback (#574). The flux app's
+      # backstage-app-config carries the oidc provider (key development,
+      # resolver zitadelProjectRoles): backstage-platform -> platform-team,
+      # backstage-developer -> guests, no role -> refused. ZITADEL users need
+      # no User entity (dangerouslyAllowSignInWithoutUserInCatalog), their
+      # roles come from zitadel-config/users.auto.tfvars (backstage_roles).
+      # Issuer, client ID and secret: BACKSTAGE_ZITADEL_* in
+      # backstage-secrets-subst (Terraform outputs issuer, backstage_client_ids,
+      # backstage_client_secrets). ZITADEL's certificate (CN=sthings.lab CA)
+      # is trusted through NODE_EXTRA_CA_CERTS (backstage-ca-env) and the
+      # cluster-trust-bundle mount below. Quoted like the guest switch.
+      BACKSTAGE_AUTH_OIDC_ENABLED: '"true"'
+      # Only this project's roles count (Terraform output
+      # backstage_project_id). Not a secret.
+      BACKSTAGE_ZITADEL_PROJECT_ID: "399985216216629471"
       DOMAIN: platform.sthings.lab
       GATEWAY_NAME: platform-sthings-gateway
       GATEWAY_NAMESPACE: default
@@ -69,7 +88,8 @@ spec:
     # the app's own backstage-catalog-config. ONE owner for that object: it used
     # to be a second copy in backstage-prereqs.yaml as well (harvester#349).
     # Must contain the User entities GitHub sign-in
-    # (usernameMatchingUserEntityName) resolves against.
+    # (usernameMatchingUserEntityName) resolves against. ZITADEL sign-in needs
+    # none (see BACKSTAGE_AUTH_OIDC_ENABLED above).
     #
     # Backstage reads this file only at startup (the chart mounts it with
     # subPath). The Deployment carries reloader.stakater.com/auto, and Reloader

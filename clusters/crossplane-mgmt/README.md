@@ -25,6 +25,12 @@ the Kyverno gate came along as
 which still reads its policies out of the other repo so there is one source for
 them.
 
+The cluster itself (k8s, CNI) is not built from this repo. It runs **Cilium
+1.19.3** (live 2026-11-17, #679); nothing here pins that. A rebuild without an
+explicit `cilium_chart_version` gets whatever the cilium-cli default is at that
+time -- set `cilium_chart_version="1.19.3"` (or a deliberately chosen version)
+on that run.
+
 > [!WARNING]
 > **`env-config-harvester.yaml` collides with `platform/virtual-machine/env-config-harvestervm.yaml`.**
 > Different names (`harvester-vm-remote-defaults` vs `harvestervm-defaults`),
@@ -46,12 +52,28 @@ them.
 
 ## Manual one-offs
 
+### TLSRoute CRD (2026-11-17, #671)
+
+Cilium 1.19.3, Gateway API CRDs v1.4.1. The experimental TLSRoute CRD v1.4.1
+was applied by hand; without it the cilium-operator logs `no kind is registered
+for the type v1alpha2.TLSRouteList` and never re-resolves HTTPRoutes, so a route
+created before its Service stays at `BackendNotFound` (cilium/cilium#47819).
+Raise it with every Gateway API upgrade:
+
+```bash
+export KUBECONFIG=~/.kube/crossplane-mgmt
+kubectl apply -f https://raw.githubusercontent.com/kubernetes-sigs/gateway-api/v1.4.1/config/crd/experimental/gateway.networking.k8s.io_tlsroutes.yaml
+kubectl -n kube-system rollout restart deploy/cilium-operator
+```
+
+Before: 42 errors/h, after: 0; 2/2 HTTPRoutes `ResolvedRefs=True`, both 200.
+
 ### provider-kubernetes runtime config (2026-09-30)
 
 The Provider is installed as a Configuration dependency and is not in git, so
 its `runtimeConfigRef` is set by hand. The DeploymentRuntimeConfig it points at
 is GitOps'd: [`platform/providers/drc-provider-kubernetes.yaml`](./platform/providers/drc-provider-kubernetes.yaml)
-(`--poll=1m`, see the comment there). After Argo CD has synced it:
+(`--poll=1m`, `--enable-watches`, see the comment there). After Argo CD has synced it:
 
 ```bash
 export KUBECONFIG=~/.kube/crossplane-mgmt

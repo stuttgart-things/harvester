@@ -14,3 +14,22 @@ users = {
   rdevaney = { email = "rdevaney@sthings-edge.com", first_name = "Rory", last_name = "Devaney", roles = ["portal-user"] }
   someara  = { email = "someara@sthings-edge.com", first_name = "Sheila", last_name = "O’Meara", roles = ["portal-user"] }
 }
+
+# sthings-backstage roles (#675, #676, #681), as on LabUL/LabDA: portal-admin
+# -> backstage-platform, portal-user -> backstage-developer. The beta/team
+# roles of the vSphere labs (doc, biff) are not used here yet.
+backstage_roles = {
+  sthings  = ["backstage-platform"]
+  indy     = ["backstage-platform"]
+  tommy    = ["backstage-platform"]
+  mcfly    = ["backstage-developer"]
+  mcclane  = ["backstage-developer"]
+  fmcguire = ["backstage-developer"]
+  rdevaney = ["backstage-developer"]
+  someara  = ["backstage-developer"]
+}
+
+# No vault / argocd project yet (lab.auto.tfvars): ArgoCD's roles are in
+# apps.auto.tfvars (harvester-extras.tf) until #677.
+vault_roles  = {}
+argocd_roles = {}

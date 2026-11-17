@@ -25,8 +25,10 @@
 #     the ansible SSH file. Until this cluster carries sops-git, the placement
 #     and the ansible defaults stay written out in ./fleet-state.
 #
-#   claim-machinery-api / komoplane -- the API already runs on platform; add
-#     komoplane here if a local view is wanted.
+#   claim-machinery-api -- runs here, but as a Kustomization of its own
+#     (claim-machinery-api.yaml, harvester#676), not as a component of this
+#     bundle.
+#   komoplane -- add it here if a local view is wanted.
 #
 # machinery IS selected (harvester#490): it is a dashboard over the
 # config./resources.stuttgart-things.com claims of the cluster it runs on, so

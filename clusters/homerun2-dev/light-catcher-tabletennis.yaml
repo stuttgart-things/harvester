@@ -44,8 +44,8 @@ spec:
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_PROFILE_CM: homerun2-light-catcher-tabletennis-profile
       # Under the portal's key (./sthings-portal.yaml), like the others.
       HOMERUN2_LIGHT_CATCHER_TABLETENNIS_BASE_PATH: /table
-      HOMERUN2_LIGHT_CATCHER_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
-      HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
+      HOMERUN2_LIGHT_CATCHER_VERSION: v1.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher
+      HOMERUN2_LIGHT_CATCHER_KUSTOMIZE_VERSION: v1.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-light-catcher-kustomize
 ---
 # Its dashboard on light-catcher-tabletennis.homerun2-dev.sthings.lab/table/.
 apiVersion: kustomize.toolkit.fluxcd.io/v1

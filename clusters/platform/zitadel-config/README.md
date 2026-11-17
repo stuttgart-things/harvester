@@ -1,27 +1,66 @@
-# ZITADEL config (platform) — sthings-portal OIDC clients
+# ZITADEL config (platform) — portal, Backstage, claim-machinery and app OIDC clients
 
-Declarative ZITADEL setup for sthings-portal's OIDC login against the
-Harvester lab IdP at `https://zitadel.platform.sthings.lab` (Flux:
-`apps-platform` → `zitadel` on this cluster, #560). A root over the module
-[`terraform/modules/zitadel-portal`](https://github.com/stuttgart-things/stuttgart-things/tree/main/terraform/modules/zitadel-portal)
-of the vSphere labs (stuttgart-things/stuttgart-things#4118), pinned to a
-commit in `main.tf`.
+Declarative ZITADEL setup of the Harvester lab IdP at
+`https://zitadel.platform.sthings.lab` (Flux: `apps-platform` → `zitadel` on
+this cluster, #560). Since #680 it is the **third lab of the shared root** of
+stuttgart-things/stuttgart-things#4612 (LabUL
+`clusters/labul/vsphere/infra-sthings/zitadel-portal-config`, LabDA
+`clusters/labda/vsphere/sthings-infra/zitadel-config`).
+
+## Same code as LabUL/LabDA (#680)
+
+`main.tf`, `variables.tf` and `outputs.tf` are the files of the two vSphere
+roots; the only change is the module `source`: `git::…?ref=<commit>` instead
+of the relative path (pinned -- a change there must not reach this instance
+unreviewed). Bump the ref and copy the three files together.
+
+| File | What |
+|---|---|
+| `lab.auto.tfvars` | `zitadel_domain`, `portals`, `oidc_apps`, `backstages`, `claim_machinery_machine_users`, `claim_machinery_portals`, `vaults`, `argocds` |
+| `users.auto.tfvars` | `users`, `backstage_roles`, `vault_roles`, `argocd_roles` |
+| `backend.tf` | where the state lives |
+
+**Harvester-only, the exception to "only the tfvars differ"** -- until
+ArgoCD, MinIO and Grafana move to the role map / the shared argocd project:
+
+| File | What |
+|---|---|
+| [`harvester-extras.tf`](./harvester-extras.tf) + [`apps.auto.tfvars`](./apps.auto.tfvars) | the projects/clients `argocd`, `minio`, `grafana` (#574), unchanged by #680 |
+| [`groups-claim.tf`](./groups-claim.tf) | the flat `groups` claim (Actions v1) they read |
+| [`moved.tf`](./moved.tf) | `module.zitadel_portal.*` → `module.users` / `module.portal` (#680); same IDs |
+
+`argocds` stays `{}` until #677 (argo-cd-oidc, claim `argocd_roles`): the
+shared root's `zitadel_trigger_actions.pre_userinfo` would take over the
+"pre userinfo creation" trigger that `groups-claim.tf` owns, and the two
+resources would overwrite each other's action list. `vaults` stays `{}`
+until OpenBao gets its OIDC login (`vault-oidc-zitadel`, #574).
 
 ## What it creates
 
 In the default org `ZITADEL`:
 
-- **Project** `sthings-portal` with role check (no role, no login) and role
-  assertion; **roles** `portal-admin`, `portal-user`
-- **OIDC web app** per entry of `portals`, by default
-  `homerun2-dev` → `https://portal.homerun2-dev.sthings.lab`: redirect
-  `/auth/callback`, post-logout `/auth/login`, code flow, basic auth, roles +
-  `preferred_username` in the ID token
-- **Users** with grants from `users.auto.tfvars` (a copy of the vSphere labs'
-  list -- keep them in step)
+- `module.users`: the org lookup and the **users** of `users.auto.tfvars`
+  (a copy of the vSphere labs' list -- keep them in step)
+- `module.portal`: **project** `sthings-portal` (role check, role
+  assertion), roles `portal-admin` / `portal-user`, one web client per
+  `portals` entry -- `homerun2-dev` (`https://portal.homerun2-dev.sthings.lab`,
+  live) and `machinery-portal` (`https://machinery-portal.platform.sthings.lab`,
+  #681, not deployed yet): redirect `/auth/callback`, post-logout
+  `/auth/login`
+- `module.backstage`: **project** `sthings-backstage`, roles
+  `backstage-platform` / `backstage-developer` (grants from `backstage_roles`),
+  clients `backstage` (`https://backstage.platform.sthings.lab`, #675),
+  `claims-cli` (native, device flow, JWT), `machinery-portal-machinery-hv`
+  (`https://machinery-portal.machinery-hv.sthings.lab`, #681), and the
+  machine user `machinery-order-service` (client credentials, JWT,
+  `backstage-platform`). claim-machinery-api's audience is this project
+  (output `claim_machinery_audience`, #676)
+- `harvester-extras.tf`: `argocd`, `minio`, `grafana` (below)
 
-Outputs `issuer`, `client_ids`, `client_secrets` (maps by portal name),
-`project_id`, `org_id`.
+Outputs: those of the shared root (`issuer`, `org_id`, `user_ids`,
+`project_id`, `client_ids` / `client_secrets`, `backstage_*`,
+`claim_machinery_*`, `vault_*`, `argocd_*`) plus `app_client_ids` /
+`app_client_secrets` of harvester-extras.tf.
 
 ---
 
@@ -74,7 +113,7 @@ export TF_VAR_user_initial_passwords="$(jq -nc --arg pw '<initial password>' \
   '[ "sthings","indy","tommy","mcfly","mcclane","fmcguire","rdevaney","someara" ] | map({(.): $pw}) | add')"
 
 terraform init
-terraform plan      # 1 project, 2 roles, 1 OIDC app, 8 users, 8 grants
+terraform plan      # after #680: No changes
 terraform apply
 
 terraform output -raw issuer
@@ -86,7 +125,7 @@ terraform output -json client_secrets | jq -r '."homerun2-dev"'   # sensitive --
 returns `null` for it, there is no way to look it up afterwards. To give an
 existing user a new initial password (again with a forced change at the first
 login), replace it:
-`terraform apply -replace='module.zitadel_portal.zitadel_human_user.user["<name>"]'`
+`terraform apply -replace='module.users.zitadel_human_user.user["<name>"]'`
 (its grant is replaced with it).
 
 ### One password for all users, no forced change
@@ -125,7 +164,7 @@ password an initial one again.
 
 ## Further apps (harvester#574)
 
-[`apps.tf`](./apps.tf) adds OIDC clients next to the portal, from
+[`harvester-extras.tf`](./harvester-extras.tf) (until #680 `apps.tf`) adds OIDC clients next to the portal, from
 [`apps.auto.tfvars`](./apps.auto.tfvars) -- per app:
 
 - **project** `<app>` with role check (no role on it, no login) and role
@@ -201,7 +240,7 @@ redirect URL must be exactly
 ## Rotating the client secret
 
 ```bash
-terraform apply -replace='module.zitadel_portal.zitadel_application_oidc.portal["homerun2-dev"]'
+terraform apply -replace='module.portal.zitadel_application_oidc.app["homerun2-dev"]'
 ```
 
 A new app: client ID **and** secret change. Update both in the portal.

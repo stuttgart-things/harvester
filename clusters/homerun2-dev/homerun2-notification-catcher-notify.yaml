@@ -54,10 +54,51 @@ data:
     #
     # Severity rank (low -> high):
     #   debug < info < success < warning < critical = error
+    # harvester#523: by purpose, not by cluster.
+    #   harvester-ops-alerts  ${TEAMS_OPS_WEBHOOK_URL}  infrastructure: Alertmanager
+    #                         (platform), k8s-pitcher (any cluster), schedule-pitcher
+    #                         findings (Harvester/Longhorn/backups)
+    #   harvester-apps        ${TEAMS_WEBHOOK_URL}      everything else, as fallback
+    # The three ops outputs post to the same channel; a message matching two of
+    # them would go out twice, which their filters do not allow today
+    # (Alertmanager pitches as system msteams, k8s-pitcher tags k8s, the
+    # schedule-pitcher as its own system). Sender fields read from the catcher
+    # log on 2026-11-17, not guessed.
     outputs:
+      - name: teams-ops-alertmanager
+        type: msteams
+        webhook_url: "${TEAMS_OPS_WEBHOOK_URL}"
+        filters:
+          match: { author: alertmanager }
+          severity_min: warning
+        throttle:
+          window: 10m
+          max: 5
+      - name: teams-ops-k8s
+        type: msteams
+        webhook_url: "${TEAMS_OPS_WEBHOOK_URL}"
+        filters:
+          # k8s-pitcher-<cluster>: Flux/Kubernetes events, tags "k8s,…"
+          tags_contain: [k8s]
+          severity_min: warning
+        throttle:
+          window: 10m
+          max: 5
+      - name: teams-ops-schedule
+        type: msteams
+        webhook_url: "${TEAMS_OPS_WEBHOOK_URL}"
+        filters:
+          match: { system: homerun2-schedule-pitcher }
+          severity_min: warning
+        throttle:
+          window: 10m
+          max: 5
+      # harvester-apps. fallback (catcher #74): takes only what no ops output
+      # matched, so nothing is posted to both channels.
       - name: teams-homerun2-dev
         type: msteams
         webhook_url: "${TEAMS_WEBHOOK_URL}"
+        fallback: true
         filters:
           # warning and above, from any system. Deliberately broad: this is a
           # dev cluster and an over-narrow filter here is indistinguishable
