@@ -50,7 +50,7 @@ spec:
       # v0.30.0: the UI shows the login, owner choices and an order
       # confirmation. All 15 templates of the profile render with their
       # defaults on v0.30.0 (checked 2026-11-17, harvester#676).
-      CLAIM_MACHINERY_API_VERSION: v0.30.1 # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
+      CLAIM_MACHINERY_API_VERSION: v0.30.2 # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
       CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
       CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/api-templates-profiles.yaml"
       FLUX_SOURCE_API_VERSION: v1
