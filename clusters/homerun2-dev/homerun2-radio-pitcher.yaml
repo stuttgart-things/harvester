@@ -31,6 +31,11 @@
 #
 # The schedule is re-read when the ConfigMap changes, without a restart; a
 # broken one is logged, /ready reports it and the last good one stays on air.
+#
+# Programme UI (v0.5.0+, radio-pitcher#23): read-only, at /radio/ behind the
+# portal (key `radio` in ./sthings-portal.yaml, so behind its Zitadel login):
+# the show on air, the clock, what airs next, the last aired cards, each
+# source's last query, and a preview that builds a segment without airing it.
 # Try a segment on the real panel:
 #   kubectl -n homerun2 exec deploy/homerun2-radio-pitcher -- /ko-app/homerun2-radio-pitcher once news
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -42,7 +47,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
   ref:
-    tag: v0.1.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+    tag: v0.5.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -95,12 +100,17 @@ spec:
                           name: redis-stack-auth
                           key: redis-password
                           optional: false
+                    # The programme UI under the portal's prefix (the
+                    # artifact's profile sets it too; explicit here because
+                    # the portal key below depends on it).
+                    - name: BASE_PATH
+                      value: /radio
                     - name: RADIO_NEWS_FEEDS
                       value: cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml,hn=https://hnrss.org/frontpage?points=300
-                    # Off until homerun2-radio-pitcher#11: the number guard
-                    # checks digits only, and gemma3 wrote "Six of the
-                    # sixty-four VMs" for 6 VMs. The rest stays set, so
-                    # switching it on is this one line.
+                    # Off since gemma3 wrote "Six of the sixty-four VMs" for
+                    # 6 VMs. Fixed in v0.2.0 (radio-pitcher#11: number words,
+                    # repeated numbers and a dropped cluster name are
+                    # rejected); switching it on is this one line.
                     - name: RADIO_LLM_ENABLED
                       value: "false"
                     - name: OLLAMA_URL
@@ -135,8 +145,11 @@ spec:
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
-            # Day windows: parsed, not aired yet
-            # (stuttgart-things/homerun2-radio-pitcher#3, night mode #5).
+            # Day windows (shows). Aired since v0.4.0 (radio-pitcher#3):
+            # a show may pick a named clock (`clock: <name>` from `clocks:`)
+            # and air `extra:` segments once per window. None of these has a
+            # clock of its own yet, so the clock above airs all day. A silent
+            # night is `clock: night` plus `clocks: { night: {} }`.
             programme:
               "07:00-10:00": { show: morning-show }
               "10:00-17:00": { show: daytime }
