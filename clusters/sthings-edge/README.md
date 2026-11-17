@@ -211,6 +211,22 @@ Swap must be off before k3s (already the case on the box):
 sudo swapoff -a && sudo sed -i '/swap.img/d' /etc/fstab && sudo rm -f /swap.img
 ```
 
+**Time: the Opal as a fallback NTP source (#683).** The box's RTC loses its time whenever
+the box has no power (missing or dead coin cell: `journalctl -k -b | grep "PM: RTC"` shows
+`2023-01-01` after every cold start). Until chrony reaches an NTP server, the clock sits at
+systemd's minimum date, so certificates count as not yet valid. Besides the Ubuntu pools,
+chrony also asks the Opal, which serves NTP (stratum 2) from its own uplink:
+
+```bash
+printf '%s\n' '# Opal as a local NTP source next to the Ubuntu pools (#683).' \
+  'server 192.168.8.1 iburst minpoll 6 maxpoll 10' \
+  | sudo tee /etc/chrony/sources.d/opal.sources
+sudo chronyc reload sources && chronyc -n sources   # 192.168.8.1 listed, Reach > 0
+```
+
+The Opal has no RTC either, so this helps only while the Opal itself has time (the box
+rebooted alone, or the uplink lost after the Opal synced). It does not replace the coin cell.
+
 ## 6. Tools
 
 ```bash
