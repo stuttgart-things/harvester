@@ -14,7 +14,7 @@
 //
 // VALUES COME ONLY FROM shared.tfvars.sops.json, decrypted on the fly:
 //
-//   sops exec-file shared.tfvars.sops.json 'terraform apply -var-file={}'
+//   sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform apply -var-file={}'
 //
 // `shared_entries` has NO default on purpose. With `default = {}` a plain
 // `terraform apply` -- e.g. to rotate an AppRole secret_id -- would plan to

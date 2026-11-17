@@ -72,22 +72,24 @@ person's credential, from `shared.tfvars.sops.json` (harvester#523):
 
 ```bash
 cd clusters/platform/openbao/machinery-fleet
-# add or change a value -- read from stdin, so it never shows up in the
-# process list or shell history; paste the URL, then Ctrl-D
-sops set --value-stdin shared.tfvars.sops.json \
-  '["shared_entries"]["homerun2/_teams-webhook"]["data"]["teamsWebhookUrl"]'
+# add or change a value
+# --value-stdin takes a JSON value, so quote it with jq; read -rs keeps it off
+# the screen and out of the history
+read -rs URL; printf '%s' "$URL" | jq -Rs . | sops set --value-stdin shared.tfvars.sops.json \
+  '["shared_entries"]["homerun2/_teams-webhook"]["data"]["teamsWebhookUrl"]'; unset URL
 # (the first time, create the parent first:
 #  echo '{"data":{}}' | sops set --value-stdin shared.tfvars.sops.json '["shared_entries"]["homerun2/_teams-webhook"]')
 
 export VAULT_TOKEN=…   # as for the rest of this root
-sops exec-file shared.tfvars.sops.json 'terraform plan  -var-file={}'
-sops exec-file shared.tfvars.sops.json 'terraform apply -var-file={}'
+sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform plan  -var-file={}'
+sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform apply -var-file={}'
 ```
 
 > [!IMPORTANT]
 > **Every run of this root needs the `-var-file` now**, including AppRole
 > rotation. `shared_entries` has no default on purpose: with an empty default, a
-> plain `terraform apply` would delete every shared entry.
+> plain `terraform apply` would delete every shared entry. `--filename` must
+> end in `.json`, or Terraform parses the decrypted file as HCL.
 
 ## Not here
 

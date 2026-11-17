@@ -1,5 +1,5 @@
 {
-  "_comment": "SHAPE ONLY -- no real values. The real file is shared.tfvars.sops.json (age recipient as ../app-secrets/terraform.tfvars.sops.json). Create/extend it with `sops set`, never by decrypting to disk. Apply: sops exec-file shared.tfvars.sops.json 'terraform apply -var-file={}'.",
+  "_comment": "SHAPE ONLY -- no real values. The real file is shared.tfvars.sops.json (age recipient as ../app-secrets/terraform.tfvars.sops.json). Create/extend it with `sops set`, never by decrypting to disk. Apply: sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform apply -var-file={}'.",
 
   "shared_entries": {
     "homerun2/_teams-webhook": {
