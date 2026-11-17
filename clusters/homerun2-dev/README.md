@@ -25,6 +25,17 @@ export GITHUB_USER=... GITHUB_TOKEN=... AGE_PUB=...
 
 ---
 
+## Kernel pinned to 7.0.0-38-generic (#697)
+
+The node boots **7.0.0-38-generic** on purpose. On 7.0.0-42, the containerd AppArmor
+profile `cri-containerd.apparmor.d` denies signals between Postgres processes,
+and CNPG databases hang (logins stuck in `authentication`, "too many clients").
+Rolled back from 7.0.0-42 with a reboot on 2026-11-17.
+
+- `/etc/default/grub`: `GRUB_DEFAULT` points at the -38 entry (original: `/etc/default/grub.bak-697`).
+- `apt-mark hold linux-virtual linux-image-virtual linux-headers-virtual linux-headers-generic`: no new kernels, and no kernel security updates.
+- Remove the pin only after #697 is fixed: restore the backup, run `update-grub` and `apt-mark unhold` on the same packages, then reboot. Kured (#674) waits for this.
+
 ## 1. Reserve the address and the DNS record
 
 **Do this first.** The LB address is written by hand into
