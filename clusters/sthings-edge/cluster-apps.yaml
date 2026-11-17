@@ -75,13 +75,19 @@ spec:
   # (stuttgart-things#3923); v1.182.2: the notification-catcher's read-only
   # UI with its Service, route and BASE_PATH (flux#821), DISPLAY_QUEUE for
   # the led-catcher (flux#826), kube-prometheus-stack CRDs with the chart
-  # (flux#828). Its homerun2 defaults lag the releases, so the latest are
-  # pinned on homerun2-sops and homerun2-portal below.
+  # (flux#828). Its homerun2 defaults lagged the releases, so the latest were
+  # pinned on homerun2-sops and homerun2-portal.
+  # v1.233.0 (#683, the same tag as clusters/edge since #668): schmetterpause
+  # v0.24.0 (additive migrations only: player avatars), zaehlwerk/pong/portal
+  # v0.47.1, omni-pitcher v2.4.1, demo-pitcher v2.3.1, OpenBao chart 0.30.7,
+  # cert-manager v1.21.3, trust-manager v0.26.0, barman-cloud plugin 0.9.0.
+  # The homerun2 defaults now equal the old pins (led-catcher v0.28.0,
+  # notification-catcher v3.18.0, portal v0.8.0), so those pins are gone.
   source:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.182.2
+    tag: v1.233.0
     interval: 1h
   path: ./clusters/sthings-edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -246,12 +252,6 @@ spec:
         HOMERUN2_DEMO_PITCHER_BASE_PATH: /pitch
         HOMERUN2_CONFIG_VIEWER_BASE_PATH: /config
         HOMERUN2_NOTIFICATION_CATCHER_BASE_PATH: /notify
-        # The latest releases where flux's defaults are older (v1.182.2:
-        # led-catcher v0.20.0, notification-catcher v3.13.0), as on
-        # homerun2-dev. Drop a pin once the flux default catches up.
-        HOMERUN2_LED_CATCHER_VERSION: v0.28.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-led-catcher
-        HOMERUN2_NOTIFICATION_CATCHER_VERSION: v3.18.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher
-        HOMERUN2_NOTIFICATION_CATCHER_KUSTOMIZE_VERSION: v3.18.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-notification-catcher-kustomize
       secrets:
         homerun2-sops-secrets:
           HOMERUN2_REDIS_PASSWORD_B64: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_REDIS_PASSWORD_B64 # pragma: allowlist secret
@@ -278,6 +278,11 @@ spec:
         # (Before: https://schmetterpause.<EDGE_DOMAIN>, the default.)
         TABLETENNIS_SCOREBOARD_HANDOVER: sops
         TABLETENNIS_ZAEHLWERK_SCHMETTERPAUSE_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
+        # The winner's figure on the LED panel after a won set or match (flux
+        # ZAEHLWERK_PANEL_FIGURES_URL, schmetterpause ADR-0030; as clusters/edge).
+        # The flux default is schmetterpause.<EDGE_DOMAIN>, which the edge CA
+        # signs and the catcher, mounting no CA, refuses; the players' name it accepts.
+        TABLETENNIS_ZAEHLWERK_PANEL_FIGURES_URL: https://schmetterpause.${EDGE_PLAY_DOMAIN}
         # The pages' links -- zaehlwerk's Pong, the way back to zaehlwerk -- go
         # to the players' names (./play/play-routes), which a phone reaches
         # without the edge CA (flux#736).
@@ -333,8 +338,8 @@ spec:
         TABLETENNIS_ZAEHLWERK_BUTTONS_SIM: 'on'
         TABLETENNIS_ZAEHLWERK_BUTTONS_HOSTNAME: buttons
         TABLETENNIS_ZAEHLWERK_BUTTONS_DEVICE: button
-        # The sim's image: the bundle still defaults to v0.28.0 (flux v1.182.2),
-        # the component itself to v0.30.0, with zaehlwerk. Drop once the bundle catches up.
+        # The sim's image: the bundle defaults to v0.47.0 (flux v1.233.0), the
+        # component itself to v0.47.1, with zaehlwerk. Drop once the bundle catches up.
         TABLETENNIS_ZAEHLWERK_BUTTONS_VERSION: v0.47.1 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-buttons
       secrets:
         tabletennis-sops-secrets:
@@ -370,11 +375,9 @@ spec:
     # https://homerun2-portal.<EDGE_PLAY_DOMAIN> (./play). The keys are the
     # BASE_PATHs set on homerun2-sops and the table's light-catcher above;
     # the table's light is in its own namespace. No login, no secrets.
-    # v0.7.0 knows the notification-catcher by its key notify (flux v1.182.2
-    # still defaults to v0.6.0).
+    # Its version is the flux default (v0.8.0 in v1.233.0).
     homerun2-portal:
       vars:
-        HOMERUN2_PORTAL_VERSION: v0.8.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-portal
         HOMERUN2_PORTAL_HOSTNAME: homerun2-portal
         HOMERUN2_PORTAL_SERVICES: core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,light=http://homerun2-light-catcher,table|Table light=http://homerun2-light-catcher.homerun2-tabletennis,wled=http://homerun2-wled-mock,config=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher
     # OpenBao for the devices' PKI/ACME: static seal, one node. THE SEAL KEY
