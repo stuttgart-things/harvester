@@ -27,14 +27,15 @@ spec:
       name: minio-secrets
       optional: false
   # ZITADEL login for the console (harvester#574) NEXT TO the root user, which
-  # stays (auth.rootUser/rootPassword from minio-secrets). The claim `groups`
-  # (clusters/platform/zitadel-config/groups-claim.tf) names MinIO policies:
-  # minio-admin / minio-readonly from
-  # clusters/machinery-hv/xrs/platform-minio-oidc-policies.yaml; other values
-  # in it have no policy and are skipped.
+  # stays (auth.rootUser/rootPassword from minio-secrets). Two OpenID configs,
+  # two buttons (harvester#719): MinIO cannot read ZITADEL's role map, so each
+  # config has a fixed ROLE_POLICY and ZITADEL's role check decides who may
+  # use it -- client `minio` => policy minio-admin ("ZITADEL (admin)"),
+  # client `minio-readonly` (suffix _READONLY) => minio-readonly. Policies:
+  # clusters/machinery-hv/xrs/platform-minio-oidc-policies.yaml.
   #
-  # Client ID and secret: SOPS Secret minio-oidc-zitadel
-  # (./minio-oidc-zitadel.enc.yaml) as env. MINIO_BROWSER_REDIRECT_URL makes
+  # Client IDs and secrets: SOPS Secret minio-oidc-zitadel
+  # (./minio-oidc-zitadel.enc.yaml) as env, the readonly ones with _READONLY. MINIO_BROWSER_REDIRECT_URL makes
   # the console call back on <url>/oauth_callback, as registered in
   # zitadel-config/apps.auto.tfvars. The cluster trust bundle goes into
   # /certs/CAs (the server runs with --certs-dir /certs), so MinIO trusts
@@ -59,12 +60,20 @@ spec:
             extraEnvVars:
               - name: MINIO_IDENTITY_OPENID_CONFIG_URL
                 value: https://zitadel.platform.sthings.lab/.well-known/openid-configuration
-              - name: MINIO_IDENTITY_OPENID_CLAIM_NAME
-                value: groups
+              - name: MINIO_IDENTITY_OPENID_ROLE_POLICY
+                value: minio-admin
               - name: MINIO_IDENTITY_OPENID_SCOPES
                 value: openid,profile,email
               - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME
-                value: ZITADEL
+                value: ZITADEL (admin)
+              - name: MINIO_IDENTITY_OPENID_CONFIG_URL_READONLY
+                value: https://zitadel.platform.sthings.lab/.well-known/openid-configuration
+              - name: MINIO_IDENTITY_OPENID_ROLE_POLICY_READONLY
+                value: minio-readonly
+              - name: MINIO_IDENTITY_OPENID_SCOPES_READONLY
+                value: openid,profile,email
+              - name: MINIO_IDENTITY_OPENID_DISPLAY_NAME_READONLY
+                value: ZITADEL (read-only)
               - name: MINIO_BROWSER_REDIRECT_URL
                 value: https://artifacts-console.platform.sthings.lab
             extraVolumes:
