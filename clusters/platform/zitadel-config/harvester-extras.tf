@@ -1,15 +1,11 @@
 # HARVESTER-ONLY -- not part of the shared root (stuttgart-things#4612).
 #
 # main.tf, variables.tf and outputs.tf here are the LabUL/LabDA files (module
-# sources pinned to a commit). This file and ./groups-claim.tf are the one
-# exception to "only the tfvars differ" (harvester#680): ArgoCD, MinIO and
-# Grafana on platform were wired before the shared root existed and read the
-# flat `groups` claim with their own role keys (argocd-readonly, minio-*,
-# grafana-*). They stay here, unchanged, until they move to the role map /
-# the shared root's argocd project (argo-cd-oidc + `argocd_roles`, #677).
-# Until then `argocds` in lab.auto.tfvars stays empty: the shared root's
-# zitadel_trigger_actions.pre_userinfo would own the same trigger as
-# groups-claim.tf and the two would overwrite each other.
+# sources pinned to a commit). This file is the one exception to "only the
+# tfvars differ" (harvester#680): MinIO and Grafana on platform were wired
+# before the shared root existed. Since #719 they read no `groups` claim:
+# Grafana uses ZITADEL's role map, MinIO one client per policy (ROLE_POLICY).
+# Argo CD moved to the shared root's argocd project (#677, moved.tf).
 #
 # Further OIDC clients next to the portal (harvester#574): one project per
 # app, so each app has its own roles and ZITADEL refuses a user without a
@@ -100,8 +96,7 @@ resource "zitadel_project_role" "app" {
 }
 
 # A confidential web client per app (code flow, secret via basic auth), as
-# for the portal. Roles and profile claims in the ID token; the flat `groups`
-# claim most apps read comes from ./groups-claim.tf.
+# for the portal. Roles (ZITADEL's role map) and profile claims in the ID token.
 resource "zitadel_application_oidc" "app" {
   for_each = local.apps
 
