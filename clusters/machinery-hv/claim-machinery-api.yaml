@@ -1,0 +1,101 @@
+---
+# claim-machinery-api on machinery-hv (harvester#676, #681): renders Crossplane
+# claims from ../../api-templates-profiles.yaml, as on LabUL machinery-labul and
+# LabDA machinery. claims.machinery-hv.sthings.lab, through the cluster Gateway.
+#
+# The old instance on platform (clusters/platform/apps/claim-machinery-api.yaml,
+# v0.21.1, no auth) stays until Backstage and the other clients are switched
+# (#681); then it is removed there.
+#
+# flux-apps ./apps/claim-machinery-api directly, like platform -- not the cicd
+# component of the bundle: adding a component to cicd-platform would put this
+# app behind the Crossplane profile's 20m wait and the other way round.
+#
+# ORDER AUTH. POST .../order needs a JWT of the platform ZITADEL for the
+# sthings-backstage project. The keys live in the ConfigMap
+# claim-machinery-order (./claim-machinery-order), applied by the second
+# Kustomization below.
+#
+# ORDER AS PR stays OFF: no GITHUB_DISPATCH_* and no Secret
+# claim-machinery-github-app (the GitHub App is #681). Without it, /order only
+# renders and returns the manifest -- it writes nothing to any cluster or repo.
+# ENABLE_HOMERUN stays at the base default (false) and the profile defines no
+# functions, so an order has no side effect at all here.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: claim-machinery-api
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: cicd
+spec:
+  # The HTTPRoute needs the Gateway (infra-platform).
+  dependsOn:
+    - name: cilium-gateway
+  interval: 1h
+  retryInterval: 1m
+  # Applies an OCIRepository and a second Kustomization; wait holds until the
+  # inner one has pulled and applied the OCI artifact.
+  timeout: 10m
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/claim-machinery-api
+  postBuild:
+    substitute:
+      # v0.29.0: showWhen/enumWhen checked before KCL, 400 with field errors.
+      # v0.30.0: the UI shows the login, owner choices and an order
+      # confirmation. All 15 templates of the profile render with their
+      # defaults on v0.30.0 (checked 2026-11-17, harvester#676).
+      CLAIM_MACHINERY_API_VERSION: v0.30.0 # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
+      CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
+      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/api-templates-profiles.yaml"
+      FLUX_SOURCE_API_VERSION: v1
+      GATEWAY_NAME: machinery-hv-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: claims
+      DOMAIN: machinery-hv.sthings.lab
+      # No trust-manager on this cluster: the bundle is a plain ConfigMap with
+      # the sthings.lab root (OpenBao PKI, the issuer of ZITADEL's
+      # certificate), in ./claim-machinery-order. Mounted as
+      # /etc/ssl/custom/trust-bundle.pem = AUTH_OIDC_CA_FILE. SSL_CERT_DIR adds
+      # it to the image's system roots (raw.githubusercontent.com).
+      CLAIM_MACHINERY_TRUST_BUNDLE_CONFIGMAP: claim-machinery-trust-bundle
+      CLAIM_MACHINERY_TRUST_BUNDLE_KEY: trust-bundle.pem
+      CLAIM_MACHINERY_SSL_CERT_DIR: /etc/ssl/custom
+---
+# The order-auth ConfigMap and the trust bundle, in the namespace the
+# Kustomization above creates. A Kustomization of its own, as on LabUL
+# (machinery-labul-claim-order): on a fresh bootstrap flux-system would fail its
+# dry run on objects in a namespace that does not exist yet.
+#
+# NO RELOADER on this cluster. The Deployment reads both objects optionally;
+# a pod started before they existed (first bootstrap) or before a change runs
+# without them -- after any change here: kubectl -n claim-machinery rollout
+# restart deploy/claim-machinery-api.
+#
+# prune: true -- deleting ./claim-machinery-order/claim-machinery-order.yaml
+# switches order auth off again (after a restart).
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: claim-machinery-order
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: cicd
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 2m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: claim-machinery-api
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./clusters/machinery-hv/claim-machinery-order

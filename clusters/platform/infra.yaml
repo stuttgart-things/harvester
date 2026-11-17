@@ -185,6 +185,34 @@ spec:
       # out (#518). Needs stuttgart-things/flux#831; without it this is unused.
       TRUST_BUNDLE_SECRET_CA_SECRET: openbao-pki-ca # pragma: allowlist secret
       TRUST_BUNDLE_SECRET_CA_KEY: ca.crt # pragma: allowlist secret
+  # #600: trust-manager exits with "leader election lost" when lease renewals
+  # stall. The chart default (15s lease / 10s renew deadline, 5s per request)
+  # does not survive the first ~30 min after a platform boot, when lease PUTs
+  # take 1-5s at p99. cert-manager runs with 60s/40s on the same API server and
+  # never lost its lease. Same values here, plus requests so the pod is no
+  # longer BestEffort while the node is busy starting everything else.
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+        name: trust-manager
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: trust-manager
+        spec:
+          values:
+            app:
+              leaderElection:
+                leaseDuration: 60s
+                renewDeadline: 40s
+            resources:
+              requests:
+                cpu: 25m
+                memory: 64Mi
+              limits:
+                memory: 256Mi
 ---
 # The ClusterIssuer for the OpenBao on this cluster — the tokenless half of the
 # migration off the infra Vault.
@@ -463,10 +491,35 @@ spec:
     - components/grafana-datasource
   prune: true
   wait: true
+  # Chart 20.0.0 dropped the bundled MinIO subchart and its schema refuses
+  # unknown top-level keys, so the release's `minio: {enabled: false}` fails
+  # every upgrade ("additional properties 'minio' not allowed", harvester#664).
+  # Storage is unaffected: filesystem on the singleBinary PVC, rendered
+  # identically by 19.4.0 and 21.x. A null removes the key and is a no-op
+  # once flux-infra's infra/loki/release.yaml drops it; then this patch goes.
+  patches:
+    - target:
+        kind: HelmRelease
+        name: loki
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: loki
+        spec:
+          values:
+            minio: null
+            # One node: the chart's required gateway anti-affinity lets no
+            # surge pod schedule, so a RollingUpdate never finishes (first
+            # seen on the 21.3.1 upgrade). Recreate: a few seconds without
+            # the gateway on a rollout instead.
+            gateway:
+              deploymentStrategy:
+                type: Recreate
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
-      LOKI_VERSION: "21.2.1" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
+      LOKI_VERSION: "21.3.1" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
       LOKI_STORAGE_CLASS: local-path
       LOKI_STORAGE_SIZE: 30Gi
       LOKI_RETENTION: 168h

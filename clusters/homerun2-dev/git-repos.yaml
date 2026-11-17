@@ -11,6 +11,16 @@
 # hand-written per-app Kustomizations that come later; the same
 # flux-infra/flux-apps pair as in clusters/platform/git-repos.yaml.
 #
+# PINNED TO A TAG (harvester#672), like clusters/machinery-hv. On `branch:
+# main` every merge in stuttgart-things/flux reached this cluster without a PR
+# here; with a tag each step arrives as a Renovate PR with a visible diff.
+# Both objects carry the same tag -- keep them in step.
+#
+# v1.233.0 (2026-11): rendered against the previously deployed main@1d455dda,
+# which is v1.233.0 plus one commit (apps/infisical image tag, not deployed on
+# this cluster). Every path this cluster's Kustomizations read is
+# byte-identical, so the pin changes nothing that runs.
+#
 # flux-bootstrap does NOT create these. It renders the FluxInstance and its
 # secrets only -- without this file every Kustomization sits at
 # "source not found" and nothing deploys.
@@ -22,7 +32,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -33,5 +43,5 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    branch: main
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git

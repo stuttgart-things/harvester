@@ -38,6 +38,24 @@
 # CROSSPLANE_OPENTOFU_PROVIDER_VERSION (v1.1.8 -> v1.1.9), which the machinery
 # profile's own provider pin overrides (v1.1.6 runs), as before.
 #
+# v1.233.0 (2026-11-16, harvester#673; replaces the v1.179.0 draft #495).
+# Rendered at both tags (every Kustomization recursively, object by object):
+# Crossplane chart 2.3.3 -> 2.4.2 (minor); machinery profile `cluster`
+# v0.12.3 -> v0.16.4, `rancher-cluster` now listed at v0.12.0 (was patched in
+# place to v0.11.0, same derived name), platform v0.9.0, cni v0.1.5,
+# harvester-vm v0.2.0, vm-provision/vsphere-vm v0.2.0, proxmoxvm v0.22.0,
+# packer-* v0.7.0, scheduled-run v0.2.0, vspherevm v0.15.0; provider-kubernetes
+# v1.4.1, provider-proxmox-bpg v1.22.0 (+ a workspace PVC), functions
+# auto-ready v0.6.9 / environment-configs v0.7.6 / go-templating v0.12.6;
+# tekton-operator (CRD tektonhubs dropped, none exist here); machinery
+# v1.17.0; cert-manager v1.21.3, headlamp 0.46.0, flux-web 0.62.1, openebs
+# 4.6.2. `crossplane composition render` of the live app-dev-hv XRs:
+# rancher-cluster, platform and cni compose identically; `cluster` v0.16.4
+# (xplane-cluster 0.27.4) appends `local-storage` to the RancherCluster's
+# machineGlobalConfig.disable (k3s + a storage profile). On a running
+# cluster that re-plans the node: Rancher restarts k3s, and k3s deletes the
+# local-path provisioner.
+#
 # Both objects point at the same tag. They are two because the bundles name
 # their source separately (FLUX_SOURCE / APPS_SOURCE); keep them in step.
 #
@@ -51,7 +69,7 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.95.0
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -62,5 +80,5 @@ metadata:
 spec:
   interval: 10m0s
   ref:
-    tag: v1.95.0
+    tag: v1.233.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git

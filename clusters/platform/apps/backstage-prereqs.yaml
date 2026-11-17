@@ -27,7 +27,17 @@ data:
   # worker-step templates grouped last, v1.22.0 platform-team separated from
   # developers in the permission policy and guest switchable
   # (BACKSTAGE_AUTH_GUEST_ENABLED in backstage.yaml, sthings-backstage#202).
-  imageTag: "v1.22.0"
+  # v1.23.0 ZITADEL sign-in with the zitadelProjectRoles resolver
+  # (AUTH_OIDC_ENABLED, #203) and a platform-only /devtools (#204), v1.24.x
+  # Pull Requests tab and /devtools fix, v1.25.x beta tracks/team roles and
+  # machinery orders (private to their owner), v1.26.0 MachineryClaimPicker
+  # proxyPaths, v1.27.0-v1.28.0 live facts + Flux/Argo CD on
+  # kubernetes-cluster entities (opt-in, no entry here), v1.29.0 template
+  # groups and the Backstage monorepo update (#185), v1.30.0 HTTPRoutes as
+  # links on cluster entities (#222). harvester#675.
+  #
+  # This ConfigMap WINS over BACKSTAGE_IMAGE_TAG in backstage.yaml: bump both.
+  imageTag: "v1.30.0"
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
