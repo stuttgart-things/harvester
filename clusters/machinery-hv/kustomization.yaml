@@ -27,3 +27,5 @@ resources:
   - fleet-state.yaml
   # -> ./xrs          prune: FALSE
   - xrs.yaml
+  # flux-apps ./apps/claim-machinery-api + -> ./claim-machinery-order
+  - claim-machinery-api.yaml
