@@ -35,6 +35,16 @@ vault_roles = {
   sthings = ["vault-admin"]
 }
 
-# No argocd project yet (lab.auto.tfvars): ArgoCD's roles are in
-# apps.auto.tfvars (harvester-extras.tf) until #677.
-argocd_roles = {}
+# Argo CD (#677), as in the portal: portal-admin => argocd-admin
+# (role:admin), portal-user => argocd-reader (role:readonly). The local
+# admin stays as emergency access.
+argocd_roles = {
+  sthings  = ["argocd-admin"]
+  indy     = ["argocd-admin"]
+  tommy    = ["argocd-admin"]
+  mcfly    = ["argocd-reader"]
+  mcclane  = ["argocd-reader"]
+  fmcguire = ["argocd-reader"]
+  rdevaney = ["argocd-reader"]
+  someara  = ["argocd-reader"]
+}

@@ -20,20 +20,20 @@ unreviewed). Bump the ref and copy the three files together.
 | `users.auto.tfvars` | `users`, `backstage_roles`, `vault_roles`, `argocd_roles` |
 | `backend.tf` | where the state lives |
 
-**Harvester-only, the exception to "only the tfvars differ"** -- until
-ArgoCD, MinIO and Grafana move to the role map / the shared argocd project:
+**Harvester-only, the exception to "only the tfvars differ"** -- MinIO and
+Grafana, wired before the shared root existed:
 
 | File | What |
 |---|---|
-| [`harvester-extras.tf`](./harvester-extras.tf) + [`apps.auto.tfvars`](./apps.auto.tfvars) | the projects/clients `argocd`, `minio`, `grafana` (#574), unchanged by #680 |
-| [`groups-claim.tf`](./groups-claim.tf) | the flat `groups` claim (Actions v1) they read |
-| [`moved.tf`](./moved.tf) | `module.zitadel_portal.*` → `module.users` / `module.portal` (#680); same IDs |
+| [`harvester-extras.tf`](./harvester-extras.tf) + [`apps.auto.tfvars`](./apps.auto.tfvars) | the projects/clients `minio`, `minio-readonly`, `grafana` (#574, #719) |
+| [`moved.tf`](./moved.tf) | `module.zitadel_portal.*` → `module.users` / `module.portal` (#680); `argocd` → `module.argocd` (#677); same IDs |
 
-`argocds` stays `{}` until #677 (argo-cd-oidc, claim `argocd_roles`): the
-shared root's `zitadel_trigger_actions.pre_userinfo` would take over the
-"pre userinfo creation" trigger that `groups-claim.tf` owns, and the two
-resources would overwrite each other's action list. `vaults` stays `{}`
-until OpenBao gets its OIDC login (`vault-oidc-zitadel`, #574).
+Since #677/#719 there is **no `groups` claim any more** (`groups-claim.tf`,
+Actions v1, removed): Argo CD reads `argocd_roles` (action `argocdRoles` of the
+shared root, `argocds` in `lab.auto.tfvars`), Grafana reads ZITADEL's role map
+`urn:zitadel:iam:org:project:roles` (JMESPath in `../infra.yaml`), MinIO has
+one client per policy (`ROLE_POLICY`, two login buttons, `../apps/minio.yaml`),
+OpenBao reads the role map with bound claims (`../openbao/oidc.tf`).
 
 ## What it creates
 
@@ -174,31 +174,28 @@ password an initial one again.
 - **grants** for users of `users.auto.tfvars` (ids from the module output
   `user_ids`)
 
-[`groups-claim.tf`](./groups-claim.tf): an Actions-v1 script on the
-customise-token flow (userinfo + access token) sets a flat **`groups`** claim
-with every role key the user holds on any project. ArgoCD, Grafana, MinIO and
-OpenBao read that; each matches only its own keys. Actions v1 is deprecated in
-ZITADEL v4 -- check it before a major upgrade.
+Roles reach the apps through ZITADEL's role map in the ID token (no
+`groups` claim since #719), see the table above.
 
 **Every app keeps its local admin** -- these clients add a login, they replace
 none (harvester#574).
 
 ```bash
-terraform output -json app_client_ids     | jq -r '.argocd'
-terraform output -json app_client_secrets | jq -r '.argocd'   # sensitive -- don't paste
+terraform output -json app_client_ids     | jq -r '.grafana'
+terraform output -json app_client_secrets | jq -r '.grafana'   # sensitive -- don't paste
 ```
 
 | App | URL | Roles | Local fallback |
 |---|---|---|---|
-| `argocd` | `https://argocd.platform.sthings.lab` | `argocd-admin`, `argocd-readonly` | `admin` |
-| `minio` | `https://artifacts-console.platform.sthings.lab` | `minio-admin`, `minio-readonly` (MinIO policies of the same name) | root user |
+| `minio` | `https://artifacts-console.platform.sthings.lab` | `minio-admin` → `ROLE_POLICY` minio-admin, button "ZITADEL (admin)" | root user |
+| `minio-readonly` | same | `minio-readonly` → `ROLE_POLICY` minio-readonly, button "ZITADEL (read-only)" | root user |
 | `grafana` | `https://grafana.platform.sthings.lab` | `grafana-admin` (Admin), `grafana-readonly` (Viewer) | `admin` |
 
 ### Wiring ArgoCD
 
 `../apps/argocd-platform.yaml` patches the HelmRelease `argocd-deployment`:
-`url`, RBAC (`argocd-admin` => `role:admin`, `argocd-readonly` =>
-`role:readonly`, scopes `[groups]`) and `oidc.config` via `valuesFrom` from the
+`url`, RBAC (`argocd-admin` => `role:admin`, `argocd-reader` =>
+`role:readonly`, scopes `[argocd_roles]`, #677) and `oidc.config` via `valuesFrom` from the
 SOPS Secret `argocd-oidc-zitadel` in `argocd` (`../apps/argocd-oidc-zitadel.enc.yaml`),
 key `values.yaml`: a values document with `configs.cm."oidc.config"` (no
 `targetPath` -- that parses as `--set` and breaks on commas).
@@ -208,8 +205,8 @@ argocd client:
 
 ```bash
 umask 077
-CID=$(terraform output -json app_client_ids | jq -r '.argocd')
-terraform output -json app_client_secrets | jq -j '.argocd' > /dev/shm/argocd-cs
+CID=$(terraform output -json argocd_client_ids | jq -r '.argocd')
+terraform output -json argocd_client_secrets | jq -j '.argocd' > /dev/shm/argocd-cs
 { echo "name: ZITADEL"
   echo "issuer: https://zitadel.platform.sthings.lab"
   echo "clientID: \"$CID\""

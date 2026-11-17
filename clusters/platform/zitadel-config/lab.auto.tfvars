@@ -2,7 +2,7 @@
 # harvester#680). main.tf / variables.tf / outputs.tf are LabUL's and LabDA's
 # (module sources pinned to a commit); the lab differences live here, in
 # users.auto.tfvars and backend.tf -- plus the Harvester-only
-# harvester-extras.tf / groups-claim.tf / apps.auto.tfvars (README).
+# harvester-extras.tf / apps.auto.tfvars (README).
 
 zitadel_domain = "zitadel.platform.sthings.lab"
 
@@ -49,9 +49,11 @@ vaults = {
   "openbao-platform" = "https://openbao.platform.sthings.lab"
 }
 
-# argocd project: none yet. ArgoCD on platform logs in through the `argocd`
-# app of harvester-extras.tf (flat groups claim, argocd-readonly); it moves
-# here with the argo-cd-oidc / argocd_roles switch (#677). Setting this
-# before would put zitadel_trigger_actions.pre_userinfo on the trigger that
-# groups-claim.tf owns.
-argocds = {}
+# argocd project (#677): Argo CD on platform. The key is the client name;
+# `argocd` keeps the client of the former harvester-extras.tf app (moved.tf),
+# so its client ID/secret in apps/argocd-oidc-zitadel.enc.yaml stay valid.
+# RBAC on the claim argocd_roles (action argocdRoles, main.tf) in
+# ../apps/argocd-platform.yaml.
+argocds = {
+  "argocd" = "https://argocd.platform.sthings.lab"
+}

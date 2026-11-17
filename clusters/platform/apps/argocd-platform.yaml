@@ -43,9 +43,12 @@ spec:
   #
   # url: ArgoCD builds the redirect URI from it (<url>/auth/callback, as
   # registered in ../zitadel-config/apps.auto.tfvars); it said
-  # https://argocd.example.com. RBAC: the flat `groups` claim
-  # (../zitadel-config/groups-claim.tf), argocd-admin => role:admin,
-  # argocd-readonly => role:readonly; no default role -- ZITADEL's role check
+  # https://argocd.example.com. RBAC: the claim `argocd_roles` (#677), a flat
+  # list of the user's roles on the argocd project, set by the ZITADEL action
+  # argocdRoles of the shared root (../zitadel-config/main.tf, var.argocds) --
+  # as LabUL's argo-cd-oidc component, which targets the cicd/platform bundle
+  # and so cannot be used on this one. argocd-admin => role:admin,
+  # argocd-reader => role:readonly; no default role -- ZITADEL's role check
   # refuses users without either anyway.
   patches:
     - target:
@@ -78,10 +81,10 @@ spec:
                         url: https://argocd.platform.sthings.lab
                       rbac:
                         policy.default: ""
-                        scopes: "[groups]"
+                        scopes: "[argocd_roles]"
                         policy.csv: |
                           g, argocd-admin, role:admin
-                          g, argocd-readonly, role:readonly
+                          g, argocd-reader, role:readonly
                     # Metrics + ServiceMonitors for the ArgoCD dashboard
                     # (../infra.yaml, argo-cd examples/dashboard.json).
                     controller:

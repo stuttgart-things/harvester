@@ -29,3 +29,38 @@ moved {
   from = module.zitadel_portal.zitadel_user_grant.user
   to   = module.portal.zitadel_user_grant.user
 }
+
+# #677: Argo CD moves from harvester-extras.tf (var.apps.argocd, flat groups
+# claim) to the shared root's argocd project (var.argocds, claim
+# argocd_roles). Same resource types, so project, client (ID + secret) and
+# the admins' grants keep their IDs. The role argocd-readonly is replaced by
+# the shared root's argocd-reader (role and reader grants are re-created).
+moved {
+  from = zitadel_project.app["argocd"]
+  to   = module.argocd[0].zitadel_project.project
+}
+
+moved {
+  from = zitadel_application_oidc.app["argocd"]
+  to   = module.argocd[0].zitadel_application_oidc.app["argocd"]
+}
+
+moved {
+  from = zitadel_project_role.app["argocd/argocd-admin"]
+  to   = module.argocd[0].zitadel_project_role.role["argocd-admin"]
+}
+
+moved {
+  from = zitadel_user_grant.app["argocd/sthings"]
+  to   = module.argocd[0].zitadel_user_grant.user["sthings"]
+}
+
+moved {
+  from = zitadel_user_grant.app["argocd/indy"]
+  to   = module.argocd[0].zitadel_user_grant.user["indy"]
+}
+
+moved {
+  from = zitadel_user_grant.app["argocd/tommy"]
+  to   = module.argocd[0].zitadel_user_grant.user["tommy"]
+}
