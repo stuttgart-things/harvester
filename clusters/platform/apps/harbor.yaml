@@ -1,3 +1,12 @@
+# RETIRED (#693): the Bitnami Harbor (chart 27.0.3, Harbor 2.13,
+# bitnamilegacy images) is replaced by ./goharbor.yaml. Kept suspended, with
+# its HelmRelease suspended and all workloads scaled to 0, so the namespace
+# "harbor" and its PVCs (database, registry) stay as the way back.
+#
+# Way back: flux resume hr harbor -n harbor, scale up, point the routes back.
+#
+# DO NOT just delete this file: prune would remove the namespace "harbor"
+# with its PVCs. Removing it is a separate step with an explicit OK.
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -65,7 +74,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-apps
-  suspend: false
+  suspend: true
   timeout: '10m'
   wait: true
   healthChecks:
