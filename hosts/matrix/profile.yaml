@@ -8,9 +8,9 @@
 # keep the two identical), so the panel and the simulator agree. The one that matters for table tennis is tabletennis-score:
 # the score stays up (hold) until the next point replaces it.
 #
-# The panel reads `messages` and `tabletennis` at once (led_redis_stream in
-# ./README.md): the demo's score stays up while cards for the cluster pass over
-# it (clusters/homerun2-dev/README.md, "The demo").
+# The panel reads `messages` and `ambient` (led_redis_stream in ./README.md);
+# `tabletennis` only during a real match, switched on by hand (README, "Table
+# tennis"): the score then stays up while cards for the cluster pass over it.
 # Notifications are `card`s (homerun2-led-catcher#121): a header bar in the
 # severity colour with the system, the title wrapped over 3-4 lines, the
 # message as a ticker, tags, and author + HH:MM of the event. strip_prefix

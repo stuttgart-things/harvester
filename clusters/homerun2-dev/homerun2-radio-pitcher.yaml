@@ -26,8 +26,8 @@
 # RAG-AI), not OpenRouter -- the shared free key runs into
 # 429 free-models-per-day. An answer with a number that is not in the input,
 # or one too long for the card, is rejected and the fixed text airs. Ollama
-# down = fixed texts, nothing else changes. Switched OFF for now (below):
-# numbers spelled out as words slip past the guard (radio-pitcher#11).
+# down = fixed texts, nothing else changes. Number words and a dropped
+# cluster name are rejected too since v0.2.0 (radio-pitcher#11).
 #
 # The schedule is re-read when the ConfigMap changes, without a restart; a
 # broken one is logged, /ready reports it and the last good one stays on air.
@@ -127,12 +127,13 @@ spec:
                           optional: false
                     - name: RADIO_NEWS_FEEDS
                       value: cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml,hn=https://hnrss.org/frontpage?points=300
-                    # Off since gemma3 wrote "Six of the sixty-four VMs" for
-                    # 6 VMs. Fixed in v0.2.0 (radio-pitcher#11: number words,
-                    # repeated numbers and a dropped cluster name are
-                    # rejected); switching it on is this one line.
+                    # On since 2026-11-18. It was off while gemma3 could write
+                    # "Six of the sixty-four VMs" for 6 VMs; v0.2.0 rejects
+                    # number words, repeated numbers and a dropped cluster name
+                    # (radio-pitcher#11). Dry run of v0.7.0 against this
+                    # cluster and Harvester: every number and name kept.
                     - name: RADIO_LLM_ENABLED
-                      value: "false"
+                      value: "true"
                     - name: OLLAMA_URL
                       value: http://ollama-gpu.sthings.lab:11434
                     - name: OLLAMA_MODEL
