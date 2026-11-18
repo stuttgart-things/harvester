@@ -53,10 +53,16 @@ spec:
     - ../../components/zaehlwerk-panel-redis
     # The running match on schmetterpause's start page.
     - ../../components/schmetterpause-zaehlwerk-on
+    # GET /api/statistics (schmetterpause v0.25.0+, ADR-0032) for the radio's
+    # tabletennis-stats (./homerun2-radio-pitcher.yaml): a read-only token,
+    # SCHMETTERPAUSE_STATISTICS_TOKEN, the same value as the radio's Secret
+    # ./homerun2-radio-pitcher-schmetterpause.enc.yaml. Needs flux#1041.
+    - ../../components/schmetterpause-statistics-sops
   postBuild:
     # SCHMETTERPAUSE_SESSION_KEY, SCHMETTERPAUSE_DB_PASSWORD,
-    # SCHMETTERPAUSE_SCOREBOARD_TOKEN, ZAEHLWERK_MATCHES_TOKEN (all required)
-    # and ZAEHLWERK_REDIS_PASSWORD (homerun2's) -- ./homerun2-secrets-subst.enc.yaml.
+    # SCHMETTERPAUSE_SCOREBOARD_TOKEN, SCHMETTERPAUSE_STATISTICS_TOKEN,
+    # ZAEHLWERK_MATCHES_TOKEN (all required) and ZAEHLWERK_REDIS_PASSWORD
+    # (homerun2's) -- ./homerun2-secrets-subst.enc.yaml.
     substituteFrom:
       - kind: Secret
         name: homerun2-secrets-subst
@@ -107,7 +113,8 @@ spec:
       # v0.41.0..v0.47.0: the players' figures and colours on Pong's board
       # (paddles, names) and on the panel, the match's length to the panel;
       # v0.47.1: ends change only between sets, never at five (zaehlwerk#232).
-      SCHMETTERPAUSE_VERSION: v0.24.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
+      # schmetterpause v0.25.0: GET /api/statistics (ADR-0032).
+      SCHMETTERPAUSE_VERSION: v0.25.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
       ZAEHLWERK_VERSION: v0.47.1 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
   patches:
     # SP_PUBLIC_BASE_URL: the base ships a placeholder, and schmetterpause
