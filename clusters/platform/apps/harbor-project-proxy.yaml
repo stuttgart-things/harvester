@@ -8,20 +8,19 @@ metadata:
   name: harbor-project-proxy
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: harbor
   force: false
   interval: '1h'
   path: './apps/harbor/components/project-proxy'
   postBuild:
     substitute:
-      HARBOR_NAMESPACE: harbor
+      # goharbor since #693: the HelmRelease "harbor" it depends on and the
+      # harbor-core it forwards to are the goharbor chart's (./goharbor.yaml).
+      HARBOR_NAMESPACE: goharbor
       HARBOR_HOSTNAME: harbor
       HARBOR_DOMAIN: platform.sthings.lab
-      # Exposure is via the Gateway API HTTPRoute (already deployed by the
-      # harbor-httproute Kustomization, which includes the wildcard
-      # *.harbor.<domain> route to the harbor-project-proxy service), so the
-      # chart's own nginx ingress is disabled.
+      # Exposure is via the Gateway API HTTPRoute harbor-project-proxy in
+      # ./goharbor.yaml (*.harbor.<domain>), so the chart's own nginx
+      # ingress is disabled.
       INGRESS_ENABLED: 'false'
       INGRESS_CLASS_NAME: nginx
       HARBOR_PROJECT_PROXY_VERSION: '0.0.1'
