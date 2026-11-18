@@ -2,7 +2,7 @@
 
 A Raspberry Pi 3B+ driving a 64x64 HUB75 RGB matrix through an Adafruit HAT.
 It runs [homerun2-led-catcher](https://github.com/stuttgart-things/homerun2-led-catcher)
-natively under systemd, in `full` mode: it consumes the `messages` and `tabletennis` streams from
+natively under systemd, in `full` mode: it consumes the `messages` and `ambient` streams from
 homerun2-dev's Redis (`192.168.10.179:6379`, consumer group
 `homerun2-led-matrix`), and the panel can still be driven over HTTP
 (`/display`). The same port serves the **demo UI**, a simulator of the panel
@@ -162,9 +162,9 @@ dagger -m github.com/stuttgart-things/dagger/ansible call execute \
   --parameters "ansible_become_password='{{ lookup(\"env\", \"ANSIBLE_PASSWORD\") }}' \
 led_api_token='{{ lookup(\"env\", \"LED_API_TOKEN\") }}' \
 led_mode=full led_redis_addr=192.168.10.179 led_consumer_group=homerun2-led-matrix \
-led_profile_src=/src/profile.yaml led_redis_stream=messages,tabletennis,ambient led_ui_stream_presets=messages,tabletennis \
+led_profile_src=/src/profile.yaml led_redis_stream=messages,ambient led_ui_stream_presets=messages,tabletennis \
 led_redis_password='{{ lookup(\"env\", \"REDIS_PASSWORD\") }}' \
-led_catcher_version=v0.31.0 led_base_path=/matrix \
+led_catcher_version=v0.32.0 led_base_path=/matrix \
 led_tls_hostname=matrix.sthings.lab led_tls_ip_sans=192.168.10.120 \
 led_idle=clock led_idle_style=rotate led_idle_color_mode=daylight \
 led_display_queue=3 led_redis_startup_timeout=0 \
@@ -176,7 +176,7 @@ rm -f ansible.env
 
 | Parameter | |
 |---|---|
-| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146). v0.24.0 to v0.27.2 add a picture chosen by the message, overlays, and the scoreboard's colours, header and point marker (#149 to #157). v0.27.3 accepts `REDIS_STARTUP_TIMEOUT=0` ([#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158)). v0.28.0: the scoreboard says LIVE behind a red dot instead of "BIS 11", in bigger 12x24 digits (#160). v0.29.0 adds the idle clock's faces and colour modes, v0.30.0 clock faces as playlist items ([#162](https://github.com/stuttgart-things/homerun2-led-catcher/issues/162)). v0.31.0 adds `ambient` rules: the radio programme shows only on a free panel and any notification cuts it off ([#161](https://github.com/stuttgart-things/homerun2-led-catcher/issues/161)) |
+| `led_catcher_version` | the homerun2-led-catcher release to check out; `/healthz` reports it. v0.13.0 or later for the `card` kind [`profile.yaml`](./profile.yaml) uses. v0.23.0 adds `https://` URLs as images and playlists (`PUT /matrix/display/playlist`, the **Playlist** rows of the Panel control), [homerun2-led-catcher#146](https://github.com/stuttgart-things/homerun2-led-catcher/issues/146). v0.24.0 to v0.27.2 add a picture chosen by the message, overlays, and the scoreboard's colours, header and point marker (#149 to #157). v0.27.3 accepts `REDIS_STARTUP_TIMEOUT=0` ([#158](https://github.com/stuttgart-things/homerun2-led-catcher/issues/158)). v0.28.0: the scoreboard says LIVE behind a red dot instead of "BIS 11", in bigger 12x24 digits (#160). v0.29.0 adds the idle clock's faces and colour modes, v0.30.0 clock faces as playlist items ([#162](https://github.com/stuttgart-things/homerun2-led-catcher/issues/162)). v0.31.0 adds `ambient` rules: the radio programme shows only on a free panel and any notification cuts it off ([#161](https://github.com/stuttgart-things/homerun2-led-catcher/issues/161)). v0.32.0: programme also plays over a held score unchanged for 60 s (`AMBIENT_AFTER_HOLD`), which comes back afterwards -- the Pong demo held it almost always ([#166](https://github.com/stuttgart-things/homerun2-led-catcher/issues/166)) |
 | `led_base_path=/matrix` | every route under `/matrix`, the key homerun2-dev's portal uses for the Pi ([why](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); `/healthz` and `/health` stay at the root. Needs v0.18.0, and v0.19.0 for the portal card's fragment |
 | `led_tls_hostname`, `led_tls_ip_sans` | the certificate's names; without `led_tls_hostname` no certificate and no Caddy |
 | `led_idle=clock` | the clock between displays, set in the unit, so it survives restarts (`led_idle_color`: a colour name or `r,g,b`) |
@@ -186,7 +186,7 @@ rm -f ansible.env
 | `led_mode=full`, `led_redis_addr` | the panel consumes homerun2-dev's streams from `redis-stack-lb` on `192.168.10.179` (see [its README](../../clusters/homerun2-dev/README.md#the-real-devices-led-matrix-and-wled)); the web UI and `/display` stay. `standalone` drops Redis again |
 | `led_consumer_group` | **not** the default `homerun2-led-catcher`: the simulator in the cluster reads with that group, and two consumers in one group each get half the messages |
 | `led_profile_src` | [`profile.yaml`](./profile.yaml) in this directory, at `/src` inside the Dagger container. Installed on every run, and the catcher restarts when it changes: edit it here, not on the Pi |
-| `led_redis_stream=messages,tabletennis,ambient` | `ambient` is the radio programme between notifications ([homerun2-radio-pitcher](../../clusters/homerun2-dev/homerun2-radio-pitcher.yaml)), which the profile's `radio` rule shows only on a free panel. The other two at once: the cluster's messages and the table tennis demo's score ([homerun2-dev's README](../../clusters/homerun2-dev/README.md#9-the-demo-pong-plays-tournaments-on-the-tv-the-matrix-and-the-strip)), which the profile's `tabletennis-score` rule holds on the panel while cards pass over it. A comma makes the play write `REDIS_STREAMS` (`container` collection 26.1025.1511 and later, stuttgart-things/ansible#1421) |
+| `led_redis_stream=messages,ambient` | the cluster's messages and `ambient`, the radio programme between notifications ([homerun2-radio-pitcher](../../clusters/homerun2-dev/homerun2-radio-pitcher.yaml)), which the profile's `radio` rule shows only on a free panel. **Not `tabletennis`** since 2026-11-18: the Pong demo scores 10 to 20 points a minute around the clock, so its held score kept the panel busy and every radio card was dropped (`dropped (busy)`), even with led-catcher v0.32.0's 60 s rule ([#166](https://github.com/stuttgart-things/homerun2-led-catcher/issues/166)). Switch it on for a real match, see [Table tennis](#table-tennis). A comma makes the play write `REDIS_STREAMS` (`container` collection 26.1025.1511 and later, stuttgart-things/ansible#1421) |
 | `led_ui_stream_presets` | the `messages` / `tabletennis` buttons in the demo UI, for looking at one stream alone |
 | `led_redis_password` | written to `/etc/default/led-catcher` beside the token |
 | `led_api_token` | the bearer token for `POST /display`, written to `/etc/default/led-catcher` (`0600`) |
@@ -237,7 +237,11 @@ zaehlwerk pitches each score onto the `tabletennis` stream. The panel only
 shows it while subscribed to that stream, and switching is done by hand, as on
 the cluster's simulator ([why](../../clusters/homerun2-dev/README.md#tabletennis-is-a-stream-nobody-reads-and-that-is-the-decision)):
 the **tabletennis** button on https://matrix.sthings.lab/matrix/ before the match, and
-**messages** or **reset** afterwards. The score stays up between points
+**reset** afterwards (back to `messages,ambient` from the unit). The panel does
+not read it all the time: the Pong demo plays without a pause and would keep the
+radio programme off the panel (`led_redis_stream` above). During a match the
+radio only gets on in a pause of 60 s or more and the next point cuts it short
+(led-catcher v0.32.0, #166). The score stays up between points
 (`tabletennis-score` in [`profile.yaml`](./profile.yaml): `kind: static`,
 `hold: true`). A restart falls back to `messages`, because the switch is not
 persisted.
@@ -245,8 +249,10 @@ persisted.
 From a terminal:
 
 ```bash
-curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["tabletennis"]}'
-curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["messages"]}'
+# a match: score, cluster messages and the radio
+curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["messages", "tabletennis", "ambient"]}'
+# afterwards
+curl -s -X POST https://matrix.sthings.lab/matrix/streams -H 'content-type: application/json' -d '{"streams": ["messages", "ambient"]}'
 ```
 
 `/streams` is unauthenticated, like on the cluster. Anyone on the lab network
