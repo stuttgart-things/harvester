@@ -10,7 +10,9 @@
 # keeps the local form next to "LOGIN WITH ZITADEL").
 #
 # The client secret is write-only: it never lands in the state. Bump
-# oidc_client_secret_version to push a new one.
+# oidc_client_secret_version to push a new one. Version 2: the first push was
+# stored unencrypted-broken because goharbor-secrets had a 13-char secretKey
+# (Harbor needs 16: "crypto/aes: invalid key size 13"), fixed in #693.
 
 variable "zitadel_issuer" {
   type    = string
@@ -31,7 +33,7 @@ variable "oidc_client_secret" {
 
 variable "oidc_client_secret_version" {
   type    = number
-  default = 1
+  default = 2
 }
 
 resource "harbor_config_auth" "oidc" {
