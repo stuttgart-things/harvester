@@ -11,7 +11,7 @@
 # only, to check the new Harbor while harbor.<domain> still goes to the old
 # one. Step 2 (cutover) moves it to harbor.<domain>.
 #
-# Secrets: ./goharbor-secrets.enc.yaml (admin password = the old one,
+# Secrets: ./goharbor-secrets.enc.yaml (admin password = the old one, # pragma: allowlist secret
 # secretKey, internal database password).
 #
 # Single-node platform cluster: trivy and metrics off, small requests (the
@@ -62,8 +62,8 @@ spec:
       targetPath: database.internal.password
   values:
     externalURL: https://harbor.platform.sthings.lab
-    existingSecretAdminPassword: goharbor-secrets
-    existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+    existingSecretAdminPassword: goharbor-secrets # pragma: allowlist secret
+    existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD # pragma: allowlist secret
     existingSecretSecretKey: goharbor-secrets
     expose:
       type: route
