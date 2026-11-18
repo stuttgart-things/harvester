@@ -85,7 +85,7 @@ spec:
         metadata:
           name: sthings-portal-config
         data:
-          PORTAL_SERVICES: "core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,table|Table Light=http://homerun2-light-catcher.homerun2-tabletennis.svc.cluster.local,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher"
+          PORTAL_SERVICES: "core=http://homerun2-core-catcher,notify=http://homerun2-notification-catcher,led=http://homerun2-led-catcher,matrix|LED Matrix (Pi)=http://matrix.sthings.lab:8080,light=http://homerun2-light-catcher,table|Table Light=http://homerun2-light-catcher.homerun2-tabletennis.svc.cluster.local,wled=http://homerun2-wled-mock,schedule|Schedule Pitcher=http://homerun2-schedule-pitcher,radio|Radio=http://homerun2-radio-pitcher,sound|Sound Catcher=http://homerun2-sound-catcher,config|Config Viewer=http://homerun2-config-viewer,pitch=http://homerun2-demo-pitcher"
           PORTAL_THEME: "homerun2"
           AUTH_MODE: oidc
           AUTH_USERS_FILE: /etc/portal/auth/users

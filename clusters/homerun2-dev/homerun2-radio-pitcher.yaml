@@ -31,6 +31,23 @@
 #
 # The schedule is re-read when the ConfigMap changes, without a restart; a
 # broken one is logged, /ready reports it and the last good one stays on air.
+#
+# Programme UI (v0.5.0+, radio-pitcher#23): read-only, at /radio/ behind the
+# portal (key `radio` in ./sthings-portal.yaml, so behind its Zitadel login):
+# the show on air, the clock, what airs next, the last aired cards, each
+# source's last query, and a preview that builds a segment without airing it.
+# Session controls (v0.6.0+, radio-pitcher#24): pause, skip the next slot,
+# switch the clock, air a segment now -- short-lived overrides for the running
+# pod, the schedule below stays the programme. Unlocked in the page with the
+# token of ./homerun2-radio-pitcher-ui.enc.yaml:
+#   sops -d --extract '["stringData"]["ui-token"]' clusters/homerun2-dev/homerun2-radio-pitcher-ui.enc.yaml
+# Daily summary (v0.7.0+, radio-pitcher#7): at 17:30 the counts of the last
+# 24 h from homerun2-scout's /analytics/digest -- messages, errors, critical,
+# the day before, the busiest system. The artifact points RADIO_SCOUT_URL at
+# the stack's homerun2-scout and RADIO_SCOUT_TOKEN at its Secret
+# homerun2-scout-token (required). The radio's own cards are indexed too;
+# scout leaves them out (HOMERUN2_SCOUT_DIGEST_EXCLUDE_SYSTEMS in
+# ./homerun2.yaml).
 # Try a segment on the real panel:
 #   kubectl -n homerun2 exec deploy/homerun2-radio-pitcher -- /ko-app/homerun2-radio-pitcher once news
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -42,7 +59,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
   ref:
-    tag: v0.1.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+    tag: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -95,12 +112,25 @@ spec:
                           name: redis-stack-auth
                           key: redis-password
                           optional: false
+                    # The programme UI under the portal's prefix (the
+                    # artifact's profile sets it too; explicit here because
+                    # the portal key below depends on it).
+                    - name: BASE_PATH
+                      value: /radio
+                    # Session controls of the UI; required, so a missing
+                    # Secret stops the pod instead of a UI without controls.
+                    - name: RADIO_UI_TOKEN
+                      valueFrom:
+                        secretKeyRef:
+                          name: homerun2-radio-pitcher-ui
+                          key: ui-token
+                          optional: false
                     - name: RADIO_NEWS_FEEDS
                       value: cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml,hn=https://hnrss.org/frontpage?points=300
-                    # Off until homerun2-radio-pitcher#11: the number guard
-                    # checks digits only, and gemma3 wrote "Six of the
-                    # sixty-four VMs" for 6 VMs. The rest stays set, so
-                    # switching it on is this one line.
+                    # Off since gemma3 wrote "Six of the sixty-four VMs" for
+                    # 6 VMs. Fixed in v0.2.0 (radio-pitcher#11: number words,
+                    # repeated numbers and a dropped cluster name are
+                    # rejected); switching it on is this one line.
                     - name: RADIO_LLM_ENABLED
                       value: "false"
                     - name: OLLAMA_URL
@@ -135,12 +165,19 @@ spec:
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
-            # Day windows: parsed, not aired yet
-            # (stuttgart-things/homerun2-radio-pitcher#3, night mode #5).
+            # Day windows (shows). Aired since v0.4.0 (radio-pitcher#3):
+            # a show may pick a named clock (`clock: <name>` from `clocks:`)
+            # and air `extra:` segments once per window. None of these has a
+            # clock of its own yet, so the clock above airs all day. A silent
+            # night is `clock: night` plus `clocks: { night: {} }`.
+            # after-work adds the day's numbers at 17:30 (daily-summary).
             programme:
               "07:00-10:00": { show: morning-show }
               "10:00-17:00": { show: daytime }
-              "17:00-19:00": { show: after-work }
+              "17:00-19:00":
+                show: after-work
+                extra:
+                  - { segment: daily-summary, at: "17:30" }
               "19:00-07:00": { show: night }
           sources.yaml: |
             sources:
