@@ -1,0 +1,127 @@
+# Harbor from the official goharbor/harbor chart (harvester#693), replacing
+# the frozen Bitnami chart (27.0.3, Harbor 2.13, bitnamilegacy images) of
+# ./harbor.yaml.
+#
+# Fresh install, no data taken over: the old Harbor held a 66 MB pull-through
+# cache (one image) and only the local admin. The projects are in Terraform,
+# ../harbor-config.
+#
+# Exposure: the chart's HTTPRoute (expose.type route, no nginx, no Ingress)
+# on platform-sthings-gateway. Step 1 of the move: host harbor-next.<domain>
+# only, to check the new Harbor while harbor.<domain> still goes to the old
+# one. Step 2 (cutover) moves it to harbor.<domain>.
+#
+# Secrets: ./goharbor-secrets.enc.yaml (admin password = the old one, # pragma: allowlist secret
+# secretKey, internal database password).
+#
+# Single-node platform cluster: trivy and metrics off, small requests (the
+# node's CPU requests are at ~78 %).
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: goharbor
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: goharbor
+  namespace: goharbor
+spec:
+  interval: 12h
+  url: https://helm.goharbor.io
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  # Named "harbor" so the services are harbor-core/harbor-portal and the
+  # harbor-project-proxy HelmRelease (dependsOn: harbor) finds it.
+  name: harbor
+  namespace: goharbor
+spec:
+  interval: 30m
+  timeout: 10m
+  chart:
+    spec:
+      chart: harbor
+      version: "1.19.4" # datasource=helm depName=harbor registryUrl=https://helm.goharbor.io
+      sourceRef:
+        kind: HelmRepository
+        name: goharbor
+      interval: 12h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  valuesFrom:
+    - kind: Secret
+      name: goharbor-secrets
+      valuesKey: DATABASE_PASSWORD
+      targetPath: database.internal.password
+  values:
+    externalURL: https://harbor.platform.sthings.lab
+    existingSecretAdminPassword: goharbor-secrets # pragma: allowlist secret
+    existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD # pragma: allowlist secret
+    existingSecretSecretKey: goharbor-secrets # pragma: allowlist secret
+    expose:
+      type: route
+      tls:
+        enabled: false
+      route:
+        parentRefs:
+          - name: platform-sthings-gateway
+            namespace: default
+            group: gateway.networking.k8s.io
+            kind: Gateway
+        hosts:
+          - harbor-next.platform.sthings.lab
+    ipFamily:
+      ipv6:
+        enabled: false
+    persistence:
+      enabled: true
+      resourcePolicy: keep
+      persistentVolumeClaim:
+        registry:
+          storageClass: local-path
+          size: 12Gi
+        jobservice:
+          jobLog:
+            storageClass: local-path
+            size: 1Gi
+        database:
+          storageClass: local-path
+          size: 2Gi
+        redis:
+          storageClass: local-path
+          size: 1Gi
+    trivy:
+      enabled: false
+    metrics:
+      enabled: false
+    portal:
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+    core:
+      resources:
+        requests: {cpu: 50m, memory: 128Mi}
+    jobservice:
+      resources:
+        requests: {cpu: 20m, memory: 64Mi}
+    registry:
+      registry:
+        resources:
+          requests: {cpu: 20m, memory: 64Mi}
+      controller:
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+    database:
+      internal:
+        resources:
+          requests: {cpu: 50m, memory: 128Mi}
+    redis:
+      internal:
+        resources:
+          requests: {cpu: 20m, memory: 32Mi}
