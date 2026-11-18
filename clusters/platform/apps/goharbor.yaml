@@ -64,7 +64,7 @@ spec:
     externalURL: https://harbor.platform.sthings.lab
     existingSecretAdminPassword: goharbor-secrets # pragma: allowlist secret
     existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD # pragma: allowlist secret
-    existingSecretSecretKey: goharbor-secrets
+    existingSecretSecretKey: goharbor-secrets # pragma: allowlist secret
     expose:
       type: route
       tls:
