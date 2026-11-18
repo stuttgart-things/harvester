@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: homerun2-radio-pitcher-schmetterpause
+    namespace: homerun2
+type: Opaque
+stringData:
+    statistics-token: ENC[AES256_GCM,data:sYC7LtvfMoKq+uKc6G5xk3tTeu5dI65qcLTTi+ldh7YyIAYhoQpwXrAX/ajKEnsz36b3WVIwhW5T6f4SnMMQ3w==,iv:0YPf7kexHdYku6GpZI3Zx4xRG99dqaY7CGckm8W+ieM=,tag:yBpEDovBEvyYsYtB2DV3TQ==,type:str]
+sops:
+    age:
+        - enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBUYnNhY1dCNy9BZzYzY3Zt
+            NS8vaEY3Sml5MjYyeUZESFVySysxMVNkaFRVClEwNDJNc0diWVBzbnQxUGJUREt1
+            bkVLa0tJYUI0VWdseStNWXF5NEZxY28KLS0tIDIwQ0ZZNzdLN1k5MnRCSVZmMHpq
+            V1FwWXF1dlJIRVpVOTBhSm5vQWFadTQK7AkuV8oRQjCJ2FOBJAbGTyozw0iwp6DA
+            nEL24P0laJpSLGd+uS5qP1+Izu76ylTaF+Glk2jPSCCwjldyFgvrLQ==
+            -----END AGE ENCRYPTED FILE-----
+          recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+    encrypted_regex: ^(data|stringData)$
+    lastmodified: "2026-11-18T16:03:17Z"
+    mac: ENC[AES256_GCM,data:o1M85N9Jtr2n6HW+nF6dfhJ7NJdsk4uKD9cGPj3ACBw5UpJ8OWvjE+jsM/Uz2jRc+8J7e9zaURizRqIHYf8T+cVaBUoHQ58SOkRZ5vGnIN/2zPWTAVqFcOi8sT+tVNi6zZApcgDPxmc5E5vnmdc5Z7WrOXTHpDeL3RemHMHgbao=,iv:Uc0/QX7TStj2wDrx7UJ7nmt8ME9kfn8hy512Q0uhHzc=,tag:m8vzetXKyhMVTgh5mIrINw==,type:str]
+    version: 3.13.3
