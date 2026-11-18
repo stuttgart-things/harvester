@@ -41,6 +41,13 @@
 # pod, the schedule below stays the programme. Unlocked in the page with the
 # token of ./homerun2-radio-pitcher-ui.enc.yaml:
 #   sops -d --extract '["stringData"]["ui-token"]' clusters/homerun2-dev/homerun2-radio-pitcher-ui.enc.yaml
+# Daily summary (v0.7.0+, radio-pitcher#7): at 17:30 the counts of the last
+# 24 h from homerun2-scout's /analytics/digest -- messages, errors, critical,
+# the day before, the busiest system. The artifact points RADIO_SCOUT_URL at
+# the stack's homerun2-scout and RADIO_SCOUT_TOKEN at its Secret
+# homerun2-scout-token (required). The radio's own cards are indexed too;
+# scout leaves them out (HOMERUN2_SCOUT_DIGEST_EXCLUDE_SYSTEMS in
+# ./homerun2.yaml).
 # Try a segment on the real panel:
 #   kubectl -n homerun2 exec deploy/homerun2-radio-pitcher -- /ko-app/homerun2-radio-pitcher once news
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -52,7 +59,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
   ref:
-    tag: v0.6.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+    tag: v0.7.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -163,10 +170,14 @@ spec:
             # and air `extra:` segments once per window. None of these has a
             # clock of its own yet, so the clock above airs all day. A silent
             # night is `clock: night` plus `clocks: { night: {} }`.
+            # after-work adds the day's numbers at 17:30 (daily-summary).
             programme:
               "07:00-10:00": { show: morning-show }
               "10:00-17:00": { show: daytime }
-              "17:00-19:00": { show: after-work }
+              "17:00-19:00":
+                show: after-work
+                extra:
+                  - { segment: daily-summary, at: "17:30" }
               "19:00-07:00": { show: night }
           sources.yaml: |
             sources:
