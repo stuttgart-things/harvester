@@ -39,6 +39,30 @@ apps = {
       someara  = ["minio-readonly"]
     }
   }
+  # Harbor on platform (goharbor chart, ../apps/goharbor.yaml, harvester#693):
+  # auth_mode oidc_auth via ../harbor-config. Harbor finds admins only in a
+  # FLAT groups claim, ZITADEL sends a role map, so no oidc_admin_group: the
+  # role check decides who gets in, harbor-admin users are made sysadmin once
+  # after their first login (../harbor-config/README.md). Callback
+  # /c/oidc/callback. Local admin stays.
+  harbor = {
+    url            = "https://harbor.platform.sthings.lab"
+    redirect_paths = ["/c/oidc/callback"]
+    roles = {
+      "harbor-admin" = "Harbor admin"
+      "harbor-user"  = "Harbor user"
+    }
+    users = {
+      sthings  = ["harbor-admin"]
+      indy     = ["harbor-admin"]
+      tommy    = ["harbor-admin"]
+      mcfly    = ["harbor-user"]
+      mcclane  = ["harbor-user"]
+      fmcguire = ["harbor-user"]
+      rdevaney = ["harbor-user"]
+      someara  = ["harbor-user"]
+    }
+  }
   # Grafana on platform (kube-prometheus-stack): auth.generic_oauth in
   # grafana.ini (../infra.yaml), role_attribute_path on the groups claim:
   # grafana-admin => Admin, grafana-readonly => Viewer, nothing else gets in
