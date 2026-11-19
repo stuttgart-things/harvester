@@ -148,9 +148,11 @@ spec:
                     target=$1 retention=$2
                     ready "$target" || return 1
                     rclone copyto /work/zitadel.dump "$target/$ts/zitadel.dump" || return 1
-                    # gzip, as the kubernetes backend stores it
+                    # gzip, as the kubernetes backend stores it. A Secret
+                    # volume file is a symlink (..data/tfstate): without
+                    # --copy-links rclone reads it as a directory and fails.
                     if [ -f /tfstate/tfstate ]; then
-                      rclone copyto /tfstate/tfstate "$target/$ts/tfstate-zitadel-config.gz" || return 1
+                      rclone copyto --copy-links /tfstate/tfstate "$target/$ts/tfstate-zitadel-config.gz" || return 1
                     else
                       echo "no Terraform state Secret, skipped"
                     fi
