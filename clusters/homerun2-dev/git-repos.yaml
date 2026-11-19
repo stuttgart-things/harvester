@@ -32,7 +32,7 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    tag: v1.237.0 # datasource=github-tags depName=stuttgart-things/flux
+    tag: v1.238.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
@@ -43,5 +43,5 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    tag: v1.237.0 # datasource=github-tags depName=stuttgart-things/flux
+    tag: v1.238.0 # datasource=github-tags depName=stuttgart-things/flux
   url: https://github.com/stuttgart-things/flux.git
