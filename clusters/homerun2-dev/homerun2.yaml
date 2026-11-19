@@ -178,6 +178,17 @@ spec:
       # or later in web mode (homerun2-led-catcher#144); quoted, a substitute
       # value must be a string.
       HOMERUN2_LED_CATCHER_DISPLAY_QUEUE: "3"
+      # The same idle screen as the real matrix (../../hosts/matrix,
+      # led_idle=clock led_idle_style=rotate led_idle_color_mode=daylight):
+      # a different clock face every 5 minutes in a colour that follows the
+      # time of day. The face depends on the time alone, so simulator and
+      # panel show the same one -- in the same zone, hence TZ (the catcher's
+      # default is UTC). Style and colour mode need flux v1.237.0 (flux#1049)
+      # and led-catcher v0.29.0 or later.
+      HOMERUN2_LED_CATCHER_IDLE: clock
+      HOMERUN2_LED_CATCHER_IDLE_STYLE: rotate
+      HOMERUN2_LED_CATCHER_IDLE_COLOR_MODE: daylight
+      HOMERUN2_LED_CATCHER_TZ: Europe/Berlin
 
       # Behind sthings-portal (./sthings-portal.yaml): each service answers
       # under the key the portal serves it at. The portal is the only way in:
