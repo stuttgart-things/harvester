@@ -127,6 +127,37 @@ resource "vault_policy" "write_kubeconfigs" {
   EOT
 }
 
+// The ClusterStack's `clusterscope-reader` Workspace (xplane-cluster 0.28.0,
+// opt-in spec.clusterscope.reader, harvester#753) reads a built cluster's ADMIN
+// kubeconfig from kubeconfigs/<cluster>, creates a read-only ServiceAccount
+// there and writes ITS kubeconfig to clusterscope/<cluster> -- what
+// ../platform-eso/seed-clusterscope-kubeconfig.sh does by hand. create/update
+// on metadata for custom_metadata (managed-by, cluster), delete on both for
+// its destroy (delete_all_versions removes the metadata path).
+//
+// The `clusterscope` MOUNT belongs to ../platform-eso, not to this root: it is
+// platform's read side. A policy is only path strings, so it can name a mount
+// another root owns; apply ../platform-eso first, or this grants writes to a
+// path that does not exist yet (harmless, but the Workspace then fails).
+//
+// kubeconfigs/data/+ read is restated although write-kubeconfigs already has
+// it, so this policy is complete on its own should it ever move to a role of
+// its own.
+resource "vault_policy" "write_clusterscope" {
+  name   = "write-clusterscope-kubeconfigs"
+  policy = <<-EOT
+    path "kubeconfigs/data/+" {
+      capabilities = ["read"]
+    }
+    path "clusterscope/data/+" {
+      capabilities = ["create", "read", "update", "delete"]
+    }
+    path "clusterscope/metadata/+" {
+      capabilities = ["create", "read", "update", "list", "delete"]
+    }
+  EOT
+}
+
 resource "vault_policy" "read_kubeconfigs" {
   name   = "read-kubeconfigs"
   policy = <<-EOT
@@ -145,10 +176,20 @@ resource "vault_policy" "read_kubeconfigs" {
 // expiring credential nobody watches is how certificates silently stopped
 // being issued before. Rotation is explicit -- taint the secret_id resource,
 // apply, re-encrypt the fleet-state Secrets.
+//
+// write-clusterscope-kubeconfigs goes on the EXISTING kubeconfig-writer, not on
+// a fourth role (harvester#753): the clusterscope-reader Workspace has to read
+// kubeconfigs/data/+, which this role already does, and its credential --
+// default/vault-kubeconfig-writer (terraform.tfvars) -- is already on
+// machinery-hv for the kubeconfig-vault Workspace. A new role would add a
+// secret_id, a render step and a SOPS blob and buy no isolation: any role that
+// can read the admin kubeconfigs and write clusterscope can copy one into the
+// other, which is the job itself. What it widens: the join play
+// (tekton-ci/vault, same role) may now also write clusterscope/<cluster>.
 locals {
   approles = {
     "machinery-hv-cluster-secrets-writer" = [for p in vault_policy.write_clusters : p.name]
-    "machinery-hv-kubeconfig-writer"      = [vault_policy.write_kubeconfigs.name]
+    "machinery-hv-kubeconfig-writer"      = [vault_policy.write_kubeconfigs.name, vault_policy.write_clusterscope.name]
     "machinery-hv-kubeconfig-reader"      = [vault_policy.read_kubeconfigs.name]
   }
 }

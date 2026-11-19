@@ -16,6 +16,7 @@ planned here can touch them.
 | Policies | `read-{homerun2,schmetterpause,observability}-clusters` | a built cluster's ESO, via `cluster-vault-sthings-lab` |
 | | `write-{…}-clusters` | the writer; `_` entries are read-only to it |
 | | `write-kubeconfigs`, `read-kubeconfigs` | kubeconfig upload / read-back |
+| | `write-clusterscope-kubeconfigs` | on the kubeconfig-writer: a ClusterStack's `clusterscope-reader` Workspace writes `clusterscope/<cluster>` (harvester#753) |
 | AppRoles | `machinery-hv-cluster-secrets-writer`, `-kubeconfig-writer`, `-kubeconfig-reader` | provider-vault / the join play / provider-kubeconfig |
 | secret_id | on the existing `crossplane` role | provider-vault `vault`: mounting the built clusters' auth backends |
 
@@ -60,6 +61,31 @@ Each AppRole logged in and was tried against what it must and must not reach
 | | read `homerun2/…` | 403 |
 | crossplane (new secret_id) | `GET sys/auth` | 200 |
 | | read `homerun2/…` | 403 |
+
+## clusterscope reader kubeconfigs (harvester#753)
+
+xplane-cluster 0.28.0 can write a cluster's READ-ONLY kubeconfig for
+clusterscope itself (`spec.clusterscope.reader.enabled: true` on the
+ClusterStack), instead of `../platform-eso/seed-clusterscope-kubeconfig.sh`.
+Its Workspace logs in with the **kubeconfig-writer** AppRole -- the
+`default/vault-kubeconfig-writer` Secret the `kubeconfig-vault` Workspace
+already uses -- so this root only adds the policy
+`write-clusterscope-kubeconfigs` to that role. No new secret_id, nothing to
+re-render: `render-fleet-secrets.sh` is not involved.
+
+Expected plan: `vault_policy.write_clusterscope` added, the
+`machinery-hv-kubeconfig-writer` role's `token_policies` changed in place
+(its secret_id stays). The `clusterscope` mount itself is
+`../platform-eso`'s and must exist first.
+
+To prove before the first opt-in (same method as above, probe entry deleted
+afterwards):
+
+| AppRole | Request | Expected |
+|---|---|---|
+| kubeconfig-writer | write `clusterscope/zz-probe` + its metadata | 200 |
+| | write `clusterscope/a/b` (two segments) | 403 |
+| | read `kubeconfigs/<cluster>` | 200 (unchanged) |
 
 ## Shared entries (`_<name>`) from SOPS
 

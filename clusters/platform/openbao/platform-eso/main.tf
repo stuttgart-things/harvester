@@ -11,7 +11,10 @@
 // any namespace on platform, so this store must never hand those out. The
 // entries here carry a ServiceAccount token that can get/list/watch what
 // clusterscope shows and nothing else (no Secrets, no writes); they are
-// written by ./seed-clusterscope-kubeconfig.sh.
+// written by ./seed-clusterscope-kubeconfig.sh or, for a cluster built by a
+// ClusterStack with spec.clusterscope.reader.enabled, by that stack's
+// `clusterscope-reader` Workspace (xplane-cluster 0.28.0; the writer policy is
+// in ../machinery-fleet).
 //
 // A ROOT OF ITS OWN, like ../machinery-fleet and ../app-secrets: ../openbao.tf
 // carries the PKI and the cert-manager mount, and a plan here must never be
