@@ -35,9 +35,14 @@
 #                            not have to be
 #   no NFS labels            the lab has had no NFS server since infra.sthings.lab
 #                            was switched off (harvester#152)
-#   no observability         platform's Argo CD has no observability-platform
-#                            ApplicationSet; with the profile set, monitoring
-#                            would never appear and nothing would say so
+#   observability            logs only so far (harvester#753): the umbrella
+#                            and observability-platform/fluent-bit are set as
+#                            plain labels below, not through the `observability`
+#                            profile. The profile would also derive the
+#                            kube-prometheus-stack secrets gate, and that stack
+#                            reads its Alertmanager token from the shared
+#                            observability/_omni-pitcher entry, which is not
+#                            seeded on this OpenBao yet
 #   homerun2 + tabletennis   added 2026-09-28, once platform installed both
 #                            ApplicationSets (stuttgart-things/flux#571,
 #                            argocd#544). tabletennis reads homerun2's
@@ -115,7 +120,16 @@ spec:
         # the routing test on homerun2-dev reached the channel.
         homerun2-platform/notification-catcher: 'true'
         homerun2-platform/notification-catcher-dry-run: 'false'
+        # Logs to the lab's Loki on platform (harvester#753): fluent-bit,
+        # HTTPS through platform's Gateway, verified against the
+        # cluster-trust-bundle trust-manager writes here (OpenBao root, since
+        # the wildcard issuer is vault-pki-k8s). Set by hand rather than via
+        # the `observability` profile -- see the header, "observability".
+        observability-platform: 'true'
+        observability-platform/fluent-bit: 'true'
       annotations:
+        # fluent-bit's Loki: platform's, through its Gateway on 443.
+        observability-platform.stuttgart-things.com/loki-host: loki.platform.sthings.lab
         homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
           outputs:
             - name: teams-app-dev-hv

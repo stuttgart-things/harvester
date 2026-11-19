@@ -125,8 +125,14 @@ name swapped; read its warnings there, they all apply.
 - **Argo CD registration.** The ClusterStack registers built clusters in Argo
   CD through the `argocd-cluster` Configuration; its preconditions on this lab
   (the Argo CD on platform, its provider config) are not in the fleet state yet.
-- **No observability ApplicationSet on platform.** The `observability` profile
-  is left out of `app-dev-hv.yaml` for that reason.
+- **Observability on platform's Argo CD** comes from
+  `../platform/apps/argocd-platform-observability.yaml` (harvester#753).
+  `app-dev-hv.yaml` sets the umbrella and `observability-platform/fluent-bit`
+  as plain labels (logs only). The `observability` profile stays out until the
+  shared entry `observability/_omni-pitcher` (property
+  `alertmanager-webhook-token`) is seeded: the profile derives the
+  kube-prometheus-stack secrets gate, and Alertmanager reads its token from
+  that entry.
 
 ## Log -- the commands as they were run
 
