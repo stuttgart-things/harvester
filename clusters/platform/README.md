@@ -263,7 +263,8 @@ Last upgrade: `2026-10-23`, `v1.35.1+k3s1` -> `v1.35.9+k3s1` (#491).
 - all Kustomizations/HelmReleases Ready after ~10 min (harbor's Helm upgrade
   and a briefly unreachable CNPG webhook took the longest);
 - 11/11 HTTPRoutes Accepted, gateway controller started;
-- OpenBao unsealed, and harvester, app-dev-hv and tabletennis Ready in Rancher.
+- OpenBao unsealed, and harvester, app-dev-hv and tabletennis Ready in Rancher
+  (tabletennis was retired on 2026-11-19, harvester#601).
 
 </details>
 

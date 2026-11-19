@@ -401,32 +401,6 @@ sys_sthings_edge -> net_192_168_10_0_24: "1 host" {
   }
 }
 
-sys_tabletennis: "tabletennis" {
-  style.fill: "#f8fafc"
-  style.stroke: "#94a3b8"
-  style.font-size: 20
-  tabletennis: "tabletennis\n192.168.10.114\n1 service" {
-    shape: rectangle
-    style: {
-      fill: "#ffffff"
-      stroke: "#475569"
-    }
-  }
-  tabletennis_gateway: "tabletennis-gateway\n192.168.10.180" {
-    shape: rectangle
-    style: {
-      fill: "#ffffff"
-      stroke: "#475569"
-    }
-  }
-}
-sys_tabletennis -> net_192_168_10_0_24: "2 hosts" {
-  style: {
-    stroke: "#0f766e"
-    stroke-width: 2
-  }
-}
-
 sys_wled_matrix: "wled-matrix" {
   style.fill: "#f8fafc"
   style.stroke: "#94a3b8"

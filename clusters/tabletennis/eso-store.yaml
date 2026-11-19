@@ -1,4 +1,7 @@
 ---
+# RETIRED 2026-11-19 (harvester#601): the tabletennis cluster is gone. Kept only
+# as the reference clusters/crossplane-mgmt/eso-store.yaml points to. Do not apply.
+#
 # tabletennis' ClusterSecretStore, and the one RBAC grant it needs.
 #
 # APPLIED BY HAND: tabletennis is a RancherCluster order on crossplane-mgmt with
