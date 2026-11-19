@@ -111,6 +111,20 @@ spec:
           name: minio-deployment
         spec:
           values:
+            # The provisioning Job's wait-for-available-minio init container
+            # uses volumePermissions.image (os-shell). The base sets
+            # global.imageRegistry=ghcr.io, which the chart applies to every
+            # image and resolves os-shell to ghcr.io/bitnami/os-shell -- 403,
+            # it does not exist there (2026-11-19, #753). The server image sets
+            # its registry explicitly, so clearing the global only moves
+            # os-shell, to the bitnamilegacy copy of the chart's own tag.
+            global:
+              imageRegistry: ""
+            volumePermissions:
+              image:
+                registry: docker.io
+                repository: bitnamilegacy/os-shell
+                tag: 12-debian-12-r43
             provisioning:
               enabled: true
               cleanupAfterFinished:
