@@ -95,7 +95,19 @@ kubectl -n kube-system rollout restart deploy/cilium-operator
 
 Before: 42 errors/h, after: 0; 2/2 HTTPRoutes `ResolvedRefs=True`, both 200.
 
-### rancher-mgmt credential (harvester#350) -- NOT DONE YET
+### rancher-mgmt credential (harvester#350) -- DONE 2026-11-19
+
+> [!NOTE]
+> **Status 2026-11-19 (harvester#601):** `tabletennis` is retired and its XR
+> removed (#782). `rancher-mgmt` was switched to
+> `crossplane-system/rancher-mgmt-kubeconfig-scoped` (`check`: whoami is the
+> SA, 6x yes / 2x no; after the switch no `forbidden` in the provider log), and
+> the old admin Secret `rancher-mgmt-kubeconfig` was **deleted** right away --
+> without the soak, because no live cluster depends on `rancher-mgmt` any more.
+> `rollback` therefore no longer works. No RancherCluster is left on
+> crossplane-mgmt; the text below is kept as the record of how it was done.
+> Still pending there: the two `tabletennis-vpki-*` Objects (managementPolicies
+> `[*]`, target cluster gone) hold the XR in deletion, see #601.
 
 The `rancher-mgmt` ClusterProviderConfig and its Secret
 `crossplane-system/rancher-mgmt-kubeconfig` are not in git (hand-applied

@@ -31,6 +31,10 @@
 # same. The ServiceAccount is separate so the two control planes can be told
 # apart (audit, creatorId on new clusters) and rotated independently.
 #
+# STATUS 2026-11-19 (harvester#601): ACTIVE. rancher-mgmt on crossplane-mgmt
+# reads rancher-mgmt-kubeconfig-scoped built from this SA's token; the old admin
+# Secret is deleted. tabletennis is retired, no RancherCluster left there.
+#
 # MERGING THIS FILE IS LIVE BUT INERT: Flux (config.yaml, path clusters/platform)
 # creates the Namespace, the ServiceAccount, its token and the bindings. Nothing
 # uses them until the `rancher-mgmt` ClusterProviderConfig on crossplane-mgmt is
