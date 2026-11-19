@@ -86,4 +86,27 @@ apps = {
       someara  = ["grafana-readonly"]
     }
   }
+  # Grafana on machinery-hv (harvester#753): its own client -- a client has
+  # one base URL. Same role keys as `grafana` (keys are per project), so the
+  # grafana.ini there is the same as platform's
+  # (../../machinery-hv/kube-prometheus-stack.yaml). Local admin stays.
+  grafana-machinery-hv = {
+    url               = "https://grafana.machinery-hv.sthings.lab"
+    redirect_paths    = ["/login/generic_oauth"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "grafana-admin"    = "Grafana admin"
+      "grafana-readonly" = "Grafana viewer"
+    }
+    users = {
+      sthings  = ["grafana-admin"]
+      indy     = ["grafana-admin"]
+      tommy    = ["grafana-admin"]
+      mcfly    = ["grafana-readonly"]
+      mcclane  = ["grafana-readonly"]
+      fmcguire = ["grafana-readonly"]
+      rdevaney = ["grafana-readonly"]
+      someara  = ["grafana-readonly"]
+    }
+  }
 }

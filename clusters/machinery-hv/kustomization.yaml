@@ -25,6 +25,8 @@ resources:
   # metrics + alerts; its token Secret (SOPS)
   - kube-prometheus-stack.yaml
   - kube-prometheus-stack-secrets.enc.yaml
+  # Grafana ZITADEL client (id + secret, SOPS)
+  - grafana-oidc-zitadel.enc.yaml
   # -> ../shared/crossplane-observability  Crossplane scraping, XR status
   #    metrics + alert, dashboards
   - crossplane-observability.yaml
