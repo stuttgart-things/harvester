@@ -718,6 +718,22 @@ shred -u /dev/shm/portal-users /dev/shm/portal-client-secret /dev/shm/portal-ses
 grep -c 'ENC\[' clusters/homerun2-dev/sthings-portal-auth.enc.yaml   # 4
 ```
 
+**No `htpasswd` on the workstation** (it comes with `apache2-utils`): Python's
+`bcrypt` module writes the same `name:bcrypt-hash` line. Use it in place of the
+`htpasswd` line above; it asks for the password twice and writes nothing if
+they differ:
+
+```bash
+python3 -c 'import bcrypt, getpass; p = getpass.getpass("Password: ").encode(); assert p == getpass.getpass("Retype: ").encode(), "passwords differ"; print("emergency:" + bcrypt.hashpw(p, bcrypt.gensalt()).decode())' \
+  > /dev/shm/portal-users && test -s /dev/shm/portal-users || echo "bcrypt FAILED"
+```
+
+The hash starts with `$2b$` instead of htpasswd's `$2y$`; the portal checks it
+with Go's `golang.org/x/crypto/bcrypt`, which takes both (tested 2026-11-19:
+`bcrypt.Cost` and `CompareHashAndPassword` on a hash from this command). No
+`bcrypt` module: `pip install --user bcrypt` or `apt install python3-bcrypt`.
+Passwords longer than 72 bytes are cut (bcrypt) or refused (`bcrypt` >= 5).
+
 The client ID goes into `AUTH_OIDC_CLIENT_ID` in `sthings-portal.yaml`
 (`terraform output -json client_ids | jq -r '."homerun2-dev"'`, not a secret).
 
