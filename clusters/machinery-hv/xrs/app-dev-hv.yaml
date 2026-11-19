@@ -142,6 +142,13 @@ spec:
         # same endpoint platform's own kube-prometheus-stack uses
         # (clusters/platform/infra.yaml). Token: observability/_omni-pitcher.
         observability-platform.stuttgart-things.com/alert-webhook-url: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
+        # Grafana login with ZITADEL (harvester#753): client grafana-app-dev-hv
+        # (platform/zitadel-config/apps.auto.tfvars); id/secret in the shared
+        # entry observability/_grafana-oidc-app-dev-hv (platform/openbao/
+        # machinery-fleet) -- not in observability/app-dev-hv, which the
+        # Platform's clusterSecrets Workspace generates.
+        observability-platform.stuttgart-things.com/grafana-oidc-issuer: https://zitadel.platform.sthings.lab
+        observability-platform.stuttgart-things.com/grafana-oidc-secret-key: _grafana-oidc-app-dev-hv
         homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
           outputs:
             - name: teams-app-dev-hv

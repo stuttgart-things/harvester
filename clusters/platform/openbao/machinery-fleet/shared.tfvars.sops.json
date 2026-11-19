@@ -9,6 +9,12 @@
 			"data": {
 				"alertmanager-webhook-token": "ENC[AES256_GCM,data:+ZagvGmWRwfVd4GMv7JtJ6LeI40//KBoxG/67QAgFU8PbtMFndYWhWfkpo6DkvTGa8iusb84Vz5Kq9Gw+G9+Ow==,iv:Q+cszHl8pcq1gke73aG7pEP7WOn9l+cjeF46DAmzm1c=,tag:GZtRf0NJ5LSK5gqlpFwBVg==,type:str]"
 			}
+		},
+		"observability/_grafana-oidc-app-dev-hv": {
+			"data": {
+				"grafana-oidc-client-id": "ENC[AES256_GCM,data:RH+J+jjHKNrRpbHZy8nyq0gF,iv:xK0AsX+idMEdMSnh9vMQPcaZri2OqtKBaYYyr3nfpPI=,tag:z2U9PxBaqxWI7cKDowZL0g==,type:str]",
+				"grafana-oidc-client-secret": "ENC[AES256_GCM,data:7RmYF18mUyl4+8Olr/LqFQMcCwB0BZPvFt9hYQYv4m75lmnUjJzLZGcrI7mFa8MvjKoeWElV3yskeh8ED60XUw==,iv:NTjQRRiCVAPEbW8iqUcbCGV4OJWgKEX9SUn2oLKRzJQ=,tag:+vmqZClYd7bC9v8FWUv75Q==,type:str]"
+			}
 		}
 	},
 	"sops": {
@@ -18,8 +24,8 @@
 				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBneTU5bzJhZGp3cWtFNE5C\nc2wvSFdXZFNYU3pBWFFzRmNwbkhXcVQ2TnlBCkszZXEySUVYTGpOdkNtMHBTNng0\ndU1qaU84cjArSThBSmpiWWtRb2UycFUKLS0tIDJJdFZoUk5iZHpTN1lMTEk1TVRp\nTnhTM0RpcG56bXVadlk0cGp4c0ZqM0EKBNpNjqauMxH1fldFrkKQ2mVz/kh8nWhk\nMlCBcbkOlc1ajP0pu7Gtc81/e8mpGiGaLutAriHZP9gSfa6Qf4zErg==\n-----END AGE ENCRYPTED FILE-----\n"
 			}
 		],
-		"lastmodified": "2026-11-19T08:07:40Z",
-		"mac": "ENC[AES256_GCM,data:vuesnl3Xt3uLDUpphvsO+yZVkoUYlr05zeAYb3R0CB0/jJOhj7WMYzo6nT4QDn8pBtHjerykvZA9a9DTMn92MUHzb3PjbvmeUjw6U8e9blLPYIM86isO4/ap4rKWV1tCVjrQBaJhilLZDda8zN9WyKhraxMZye2kCjH8bor2xAg=,iv:F7eSYv2KmgcO5dpuzrGoyWjnSMowY5Pf4WWMTOJN2l4=,tag:Ya2KbDvOuyeJrVa4VrzfUA==,type:str]",
+		"lastmodified": "2026-11-19T13:12:57Z",
+		"mac": "ENC[AES256_GCM,data:E4NL+PKnZfccr2mgCgryU5epbzfeKcKyc9nzDye89/PkD5sW1xtl8WL7xZ8/7gWoxl/JHCECKgTkkjUeSuK/prZ/bapCdFUW0QHHp5R6/Qy/cEfWoCJtdeP19/CEIopWVWnJtwJtv0mhSzoHC+BzXccCJFOurwx3viax86Bh1RU=,iv:p6XAaktYHb9tSCRQzPy8COexx1sh1sbexIPe8G1jRes=,tag:8/q5EB/snrFf0eXFGXOWWA==,type:str]",
 		"unencrypted_suffix": "_unencrypted",
 		"version": "3.11.0"
 	}
