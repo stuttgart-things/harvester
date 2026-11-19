@@ -22,6 +22,17 @@
 # per event. A card, unlike `text`, honours it -- also mid-scroll: a long
 # message does not finish in 10 s.
 displayRules:
+  # The radio's news show (card tag show=news, homerun2-radio-pitcher
+  # v0.17.0+): held longer to read. Before radio, first match wins; the radio
+  # spaces these cards 23 s apart.
+  radio-show:
+    systems: [radio]
+    severity: [INFO]
+    tags: [show=news]
+    kind: card
+    strip_prefix: true
+    duration: 20
+    ambient: true
   # The radio programme between notifications: time check, tech news, infra
   # facts, pitched by homerun2-radio-pitcher onto the `ambient` stream
   # (clusters/homerun2-dev/homerun2-radio-pitcher.yaml). `ambient`: shown only
@@ -30,8 +41,8 @@ displayRules:
   # pitcher spaces the items of a slot 15 s apart, a little longer than this
   # duration, since the catcher keeps only the newest ambient card.
   #
-  # Must stay above default-info: first match wins, and the wildcard there
-  # would otherwise take it without `ambient`.
+  # Must stay above default-info (and below radio-show): first match wins,
+  # and the wildcard there would otherwise take it without `ambient`.
   radio:
     systems: [radio]
     severity: [INFO]
