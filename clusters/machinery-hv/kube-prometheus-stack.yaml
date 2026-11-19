@@ -16,8 +16,14 @@
 # updating both files. Not optional: without the Secret this stops instead of
 # rolling out the release's `changeme` token.
 #
-# GRAFANA: https://grafana.machinery-hv.sthings.lab, local `admin`, generated
-# password (see homerun2-dev's file for how to read it).
+# GRAFANA: https://grafana.machinery-hv.sthings.lab, login with ZITADEL as on
+# platform (../platform/infra.yaml): client `grafana-machinery-hv` in
+# ../platform/zitadel-config/apps.auto.tfvars, id and secret in the SOPS Secret
+# ./grafana-oidc-zitadel.enc.yaml. grafana-admin => Admin, grafana-readonly =>
+# Viewer, nobody else (role_attribute_strict). The local `admin` with its
+# generated password stays as fallback (see homerun2-dev's file for how to read
+# it). ZITADEL's certificate verifies against cluster-trust-bundle
+# (./observability-trust-bundle.yaml).
 #
 # RESOURCES (checked 2026-11-19): 1 node, 8 CPU / 16 GiB, requests 35% CPU /
 # 28% memory, ~10.8 GiB in use; the stack requests ~200m / ~800Mi. ~46 GiB
@@ -68,6 +74,37 @@ spec:
               folderAnnotation: grafana_folder
               provider:
                 foldersFromFilesStructure: true
+        # ZITADEL login, same block as platform's (../platform/infra.yaml).
+        - op: add
+          path: /spec/values/grafana/envFromSecret
+          value: grafana-oidc-zitadel
+        - op: add
+          path: /spec/values/grafana/extraConfigmapMounts
+          value:
+            - name: trust-bundle
+              mountPath: /etc/grafana/ca
+              configMap: cluster-trust-bundle
+              readOnly: true
+        - op: add
+          path: /spec/values/grafana/grafana.ini/auth.generic_oauth
+          value:
+            enabled: true
+            name: ZITADEL
+            allow_sign_up: true
+            auto_login: false
+            scopes: openid profile email
+            auth_url: https://zitadel.platform.sthings.lab/oauth/v2/authorize
+            token_url: https://zitadel.platform.sthings.lab/oauth/v2/token
+            api_url: https://zitadel.platform.sthings.lab/oidc/v1/userinfo
+            auth_style: InHeader
+            use_pkce: true
+            login_attribute_path: preferred_username
+            name_attribute_path: name
+            email_attribute_path: email
+            role_attribute_path: >-
+              contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-admin') && 'Admin' || contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-readonly') && 'Viewer'
+            role_attribute_strict: true
+            tls_client_ca: /etc/grafana/ca/trust-bundle.pem
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
