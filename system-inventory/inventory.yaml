@@ -557,7 +557,8 @@ hosts:
           false).
       - name: Crossplane
         description: >-
-          RancherCluster, XVirtualMachine and AnsibleRun claims; reached
+          XVirtualMachine and AnsibleRun claims (RancherCluster path retired
+          2026-11-19, harvester#601); reached
           through the Kubernetes API, no ingress.
 
   # Clusterbook ledger (networks-labul on platform, read 2026-10-26):
