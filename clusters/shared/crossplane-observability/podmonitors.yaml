@@ -1,0 +1,78 @@
+---
+# Crossplane's own metrics (docs.crossplane.io/latest/guides/metrics). Nothing
+# scraped them before (checked 2026-11-19: no Pod/ServiceMonitor on either
+# cluster). The stack selects monitors in every namespace without a label
+# (podMonitorSelector: {}, *SelectorNilUsesHelmValues: false), so these are
+# picked up as they are.
+#
+# Core: serves /metrics on :8080 although the chart (metrics.enabled: false)
+# declares no such container port -- hence portNumber, not a port name.
+# The rbac-manager serves the same on :8080 (controller-runtime metrics).
+# Selected by `app`, the one label both releases share (crossplane-mgmt's
+# release is `crossplane`, machinery-hv's `crossplane-deployment`).
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: crossplane
+spec:
+  namespaceSelector:
+    matchNames: [crossplane-system]
+  selector:
+    matchExpressions:
+      - key: app
+        operator: In
+        values: [crossplane, crossplane-rbac-manager]
+  podMetricsEndpoints:
+    - portNumber: 8080
+      path: /metrics
+---
+# Providers: the package runtime gives every provider pod the port `metrics`
+# (:8080) and the label pkg.crossplane.io/provider, no DeploymentRuntimeConfig
+# needed. The label becomes `provider` on every series.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: crossplane-providers
+spec:
+  namespaceSelector:
+    matchNames: [crossplane-system]
+  selector:
+    matchExpressions:
+      - key: pkg.crossplane.io/provider
+        operator: Exists
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_pkg_crossplane_io_provider]
+          targetLabel: provider
+---
+# Functions: same port `metrics`, label pkg.crossplane.io/function -> `function`.
+# They serve gRPC server counters (grpc_server_*); the run duration per
+# function comes from core (function_run_function_*).
+#
+# function-auto-ready is LEFT OUT: v0.6.5/v0.6.9 declare the port but listen on
+# nothing there (502 through the API server proxy, checked on both clusters).
+# Scraped, it is a permanently `down` target, and two of ten targets down
+# trips the stack's TargetDown alert. Both package names it runs under are
+# listed; drop them here once a release serves metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: crossplane-functions
+spec:
+  namespaceSelector:
+    matchNames: [crossplane-system]
+  selector:
+    matchExpressions:
+      - key: pkg.crossplane.io/function
+        operator: Exists
+      - key: pkg.crossplane.io/function
+        operator: NotIn
+        values: [function-auto-ready, crossplane-contrib-function-auto-ready]
+  podMetricsEndpoints:
+    - port: metrics
+      path: /metrics
+      relabelings:
+        - sourceLabels: [__meta_kubernetes_pod_label_pkg_crossplane_io_function]
+          targetLabel: function

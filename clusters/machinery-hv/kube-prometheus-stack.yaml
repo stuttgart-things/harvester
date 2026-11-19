@@ -57,6 +57,17 @@ spec:
           path: /spec/values/prometheus/prometheusSpec/externalLabels
           value:
             cluster: machinery-hv
+        # Dashboard folders, as on platform (../platform/infra.yaml): the
+        # sidecar files a ConfigMap into the folder named by its annotation
+        # grafana_folder -- "Crossplane" for ./crossplane-observability.yaml's.
+        # Without an annotation (the stack's own dashboards): General.
+        - op: add
+          path: /spec/values/grafana/sidecar
+          value:
+            dashboards:
+              folderAnnotation: grafana_folder
+              provider:
+                foldersFromFilesStructure: true
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring

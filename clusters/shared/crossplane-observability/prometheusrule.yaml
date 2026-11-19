@@ -1,0 +1,43 @@
+---
+# Picked up as is: ruleSelector {} (ruleSelectorNilUsesHelmValues: false).
+# Warnings go to the omni-pitcher like the stack's own (severity warning).
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: crossplane
+spec:
+  groups:
+    - name: crossplane
+      rules:
+        # `max by` without `reason`: a change of reason (Creating ->
+        # ReconcileError) is a new series and must not restart the 30m.
+        - alert: CrossplaneXRNotReady
+          expr: |
+            max by (customresource_group, customresource_kind, namespace, name, composite) (
+              crossplane_xr_status_condition{type="Ready"}
+            ) == 0
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Crossplane XR {{ $labels.customresource_kind }} {{ $labels.namespace }}/{{ $labels.name }} not Ready for 30m"
+            description: >-
+              {{ $labels.customresource_kind }} {{ $labels.name }} (namespace
+              {{ $labels.namespace }}, top-level XR {{ $labels.composite }}) has
+              had Ready != True for more than 30 minutes. Dashboard
+              Crossplane / Crossplane XR Status lists the reason and its
+              composed resources; `kubectl describe` the XR and `crossplane
+              beta trace` it for the failing resource.
+        # Without this the alert above can never fire.
+        - alert: CrossplaneStateMetricsDown
+          expr: absent(up{job="crossplane-state-metrics"} == 1)
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "crossplane-state-metrics is not scraped"
+            description: >-
+              No successful scrape of crossplane-state-metrics (namespace
+              monitoring) for 15 minutes: no XR/MR condition metrics, so
+              CrossplaneXRNotReady cannot fire. Check the pod's log for
+              `forbidden` (ClusterRole) or a config parse error.

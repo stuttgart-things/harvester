@@ -25,6 +25,9 @@ resources:
   # metrics + alerts; its token Secret (SOPS)
   - kube-prometheus-stack.yaml
   - kube-prometheus-stack-secrets.enc.yaml
+  # -> ../shared/crossplane-observability  Crossplane scraping, XR status
+  #    metrics + alert, dashboards
+  - crossplane-observability.yaml
   - cicd-platform.yaml
   # -> ./pki          the OpenBao CA, after cert-manager
   - pki.yaml
