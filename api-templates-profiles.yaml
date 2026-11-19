@@ -22,9 +22,10 @@ templates:
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-minimal.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-baseos.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-ansiblerun/templates/ansiblerun-detailed.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-minimal.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-harvester.yaml
-  - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/crossplane/xr-rancher-cluster/templates/ranchercluster-harvester-bootstrap.yaml
+  # No xr-rancher-cluster templates: the RancherCluster path on crossplane-mgmt
+  # was retired (harvester#601, #789), and the Backstage template create-xrs-pr
+  # only writes to clusters/crossplane-mgmt/xrs. Rancher clusters are ordered as
+  # ClusterStack on machinery-hv (clusters/machinery-hv/xrs, harvester#681).
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-platform.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-developer.yaml
   - https://raw.githubusercontent.com/stuttgart-things/kcl/refs/heads/main/kubernetes/clusterbook-cluster-gen/templates/clusterbook-cluster-detailed.yaml
