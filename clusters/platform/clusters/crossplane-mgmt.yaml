@@ -60,6 +60,10 @@ spec:
     observability-platform.stuttgart-things.com/secret-key: observability
     observability-platform.stuttgart-things.com/alert-webhook-url: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
     observability-platform.stuttgart-things.com/storage-class: openebs-hostpath
+    # Grafana login with ZITADEL (harvester#753): client grafana-crossplane-mgmt
+    # (../zitadel-config/apps.auto.tfvars); id/secret in the same entry
+    # crossplane-mgmt/observability (grafana-oidc-client-id/-secret).
+    observability-platform.stuttgart-things.com/grafana-oidc-issuer: https://zitadel.platform.sthings.lab
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
     cicd-platform: 'true'                # umbrella: enable the CI/CD stack

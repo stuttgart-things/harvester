@@ -109,4 +109,47 @@ apps = {
       someara  = ["grafana-readonly"]
     }
   }
+  # Grafana on the Argo clusters app-dev-hv and crossplane-mgmt (harvester#753):
+  # the argocd catalog's kube-prometheus-stack with grafana.oidc, id/secret
+  # through ESO from OpenBao (crossplane-mgmt: app-secrets entry
+  # crossplane-mgmt/observability; app-dev-hv: machinery-fleet shared entry
+  # observability/_grafana-oidc-app-dev-hv). Same role keys as `grafana`.
+  grafana-app-dev-hv = {
+    url               = "https://grafana.app-dev-hv.sthings.lab"
+    redirect_paths    = ["/login/generic_oauth"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "grafana-admin"    = "Grafana admin"
+      "grafana-readonly" = "Grafana viewer"
+    }
+    users = {
+      sthings  = ["grafana-admin"]
+      indy     = ["grafana-admin"]
+      tommy    = ["grafana-admin"]
+      mcfly    = ["grafana-readonly"]
+      mcclane  = ["grafana-readonly"]
+      fmcguire = ["grafana-readonly"]
+      rdevaney = ["grafana-readonly"]
+      someara  = ["grafana-readonly"]
+    }
+  }
+  grafana-crossplane-mgmt = {
+    url               = "https://grafana.crossplane-mgmt.sthings.lab"
+    redirect_paths    = ["/login/generic_oauth"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "grafana-admin"    = "Grafana admin"
+      "grafana-readonly" = "Grafana viewer"
+    }
+    users = {
+      sthings  = ["grafana-admin"]
+      indy     = ["grafana-admin"]
+      tommy    = ["grafana-admin"]
+      mcfly    = ["grafana-readonly"]
+      mcclane  = ["grafana-readonly"]
+      fmcguire = ["grafana-readonly"]
+      rdevaney = ["grafana-readonly"]
+      someara  = ["grafana-readonly"]
+    }
+  }
 }
