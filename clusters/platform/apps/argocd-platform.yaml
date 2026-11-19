@@ -86,7 +86,7 @@ spec:
                           g, argocd-admin, role:admin
                           g, argocd-reader, role:readonly
                     # Metrics + ServiceMonitors for the ArgoCD dashboard
-                    # (../infra.yaml, argo-cd examples/dashboard.json).
+                    # (apps/grafana-dashboards-lab/argocd.json).
                     controller:
                       metrics:
                         enabled: true

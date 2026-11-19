@@ -1,7 +1,7 @@
 ---
 # cert-manager's controller metrics (certificate expiry, readiness, ACME/issuer
 # requests) for the "Cert-manager-Kubernetes" dashboard (grafana.com 20842,
-# ../infra.yaml). Every gateway certificate here comes from the OpenBao PKI
+# ./grafana-dashboards-lab/). Every gateway certificate here comes from the OpenBao PKI
 # issuer. A ServiceMonitor of its own instead of the chart's: cert-manager is
 # the flux-infra release, and this needs no patch on it.
 apiVersion: monitoring.coreos.com/v1
