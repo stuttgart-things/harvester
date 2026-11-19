@@ -83,6 +83,12 @@ spec:
     repoURL: https://github.com/stuttgart-things/harvester.git
     targetRevision: main
     path: clusters/shared/crossplane-observability
+    # Explicit source type: without it Argo's plugin discovery hands any path
+    # with a kustomization.yaml to argocd-vault-plugin (CMP), which fails here
+    # with "AVP_ROLE_ID and AVP_SECRET_ID ... cannot be empty". The
+    # kustomization already sets this namespace -- a no-op besides the type.
+    kustomize:
+      namespace: monitoring
   destination:
     name: crossplane-mgmt
     namespace: monitoring
