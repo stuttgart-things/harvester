@@ -1,0 +1,44 @@
+---
+# The observability platform of the Argo CD catalog on THIS cluster's Argo CD
+# (stuttgart-things/argocd ./platforms/observability, harvester#753): the
+# ApplicationSets kube-prometheus-stack, fluent-bit, clusterscope, k8sgpt and
+# prometheus-pve-exporter. All of them stay dormant until a cluster Secret
+# carries `observability-platform: "true"` PLUS each one's own opt-in/gate, so
+# installing them deploys nothing by itself.
+#
+# Shaped exactly like the children of argocd-platform (../apps/argocd-platform.yaml,
+# flux cicd/argocd-platform/components/<name>), named as such a component would
+# name it. It is a file here only because stuttgart-things/flux has no
+# `observability` component for the sthings-lab overlay yet. Once one exists
+# and the overlay lists it, DELETE this file in the same change as the bump --
+# two Kustomizations owning the same ApplicationSets fight over them.
+#
+# The appset only (platforms/observability/kustomization.yaml), NOT
+# platforms/observability/application.yaml: that is the Argo-managed way to
+# install the same AppSets, and both at once fight over them (argocd#320).
+#
+# fluent-bit-observability is in the catalog from argocd v0.115.0
+# (stuttgart-things/argocd#850); argocd-catalog in ../git-repos.yaml has to be
+# at least there before the fluent-bit labels on the clusters do anything.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: argocd-platform-platform-observability
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: argocd
+spec:
+  # Needs the Argo CD CRDs (ApplicationSet) installed by the bundle first.
+  dependsOn:
+    - name: argocd-platform-argo-cd
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  prune: true
+  wait: true
+  force: false
+  sourceRef:
+    kind: GitRepository
+    name: argocd-catalog
+  path: ./platforms/observability
