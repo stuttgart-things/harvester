@@ -141,6 +141,9 @@ spec:
                           name: homerun2-radio-pitcher-schmetterpause
                           key: statistics-token
                           optional: false
+                    # spots: the pool below (same ConfigMap)
+                    - name: RADIO_SPOTS_PATH
+                      value: /etc/homerun2-radio-pitcher/spots.yaml
                     # releases: the org's new GitHub releases (public events,
                     # one request per 10 min, no token needed)
                     - name: RADIO_RELEASES_ORG
@@ -193,6 +196,8 @@ spec:
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
                 - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
               ":15": { segment: infra-facts, count: 2 }
+              # Breaks (v0.18.0): a spot from spots.yaml below.
+              ":20": { segment: spots }
               ":25": { segment: news, count: 1, feeds: [cncf, kubernetes] }
               ":30":
                 - { segment: time-check }
@@ -200,6 +205,7 @@ spec:
                 - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
                 - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
+              ":40": { segment: spots }
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
@@ -233,3 +239,37 @@ spec:
               - name: harvester
                 type: harvester
                 kubeconfig: /etc/homerun2-radio-pitcher/kubeconfigs/harvester
+          # The spots segment's pool (homerun2-radio-pitcher examples/spots.yaml):
+          # fixed texts, never cut, at most 120 characters a line. Weighted
+          # random pick among the spots active now, not the last 3 again.
+          spots.yaml: |
+            spots:
+              - id: lunch
+                title: "Lunch at 12"
+                message: "Time for a break: lunch at 12"
+                weekdays: [mon, tue, wed, thu, fri]
+                between: "11:00-12:00"
+              - id: portal
+                title: "homerun2 portal"
+                message: "Everything the matrix shows, and more: open the homerun2 portal"
+              - id: table-tennis
+                title: "Table tennis?"
+                message: "The table is free more often than you think. Results go to schmetterpause"
+                between: "12:00-17:00"
+              - id: friday
+                title: "Friday!"
+                message: "No deploys after 15:00 on a Friday. Probably."
+                weekdays: [fri]
+                weight: 2
+              - id: quote-knuth
+                kind: quote
+                text: "Premature optimization is the root of all evil."
+                author: Donald Knuth
+              - id: quote-kernighan
+                kind: quote
+                text: "Debugging is twice as hard as writing the code in the first place."
+                author: Brian Kernighan
+              - id: quote-hopper
+                kind: quote
+                text: "The most dangerous phrase in the language is: we've always done it this way."
+                author: Grace Hopper
