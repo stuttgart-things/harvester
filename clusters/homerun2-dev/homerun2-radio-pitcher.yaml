@@ -65,7 +65,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
   ref:
-    tag: v0.14.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+    tag: v0.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -141,8 +141,10 @@ spec:
                           name: homerun2-radio-pitcher-schmetterpause
                           key: statistics-token
                           optional: false
+                    # Order = turns of a mixed news show. heise airs in German
+                    # (headlines are never translated).
                     - name: RADIO_NEWS_FEEDS
-                      value: cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml,hn=https://hnrss.org/frontpage?points=300
+                      value: heise=https://www.heise.de/rss/heise-top-atom.xml,hn=https://hnrss.org/frontpage?points=300,cncf=https://www.cncf.io/feed/,kubernetes=https://kubernetes.io/feed.xml
                     # On since 2026-11-18. It was off while gemma3 could write
                     # "Six of the sixty-four VMs" for 6 VMs; v0.2.0 rejects
                     # number words, repeated numbers and a dropped cluster name
@@ -173,12 +175,15 @@ spec:
             # daylight, ../../hosts/matrix/README.md). Each item is a 12 s
             # card; items of one slot come 15 s apart.
             clock:
+              # News shows on the hour and the half hour: the time, then 6
+              # headlines with the feeds taking turns (mix, v0.15.0), top
+              # stories first.
               ":00": { segment: time-check }
-              ":05": { segment: news, count: 2 }
+              ":01": { segment: news, count: 6, mix: true }
               ":15": { segment: infra-facts, count: 2 }
-              ":25": { segment: news, count: 2, feeds: [cncf, kubernetes] }
+              ":25": { segment: news, count: 1, feeds: [cncf, kubernetes] }
               ":30": { segment: time-check }
-              ":35": { segment: news, count: 2 }
+              ":31": { segment: news, count: 6, mix: true }
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
