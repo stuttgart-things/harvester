@@ -1,0 +1,79 @@
+---
+# kube-prometheus-stack for this cluster (harvester#753, from #490). Same as
+# ../homerun2-dev/kube-prometheus-stack.yaml, which explains why it is a local
+# stack per cluster and not remote-write to platform. What differs:
+#
+# ALERTS go to homerun2-dev's omni-pitcher through its Gateway, HTTPS
+# (this cluster runs no homerun2), on /pitch/alertmanager like platform's.
+# The certificate there is issued by the lab's OpenBao PKI: the
+# alertmanager-webhook-ca component mounts the ConfigMap cluster-trust-bundle
+# from ./observability-trust-bundle.yaml (no trust-manager here).
+#
+# TOKEN: HOMERUN2_OMNI_PITCHER_AUTH_TOKEN, the variable the flux release reads,
+# from its own SOPS Secret ./kube-prometheus-stack-secrets.enc.yaml -- a copy of
+# that key in ../homerun2-dev/homerun2-secrets-subst.enc.yaml, NOT tied to
+# platform's k8s-pitcher pilot Secret (#753). Rotating the pitcher token means
+# updating both files. Not optional: without the Secret this stops instead of
+# rolling out the release's `changeme` token.
+#
+# GRAFANA: https://grafana.machinery-hv.sthings.lab, local `admin`, generated
+# password (see homerun2-dev's file for how to read it).
+#
+# RESOURCES (checked 2026-11-19): 1 node, 8 CPU / 16 GiB, requests 35% CPU /
+# 28% memory, ~10.8 GiB in use; the stack requests ~200m / ~800Mi. ~46 GiB
+# free on the root disk that openebs-hostpath writes to.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 15m
+  dependsOn:
+    - name: cilium-gateway
+    - name: openebs
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/kube-prometheus-stack
+  components:
+    - components/alertmanager-webhook-ca
+  prune: true
+  wait: true
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+        name: kube-prometheus-stack
+      patch: |
+        - op: remove
+          path: /spec/values/grafana/adminPassword
+        - op: add
+          path: /spec/values/prometheus/prometheusSpec/externalLabels
+          value:
+            cluster: machinery-hv
+  postBuild:
+    substitute:
+      KPS_NAMESPACE: monitoring
+      KPS_VERSION: "93.4.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
+      KPS_PROMETHEUS_STORAGE_CLASS: openebs-hostpath
+      KPS_PROMETHEUS_STORAGE_SIZE: 10Gi
+      KPS_PROMETHEUS_RETENTION: 15d
+      KPS_SCRAPE_INTERVAL: 60s
+      KPS_ALERTMANAGER_WEBHOOK_URL: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
+      KPS_ALERTMANAGER_CA_CONFIGMAP: cluster-trust-bundle
+      KPS_ALERTMANAGER_CA_KEY: trust-bundle.pem
+      # Keep identical to infra-platform.yaml's INFRA_*.
+      GATEWAY_NAME: machinery-hv-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: grafana
+      DOMAIN: machinery-hv.sthings.lab
+    substituteFrom:
+      - kind: Secret
+        name: kube-prometheus-stack-secrets
+        optional: false
