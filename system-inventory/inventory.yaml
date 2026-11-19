@@ -203,8 +203,8 @@ hosts:
         description: >-
           Map of the lab's clusters from clusters/ in this repo, with live
           status and endpoint probes for platform itself and every cluster
-          whose kubeconfig is in OpenBao `kubeconfigs/` (read through
-          external-secrets, store vault-kubeconfigs).
+          whose kubeconfig is in OpenBao `kubeconfigs/` (read-only
+          clusterscope-reader kubeconfigs in OpenBao `clusterscope/`).
       - name: Grafana
         fqdn: grafana.platform.sthings.lab
         description: >-

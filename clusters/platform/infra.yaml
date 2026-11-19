@@ -528,7 +528,7 @@ spec:
       FLUENT_BIT_LOKI_HOST: loki-gateway.loki.svc.cluster.local
 ---
 # External Secrets Operator (harvester#753). The first ESO on this cluster, and
-# for now it serves ONE store: `vault-kubeconfigs` below, which clusterscope's
+# for now it serves ONE store: `vault-clusterscope` below, which clusterscope's
 # live mode reads the lab's other clusters through (./apps/clusterscope.yaml).
 # Everything else here stays SOPS-in-git, as before.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -553,14 +553,17 @@ spec:
       # the same version.
       EXTERNAL_SECRETS_VERSION: "2.15.0" # datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
 ---
-# ClusterSecretStore `vault-kubeconfigs`: KV mount `kubeconfigs` on this
-# cluster's OpenBao (machinery-hv's ClusterStacks write one entry per built
-# cluster there, property `kubeconfig`).
+# ClusterSecretStore `vault-clusterscope`: KV mount `clusterscope` on this
+# cluster's OpenBao -- one READ-ONLY kubeconfig per lab cluster (ServiceAccount
+# clusterscope-reader: get/list/watch, no Secrets), written by
+# ./openbao/platform-eso/seed-clusterscope-kubeconfig.sh. Deliberately NOT the
+# `kubeconfigs` mount: that one holds machinery-hv's ADMIN kubeconfigs, and any
+# namespace on this cluster can reference a ClusterSecretStore.
 #
 # THE OPENBAO SIDE IS ./openbao/platform-eso (terraform, by hand, FIRST): the
-# auth mount platform-sthings-eso, role `eso` bound to ESO's own ServiceAccount
-# and the policy read-kubeconfigs-eso. Before that has run this store reports
-# InvalidProviderConfig -- loud, and correct.
+# mount, the auth mount platform-sthings-eso, role `eso` bound to ESO's own
+# ServiceAccount and the policy read-clusterscope-kubeconfigs. Before that has
+# run this store reports InvalidProviderConfig -- loud, and correct.
 #
 # In-cluster over plain HTTP like cert-manager-openbao-issuer above, so it does
 # not depend on the Gateway. The CA Secret is only there because the base
@@ -572,7 +575,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: external-secrets-vault-kubeconfigs
+  name: external-secrets-vault-clusterscope
   namespace: flux-system
 spec:
   interval: 1h
@@ -588,9 +591,9 @@ spec:
   wait: true
   postBuild:
     substitute:
-      VAULT_CSS_NAME: vault-kubeconfigs
+      VAULT_CSS_NAME: vault-clusterscope
       VAULT_SERVER: http://openbao.openbao.svc.cluster.local:8200
-      VAULT_KV_PATH: kubeconfigs
+      VAULT_KV_PATH: clusterscope
       VAULT_CA_SECRET_NAME: openbao-pki-ca # pragma: allowlist secret
       VAULT_CA_SECRET_NAMESPACE: cert-manager # pragma: allowlist secret
       VAULT_CA_SECRET_KEY: ca.crt # pragma: allowlist secret

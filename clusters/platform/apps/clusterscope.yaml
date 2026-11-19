@@ -3,18 +3,19 @@
 # (git-sync, the repo is public) plus live status of this cluster
 # (harvester#490). clusterscope.platform.sthings.lab.
 #
-# Live mode reads `platform` itself in-cluster and every other cluster whose
-# kubeconfig is in OpenBao (KV mount `kubeconfigs`, entry = cluster name,
-# property `kubeconfig`), through the ClusterSecretStore vault-kubeconfigs
-# (../infra.yaml, OpenBao side ../openbao/platform-eso; harvester#753).
+# Live mode reads `platform` itself in-cluster and every other cluster that
+# has an entry in OpenBao KV mount `clusterscope` (entry = cluster name as
+# clusterscope knows it, property `kubeconfig`), through the ClusterSecretStore
+# vault-clusterscope (../infra.yaml, OpenBao side ../openbao/platform-eso;
+# harvester#753). Those are READ-ONLY ServiceAccount kubeconfigs
+# (clusterscope-reader), seeded per cluster by
+# ../openbao/platform-eso/seed-clusterscope-kubeconfig.sh -- never the admin
+# kubeconfigs in the `kubeconfigs` mount.
 #
-# CLUSTERSCOPE_KUBECONFIG_CLUSTERS lists exactly the clusters that HAVE an
-# entry -- only what machinery-hv's ClusterStacks wrote, i.e. app-dev-hv
-# (checked 2026-11-19). homerun2-dev, machinery-hv, crossplane-mgmt,
-# tabletennis, harvester, edge and sthings-edge have none and stay
-# "no kubeconfig" until one is written there; add each name to the regexp then.
-# (tabletennis and the edges sit in another network and are unreachable from
-# here anyway.)
+# The regexp takes every entry of that mount, so a newly seeded cluster shows
+# up live without a change here (ESO refreshes hourly). A cluster without an
+# entry stays "no kubeconfig"; tabletennis and the edges sit in other networks
+# and are unreachable from here anyway.
 #
 # PROBE checks every HTTPRoute URL it finds; the cluster-trust-bundle (OpenBao
 # root) is mounted so *.sthings.lab endpoints verify.
@@ -32,7 +33,7 @@ spec:
   # The store and its CRDs come from the infra Kustomizations; without them
   # the ExternalSecret below fails the apply.
   dependsOn:
-    - name: external-secrets-vault-kubeconfigs
+    - name: external-secrets-vault-clusterscope
   path: './apps/clusterscope'
   components:
     - components/vault-kubeconfigs
@@ -45,8 +46,8 @@ spec:
       CLUSTERSCOPE_LIVE: 'true'
       CLUSTERSCOPE_SELF_CLUSTER: platform
       CLUSTERSCOPE_KUBECONFIG_DIR: /kubeconfigs
-      CLUSTERSCOPE_KUBECONFIG_STORE: vault-kubeconfigs
-      CLUSTERSCOPE_KUBECONFIG_CLUSTERS: ^(app-dev-hv)$
+      CLUSTERSCOPE_KUBECONFIG_STORE: vault-clusterscope
+      CLUSTERSCOPE_KUBECONFIG_CLUSTERS: ^[a-z0-9-]+$
       CLUSTERSCOPE_PROBE: 'true'
       CLUSTERSCOPE_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
       CLUSTERSCOPE_TRUST_BUNDLE_KEY: trust-bundle.pem
