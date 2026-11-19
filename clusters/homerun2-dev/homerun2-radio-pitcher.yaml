@@ -65,7 +65,7 @@ spec:
   interval: 1h
   url: oci://ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
   ref:
-    tag: v0.15.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
+    tag: v0.17.0 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-radio-pitcher-kustomize
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -141,6 +141,10 @@ spec:
                           name: homerun2-radio-pitcher-schmetterpause
                           key: statistics-token
                           optional: false
+                    # releases: the org's new GitHub releases (public events,
+                    # one request per 10 min, no token needed)
+                    - name: RADIO_RELEASES_ORG
+                      value: stuttgart-things
                     # Order = turns of a mixed news show. heise airs in German
                     # (headlines are never translated).
                     - name: RADIO_NEWS_FEEDS
@@ -175,15 +179,27 @@ spec:
             # daylight, ../../hosts/matrix/README.md). Each item is a 12 s
             # card; items of one slot come 15 s apart.
             clock:
-              # News shows on the hour and the half hour: the time, then 6
-              # headlines with the feeds taking turns (mix, v0.15.0), top
-              # stories first.
-              ":00": { segment: time-check }
-              ":01": { segment: news, count: 6, mix: true }
+              # News shows on the hour and the half hour (v0.17.0): one block
+              # of the time, top headlines (feeds take turns), the org's new
+              # releases, fresh rollouts and an infra fact. The show's cards
+              # carry show=news, which the catcher's radio-show rule holds
+              # 20 s (./homerun2-led-catcher-profile.yaml, the Pi's
+              # ../../hosts/matrix/profile.yaml), so they come 23 s apart. A
+              # segment with nothing new is left out.
+              ":00":
+                - { segment: time-check }
+                - { segment: news, count: 3, mix: true, spacing: 23s, card-tags: [show=news] }
+                - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
+                - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
+                - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
               ":15": { segment: infra-facts, count: 2 }
               ":25": { segment: news, count: 1, feeds: [cncf, kubernetes] }
-              ":30": { segment: time-check }
-              ":31": { segment: news, count: 6, mix: true }
+              ":30":
+                - { segment: time-check }
+                - { segment: news, count: 3, mix: true, spacing: 23s, card-tags: [show=news] }
+                - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
+                - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
+                - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }

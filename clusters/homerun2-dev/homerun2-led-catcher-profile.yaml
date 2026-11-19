@@ -29,6 +29,16 @@ metadata:
 data:
   profile.yaml: |
     displayRules:
+      # The radio's news show (card tag show=news): held longer to read.
+      # Before radio, first match wins; the radio spaces these cards 23 s.
+      radio-show:
+        systems: [radio]
+        severity: [INFO]
+        tags: [show=news]
+        kind: card
+        strip_prefix: true
+        duration: 20
+        ambient: true
       radio:
         systems: [radio]
         severity: [INFO]
