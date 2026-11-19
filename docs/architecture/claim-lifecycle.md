@@ -2,117 +2,56 @@
 
 ## Overview
 
-Every Crossplane claim managed through the platform follows a defined lifecycle from creation to deletion. All state transitions are tracked in `claims/registry.yaml` and executed through Git pull requests.
+Every resource ordered in this lab is a Crossplane XR in git. Git is the only
+record of what exists: an order is a pull request that adds the XR, and the
+cluster state follows from the merge. There is no separate registry or
+inventory service.
 
-## Lifecycle States
+> **History.** An earlier design tracked every claim in `claims/registry.yaml`,
+> served by a `machinery-registry-api` and kept up to date by a
+> `claim-status-collector`. None of the services was built, the file only ever
+> held two CLI test claims, and the Backstage template *Delete Resource Claim*
+> that depended on it never worked. All of it was removed on 2026-11-19
+> (harvester#348).
 
-```
-  ┌──────────┐     PR merged      ┌──────────┐
-  │ creating ├────────────────────►│  active   │
-  └──────────┘                    └─────┬─────┘
-                                        │
-                              ┌─────────┼─────────┐
-                              │         │         │
-                              ▼         ▼         ▼
-                         ┌────────┐ ┌───────┐ ┌────────┐
-                         │healthy │ │ error │ │unknown │
-                         └────────┘ └───────┘ └────────┘
-                              │         │         │
-                              └─────────┼─────────┘
-                                        │
-                              delete PR merged
-                                        │
-                                        ▼
-                                  ┌──────────┐
-                                  │ deleted  │
-                                  └──────────┘
-```
+## Where orders live
 
-## File Artifacts Per Claim
+| Path | Cluster | Synced by | Prune | What |
+|---|---|---|---|---|
+| `clusters/crossplane-mgmt/xrs/` | crossplane-mgmt | Argo CD `showcase-crossplane-xrs` | on | `XVirtualMachine` and `AnsibleRun` claims |
+| `clusters/machinery-hv/xrs/` | machinery-hv | Flux `machinery-hv-xrs` | **off**, plus `kustomize.toolkit.fluxcd.io/prune: disabled` on every XR | `ClusterStack` orders (Rancher cluster + platform layer), e.g. `app-dev-hv` |
 
-When a claim is created, three files are generated in `claims/{category}/{name}/`:
+## Create
 
-### 1. Claim Manifest (`{template}.yaml`)
+1. A pull request adds the XR: from a Backstage template (`harvester-vm`,
+   `create-xrs-pr` in stuttgart-things/backstage-resources), from
+   `claims render` (see [claims CLI](../services/claims-cli.md)) or by hand.
+   ClusterStack orders on machinery-hv are written by hand for now.
+2. CI checks it (pre-commit; Kyverno policies for `clusters/crossplane-mgmt/xrs`).
+3. On merge, Argo CD or Flux applies it and Crossplane composes the resources.
+4. Backstage shows the result through the catalog entries of the repo.
 
-The rendered Crossplane claim resource:
+The machinery-order-service (harvester#681) will take orders through an API
+and portal and open these pull requests itself; until it runs, the paths above
+are the only ones.
 
-```yaml
-apiVersion: sthings.io/v1alpha1
-kind: VolumeClaim
-metadata:
-  name: app-pvc
-  namespace: default
-spec:
-  storage: 10Gi
-  storageClassName: nfs4-csi
-```
+## Delete
 
-### 2. Kustomization (`kustomization.yaml`)
+**crossplane-mgmt (prune on):** revert the order PR, or open a PR that removes
+the XR file. Argo CD prunes the XR and Crossplane deletes what it composed.
+Tested in the demo: VM gone after 49 s.
 
-Local kustomization referencing the claim manifest:
+**machinery-hv (prune off):** a revert alone does nothing, on purpose. Delete in
+two phases (details in `clusters/machinery-hv/xrs/README.md`):
 
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - volumeclaim.yaml
+```bash
+kubectl patch clusterstack <name> --type=merge -p '{"spec":{"platformEnabled":false}}'
+kubectl delete clusterstack <name>
 ```
 
-### 3. Catalog Info (`catalog-info.yaml`)
+then remove the file in a PR, so Flux does not recreate it.
 
-Backstage component registration:
-
-```yaml
-apiVersion: backstage.io/v1alpha1
-kind: Component
-metadata:
-  name: app-pvc
-  description: Crossplane claim (volumeclaim) - app-pvc
-  annotations:
-    github.com/project-slug: stuttgart-things/harvester
-    claim-machinery/template: volumeclaim
-    claim-machinery/category: infra
-  tags:
-    - crossplane
-    - claim
-    - volumeclaim
-    - infra
-spec:
-  type: crossplane-claim
-  lifecycle: production
-  owner: platform-team
-```
-
-## Parent Kustomization
-
-Each category directory has a `kustomization.yaml` that references its children:
-
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-resources:
-  - app-pvc
-  - my-database
-```
-
-This file is updated on both create (add entry) and delete (remove entry).
-
-## Create Workflow
-
-1. User selects a template and provides parameters (via CLI or Backstage)
-2. `claims` CLI calls `claim-machinery-api` to render the template
-3. CLI writes the three artifact files to a new git branch
-4. CLI adds an entry to `claims/registry.yaml`
-5. CLI updates the parent `kustomization.yaml`
-6. CLI creates a pull request
-7. On PR merge, Flux reconciles the claim to the cluster
-
-## Delete Workflow
-
-1. User selects a claim to delete (via CLI, Backstage, or automation)
-2. `claims` CLI resolves claim metadata (from registry or API)
-3. CLI removes the entire `claims/{category}/{name}/` directory on a new branch
-4. CLI removes the entry from `claims/registry.yaml`
-5. CLI removes the entry from parent `kustomization.yaml`
-6. CLI creates a pull request
-7. On PR merge, Flux removes the claim from the cluster
+**Stuck deletion:** if a composed object cannot reach its target any more (the
+target cluster is already gone), its finalizer holds the XR. Set that object to
+`managementPolicies: ["Observe"]` so Crossplane releases it without a remote
+delete, instead of removing finalizers by hand (harvester#601).
