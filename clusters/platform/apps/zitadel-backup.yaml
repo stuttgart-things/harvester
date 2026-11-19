@@ -13,6 +13,16 @@
 #
 # In the namespace of the zitadel component (apps-platform): removing the
 # component deletes this CronJob with the namespace, not the bucket.
+#
+# Boot race (#753): the lab is off at 02:30, so the run is the catch-up Job
+# the CronJob controller starts right after boot -- before CoreDNS,
+# zitadel-postgresql and MinIO are Ready. Until then the Services have no
+# endpoints and Cilium's socket LB answers "no route to host" (2026-11-19:
+# pods at 07:26:03 and 07:28:53, CoreDNS Ready 07:28:47, MinIO 07:29:08; the
+# third pod succeeded). So both containers first wait for their peer (up to
+# 5 min) and backoffLimit leaves room for a slow boot; activeDeadlineSeconds
+# ends a Job that hangs anyway. Missed or failed runs alert via
+# ./cronjob-alerts.yaml.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -29,7 +39,8 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      backoffLimit: 2
+      backoffLimit: 4
+      activeDeadlineSeconds: 1800
       ttlSecondsAfterFinished: 604800
       template:
         metadata:
@@ -53,6 +64,12 @@ spec:
               args:
                 - |
                   set -euo pipefail
+                  # Wait for DNS and the database after a boot (see above).
+                  for i in $(seq 1 30); do
+                    pg_isready -q -h zitadel-postgresql -U postgres -t 5 && break
+                    echo "zitadel-postgresql not ready yet ($i/30)"
+                    sleep 10
+                  done
                   pg_dump -h zitadel-postgresql -U postgres -d zitadel -Fc -f /work/zitadel.dump
                   # A dump pg_restore cannot read is no backup.
                   pg_restore --list /work/zitadel.dump > /dev/null
@@ -79,8 +96,14 @@ spec:
                 - |
                   set -euo pipefail
                   ts=$(date -u +%Y%m%dT%H%M%SZ)
-                  mc alias set backup http://minio-deployment.minio.svc.cluster.local:9000 \
-                    "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" > /dev/null
+                  # Retried: MinIO may not be Ready yet after a boot (see above).
+                  for i in $(seq 1 30); do
+                    mc alias set backup http://minio-deployment.minio.svc.cluster.local:9000 \
+                      "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" > /dev/null && break
+                    [ "$i" -lt 30 ] || exit 1
+                    echo "MinIO not ready yet ($i/30)"
+                    sleep 10
+                  done
                   mc cp --quiet /work/zitadel.dump "backup/platform-zitadel-backup/$ts/zitadel.dump"
                   # gzip, as the kubernetes backend stores it
                   if [ -f /tfstate/tfstate ]; then
