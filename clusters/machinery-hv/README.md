@@ -127,12 +127,10 @@ name swapped; read its warnings there, they all apply.
   (the Argo CD on platform, its provider config) are not in the fleet state yet.
 - **Observability on platform's Argo CD** comes from
   `../platform/apps/argocd-platform-observability.yaml` (harvester#753).
-  `app-dev-hv.yaml` sets the umbrella and `observability-platform/fluent-bit`
-  as plain labels (logs only). The `observability` profile stays out until the
-  shared entry `observability/_omni-pitcher` (property
-  `alertmanager-webhook-token`) is seeded: the profile derives the
-  kube-prometheus-stack secrets gate, and Alertmanager reads its token from
-  that entry.
+  `app-dev-hv.yaml` carries the `observability` profile and store; the
+  Alertmanager token is the shared entry `observability/_omni-pitcher`
+  (`../platform/openbao/machinery-fleet/shared.tf`), which has to be applied
+  first. Logs: `observability-platform/fluent-bit` as a plain label.
 
 ## Log -- the commands as they were run
 

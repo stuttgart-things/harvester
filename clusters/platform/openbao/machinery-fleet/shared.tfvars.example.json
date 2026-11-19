@@ -1,10 +1,14 @@
 {
   "_comment": "SHAPE ONLY -- no real values. The real file is shared.tfvars.sops.json (age recipient as ../app-secrets/terraform.tfvars.sops.json). Create/extend it with `sops set`, never by decrypting to disk. Apply: sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform apply -var-file={}'.",
-
   "shared_entries": {
     "homerun2/_teams-webhook": {
       "data": {
         "teamsWebhookUrl": "<Workflows webhook URL of the Teams channel harvester-apps>"
+      }
+    },
+    "observability/_omni-pitcher": {
+      "data": {
+        "alertmanager-webhook-token": "<homerun2-dev omni-pitcher AUTH_TOKEN = HOMERUN2_OMNI_PITCHER_AUTH_TOKEN in clusters/homerun2-dev/homerun2-secrets-subst.enc.yaml>"
       }
     }
   }

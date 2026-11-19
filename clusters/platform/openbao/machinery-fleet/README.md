@@ -69,6 +69,7 @@ person's credential, from `shared.tfvars.sops.json` (harvester#523):
 | Entry | Property | Read by |
 |---|---|---|
 | `homerun2/_teams-webhook` | `teamsWebhookUrl` | notification-catcher on every built cluster (`shared: teams-webhook` in the `homerun2` AppSecretProfile), Teams channel `harvester-apps` |
+| `observability/_omni-pitcher` | `alertmanager-webhook-token` | kube-prometheus-stack's Alertmanager on every built cluster with the `observability` profile (derived annotation `alert-webhook-secret-key: _omni-pitcher`). The bearer token of homerun2-dev's omni-pitcher, copied from `HOMERUN2_OMNI_PITCHER_AUTH_TOKEN` in `clusters/homerun2-dev/homerun2-secrets-subst.enc.yaml` (harvester#753). Rotating that token means updating both files |
 
 ```bash
 cd clusters/platform/openbao/machinery-fleet
@@ -79,6 +80,12 @@ read -rs URL; printf '%s' "$URL" | jq -Rs . | sops set --value-stdin shared.tfva
   '["shared_entries"]["homerun2/_teams-webhook"]["data"]["teamsWebhookUrl"]'; unset URL
 # (the first time, create the parent first:
 #  echo '{"data":{}}' | sops set --value-stdin shared.tfvars.sops.json '["shared_entries"]["homerun2/_teams-webhook"]')
+
+# observability/_omni-pitcher: copied SOPS -> SOPS, never on screen
+sops -d --extract '["stringData"]["HOMERUN2_OMNI_PITCHER_AUTH_TOKEN"]' \
+    ../../../homerun2-dev/homerun2-secrets-subst.enc.yaml \
+  | jq -Rs '{data:{"alertmanager-webhook-token": .}}' \
+  | sops set --value-stdin shared.tfvars.sops.json '["shared_entries"]["observability/_omni-pitcher"]'
 
 export VAULT_TOKEN=…   # as for the rest of this root
 sops exec-file --filename shared.tfvars.json shared.tfvars.sops.json 'terraform plan  -var-file={}'

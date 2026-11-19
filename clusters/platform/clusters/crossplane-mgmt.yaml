@@ -52,6 +52,14 @@ spec:
     # fluent-bit's Loki (observability-platform/fluent-bit below): the lab's
     # central one on platform, HTTPS through its Gateway (harvester#753).
     observability-platform.stuttgart-things.com/loki-host: loki.platform.sthings.lab
+    # kube-prometheus-stack: Grafana admin and the Alertmanager token from the
+    # entry `observability` in the KV mount crossplane-mgmt
+    # (../openbao/app-secrets); alerts to homerun2-dev's omni-pitcher, as
+    # platform's own stack (../infra.yaml).
+    observability-platform.stuttgart-things.com/secret-store: vault-crossplane-mgmt
+    observability-platform.stuttgart-things.com/secret-key: observability
+    observability-platform.stuttgart-things.com/alert-webhook-url: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
+    observability-platform.stuttgart-things.com/storage-class: openebs-hostpath
   labels:                    # stamped onto the resulting ArgoCD cluster secret
     auto-project: "true"     # → cluster-projects makes proj-net-test (required first)
     cicd-platform: 'true'                # umbrella: enable the CI/CD stack
@@ -79,10 +87,18 @@ spec:
     storage-platform/nfs-csi-install: 'false'        # → appset-nfs-csi-install (driver + snapshot-controller)
     storage-platform/nfs-csi-storageclasses: 'false' # → appset-nfs-csi-storageclasses (the SC).
     storage-platform.stuttgart-things.com/nfs-config: 'false'
-    # Logs only (harvester#753): fluent-bit -> platform's Loki, verified
-    # against the cluster-trust-bundle above (trust-manager-bundle, OpenBao root
-    # via cert-manager-vault-pki). kube-prometheus-stack stays off: its AppSet
-    # also needs the secrets-config gate (matched on EXISTS, so leave it
-    # absent), and this cluster has no ClusterSecretStore at all.
+    # observability (harvester#753). Logs: fluent-bit -> platform's Loki,
+    # verified against the cluster-trust-bundle above (trust-manager-bundle,
+    # OpenBao root via cert-manager-vault-pki).
     observability-platform: 'true'
     observability-platform/fluent-bit: 'true'
+    # Metrics: kube-prometheus-stack. The gate is matched on EXISTS -- a
+    # 'false' would switch it on too; delete the line to switch it off. It
+    # asserts that vault-crossplane-mgmt (../../crossplane-mgmt/eso-store.yaml)
+    # can read crossplane-mgmt/observability -- see the order in that file.
+    observability-platform.stuttgart-things.com/secrets-config: 'true'
+    # External Secrets, for the store above. Kyverno is NOT wanted here: the
+    # security umbrella would install it by default (opt-out).
+    security-platform: 'true'
+    security-platform/external-secrets: 'true' # pragma: allowlist secret
+    security-platform/kyverno: 'false'
