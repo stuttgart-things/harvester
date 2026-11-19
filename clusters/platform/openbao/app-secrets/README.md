@@ -44,6 +44,7 @@ application:
 |---|---|---|
 | `tabletennis/homerun2` | `authToken` | omni-pitcher (`/pitch` bearer), scout |
 | | `redisPassword` | redis-stack, omni-pitcher, core-catcher, scout, led-catcher |
+| | `teamsWebhookUrl` | notification-catcher (Teams output `teams-tabletennis`) |
 | `tabletennis/schmetterpause` | `session-key`, `username`, `password` | the app and its CloudNativePG database |
 | `tabletennis/zaehlwerk` | `omni-pitcher-token` | zaehlwerk's scoreboard panel |
 | | `redis-password` | zaehlwerk |

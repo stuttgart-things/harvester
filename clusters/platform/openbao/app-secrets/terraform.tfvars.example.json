@@ -6,7 +6,7 @@
       "name": "homerun2",
       "path": "tabletennis",
       "description": "tabletennis cluster application secrets",
-      "data_json": "{\"authToken\":\"<openssl rand -hex 32>\",\"redisPassword\":\"<openssl rand -hex 24>\"}"
+      "data_json": "{\"authToken\":\"<openssl rand -hex 32>\",\"redisPassword\":\"<openssl rand -hex 24>\",\"teamsWebhookUrl\":\"<Teams incoming webhook URL>\"}"
     },
     {
       "name": "schmetterpause",
