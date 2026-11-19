@@ -165,7 +165,7 @@ spec:
     kind: OCIRepository
     name: flux-repo
     url: oci://ghcr.io/stuttgart-things/flux/repo
-    tag: v1.233.0
+    tag: v1.239.0
     interval: 1h
   path: ./clusters/edge
   # The secrets the generator makes go to ./cluster-secrets and are applied
@@ -435,6 +435,13 @@ spec:
         # login, it ends matches: the route is the boundary, as for zaehlwerk.
         # 'on' QUOTED.
         TABLETENNIS_ZAEHLWERK_PORTAL: 'on'
+        # schmetterpause's kiosk (flux#1052, schmetterpause ADR-0008/0014): one
+        # device, unlocked by typing SCHMETTERPAUSE_KIOSK_TOKEN on /kiosk,
+        # creates players by name and enters counted results for everybody,
+        # with timoboll (an observer) as the operator -- a tournament without
+        # phones while the table has no piezo board. Devices are taken back
+        # under /admin. 'off' to switch it off again.
+        TABLETENNIS_SCHMETTERPAUSE_KIOSK: sops
       secrets:
         tabletennis-sops-secrets:
           SCHMETTERPAUSE_DB_PASSWORD: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_DB_PASSWORD # pragma: allowlist secret
@@ -450,6 +457,8 @@ spec:
           # table mock reads too
           SCHMETTERPAUSE_RFID_UID_KEY: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_RFID_UID_KEY # pragma: allowlist secret
           ZAEHLWERK_CHECKIN_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/ZAEHLWERK_CHECKIN_TOKEN # pragma: allowlist secret
+          # unlocks a kiosk device (TABLETENNIS_SCHMETTERPAUSE_KIOSK: sops)
+          SCHMETTERPAUSE_KIOSK_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/SCHMETTERPAUSE_KIOSK_TOKEN # pragma: allowlist secret
     # LAB: the Pong sandbox (flux apps/tabletennis/profiles/sandbox; zaehlwerk
     # ADR-0015/0016, schmetterpause ADR-0027). A SECOND schmetterpause and
     # zaehlwerk in schmetterpause-sandbox / zaehlwerk-sandbox, where
