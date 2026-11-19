@@ -37,22 +37,14 @@ cluster, so there is no reason not to run it first.
 
 ## What is in it today
 
-One mount per workload cluster. `tabletennis` holds three entries, one per
-application:
+One mount per workload cluster.
 
-| Entry | Property | Read by |
-|---|---|---|
-| `tabletennis/homerun2` | `authToken` | omni-pitcher (`/pitch` bearer), scout |
-| | `redisPassword` | redis-stack, omni-pitcher, core-catcher, scout, led-catcher |
-| | `teamsWebhookUrl` | notification-catcher (Teams output `teams-tabletennis`) |
-| `tabletennis/schmetterpause` | `session-key`, `username`, `password` | the app and its CloudNativePG database |
-| `tabletennis/zaehlwerk` | `omni-pitcher-token` | zaehlwerk's scoreboard panel |
-| | `redis-password` | zaehlwerk |
-| `tabletennis/observability` | `grafana-admin-user`, `grafana-admin-password` | kube-prometheus-stack's Grafana (argocd `platforms/observability`, annotation `observability-platform.stuttgart-things.com/secret-key: observability` on the XR) |
-| | `alertmanager-webhook-token` | its Alertmanager, bearer for homerun2-dev's omni-pitcher `/pitch/alertmanager` |
-
-Policy `read-tabletennis` grants `read` on all four. The `eso` role in
-`clusters/tabletennis/openbao` names it.
+> [!NOTE]
+> **`tabletennis` was removed on 2026-11-19 (harvester#601)**: the cluster was
+> retired in favour of `app-dev-hv`. Its mount (`homerun2`, `schmetterpause`,
+> `zaehlwerk`, `observability`) and the policy `read-tabletennis` left
+> `terraform.tfvars.sops.json`; the values are still in the git history of that
+> file. The examples below that name `tabletennis` describe the pattern.
 
 `crossplane-mgmt` has one mount of its own with one entry (harvester#753):
 
@@ -75,8 +67,7 @@ Policy `read-crossplane-mgmt` grants `read` on it; the `eso` role in
 > `HOMERUN2_OMNI_PITCHER_AUTH_TOKEN` from
 > `clusters/homerun2-dev/homerun2-secrets-subst.enc.yaml` (harvester#753), as in
 > `../machinery-fleet` `observability/_omni-pitcher`. Rotating that token means
-> updating it here twice (tabletennis and crossplane-mgmt) and in
-> machinery-fleet.
+> updating it here (crossplane-mgmt) and in machinery-fleet.
 
 **None of the entry names is a free choice.** `schmetterpause` and `zaehlwerk`
 are hard-coded in those apps' published kustomize bases — the catalog charts patch
