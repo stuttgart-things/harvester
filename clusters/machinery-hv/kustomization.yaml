@@ -30,6 +30,8 @@ resources:
   # -> ../shared/crossplane-observability  Crossplane scraping, XR status
   #    metrics + alert, dashboards
   - crossplane-observability.yaml
+  # -> ../shared/cronjob-alerts  CronJob alerts (#767)
+  - cronjob-alerts.yaml
   - cicd-platform.yaml
   # -> ./pki          the OpenBao CA, after cert-manager
   - pki.yaml

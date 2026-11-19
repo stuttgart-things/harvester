@@ -1,145 +1,25 @@
 ---
-# Alerts for CronJobs that fail, stop running, or miss runs (#753).
-#
-# Why: zitadel-backup (./zitadel-backup.yaml) made no backup from 2026-11-04
-# to 2026-11-17 and nothing said so. The platform host was off for those
-# 13 days (Prometheus has no samples in that window; node_boot_time_seconds
-# 2026-11-17T07:27Z). The chart's default KubeJobFailed did not help: it
-# fires only for a Job that ends Failed, and an off cluster runs no Job.
-#
-# Metrics: kube-state-metrics' kube_cronjob_* series (status_last_schedule_time,
-# status_last_successful_time, next_schedule_time, status_active,
-# spec_suspend), checked live on platform 2026-11-19. The interval of a
-# CronJob is next_schedule_time - status_last_schedule_time (24h for
-# zitadel-backup, 10m for argocd-sync-sweeper), so the thresholds follow the
-# schedule and need no per-CronJob config. Everything is aggregated
-# `by (namespace, cronjob)`: a kube-state-metrics restart changes its
-# pod/instance labels and must not split or reset a series.
-#
-# Lab rhythm: the lab is switched off overnight and sometimes for days. On
-# boot the CronJob controller starts ONE catch-up Job for the newest missed
-# schedule (no startingDeadlineSeconds), within minutes. The rules below are
-# built so a normal night off does not alert, but a multi-day gap does --
-# AFTER the fact, since an off cluster cannot alert about itself. Noticing
-# "platform is down" while it is down needs an outside dead man's switch on
-# the Watchdog alert, which this file cannot provide.
-#
-# severity: warning goes the way of every warning here (Alertmanager ->
-# homerun2-dev's omni-pitcher /pitch/alertmanager -> Teams, ../infra.yaml).
-# Picked up by Prometheus without a label, the release's ruleSelector is
-# empty. Next to the chart's default KubeJobFailed / KubeJobNotCompleted
-# (PrometheusRule kube-prometheus-stack-kubernetes-apps), not instead of them.
-apiVersion: monitoring.coreos.com/v1
-kind: PrometheusRule
+# CronJob alerts (harvester#753): ../../shared/cronjob-alerts, the rules from
+# #767 (moved there from this file so every cluster gets them). dependsOn kube-prometheus-stack: PrometheusRule is
+# its CRD. Nothing depends on this; a failure stalls only this Kustomization.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
 metadata:
-  name: cronjobs
-  namespace: monitoring
+  name: cronjob-alerts
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
 spec:
-  groups:
-    - name: cronjobs
-      rules:
-        # The newest run did not succeed (Job ended Failed, e.g.
-        # BackoffLimitExceeded) and no run is active. Unlike KubeJobFailed,
-        # which keeps firing while the failed Job object is kept
-        # (failedJobsHistoryLimit), this resolves with the next successful
-        # run. The second branch covers a CronJob that never succeeded.
-        - alert: KubeCronJobLastRunFailed
-          expr: |
-            (
-              (
-                max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)
-                > on (namespace, cronjob)
-                max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)
-              )
-              or
-              (
-                max by (namespace, cronjob) (kube_cronjob_status_last_schedule_time)
-                unless on (namespace, cronjob)
-                max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)
-              )
-            )
-            and on (namespace, cronjob)
-            max by (namespace, cronjob) (kube_cronjob_status_active) == 0
-          for: 10m
-          labels:
-            severity: warning
-          annotations:
-            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}: last run failed"
-            description: >-
-              The newest scheduled run of CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}
-              did not succeed and no run is active. Check
-              `kubectl -n {{ $labels.namespace }} get jobs,pods` and the logs
-              of the failed pods. Resolves with the next successful run.
-        # No success for more than two intervals (+15m slack) while the
-        # cluster runs. `for: 1h` covers the boot after a night off: the age
-        # is then over the threshold, but the catch-up Job succeeds within
-        # minutes. If the catch-up fails too, this fires an hour later.
-        - alert: KubeCronJobNotSucceeded
-          expr: |
-            (
-              time() - max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)
-            )
-            > on (namespace, cronjob)
-            (
-              2 * max by (namespace, cronjob) (
-                kube_cronjob_next_schedule_time - kube_cronjob_status_last_schedule_time
-              )
-              + 900
-            )
-            unless on (namespace, cronjob)
-            max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 1
-          for: 1h
-          labels:
-            severity: warning
-          annotations:
-            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}: no success for {{ $value | humanizeDuration }}"
-            description: >-
-              CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has not
-              completed a run successfully for {{ $value | humanizeDuration }},
-              more than two of its schedule intervals.
-        # Runs were MISSED: the success that just came in follows the
-        # previous one by more than 3 intervals, at least 3 days (a weekend
-        # off stays under that). This is the zitadel-backup gap: on
-        # 2026-11-17 the catch-up backup came 12.9 days after the one before.
-        # The previous success is the newest sample older than 1h
-        # (last_over_time ... offset 1h), so the alert fires right after the
-        # catch-up succeeds -- also when Prometheus only starts after it --
-        # and resolves after an hour on its own. Backtested on platform's
-        # Prometheus: it fires 2026-11-17 07:32-08:30Z for zitadel-backup
-        # (and the other CronJobs of the cluster, which were off as well).
-        - alert: KubeCronJobRunsMissed
-          expr: |
-            (
-              max by (namespace, cronjob) (kube_cronjob_status_last_successful_time)
-              - max by (namespace, cronjob) (
-                  last_over_time(kube_cronjob_status_last_successful_time[14d] offset 1h)
-                )
-            )
-            > on (namespace, cronjob)
-            clamp_min(
-              3 * max by (namespace, cronjob) (
-                kube_cronjob_next_schedule_time - kube_cronjob_status_last_schedule_time
-              ),
-              259200
-            )
-          labels:
-            severity: warning
-          annotations:
-            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}: {{ $value | humanizeDuration }} between two successful runs"
-            description: >-
-              The latest successful run of CronJob {{ $labels.namespace }}/{{ $labels.cronjob }}
-              came {{ $value | humanizeDuration }} after the previous one, so
-              scheduled runs were missed (cluster off, CronJob suspended, or
-              runs failing). For a backup: there is no backup from that time.
-        - alert: KubeCronJobSuspended
-          expr: |
-            max by (namespace, cronjob) (kube_cronjob_spec_suspend) == 1
-          for: 1h
-          labels:
-            severity: warning
-          annotations:
-            summary: "CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} is suspended"
-            description: >-
-              CronJob {{ $labels.namespace }}/{{ $labels.cronjob }} has been
-              suspended for over an hour; it starts no runs until
-              spec.suspend is false again.
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: kube-prometheus-stack
+  sourceRef:
+    kind: GitRepository
+    # this repository
+    name: flux-system
+  path: ./clusters/shared/cronjob-alerts
