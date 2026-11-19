@@ -12,8 +12,9 @@
 # clusters/platform/apps/zitadel-backup-secrets.enc.yaml (commands in
 # clusters/platform/zitadel-config/README.md, "Backup and restore").
 #
-# Same VM as ZITADEL: covers a deleted namespace, a broken database and a bad
-# upgrade, not the loss of the platform VM.
+# Same machine as ZITADEL: covers a deleted namespace, a broken database and
+# a bad upgrade, not the loss of platform. The off-host copy goes to the MinIO
+# on homerun2-dev (clusters/homerun2-dev/minio.yaml, harvester#753).
 #
 # `deletionPolicy` stays at Orphan and pruning is off: deleting this file (or
 # the XR) must not take the backups with it. Rule 1 of README.md applies.

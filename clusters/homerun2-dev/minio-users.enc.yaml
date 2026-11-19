@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: minio-provisioning-users
+    namespace: minio
+type: Opaque
+stringData:
+    platform-zitadel-backup: ENC[AES256_GCM,data:iHVm3KY1FS5wtvDVeD/85oS/avB3hG0z/UtejCJPF/BFm/VrbGFsYkWkW9v1En0TP0un3jXprvnYqgAylZjbDYG8RFAtnFsrrlQTupE4kbyv0J9OMI6DYHZK/SlgGTjearz7DC/Ljk17Bd5rrovwtDUcR1jVXSs3qpjh9UMt8mQoXNTVMf+V7qALqeNrP/W05x0gu++144EvcPM=,iv:oD03ZsSJokcqpWqeSo3USWd7anJbJuPR5kVv+iELM5w=,tag:Yp1ho6aoe5tXr494StntHQ==,type:str]
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBGeXk3QzJZaTZ2WkZrRXpN
+            WTRUV2RreVFyME1SYnJ6NjlBUkJCQjFPdGw4CmkxRWJRWnhkNkRZNG9SV2FydjFi
+            QjdhSzF4b1NBL2FrTGkzcTVhYi9haU0KLS0tIGk1MzdWNDdWKytBb2dMdnZlNGJu
+            TGxiN29sT2ZDSUwrakZweVVBb2lNclEK473O6ki0qTKsF7D1h5yKBrmCVN+a06lP
+            q3k1GLOhI9/CVws8owZaGqVFmV9tSguVrXR0Im5qEvUIWP0fXDmptw==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-11-19T08:15:06Z"
+    mac: ENC[AES256_GCM,data:Qe9w8Sus/Hw8p1/0pjachN/S/v58+obSxqhp51rFNsjgFr/vZwCBQKixbdFfSBS4za2QjIT4A6f4yLe3h2ofuBzGLIbUXFHuN4oK15JWnvHqz6kGr0VOZ+f0eR3Nfkz1azknlOsn0z1NPZA6cM4KMCEkpCcFlPzY8XsXtg5p5/g=,iv:TWelri9kf9CUX9wS4MOu9RT9qEFyPf9HTAWP7wVlxGs=,tag:XNYeCL2ngsWl6/LwcmafLA==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0

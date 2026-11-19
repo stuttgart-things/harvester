@@ -1,0 +1,184 @@
+---
+# MinIO on homerun2-dev: the OFF-HOST copy of platform's ZITADEL backup
+# (harvester#753, from #605/#576). platform is its own machine, this cluster a
+# VM on the Harvester host -- the nightly CronJob on platform
+# (../platform/apps/zitadel-backup.yaml) writes to its own MinIO AND here, so
+# losing the platform machine no longer takes every backup of the lab IdP with
+# it. Not a general-purpose S3: one bucket, one writer.
+#
+# A copy of stuttgart-things/flux apps/platform/components/minio with this
+# cluster's values written out (no apps-platform bundle here, like
+# ./sthings-portal.yaml): base ./apps/minio, chart 16.0.10, the image the
+# platform MinIO runs.
+#
+# Sized for what it holds: a dump is ~0.4 MB, 30 days are ~15 MB. The volume
+# is openebs-hostpath on the VM disk (a Longhorn volume on Harvester), which
+# does NOT enforce the PVC size -- this cluster has ~18 GiB free and
+# kube-prometheus-stack is coming (#759), so the bucket gets a hard quota of
+# 1 GiB below instead; the 2Gi request is documentation more than a limit.
+#
+# The bucket, its policy and the writer are provisioned by the chart's
+# post-install/post-upgrade Job from the values patched in below:
+#   * bucket platform-zitadel-backup -- named for its SOURCE, like the
+#     buckets on platform's MinIO; versioned, objects expire after 30 days
+#     (noncurrent versions after 7) -- the retention lives HERE, not in the
+#     CronJob;
+#   * policy platform-zitadel-backup-writer -- list, put and get on that
+#     bucket. No s3:DeleteObject: platform cannot delete what it wrote here,
+#     and with versioning an overwrite keeps the previous version. A
+#     compromised or broken platform can add files, not remove the history;
+#   * user platform-zitadel-backup from Secret minio/minio-provisioning-users
+#     (./minio-users.enc.yaml). The same keys are on platform as
+#     zitadel/zitadel-backup-target-homerun2-dev
+#     (../platform/apps/zitadel-backup-target-homerun2-dev.enc.yaml).
+#
+# Reached from platform as https://minio.homerun2-dev.sthings.lab through this
+# cluster's Gateway (wildcard certificate from the OpenBao PKI, CN=sthings.lab
+# root -- platform's trust-manager bundle has it). Console:
+# https://minio-console.homerun2-dev.sthings.lab, root login from
+# ./minio-secrets.enc.yaml.
+#
+# REQUIRES: Secret flux-system/minio-secrets (./minio-secrets.enc.yaml) with
+# MINIO_ADMIN_USER / MINIO_ADMIN_PASSWORD; cilium-gateway and cert-manager
+# from ./infra-platform.yaml (which carries both).
+#
+# Removing this file deletes the HelmRelease and with it the PVC: the
+# off-host copies go too. Retire it by setting suspend, not by deleting.
+#
+# The Namespace is here too, although ./apps/minio creates it: flux-system
+# applies ./minio-users.enc.yaml, and a Secret in a namespace that does not
+# exist yet fails that whole apply (as in ./logging-trust-bundle.yaml).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: minio
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: minio
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  # The base renders cert-manager Certificates through the sthings-cluster
+  # chart: applied before cert-manager's webhook serves, the Helm install fails
+  # for good (see the component). infra-platform carries cert-manager-install.
+  dependsOn:
+    - name: infra-platform
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/minio
+  postBuild:
+    substitute:
+      MINIO_NAMESPACE: minio
+      # 16.x only, NOT renovate-annotated (as platform's minio.yaml): the flux
+      # repo holds chart 17 back (console image), see
+      # apps/minio/README.md there.
+      MINIO_VERSION: "16.0.10"
+      MINIO_INGRESS_ENABLED: "false"
+      # Only for the two Certificates the base renders; the Gateway terminates
+      # TLS with the wildcard, as for every other route here.
+      CLUSTER_ISSUER: openbao-pki
+      INGRESS_HOSTNAME_API: minio
+      INGRESS_HOSTNAME_CONSOLE: minio-console
+      INGRESS_DOMAIN: homerun2-dev.sthings.lab
+      STORAGE_CLASS: openebs-hostpath
+      MINIO_STORAGE_SIZE: 2Gi
+    substituteFrom:
+      # substituteFrom-keys: MINIO_ADMIN_USER, MINIO_ADMIN_PASSWORD
+      - kind: Secret
+        name: minio-secrets
+        optional: false
+  patches:
+    # No `${...}` in here: postBuild substitutes after the patch.
+    - target:
+        kind: HelmRelease
+        name: minio-deployment
+      patch: |
+        apiVersion: helm.toolkit.fluxcd.io/v2
+        kind: HelmRelease
+        metadata:
+          name: minio-deployment
+        spec:
+          values:
+            provisioning:
+              enabled: true
+              cleanupAfterFinished:
+                enabled: true
+                seconds: 86400
+              policies:
+                - name: platform-zitadel-backup-writer
+                  statements:
+                    - effect: Allow
+                      resources:
+                        - arn:aws:s3:::platform-zitadel-backup
+                      actions:
+                        - s3:GetBucketLocation
+                        - s3:ListBucket
+                        - s3:ListBucketMultipartUploads
+                    - effect: Allow
+                      resources:
+                        - arn:aws:s3:::platform-zitadel-backup/*
+                      actions:
+                        - s3:PutObject
+                        - s3:GetObject
+                        - s3:AbortMultipartUpload
+                        - s3:ListMultipartUploadParts
+              # username/password/policies per key, see ./minio-users.enc.yaml
+              usersExistingSecrets:
+                - minio-provisioning-users
+              buckets:
+                - name: platform-zitadel-backup
+                  region: us-east-1
+                  versioning: Versioned
+                  lifecycle:
+                    - id: expire-30d
+                      expiry:
+                        days: 30
+                        nonconcurrentDays: 7
+                  quota:
+                    type: set
+                    size: 1GiB
+---
+# The routes after the release: Cilium resolves a route's backends once, so a
+# route applied before the Service exists serves 500 for good.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: minio-httproute
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: apps
+spec:
+  dependsOn:
+    - name: minio
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  force: false
+  prune: true
+  suspend: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: flux-apps
+  path: ./apps/minio/components/httproute
+  postBuild:
+    substitute:
+      MINIO_NAMESPACE: minio
+      INGRESS_HOSTNAME_API: minio
+      INGRESS_HOSTNAME_CONSOLE: minio-console
+      INGRESS_DOMAIN: homerun2-dev.sthings.lab
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default

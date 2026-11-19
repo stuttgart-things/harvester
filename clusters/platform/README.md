@@ -35,7 +35,7 @@ stuttgart-things/stuttgart-things#4118).
 | Secrets | `apps/zitadel-secrets.enc.yaml` (Secret `zitadel-secrets`): `ZITADEL_MASTERKEY` -- **never changes**, it decrypts the data in PostgreSQL -- DB passwords, initial admin password |
 | Admin | `zitadel-admin@zitadel.zitadel.platform.sthings.lab`, password `ZITADEL_ADMIN_PASSWORD` (`sops -d`), changed at the first login |
 | Terraform | [`zitadel-config/`](zitadel-config/README.md): project, roles, the homerun2-dev portal's OIDC client, users |
-| Backup | [`apps/zitadel-backup.yaml`](apps/zitadel-backup.yaml) (#575/#576): CronJob `zitadel-backup`, nightly 02:30 Europe/Berlin -- `pg_dump -Fc` (checked with `pg_restore --list`) plus the `zitadel-config` Terraform state to bucket `platform-zitadel-backup` on platform's MinIO, 14 days kept. **Not** in it: the masterkey (Git, SOPS) -- needed for any restore. Same VM, so no protection against losing it. Restore: [`zitadel-config/README.md`](zitadel-config/README.md#backup-and-restore) |
+| Backup | [`apps/zitadel-backup.yaml`](apps/zitadel-backup.yaml) (#575/#576): CronJob `zitadel-backup`, nightly 02:30 Europe/Berlin -- `pg_dump -Fc` (checked with `pg_restore --list`) plus the `zitadel-config` Terraform state to bucket `platform-zitadel-backup` on platform's MinIO (14 days) and, off-host, on homerun2-dev's MinIO (30 days, writer cannot delete; #753) -- rclone, one remote per target. **Not** in it: the masterkey (Git, SOPS) -- needed for any restore. Restore: [`zitadel-config/README.md`](zitadel-config/README.md#backup-and-restore) |
 
 ## Monitoring -- kube-prometheus-stack
 
