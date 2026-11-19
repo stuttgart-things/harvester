@@ -259,18 +259,26 @@ The nightly backup below keeps a copy of it.
 `zitadel-backup` in `zitadel`, 02:30 Europe/Berlin. It writes
 `<UTC timestamp>/zitadel.dump` (`pg_dump -Fc` of the database `zitadel`,
 checked with `pg_restore --list`) and `<UTC timestamp>/tfstate-zitadel-config.gz`
-(this Terraform state, gzip as the backend stores it) to the bucket
-`platform-zitadel-backup` on platform's MinIO, and removes what is older than
-14 days. The bucket and its user come from
-[`clusters/machinery-hv/xrs/platform-zitadel-backup.yaml`](../../machinery-hv/xrs/platform-zitadel-backup.yaml).
+(this Terraform state, gzip as the backend stores it) with rclone to every
+target in its `BACKUP_TARGETS` (#753):
+
+| Remote | Where | Bucket | Kept | Credentials |
+|---|---|---|---|---|
+| `platform` | platform's MinIO, same machine | `platform-zitadel-backup` | 14 days, deleted by the job | `../apps/zitadel-backup-secrets.enc.yaml`; bucket and user from [`clusters/machinery-hv/xrs/platform-zitadel-backup.yaml`](../../machinery-hv/xrs/platform-zitadel-backup.yaml) |
+| `homerun2dev` | MinIO on homerun2-dev (Harvester host): **off-host** | `platform-zitadel-backup` | 30 days, bucket lifecycle; versioned; the job's user cannot delete | `../apps/zitadel-backup-target-homerun2-dev.enc.yaml`; bucket, policy and user from [`clusters/homerun2-dev/minio.yaml`](../../homerun2-dev/minio.yaml) |
+
+Each target is an rclone remote configured from `RCLONE_CONFIG_<REMOTE>_*`
+environment variables; adding one (Azure Blob is planned, with an rclone
+`crypt` remote on top) is a Secret, an `envFrom` line and a `BACKUP_TARGETS`
+line -- the CronJob's header comment has the recipe.
 
 **The masterkey is not in it.** It is `ZITADEL_MASTERKEY` in
 `../apps/zitadel-secrets.enc.yaml` (git, SOPS) and must be the same on the
 instance a dump is restored into -- without it the encrypted data in the dump
 (keys, secrets) is lost.
 
-Same VM as ZITADEL: this covers a deleted namespace, a broken database and a
-bad upgrade, not the loss of the platform VM.
+The platform copy covers a deleted namespace, a broken database and a bad
+upgrade; the homerun2-dev copy also the loss of the platform machine.
 
 ### The bucket keys (once, after the bucket exists)
 
@@ -298,7 +306,7 @@ grep -c 'ENC\[' clusters/platform/apps/zitadel-backup-secrets.enc.yaml   # 3 (2 
 export KUBECONFIG=~/.kube/platform.sthings.lab
 kubectl -n zitadel create job --from=cronjob/zitadel-backup zitadel-backup-manual
 kubectl -n zitadel logs job/zitadel-backup-manual -c dump
-kubectl -n zitadel logs job/zitadel-backup-manual -c upload    # mc ls of the bucket
+kubectl -n zitadel logs job/zitadel-backup-manual -c upload    # "== <target> ok" per target, then its timestamps
 kubectl -n zitadel delete job zitadel-backup-manual
 ```
 
@@ -311,6 +319,19 @@ eval "$(kubectl --kubeconfig ~/.kube/machinery-hv -n default get secret platform
 mc ls zb/platform-zitadel-backup/
 mc cp --recursive zb/platform-zitadel-backup/<timestamp>/ /dev/shm/zitadel-restore/
 ```
+
+Platform gone: the off-host copy on homerun2-dev, with the root login (the
+backup user would do too, it may read):
+
+```bash
+eval "$(sops -d clusters/homerun2-dev/minio-secrets.enc.yaml \
+  | yq -r '"export MC_HOST_zb=https://" + .stringData.MINIO_ADMIN_USER + ":" + .stringData.MINIO_ADMIN_PASSWORD + "@minio.homerun2-dev.sthings.lab"')"
+mc ls zb/platform-zitadel-backup/
+mc cp --recursive zb/platform-zitadel-backup/<timestamp>/ /dev/shm/zitadel-restore/
+```
+
+`mc` verifies against the system CAs; the sthings.lab root must be one of them
+(or in `~/.mc/certs/CAs/`).
 
 ### Restore the database
 
