@@ -1,0 +1,48 @@
+---
+# CronJob alerts on the Argo CD clusters (harvester#753): every cluster
+# secret labelled observability-platform=true -- the clusters that get a
+# kube-prometheus-stack from the catalog AppSet (today app-dev-hv,
+# crossplane-mgmt) -- gets ../../shared/cronjob-alerts in `monitoring`.
+#
+# kustomize set explicitly: without a source type Argo's plugin discovery
+# hands a path with a kustomization.yaml to argocd-vault-plugin, which fails
+# (#780). The namespace equals the kustomization's -- the type is the point.
+# The PrometheusRule CRD comes with kube-prometheus-stack; until it is there
+# the sync fails and retries.
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cronjob-alerts
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - clusters:
+        selector:
+          matchLabels:
+            observability-platform: "true"
+  template:
+    metadata:
+      name: '{{ .name }}-cronjob-alerts'
+    spec:
+      project: '{{ .name }}'
+      source:
+        repoURL: https://github.com/stuttgart-things/harvester.git
+        targetRevision: main
+        path: clusters/shared/cronjob-alerts
+        kustomize:
+          namespace: monitoring
+      destination:
+        name: '{{ .name }}'
+        namespace: monitoring
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        retry:
+          limit: 10
+          backoff:
+            duration: 30s
+            factor: 2
+            maxDuration: 10m

@@ -59,7 +59,7 @@
 # third pod succeeded). So the dump waits for the database, the upload waits
 # for each target (up to 5 min each), backoffLimit leaves room for a slow
 # boot, and activeDeadlineSeconds ends a Job that hangs anyway. Missed or failed runs alert via
-# ./cronjob-alerts.yaml.
+# ../../shared/cronjob-alerts (Kustomization ./cronjob-alerts.yaml).
 apiVersion: batch/v1
 kind: CronJob
 metadata:

@@ -1,0 +1,22 @@
+---
+# CronJob alerts (KubeCronJobLastRunFailed, -NotSucceeded, -RunsMissed,
+# -Suspended) for every cluster with a kube-prometheus-stack in `monitoring`
+# (harvester#753, from #767). The rules: ./prometheusrule.yaml.
+#
+# Applied by:
+#   platform, homerun2-dev, machinery-hv  Flux Kustomization cronjob-alerts
+#                                         (../../<cluster>/cronjob-alerts.yaml),
+#                                         dependsOn kube-prometheus-stack
+#   app-dev-hv, crossplane-mgmt           Argo CD ApplicationSet cronjob-alerts
+#                                         (../../platform/clusters/cronjob-alerts-appset.yaml),
+#                                         every cluster labelled observability-platform=true
+#
+# Its own Kustomization/Application, not part of the stack: PrometheusRule is
+# a CRD the kube-prometheus-stack chart installs, so on a fresh cluster this
+# must wait for it -- inside the stack's Kustomization the dry-run would fail
+# and block the HelmRelease that brings the CRD.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - prometheusrule.yaml

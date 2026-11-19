@@ -1,0 +1,25 @@
+---
+# CronJob alerts (harvester#753): ../shared/cronjob-alerts, the rules from
+# #767 for every cluster. dependsOn kube-prometheus-stack: PrometheusRule is
+# its CRD. Nothing depends on this; a failure stalls only this Kustomization.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cronjob-alerts
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: kube-prometheus-stack
+  sourceRef:
+    kind: GitRepository
+    # this repository
+    name: flux-system
+  path: ./clusters/shared/cronjob-alerts
