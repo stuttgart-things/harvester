@@ -167,7 +167,7 @@ There are **5 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
     - OpenBao (`openbao.platform.sthings.lab`): PKI for sthings-lab (root CN=sthings.lab) and the Vault API the clusters use: openbao-pki ClusterIssuers log in with Kubernetes auth, Crossplane with AppRoles. Replaced the infra Vault (#152).
     - Clusterbook (`clusterbook.platform.sthings.lab`): Reserves IP and FQDN for new clusters and writes the DNS records to the DD-WRT router. Moved here from the infra cluster.
     - Clusterbook operator (`192.168.10.160`): Reconciles ClusterbookCluster resources against the Clusterbook API on this cluster. No ingress.
-    - clusterscope (`clusterscope.platform.sthings.lab`): Map of the lab's clusters from clusters/ in this repo, with live status and endpoint probes for platform itself.
+    - clusterscope (`clusterscope.platform.sthings.lab`): Map of the lab's clusters from clusters/ in this repo, with live status and endpoint probes for platform itself and every cluster whose kubeconfig is in OpenBao `kubeconfigs/` (read-only clusterscope-reader kubeconfigs in OpenBao `clusterscope/`).
     - Grafana (`grafana.platform.sthings.lab`): kube-prometheus-stack of this cluster (Prometheus, Alertmanager, Grafana). Alerts go to omni-pitcher on homerun2-dev.
     - Loki (`loki.platform.sthings.lab`): Central log store of the lab. fluent-bit on every cluster pushes here; queried through Grafana.
 

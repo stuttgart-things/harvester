@@ -38,7 +38,8 @@ spec:
   components:
     - ../components/openbao
     # The k8s-pitcher only, pitching to homerun2-dev's omni-pitcher. The -sops
-    # variant: this cluster has no external-secrets.
+    # variant: app secrets on this cluster are SOPS; its external-secrets
+    # (infra.yaml) serves only the vault-clusterscope store.
     - ../components/homerun2-k8s-pitcher-remote-sops
     # The lab IdP for sthings-portal (#560): PostgreSQL, ZITADEL with the
     # login UI v2 and the `terraform` machine user for ./zitadel-config.
