@@ -41,8 +41,15 @@ source "file" "user_data" {
         } : {}
       )]
     )
+    # qemu-guest-agent is a STATIC unit on Ubuntu 26.04: udev starts it as
+    # soon as the hypervisor provides the virtio channel
+    # (org.qemu.guest_agent.0) -- on Harvester, every VM. The packer build VM
+    # has no such channel, so `systemctl enable --now` failed here in every
+    # build; since #352 a cloud-init error fails the build, and the first
+    # golden release after it (2026-11-19, run 44555220229) stopped on
+    # "Runparts: 1 failures (runcmd)". Start it if possible, never fail on it.
     runcmd = [
-      ["systemctl", "enable", "--now", "qemu-guest-agent.service"]
+      ["sh", "-c", "systemctl start qemu-guest-agent.service || echo 'qemu-guest-agent: no virtio channel in this VM; udev starts it on Harvester'"]
     ]
   }))
   target = "user-data"
