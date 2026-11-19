@@ -1,5 +1,13 @@
 # The ESO OpenBao auth mount for `tabletennis`
 
+> [!NOTE]
+> **Retired 2026-11-19 (harvester#601).** The cluster was decommissioned in
+> favour of `app-dev-hv`. Its Terraform state lived in a Secret on the cluster
+> itself (`backend.tf`), so the mount was removed with `bao auth disable`, not
+> with `terraform destroy`. This directory and `../eso-store.yaml` stay only as
+> the reference that `clusters/crossplane-mgmt/openbao` and
+> `clusters/homerun2-dev/openbao` point to. Do not apply.
+
 One Kubernetes auth mount on the OpenBao that runs on `platform`, and that is all
 this directory does.
 

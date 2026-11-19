@@ -42,7 +42,8 @@ every package goes `Healthy=False`. The profile README forbids exactly that
 layering; `cluster` also needs `rancher-cluster >=v0.8.1`, and `tabletennis`
 runs on the 0.7.4 one. stuttgart-things/flux#506 has the full history.
 
-crossplane-mgmt keeps running `tabletennis` until its successor is built here.
+`tabletennis` on crossplane-mgmt was retired on 2026-11-19 in favour of
+`app-dev-hv` (harvester#601); there is no successor order for it.
 
 ## Layout
 

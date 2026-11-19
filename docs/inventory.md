@@ -6,7 +6,7 @@ stuttgart-things Harvester Demo Lab: Systems, hostnames, services and IP allocat
 
 ## Virtual machines on Harvester
 
-There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110): `app-dev-hv`, `crossplane-mgmt`, `homerun2-dev`, `machinery-hv`, `ollama-gpu`, `tabletennis`. Each one is a cluster node or a single host; Scaffolder templates, catalog locations and VM templates such as `harvester-vm` or `harvester-vm-template` are **not** VMs. Backstage lists each VM as a Resource `<name>-harvester-vm`; Rancher-provisioned cluster nodes carry a pool name in Harvester (e.g. `app-dev-hv-pool1-…`).
+There are **5 virtual machines** on Harvester (host `harvester`, 192.168.10.110): `app-dev-hv`, `crossplane-mgmt`, `homerun2-dev`, `machinery-hv`, `ollama-gpu`. Each one is a cluster node or a single host; Scaffolder templates, catalog locations and VM templates such as `harvester-vm` or `harvester-vm-template` are **not** VMs. Backstage lists each VM as a Resource `<name>-harvester-vm`; Rancher-provisioned cluster nodes carry a pool name in Harvester (e.g. `app-dev-hv-pool1-…`).
 
 | VM | IP | Kind | Cluster |
 |---|---|---|---|
@@ -15,11 +15,10 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 | `homerun2-dev` | 192.168.10.117 | rke2-cluster | homerun2-dev |
 | `machinery-hv` | 192.168.10.105 | rke2-cluster | machinery-hv |
 | `ollama-gpu` | 192.168.10.147 | host | - |
-| `tabletennis` | 192.168.10.114 | k3s-cluster | tabletennis |
 
 ## All hosts
 
-32 addresses in the inventory, sorted by IP.
+30 addresses in the inventory, sorted by IP.
 
 | Hostname | IP | Kind | System | Cluster | Harvester VM |
 |---|---|---|---|---|---|
@@ -41,7 +40,6 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 | `crossplane-mgmt` | 192.168.10.108 | k3s-cluster | crossplane-mgmt | crossplane-mgmt | yes |
 | `harvester` | 192.168.10.110 | hypervisor | harvester | harvester | - |
 | `sthings-edge-kiosk` | 192.168.10.111 | host | sthings-edge | - | - |
-| `tabletennis` | 192.168.10.114 | k3s-cluster | tabletennis | tabletennis | yes |
 | `homerun2-dev` | 192.168.10.117 | rke2-cluster | homerun2-dev | homerun2-dev | yes |
 | `matrix` | 192.168.10.120 | host | matrix | - | - |
 | `wled-matrix` | 192.168.10.123 | host | wled-matrix | - | - |
@@ -54,7 +52,6 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 | `crossplane-mgmt-vip` | 192.168.10.177 | host | crossplane-mgmt | crossplane-mgmt | - |
 | `machinery-hv-gateway` | 192.168.10.178 | host | machinery-hv | machinery-hv | - |
 | `homerun2-dev-redis` | 192.168.10.179 | host | homerun2-dev | homerun2-dev | - |
-| `tabletennis-gateway` | 192.168.10.180 | host | tabletennis | tabletennis | - |
 
 ## Systems
 
@@ -73,7 +70,7 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 
 ### crossplane-mgmt
 
-- **`crossplane-mgmt`** 192.168.10.108 (VM on Harvester): VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28). Crossplane for the VM path (XVirtualMachine -> Harvester) and the RancherCluster order tabletennis; Argo CD on platform syncs clusters/crossplane-mgmt (showcase-crossplane-platform / -xrs).
+- **`crossplane-mgmt`** 192.168.10.108 (VM on Harvester): VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28). Crossplane for the VM path (XVirtualMachine -> Harvester); the RancherCluster order tabletennis was retired on 2026-11-19 (harvester#601). Argo CD on platform syncs clusters/crossplane-mgmt (showcase-crossplane-platform / -xrs).
     - Kubernetes API (`192.168.10.108:6443`): API server; also the Argo CD cluster server URL (useFQDNAsServer: false).
     - Crossplane (`192.168.10.108`): RancherCluster, XVirtualMachine and AnsibleRun claims; reached through the Kubernetes API, no ingress.
 - **`crossplane-mgmt-vip`** 192.168.10.177: Clusterbook reservation of crossplane-mgmt with DNS (*.crossplane-mgmt.sthings.lab), made by the ClusterbookCluster on platform for the Argo CD registration.
@@ -201,12 +198,6 @@ There are **6 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 - **`edge-log-sink`** 192.168.8.23: Cilium LB address of the firmware's log sink (clusters/sthings-edge/log-sink), own pool with exactly this IP. The piezo board sends its diagnostic log here directly, without a name.
     - log sink (UDP) (`192.168.8.23:9000`): One JSON line per event over UDP (zaehlwerk-firmware ADR-0004); one file per session and per game. The viewer is log-sink.edge.sthings.lab on edge-gateway.
 - **`sthings-edge-kiosk`** 192.168.10.111: The sthings-edge box (MAC 00:e0:4c:0a:f6:ff) when it boots in SthingsNet: role `kiosk` (detected from the gateway), Firefox kiosk with the homerun2-dev tabs, k3s skipped. See clusters/sthings-edge/README.md.
-
-### tabletennis
-
-- **`tabletennis`** 192.168.10.114 (VM on Harvester): Single node (tabletennis-pool1) built by Rancher on Harvester. The address is a DHCP lease from the dynamic pool, not a reservation. homerun2 and tabletennis come from the platform profiles via Argo CD on platform.
-    - Kubernetes API (`192.168.10.114:6443`): k3s API server, registered in Argo CD on platform.
-- **`tabletennis-gateway`** 192.168.10.180: Clusterbook reservation (180:ASSIGNED:DNS:tabletennis) for the Gateway tabletennis-gateway, *.tabletennis.sthings.lab. Not served: the cluster has no Cilium Gateway controller, so the Gateway stays Pending and the VIP never comes up (checked 2026-10-26).
 
 ### wled-matrix
 

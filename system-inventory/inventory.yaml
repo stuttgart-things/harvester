@@ -545,8 +545,9 @@ hosts:
     cluster: crossplane-mgmt
     description: >-
       VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28).
-      Crossplane for the VM path (XVirtualMachine -> Harvester) and the
-      RancherCluster order tabletennis; Argo CD on platform syncs
+      Crossplane for the VM path (XVirtualMachine -> Harvester); the
+      RancherCluster order tabletennis was retired on 2026-11-19 (harvester#601).
+      Argo CD on platform syncs
       clusters/crossplane-mgmt (showcase-crossplane-platform / -xrs).
     services:
       - name: Kubernetes API
@@ -649,39 +650,6 @@ hosts:
       - name: scout
         fqdn: scout.app-dev-hv.sthings.lab
         description: homerun2 scout.
-
-  # ---------------------------------------------------------------------------
-  # tabletennis: the k3s cluster ordered as a RancherCluster on crossplane-mgmt
-  # (clusters/crossplane-mgmt/xrs/infra/tabletennis). Still running beside
-  # app-dev-hv on 2026-10-26. Addresses read live: node from the cluster,
-  # gateway from the Clusterbook ledger.
-  # ---------------------------------------------------------------------------
-  - system: tabletennis
-    hostname: tabletennis
-    ip: 192.168.10.114
-    kind: k3s-cluster
-    vm: harvester
-    cluster: tabletennis
-    description: >-
-      Single node (tabletennis-pool1) built by Rancher on Harvester. The
-      address is a DHCP lease from the dynamic pool, not a reservation.
-      homerun2 and tabletennis come from the platform profiles via Argo CD on
-      platform.
-    services:
-      - name: Kubernetes API
-        port: 6443
-        description: k3s API server, registered in Argo CD on platform.
-
-  - system: tabletennis
-    hostname: tabletennis-gateway
-    ip: 192.168.10.180
-    kind: host
-    cluster: tabletennis
-    description: >-
-      Clusterbook reservation (180:ASSIGNED:DNS:tabletennis) for the Gateway
-      tabletennis-gateway, *.tabletennis.sthings.lab. Not served: the cluster
-      has no Cilium Gateway controller, so the Gateway stays Pending and the
-      VIP never comes up (checked 2026-10-26).
 
   # ---------------------------------------------------------------------------
   # edge (edge-tt-test1): the edge lab cluster in LabDA vSphere, the reference
