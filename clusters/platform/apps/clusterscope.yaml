@@ -17,6 +17,16 @@
 # entry stays "no kubeconfig"; tabletennis and the edges sit in other networks
 # and are unreachable from here anyway.
 #
+# WHICH DIRECTORIES ARE CLUSTERS (-config, components/config, harvester#753):
+# clusters/ also holds directories that are not clusters -- shared (content
+# used by several clusters), platform-seeds and homerun2-dev-light (Kustomize
+# siblings). `include` lists the real ones; A NEW CLUSTER DIRECTORY MUST BE
+# ADDED THERE or clusterscope does not show it. Clusters built by machinery-hv
+# from a ClusterStack (app-dev-hv) have no directory here: `machineries` reads
+# their orders from machinery-hv (its clusterscope entry; the reader's
+# ClusterRole covers clusterstacks), so they show as "ordered on machinery-hv"
+# instead of "kubeconfig only".
+#
 # PROBE checks every HTTPRoute URL it finds; the cluster-trust-bundle (OpenBao
 # root) is mounted so *.sthings.lab endpoints verify.
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -37,6 +47,7 @@ spec:
   path: './apps/clusterscope'
   components:
     - components/vault-kubeconfigs
+    - components/config
   postBuild:
     substitute:
       CLUSTERSCOPE_NAMESPACE: clusterscope
@@ -49,6 +60,10 @@ spec:
       CLUSTERSCOPE_KUBECONFIG_STORE: vault-clusterscope
       CLUSTERSCOPE_KUBECONFIG_CLUSTERS: ^[a-z0-9-]+$
       CLUSTERSCOPE_PROBE: 'true'
+      CLUSTERSCOPE_CONFIG_FILE: /etc/clusterscope/config.yaml
+      # ONE line of JSON (see the header): the real cluster directories + the
+      # ClusterStack orders on machinery-hv.
+      CLUSTERSCOPE_CONFIG: '{"roots":[{"path":"/data/harvester/clusters","lab":"sthings-lab","include":["platform","homerun2-dev","machinery-hv","crossplane-mgmt","harvester","tabletennis","edge","sthings-edge"]}],"machineries":[{"cluster":"machinery-hv","lab":"sthings-lab"}]}'
       CLUSTERSCOPE_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
       CLUSTERSCOPE_TRUST_BUNDLE_KEY: trust-bundle.pem
       GIT_SYNC_REPO: https://github.com/stuttgart-things/harvester
