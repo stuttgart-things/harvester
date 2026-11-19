@@ -188,13 +188,13 @@ spec:
             # clock of its own yet, so the clock above airs all day. A silent
             # night is `clock: night` plus `clocks: { night: {} }`.
             # after-work adds the day's numbers at 17:30 (daily-summary).
-            # Table tennis: the week at lunch, the day after work.
+            # Table tennis: the day after work. No weekly card at lunch:
+            # schmetterpause counts at most 200 matches per query and the
+            # Pong demo plays more than that a day, so the week and the day
+            # were the same card ("at least 200 matches").
             programme:
               "07:00-10:00": { show: morning-show }
-              "10:00-17:00":
-                show: daytime
-                extra:
-                  - { segment: tabletennis-stats, at: "12:20" }
+              "10:00-17:00": { show: daytime }
               "17:00-19:00":
                 show: after-work
                 extra:
