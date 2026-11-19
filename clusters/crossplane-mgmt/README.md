@@ -9,7 +9,7 @@ directory onto it.
 | Path | Synced by | Prune | What |
 |---|---|---|---|
 | [`platform/`](./platform/) | Application `showcase-crossplane-platform` | **off** | Crossplane Configurations, their EnvironmentConfigs, RBAC, namespaces, the PKI source Secrets. Prune is off on purpose: pruning a Configuration triggers foreground deletion and cascade-deletes every XR built from it |
-| [`xrs/`](./xrs/) | Application `showcase-crossplane-xrs` | on | The resource claims themselves — `RancherCluster`, `XVirtualMachine`, `AnsibleRun`, namespaces. `catalog-info.yaml` / `kustomization.yaml` are excluded by the Application (Backstage/kustomize artifacts, not CRDs) |
+| [`xrs/`](./xrs/) | Application `showcase-crossplane-xrs` | on | The resource claims themselves — `XVirtualMachine`, `AnsibleRun`, namespaces. `catalog-info.yaml` / `kustomization.yaml` are excluded by the Application (Backstage/kustomize artifacts, not CRDs) |
 | [`../shared/crossplane-observability/`](../shared/crossplane-observability/) | Application `crossplane-mgmt-crossplane-observability` | on | Scraping of Crossplane core/providers/functions, XR/MR Ready+Synced metrics, alert `CrossplaneXRNotReady`, Grafana folder "Crossplane". Shared with machinery-hv |
 | [`openbao/`](./openbao/) | nobody — `terraform apply` by hand | — | Vault/OpenBao auth + PKI config for this cluster |
 | `env-config-harvester.yaml` | nobody — `kubectl apply` by hand | — | See the warning below |
@@ -95,58 +95,28 @@ kubectl -n kube-system rollout restart deploy/cilium-operator
 
 Before: 42 errors/h, after: 0; 2/2 HTTPRoutes `ResolvedRefs=True`, both 200.
 
-### rancher-mgmt credential (harvester#350) -- DONE 2026-11-19
+### RancherCluster path -- retired 2026-11-19 (harvester#601)
 
-> [!NOTE]
-> **Status 2026-11-19 (harvester#601):** `tabletennis` is retired and its XR
-> removed (#782). `rancher-mgmt` was switched to
-> `crossplane-system/rancher-mgmt-kubeconfig-scoped` (`check`: whoami is the
-> SA, 6x yes / 2x no; after the switch no `forbidden` in the provider log), and
-> the old admin Secret `rancher-mgmt-kubeconfig` was **deleted** right away --
-> without the soak, because no live cluster depends on `rancher-mgmt` any more.
-> `rollback` therefore no longer works. No RancherCluster is left on
-> crossplane-mgmt; the text below is kept as the record of how it was done.
-> Still pending there: the two `tabletennis-vpki-*` Objects (managementPolicies
-> `[*]`, target cluster gone) hold the XR in deletion, see #601.
+crossplane-mgmt no longer orders Rancher clusters. Its only RancherCluster,
+`tabletennis`, was retired (#782); new clusters are ordered as `ClusterStack`
+on machinery-hv (scoped SA `crossplane-machinery`, `no-creator-rbac`). Removed
+with it:
 
-The `rancher-mgmt` ClusterProviderConfig and its Secret
-`crossplane-system/rancher-mgmt-kubeconfig` are not in git (hand-applied
-2026-06-09). As of 2026-11-17 that Secret is **platform's k3s admin
-kubeconfig** (client certificate `CN=system:admin, O=system:masters`, valid
-until 2027-03-16), so the five Objects of `tabletennis` -- and anything that
-can read `crossplane-system` here -- act as cluster-admin on platform.
-machinery-hv moved off the same credential on 2026-09-28.
+- `platform/rancher-cluster/` -- Configuration `rancher-cluster` v0.7.4,
+  EnvironmentConfig `rancher-cluster-defaults`, the downstream CA source Secret
+  `cert-manager/openbao-pki-ca`. Prune is off for `platform/`, so the live
+  objects were deleted by hand after the merge.
+- The hand-applied ClusterProviderConfig `rancher-mgmt` and its Secret
+  `crossplane-system/rancher-mgmt-kubeconfig-scoped` (deleted by hand; never in
+  git). The earlier admin Secret `rancher-mgmt-kubeconfig` (platform's k3s
+  admin kubeconfig) was already deleted on 2026-11-19 (#350).
+- `rancher-mgmt-credential.sh` and, on platform,
+  `../platform/crossplane-mgmt-access.yaml` (#701: namespace, SA and bindings
+  `crossplane-mgmt-access`; Flux prunes them).
 
-The target is the scoped ServiceAccount `crossplane-mgmt-access/crossplane-mgmt`
-on platform ([`../platform/crossplane-mgmt-access.yaml`](../platform/crossplane-mgmt-access.yaml)),
-bound to the same Roles as machinery-hv's `crossplane-machinery`. The switch
-only changes which Secret the ClusterProviderConfig reads: the Objects keep
-`providerConfigRef: rancher-mgmt`, and no Secret name appears in any composed
-manifest or in `rancher-cluster-defaults`, so **no composed resource changes and
-Rancher has nothing to roll** (unlike #590).
-
-Order -- after `crossplane-mgmt-access.yaml` is reconciled on platform:
-
-```bash
-cd clusters/crossplane-mgmt
-./rancher-mgmt-credential.sh verify     # BEFORE: note generation + machine name
-./rancher-mgmt-credential.sh check      # whoami = ...:crossplane-mgmt-access:crossplane-mgmt; 6x yes, 2x no
-./rancher-mgmt-credential.sh secret     # new Secret rancher-mgmt-kubeconfig-scoped (old one stays)
-./rancher-mgmt-credential.sh switch
-# wait > 1 poll interval (--poll=1m), then
-./rancher-mgmt-credential.sh verify     # all Synced/Ready, generation + machine unchanged
-kubectl -n crossplane-system logs deploy/$(kubectl -n crossplane-system get deploy -o name | grep provider-kubernetes | cut -d/ -f2) --since=10m | grep -ci forbidden   # 0
-```
-
-Rollback: `./rancher-mgmt-credential.sh rollback` (points back at the old
-Secret, which `switch` leaves in place). After a soak of a few days, delete the
-old Secret `crossplane-system/rancher-mgmt-kubeconfig` -- deleting it, not
-emptying it, because its last-applied annotation holds a second copy of the
-admin kubeconfig.
-
-Rotation: delete `crossplane-mgmt-access/crossplane-mgmt-token` on platform,
-wait for the new token, `./rancher-mgmt-credential.sh secret`. The
-ClusterProviderConfig does not change.
+`harvester` and `in-cluster` remain the only ClusterProviderConfigs here.
+machinery-hv keeps its own `rancher-mgmt` and the RancherCluster XRs its
+ClusterStacks compose -- that path is unaffected.
 
 ### provider-kubernetes runtime config (2026-09-30)
 

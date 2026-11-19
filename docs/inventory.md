@@ -72,7 +72,7 @@ There are **5 virtual machines** on Harvester (host `harvester`, 192.168.10.110)
 
 - **`crossplane-mgmt`** 192.168.10.108 (VM on Harvester): VM node of crossplane-mgmt (static lease for MAC BA:69:A8:A3:BA:28). Crossplane for the VM path (XVirtualMachine -> Harvester); the RancherCluster order tabletennis was retired on 2026-11-19 (harvester#601). Argo CD on platform syncs clusters/crossplane-mgmt (showcase-crossplane-platform / -xrs).
     - Kubernetes API (`192.168.10.108:6443`): API server; also the Argo CD cluster server URL (useFQDNAsServer: false).
-    - Crossplane (`192.168.10.108`): RancherCluster, XVirtualMachine and AnsibleRun claims; reached through the Kubernetes API, no ingress.
+    - Crossplane (`192.168.10.108`): XVirtualMachine and AnsibleRun claims (RancherCluster path retired 2026-11-19, harvester#601); reached through the Kubernetes API, no ingress.
 - **`crossplane-mgmt-vip`** 192.168.10.177: Clusterbook reservation of crossplane-mgmt with DNS (*.crossplane-mgmt.sthings.lab), made by the ClusterbookCluster on platform for the Argo CD registration.
 
 ### edge-tt-test1
