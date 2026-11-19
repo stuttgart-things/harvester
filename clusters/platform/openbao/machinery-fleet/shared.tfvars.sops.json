@@ -4,6 +4,11 @@
 			"data": {
 				"teamsWebhookUrl": "ENC[AES256_GCM,data:O23MO8jWSgZHnYXXTto0o2yM0Da7VQXyFnQ9VsjH4I8eSiCM93p7coR3xjFb3J3H/snImjcS4bTF2m0P2b6ipoDnckUKXWGBfqj1IvxPCxGnt5fZJS06uNeLx/JoS4a/FJIEpYbd3OtcEbaEI0yw2E77DZ/06q3LmZ1omTxUDyG3FVY/Pu6DgOI1M29LhH3p95k0ClW7A/Zm6vehcnEPQZ8TQW7SGO6HfmG3+a7u4RykFezmnuEuD60+E29K1bOEsfh8IpM7sVkSwJUCnims9QBTnZ7XPcsS4zwalqS4bjCk/8GZAPOt7rSz/Psp3RhWZEwFSE8liuHNjhA8FV9aYrWW5TVO3f/NSzhOjM2/eXjEsf9ZgZMCY6vEKO/Z9qNR9XHKD685tlw=,iv:Q6livv1WhoOFzZTtIn7TXNih40ams+TyYHR29qiW/fI=,tag:VDQIaPEt7V+RFXm+1DW5zA==,type:str]"
 			}
+		},
+		"observability/_omni-pitcher": {
+			"data": {
+				"alertmanager-webhook-token": "ENC[AES256_GCM,data:+ZagvGmWRwfVd4GMv7JtJ6LeI40//KBoxG/67QAgFU8PbtMFndYWhWfkpo6DkvTGa8iusb84Vz5Kq9Gw+G9+Ow==,iv:Q+cszHl8pcq1gke73aG7pEP7WOn9l+cjeF46DAmzm1c=,tag:GZtRf0NJ5LSK5gqlpFwBVg==,type:str]"
+			}
 		}
 	},
 	"sops": {
@@ -13,8 +18,8 @@
 				"enc": "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBneTU5bzJhZGp3cWtFNE5C\nc2wvSFdXZFNYU3pBWFFzRmNwbkhXcVQ2TnlBCkszZXEySUVYTGpOdkNtMHBTNng0\ndU1qaU84cjArSThBSmpiWWtRb2UycFUKLS0tIDJJdFZoUk5iZHpTN1lMTEk1TVRp\nTnhTM0RpcG56bXVadlk0cGp4c0ZqM0EKBNpNjqauMxH1fldFrkKQ2mVz/kh8nWhk\nMlCBcbkOlc1ajP0pu7Gtc81/e8mpGiGaLutAriHZP9gSfa6Qf4zErg==\n-----END AGE ENCRYPTED FILE-----\n"
 			}
 		],
-		"lastmodified": "2026-11-17T09:56:13Z",
-		"mac": "ENC[AES256_GCM,data:hSPX3ChEzTEseuwUrGH0VOqQdpbCz0nsyb+I1C/Y22WE+SdTH1oLbN1v8Xrl5zRkFZg/w3YvPOmZftr28RIh5F4eusJdlAxh7T4wlL5Am7ykVmeupE4L007YrJH5t+OYqxwjGBEo1JnzZ3KK2gbVxZoh2BCcUg2DevWiP39gpyA=,iv:J2gU2ya/kYxVnLWv+lCwWGgS8gdTj3X0E3sQdg9VDiU=,tag:Zlpn271sMK64KKP2gHMcbg==,type:str]",
+		"lastmodified": "2026-11-19T08:07:40Z",
+		"mac": "ENC[AES256_GCM,data:vuesnl3Xt3uLDUpphvsO+yZVkoUYlr05zeAYb3R0CB0/jJOhj7WMYzo6nT4QDn8pBtHjerykvZA9a9DTMn92MUHzb3PjbvmeUjw6U8e9blLPYIM86isO4/ap4rKWV1tCVjrQBaJhilLZDda8zN9WyKhraxMZye2kCjH8bor2xAg=,iv:F7eSYv2KmgcO5dpuzrGoyWjnSMowY5Pf4WWMTOJN2l4=,tag:Ya2KbDvOuyeJrVa4VrzfUA==,type:str]",
 		"unencrypted_suffix": "_unencrypted",
 		"version": "3.11.0"
 	}

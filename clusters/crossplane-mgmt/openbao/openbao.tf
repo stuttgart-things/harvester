@@ -19,7 +19,11 @@
 // does not exist LOGS IN SUCCESSFULLY and is granted nothing -- so the mistake
 // surfaces as a denied signing request much later, not as an error here.
 module "openbao-base-setup" {
-  source          = "github.com/stuttgart-things/vault-base-setup"
+  // Pinned to the commit tabletennis/openbao and platform/openbao/app-secrets
+  // use (harvester#753). It is the first with bound_service_account_names for
+  // the eso auth below; the only module change since (#57, AppRole TTLs) does
+  // not touch anything this root creates, so the existing state plans clean.
+  source          = "github.com/stuttgart-things/vault-base-setup?ref=e5b4544ef1d13052e6f41c1ab7ac616de5d38037"
   vault_addr      = var.openbao_addr
   skip_tls_verify = true
   kubeconfig_path = var.kubeconfig_path
@@ -53,6 +57,28 @@ module "openbao-base-setup" {
       namespace      = "cert-manager"
       token_policies = ["pki-issue"]
       token_ttl      = 3600
+    },
+    // /v1/auth/crossplane-mgmt-sthings-eso for External Secrets (harvester#753:
+    // kube-prometheus-stack reads its Grafana admin and Alertmanager token from
+    // crossplane-mgmt/observability). Same shape as clusters/tabletennis/openbao:
+    // bound to ESO's OWN controller ServiceAccount (external-secrets in
+    // external-secrets, releaseName external-secrets in argocd
+    // infra/external-secrets/install), not to a new one; same reviewer as the
+    // certmanager mount above. ../eso-store.yaml names this mount and role.
+    //
+    // read-crossplane-mgmt comes from ../../platform/openbao/app-secrets --
+    // apply that FIRST: a role bound to a missing policy logs in and gets
+    // nothing. ESO must be installed (security-platform labels on
+    // ../../platform/clusters/crossplane-mgmt.yaml) before the SA exists; the
+    // role does not need it to exist, the login does.
+    {
+      name           = "eso"
+      namespace      = "external-secrets"
+      token_policies = ["read-crossplane-mgmt"]
+      token_ttl      = 3600
+
+      bound_service_account_names      = ["external-secrets"]
+      bound_service_account_namespaces = ["external-secrets"]
     }
   ]
 }

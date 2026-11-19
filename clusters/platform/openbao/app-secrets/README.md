@@ -48,9 +48,20 @@ application:
 | `tabletennis/schmetterpause` | `session-key`, `username`, `password` | the app and its CloudNativePG database |
 | `tabletennis/zaehlwerk` | `omni-pitcher-token` | zaehlwerk's scoreboard panel |
 | | `redis-password` | zaehlwerk |
+| `tabletennis/observability` | `grafana-admin-user`, `grafana-admin-password` | kube-prometheus-stack's Grafana (argocd `platforms/observability`, annotation `observability-platform.stuttgart-things.com/secret-key: observability` on the XR) |
+| | `alertmanager-webhook-token` | its Alertmanager, bearer for homerun2-dev's omni-pitcher `/pitch/alertmanager` |
 
-Policy `read-tabletennis` grants `read` on all three. The `eso` role in
+Policy `read-tabletennis` grants `read` on all four. The `eso` role in
 `clusters/tabletennis/openbao` names it.
+
+`crossplane-mgmt` has one mount of its own with one entry (harvester#753):
+
+| Entry | Property | Read by |
+|---|---|---|
+| `crossplane-mgmt/observability` | `grafana-admin-user`, `grafana-admin-password`, `alertmanager-webhook-token` | kube-prometheus-stack on crossplane-mgmt, through `vault-crossplane-mgmt` (`../../../crossplane-mgmt/eso-store.yaml`) |
+
+Policy `read-crossplane-mgmt` grants `read` on it; the `eso` role in
+`clusters/crossplane-mgmt/openbao` names it.
 
 > [!IMPORTANT]
 > **Two pairs must match byte for byte.** `zaehlwerk:omni-pitcher-token` =
@@ -59,6 +70,13 @@ Policy `read-tabletennis` grants `read` on all three. The `eso` role in
 > `panel pitch failed, point not shown` line in zaehlwerk's log.
 > `zaehlwerk:redis-password` = `homerun2:redisPassword`, because it is the same
 > Redis.
+> `observability:alertmanager-webhook-token` is NOT tabletennis' own homerun2
+> token: alerts go to the central stack on homerun2-dev, so it is
+> `HOMERUN2_OMNI_PITCHER_AUTH_TOKEN` from
+> `clusters/homerun2-dev/homerun2-secrets-subst.enc.yaml` (harvester#753), as in
+> `../machinery-fleet` `observability/_omni-pitcher`. Rotating that token means
+> updating it here twice (tabletennis and crossplane-mgmt) and in
+> machinery-fleet.
 
 **None of the entry names is a free choice.** `schmetterpause` and `zaehlwerk`
 are hard-coded in those apps' published kustomize bases — the catalog charts patch

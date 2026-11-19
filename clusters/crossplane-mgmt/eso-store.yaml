@@ -1,0 +1,75 @@
+---
+# crossplane-mgmt's ClusterSecretStore, and the one RBAC grant it needs
+# (harvester#753: kube-prometheus-stack's Grafana admin and Alertmanager token).
+# A copy of ../tabletennis/eso-store.yaml with this cluster's names; read that
+# file's comments for the why.
+#
+# APPLIED BY HAND, like tabletennis' -- deliberately NOT under ./platform or
+# ./xrs: those are synced by Argo CD, and this file needs the external-secrets
+# namespace and CRDs, which arrive only after the security-platform labels on
+# ../platform/clusters/crossplane-mgmt.yaml have installed ESO. A failed sync
+# there would stall the Crossplane platform layer. The fleet's
+# external-secrets-stores AppSet does not fit either: it assumes the mount
+# `<cluster>-eso` and a ServiceAccount `eso` that only a ClusterStack's
+# Platform creates.
+#
+# Order:
+#   1. ../platform/openbao/app-secrets   mount crossplane-mgmt, entry, policy
+#   2. ESO running on this cluster       kubectl -n external-secrets get sa external-secrets
+#   3. ./openbao                         auth mount crossplane-mgmt-sthings-eso
+#   4. this file:
+#        kubectl --kubeconfig ~/.kube/crossplane-mgmt apply -f clusters/crossplane-mgmt/eso-store.yaml
+#        kubectl --kubeconfig ~/.kube/crossplane-mgmt get clustersecretstore vault-crossplane-mgmt   # Valid
+#
+# Valid only proves the LOGIN. The proof is the ExternalSecrets in `monitoring`
+# reporting SecretSynced once kube-prometheus-stack is deployed.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: external-secrets-self-token
+  namespace: external-secrets
+rules:
+  - apiGroups: [""]
+    resources: ["serviceaccounts/token"]
+    resourceNames: ["external-secrets"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: external-secrets-self-token
+  namespace: external-secrets
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: external-secrets-self-token
+subjects:
+  - kind: ServiceAccount
+    name: external-secrets
+    namespace: external-secrets
+---
+# KV mount `crossplane-mgmt`, owned by ../platform/openbao/app-secrets. Today
+# one entry: `observability` (kube-prometheus-stack).
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: vault-crossplane-mgmt
+spec:
+  provider:
+    vault:
+      server: https://openbao.platform.sthings.lab
+      path: crossplane-mgmt
+      version: v2
+      # The OpenBao root, from the network platform (cert-manager-vault-pki).
+      caProvider:
+        type: Secret
+        name: vault-pki-ca
+        namespace: cert-manager
+        key: ca.crt
+      auth:
+        kubernetes:
+          mountPath: crossplane-mgmt-sthings-eso
+          role: eso
+          serviceAccountRef:
+            name: external-secrets
+            namespace: external-secrets

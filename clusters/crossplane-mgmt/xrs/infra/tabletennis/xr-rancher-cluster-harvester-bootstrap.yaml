@@ -99,20 +99,21 @@ spec:
       observability-platform: 'true'
       observability-platform/fluent-bit: 'true'
       #
-      # METRICS: kube-prometheus-stack is NOT running yet, and not because of
-      # a label here. Its AppSet also needs the gate
-      # observability-platform.stuttgart-things.com/secrets-config, matched on
-      # EXISTS -- so it must be ABSENT, not 'false', until a store can read an
-      # entry with grafana-admin-user, grafana-admin-password and
-      # alertmanager-webhook-token. vault-tabletennis has no such entry
-      # (clusters/platform/openbao/app-secrets: homerun2, schmetterpause,
-      # zaehlwerk only). Add the entry and its read policy there, then the gate
-      # label plus the secret-store / secret-key / alert-webhook-url
-      # annotations (argocd platforms/observability/README.md).
+      # METRICS: kube-prometheus-stack (monitoring ns, Grafana at
+      # grafana.tabletennis.sthings.lab). Its AppSet needs this gate, matched on
+      # EXISTS -- a 'false' here would switch it ON as well; delete the line to
+      # switch it off. It asserts that vault-tabletennis can read the entry
+      # `observability` (annotations below): grafana-admin-user,
+      # grafana-admin-password and alertmanager-webhook-token, written by
+      # clusters/platform/openbao/app-secrets together with the read-tabletennis
+      # line for it (harvester#753). That apply comes BEFORE this label reaches
+      # the cluster; the eso role in clusters/tabletennis/openbao already names
+      # read-tabletennis, so nothing changes there.
+      observability-platform.stuttgart-things.com/secrets-config: 'true'
       #
       # The schmetterpause PodMonitors and alert rules need the Prometheus
-      # Operator CRDs from that stack: keep tabletennis-platform's
-      # monitoring-enabled annotation unset until it runs.
+      # Operator CRDs from that stack: tabletennis-platform's
+      # monitoring-enabled annotation stays unset until it runs.
 
       # ---- the two app platforms this cluster exists for ----
       #
@@ -218,6 +219,16 @@ spec:
       # fluent-bit's Loki (observability-platform/fluent-bit above): platform's,
       # through its Gateway on 443.
       observability-platform.stuttgart-things.com/loki-host: loki.platform.sthings.lab
+      # kube-prometheus-stack (gate label above). The entry is named
+      # `observability`, not after the cluster (the AppSet's default), in line
+      # with the one-entry-per-application names in this store. The webhook
+      # token is read from the same entry.
+      observability-platform.stuttgart-things.com/secret-store: vault-tabletennis
+      observability-platform.stuttgart-things.com/secret-key: observability
+      # Alerts (warning|critical) -> homerun2-dev's omni-pitcher, as platform's
+      # own stack does (clusters/platform/infra.yaml), not tabletennis' own
+      # homerun2: the central notification-catcher fans them out.
+      observability-platform.stuttgart-things.com/alert-webhook-url: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
       # NOT a default, and it has to be set: without it homerun2 reads the entry
       # named after the CLUSTER (`tabletennis`), while schmetterpause and
       # zaehlwerk read entries named after themselves -- their bases hard-code

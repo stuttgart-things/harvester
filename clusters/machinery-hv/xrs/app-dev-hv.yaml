@@ -35,14 +35,19 @@
 #                            not have to be
 #   no NFS labels            the lab has had no NFS server since infra.sthings.lab
 #                            was switched off (harvester#152)
-#   observability            logs only so far (harvester#753): the umbrella
-#                            and observability-platform/fluent-bit are set as
-#                            plain labels below, not through the `observability`
-#                            profile. The profile would also derive the
-#                            kube-prometheus-stack secrets gate, and that stack
-#                            reads its Alertmanager token from the shared
-#                            observability/_omni-pitcher entry, which is not
-#                            seeded on this OpenBao yet
+#   observability            harvester#753: the `observability` profile plus
+#                            `observability` in secretStores derive the
+#                            umbrella, the kube-prometheus-stack secrets gate,
+#                            store vault-observability and
+#                            alert-webhook-secret-key _omni-pitcher. Grafana
+#                            admin: observability/app-dev-hv (the Platform's
+#                            clusterSecrets Workspace). Alertmanager token:
+#                            observability/_omni-pitcher, homerun2-dev's
+#                            omni-pitcher token, written by
+#                            platform/openbao/machinery-fleet/shared.tf -- that
+#                            apply comes BEFORE this change reaches the cluster.
+#                            Logs: observability-platform/fluent-bit (opt-in,
+#                            not in the profile) as a plain label below
 #   homerun2 + tabletennis   added 2026-09-28, once platform installed both
 #                            ApplicationSets (stuttgart-things/flux#571,
 #                            argocd#544). tabletennis reads homerun2's
@@ -95,12 +100,16 @@ spec:
     - storage-openebs
     - homerun2
     - tabletennis
+    - observability
   # The ClusterSecretStores the two profiles read through (external-secrets-
   # stores AppSet, kv-mounts derived from this list; ESO logs in via the
   # Platform's Vault issuer auth, policies read-<mount>-clusters).
   secretStores:
     - homerun2
     - schmetterpause
+    # kube-prometheus-stack's Grafana admin (own entry) and Alertmanager token
+    # (_omni-pitcher) -- see the header, "observability".
+    - observability
     # NOT tabletennis in the first order: it pulls schmetterpause, whose -backup
     # entry reads the shared object-store-backup -- not in
     # cluster-vault-sthings-lab and not seeded, and the render fails on it
@@ -123,13 +132,16 @@ spec:
         # Logs to the lab's Loki on platform (harvester#753): fluent-bit,
         # HTTPS through platform's Gateway, verified against the
         # cluster-trust-bundle trust-manager writes here (OpenBao root, since
-        # the wildcard issuer is vault-pki-k8s). Set by hand rather than via
-        # the `observability` profile -- see the header, "observability".
-        observability-platform: 'true'
+        # the wildcard issuer is vault-pki-k8s). Opt-in, so not part of the
+        # `observability` profile, which sets the umbrella.
         observability-platform/fluent-bit: 'true'
       annotations:
         # fluent-bit's Loki: platform's, through its Gateway on 443.
         observability-platform.stuttgart-things.com/loki-host: loki.platform.sthings.lab
+        # Alertmanager (warning|critical) -> homerun2-dev's omni-pitcher, the
+        # same endpoint platform's own kube-prometheus-stack uses
+        # (clusters/platform/infra.yaml). Token: observability/_omni-pitcher.
+        observability-platform.stuttgart-things.com/alert-webhook-url: https://omni-pitcher.homerun2-dev.sthings.lab/pitch/alertmanager
         homerun2-platform.stuttgart-things.com/notification-catcher-notify-config: |
           outputs:
             - name: teams-app-dev-hv
