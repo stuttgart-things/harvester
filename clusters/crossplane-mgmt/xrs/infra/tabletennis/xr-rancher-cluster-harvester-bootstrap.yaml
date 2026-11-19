@@ -121,11 +121,13 @@ spec:
       # file. The component set is fixed by the bundle.
       homerun2-platform: 'true'
       homerun2-platform/stack: 'true'
-      # notification-catcher (harvester#490), dry-run until the notify config
-      # is known-good. The webhook is property teamsWebhookUrl of the same
-      # vault-tabletennis entry as the rest of homerun2 (secret-key below).
+      # notification-catcher (harvester#490): homerun2 stream entries with
+      # severity >= warning to Teams. The webhook is property teamsWebhookUrl
+      # of the same vault-tabletennis entry as the rest of homerun2
+      # (secret-key below), seeded via clusters/platform/openbao/app-secrets
+      # (harvester#753). Live like app-dev-hv (#707).
       homerun2-platform/notification-catcher: 'true'
-      homerun2-platform/notification-catcher-dry-run: 'true'
+      homerun2-platform/notification-catcher-dry-run: 'false'
       # tabletennis: schmetterpause + its database, zaehlwerk, and the LED strip
       # at the table. A platform of its own, beside homerun2.
       tabletennis-platform: 'true'
