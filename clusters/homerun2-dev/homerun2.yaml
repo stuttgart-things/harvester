@@ -142,7 +142,10 @@ spec:
       # is left out of the counts -- else it counts its own cards. Applies to
       # the periodic digest and /analytics/* alike. Needs flux#1040; before
       # that, the variable is simply unused.
-      HOMERUN2_SCOUT_DIGEST_EXCLUDE_SYSTEMS: radio
+      # tabletennis too (2026-11-19): the Pong demo's points are ~97 % of all
+      # messages (6730 of ~6920 in 24 h), so the day's balance said nothing
+      # about the cluster. The table has its own segment (tabletennis-stats).
+      HOMERUN2_SCOUT_DIGEST_EXCLUDE_SYSTEMS: radio,tabletennis
 
       # The simulator reads both streams all the time, as the real matrix does
       # (../../hosts/matrix, led_streams): `messages` for the cluster and
