@@ -29,3 +29,7 @@ resources:
   - xrs.yaml
   # flux-apps ./apps/claim-machinery-api + -> ./claim-machinery-order
   - claim-machinery-api.yaml
+  # machinery's gRPC bearer token (MACHINERY_AUTH_TOKEN), the substituteFrom
+  # Secret of the flux cicd component machinery-auth-sops -- see the
+  # machinery note in cicd-platform.yaml
+  - machinery-auth-sops-secrets.enc.yaml
