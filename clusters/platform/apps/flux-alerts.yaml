@@ -1,0 +1,77 @@
+---
+# Alerts on Flux objects on this cluster that stay not-Ready (#753, from #605).
+# The metric is flux-operator's flux_resource_info (one series per Flux object:
+# kind, name, exported_namespace = the object's namespace, ready =
+# True|False|Unknown, suspended, reason), scraped through the ServiceMonitor of
+# ./flux-monitoring.yaml.
+#
+# severity: warning goes the way of every warning here: Alertmanager ->
+# homerun2-dev's omni-pitcher /pitch/alertmanager -> Teams (../infra.yaml,
+# kube-prometheus-stack). Picked up by Prometheus without a label, the
+# release's ruleSelector is empty.
+#
+# Complements the k8s-pitcher pilot (../apps-platform.yaml), which pitches
+# Ready FLIPS of Kustomizations and HelmReleases with a 1h cooldown: these
+# fire on a STATE that persists, for every Flux kind (sources, charts, ...),
+# and resolve on their own.
+#
+# Grouped without `reason`: a reason that changes while the object stays
+# not-Ready (e.g. ReconciliationFailed -> DependencyNotReady) would otherwise
+# restart `for` and the alert would never fire.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: flux-resources
+  namespace: monitoring
+spec:
+  groups:
+    - name: flux-resources
+      rules:
+        # Ready=False for 15m: longer than every retryInterval (1m) and the
+        # longest timeout (15m) here, so one failed attempt during an upgrade
+        # or a cold start (dependsOn chains) does not page.
+        - alert: FluxResourceNotReady
+          expr: |
+            max by (kind, exported_namespace, name) (
+              flux_resource_info{ready="False", suspended="False"}
+            )
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} not ready"
+            description: >-
+              Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }}
+              on platform has been Ready=False for 15 minutes. Check with
+              `flux get all -A --status-selector ready=false` or
+              `kubectl -n {{ $labels.exported_namespace }} describe {{ $labels.kind }} {{ $labels.name }}`.
+        # Ready=Unknown means "reconciling": normal for seconds to minutes,
+        # not for an hour (a stuck HelmRelease install, a wait that never
+        # ends).
+        - alert: FluxResourceReconcilingTooLong
+          expr: |
+            max by (kind, exported_namespace, name) (
+              flux_resource_info{ready="Unknown", suspended="False"}
+            )
+          for: 1h
+          labels:
+            severity: warning
+          annotations:
+            summary: "Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }} reconciling for 1h"
+            description: >-
+              Flux {{ $labels.kind }} {{ $labels.exported_namespace }}/{{ $labels.name }}
+              on platform has been Ready=Unknown (reconciling) for 1 hour.
+        # Without the metric the two above can never fire: flux-operator or
+        # its ServiceMonitor gone, or the scrape broken.
+        - alert: FluxResourceInfoMissing
+          expr: absent(flux_resource_info)
+          for: 30m
+          labels:
+            severity: warning
+          annotations:
+            summary: "flux_resource_info missing on platform"
+            description: >-
+              Prometheus on platform has had no flux_resource_info series for
+              30 minutes, so the Flux not-ready alerts cannot fire. Check the
+              flux-operator ServiceMonitor (Kustomization flux-monitoring) and
+              the flux-operator pod in flux-system.

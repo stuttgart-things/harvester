@@ -55,6 +55,10 @@ spec:
     # on a cluster nobody depends on yet: adding it rolls CoreDNS, about a
     # minute without cluster DNS on a single node.
     - ../components/coredns-lab-zone
+    # logs -- every container log to the lab's Loki on platform, HTTPS through
+    # its Gateway, as on homerun2-dev (harvester#490, #753). Needs flux#822,
+    # in the pinned tag since v1.233.0. CA: observability-trust-bundle.yaml.
+    - ../components/fluent-bit-remote
   postBuild:
     substitute:
       FLUX_SOURCE: flux-infra
@@ -64,6 +68,16 @@ spec:
       INFRA_GATEWAY_NAME: machinery-hv-sthings-gateway
       INFRA_GATEWAY_NAMESPACE: default
       INFRA_TLS_SECRET: wildcard-tls # pragma: allowlist secret
+
+      # ---- fluent-bit-remote ----------------------------------------------
+      FLUENT_BIT_CLUSTER_NAME: machinery-hv
+      FLUENT_BIT_LOKI_HOST: loki.platform.sthings.lab
+      # The kubernetes filter's API buffer. The cilium agent pod here is
+      # ~35 kB, above fluent-bit's 32k default: its logs would reach Loki
+      # without namespace/pod labels and fluent-bit warns "[http_client]
+      # cannot increase buffer" (#753). Read only from the flux tag that
+      # contains stuttgart-things/flux#1045; ignored before that.
+      FLUENT_BIT_K8S_BUFFER_SIZE: 128k
 
       # ---- cilium-lb ------------------------------------------------------
       # Reserved in Clusterbook on 2026-09-24 by auto-assignment (README step

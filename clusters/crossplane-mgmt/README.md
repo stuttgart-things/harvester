@@ -94,6 +94,47 @@ kubectl -n kube-system rollout restart deploy/cilium-operator
 
 Before: 42 errors/h, after: 0; 2/2 HTTPRoutes `ResolvedRefs=True`, both 200.
 
+### rancher-mgmt credential (harvester#350) -- NOT DONE YET
+
+The `rancher-mgmt` ClusterProviderConfig and its Secret
+`crossplane-system/rancher-mgmt-kubeconfig` are not in git (hand-applied
+2026-06-09). As of 2026-11-17 that Secret is **platform's k3s admin
+kubeconfig** (client certificate `CN=system:admin, O=system:masters`, valid
+until 2027-03-16), so the five Objects of `tabletennis` -- and anything that
+can read `crossplane-system` here -- act as cluster-admin on platform.
+machinery-hv moved off the same credential on 2026-09-28.
+
+The target is the scoped ServiceAccount `crossplane-mgmt-access/crossplane-mgmt`
+on platform ([`../platform/crossplane-mgmt-access.yaml`](../platform/crossplane-mgmt-access.yaml)),
+bound to the same Roles as machinery-hv's `crossplane-machinery`. The switch
+only changes which Secret the ClusterProviderConfig reads: the Objects keep
+`providerConfigRef: rancher-mgmt`, and no Secret name appears in any composed
+manifest or in `rancher-cluster-defaults`, so **no composed resource changes and
+Rancher has nothing to roll** (unlike #590).
+
+Order -- after `crossplane-mgmt-access.yaml` is reconciled on platform:
+
+```bash
+cd clusters/crossplane-mgmt
+./rancher-mgmt-credential.sh verify     # BEFORE: note generation + machine name
+./rancher-mgmt-credential.sh check      # whoami = ...:crossplane-mgmt-access:crossplane-mgmt; 6x yes, 2x no
+./rancher-mgmt-credential.sh secret     # new Secret rancher-mgmt-kubeconfig-scoped (old one stays)
+./rancher-mgmt-credential.sh switch
+# wait > 1 poll interval (--poll=1m), then
+./rancher-mgmt-credential.sh verify     # all Synced/Ready, generation + machine unchanged
+kubectl -n crossplane-system logs deploy/$(kubectl -n crossplane-system get deploy -o name | grep provider-kubernetes | cut -d/ -f2) --since=10m | grep -ci forbidden   # 0
+```
+
+Rollback: `./rancher-mgmt-credential.sh rollback` (points back at the old
+Secret, which `switch` leaves in place). After a soak of a few days, delete the
+old Secret `crossplane-system/rancher-mgmt-kubeconfig` -- deleting it, not
+emptying it, because its last-applied annotation holds a second copy of the
+admin kubeconfig.
+
+Rotation: delete `crossplane-mgmt-access/crossplane-mgmt-token` on platform,
+wait for the new token, `./rancher-mgmt-credential.sh secret`. The
+ClusterProviderConfig does not change.
+
 ### provider-kubernetes runtime config (2026-09-30)
 
 The Provider is installed as a Configuration dependency and is not in git, so

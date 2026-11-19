@@ -1,0 +1,52 @@
+---
+# The "Lab" dashboards in Grafana, vendored (harvester#753, from #605). They
+# used to be downloaded by Grafana's init container at every start (grafana.com
+# by gnetId, GitHub by tag): no internet, no dashboards, and a failed download
+# blocked the pod. Now ConfigMaps from git, picked up by Grafana's dashboard
+# sidecar (label grafana_dashboard: "1", all namespaces) and put into the
+# folder "Lab" by the annotation grafana_folder (sidecar folderAnnotation,
+# ../../infra.yaml).
+#
+# Flux's generated kustomization for clusters/platform includes this directory
+# as a resource because it has a kustomization.yaml. No postBuild substitution
+# runs here, so the dashboards' $variables stay as they are.
+#
+# UPDATING: replace the JSON with the file of the version that runs here and
+# keep the edits listed below. The sources, pinned like the components:
+#   argocd.json        argoproj/argo-cd v3.6.1 examples/dashboard.json
+#                      (app version of chart argo-cd 10.18.0, apps/argocd-platform.yaml)
+#   cert-manager.json  grafana.com 20842 revision 3 (latest revision; there is
+#                      no per-version dashboard, metrics: apps/cert-manager-servicemonitor.yaml)
+#   minio.json         minio/minio RELEASE.2025-04-22T22-12-26Z
+#                      docs/metrics/prometheus/grafana/minio-dashboard.json
+#   minio-node.json    same tag, docs/metrics/prometheus/grafana/node/minio-node.json
+#                      (image minio:2025.4.22 of chart 16.0.10, apps/minio.yaml)
+# Edits: MinIO's two use the import input ${DS_PROMETHEUS}, which only the UI
+# import and the old init container resolved. Replaced by the datasource uid
+# `prometheus` (kube-prometheus-stack's default datasource) and __inputs
+# dropped:
+#   sed -E '/-- .* --/! s/\$\{?DS_PROMETHEUS\}?/prometheus/g' in.json | jq 'del(.__inputs)'
+# ArgoCD and cert-manager pick the datasource with a dashboard variable and
+# need no edit.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    grafana_dashboard: "1"
+  annotations:
+    grafana_folder: Lab
+configMapGenerator:
+  - name: grafana-dashboard-lab-argocd
+    files:
+      - argocd.json
+  - name: grafana-dashboard-lab-cert-manager
+    files:
+      - cert-manager.json
+  - name: grafana-dashboard-lab-minio
+    files:
+      - minio.json
+  - name: grafana-dashboard-lab-minio-node
+    files:
+      - minio-node.json

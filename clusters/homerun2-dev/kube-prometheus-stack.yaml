@@ -1,0 +1,93 @@
+---
+# kube-prometheus-stack for this cluster (harvester#753, from #490): Prometheus,
+# Alertmanager, Grafana, node-exporter, kube-state-metrics, the chart's default
+# alert rules. Same flux base and chart version as clusters/platform/infra.yaml.
+#
+# WHY A LOCAL STACK AND NOT REMOTE-WRITE: the lab has no central metrics
+# receiver. platform's Prometheus scrapes platform only (no remote-write
+# receiver, no federation), and the ArgoCD clusters' `observability-platform`
+# label (stuttgart-things/argocd platforms/observability) installs the same
+# thing as here: one stack per cluster, warning/critical alerts to a central
+# omni-pitcher, every alert labelled with its cluster. Metrics stay on this
+# cluster; what reaches the lab centrally is the alerts.
+#
+# A standalone Kustomization, not the bundle's kube-prometheus-stack component,
+# for the same reason as on platform: the patches below (no public default
+# Grafana password, the `cluster` external label) cannot be passed through a
+# bundle.
+#
+# ALERTS go to this cluster's own omni-pitcher, plain HTTP in-cluster, on its
+# Alertmanager endpoint /pitch/alertmanager (omni-pitcher >= v2.4.0, runs
+# v2.4.1 -- homerun2.yaml), from there via notification-catcher to Teams like
+# platform's. Bearer token = the pitcher's own AUTH_TOKEN,
+# HOMERUN2_OMNI_PITCHER_AUTH_TOKEN from homerun2-secrets-subst -- exactly the
+# variable the flux release reads, so no patch is needed for it. Not optional:
+# without the Secret this stops instead of rolling out the `changeme` token.
+#
+# GRAFANA: https://grafana.homerun2-dev.sthings.lab, local `admin`, the password
+# the grafana chart generates (the patch drops the release's adminPassword,
+# whose fallback is the public `prom-operator`):
+#   kubectl -n monitoring get secret kube-prometheus-stack-grafana \
+#     -o jsonpath='{.data.admin-password}' | base64 -d
+#
+# RESOURCES (checked 2026-11-19): 1 node, 12 CPU / 12 GiB, requests 25% CPU /
+# 38% memory, ~6.5 GiB in use; the stack requests ~200m / ~800Mi. Prometheus
+# on openebs-hostpath (the only StorageClass), on the node's root disk with
+# ~18 GiB free -- hence 7d retention, not platform's 15d.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kube-prometheus-stack
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 1m
+  # The chart installs the prometheus-operator CRDs and five workloads;
+  # wait: true holds until all are healthy.
+  timeout: 15m
+  dependsOn:
+    # Grafana's HTTPRoute needs the Gateway; the Prometheus PVC needs openebs.
+    # Both are children of infra-platform.yaml.
+    - name: cilium-gateway
+    - name: openebs
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/kube-prometheus-stack
+  prune: true
+  wait: true
+  patches:
+    - target:
+        group: helm.toolkit.fluxcd.io
+        kind: HelmRelease
+        name: kube-prometheus-stack
+      patch: |
+        - op: remove
+          path: /spec/values/grafana/adminPassword
+        # On every series this Prometheus sends out -- in particular on each
+        # alert, so the shared Teams channel says where it came from.
+        - op: add
+          path: /spec/values/prometheus/prometheusSpec/externalLabels
+          value:
+            cluster: homerun2-dev
+  postBuild:
+    substitute:
+      KPS_NAMESPACE: monitoring
+      KPS_VERSION: "93.4.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
+      KPS_PROMETHEUS_STORAGE_CLASS: openebs-hostpath
+      KPS_PROMETHEUS_STORAGE_SIZE: 10Gi
+      KPS_PROMETHEUS_RETENTION: 7d
+      KPS_SCRAPE_INTERVAL: 60s
+      KPS_ALERTMANAGER_WEBHOOK_URL: http://homerun2-omni-pitcher.homerun2.svc.cluster.local/pitch/alertmanager
+      # Grafana's HTTPRoute -- same Gateway as infra-platform.yaml's INFRA_*.
+      GATEWAY_NAME: homerun2-dev-sthings-gateway
+      GATEWAY_NAMESPACE: default
+      HOSTNAME: grafana
+      DOMAIN: homerun2-dev.sthings.lab
+    substituteFrom:
+      - kind: Secret
+        name: homerun2-secrets-subst
+        optional: false
