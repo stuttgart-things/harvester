@@ -36,19 +36,17 @@
 # It waits on crossplane-configs, which the machinery profile creates.
 # machinery.machinery-hv.sthings.lab, through the cluster Gateway.
 #
-# GRPC AUTH IS PREPARED, NOT YET SWITCHED ON (harvester#753). The target is
-# `machinery-auth-sops` in place of `machinery`, plus `machinery-grpcroute`
-# (machinery-grpc.machinery-hv.sthings.lab): machinery's gRPC API with a
-# bearer token, reachable from other clusters. `machinery-auth` itself reads
-# the token through an ExternalSecret, and this cluster runs no ESO (see
-# infra-platform.yaml); the -sops variant substitutes it from the Secret
-# machinery-auth-sops-secrets (./machinery-auth-sops-secrets.enc.yaml, key
-# MACHINERY_AUTH_TOKEN). That variant comes with stuttgart-things/flux#1048,
-# after v1.234.0, so the switch rides on the git-repos.yaml bump to the first
-# tag that has cicd/platform/components/machinery-auth-sops. No gRPC client of
-# this machinery exists today (no GRPCRoute, nothing in-cluster calls :50051;
-# checked 2026-11-19), so nothing has to receive the token first. A client
-# added later gets the same value:
+# GRPC AUTH IS ON (harvester#753): `machinery-auth-sops` in place of
+# `machinery`. machinery's gRPC API requires a bearer token. `machinery-auth`
+# reads the token through an ExternalSecret and this cluster runs no ESO (see
+# infra-platform.yaml); the -sops variant (stuttgart-things/flux#1048, flux
+# >= v1.236.0) substitutes it from the Secret machinery-auth-sops-secrets
+# (./machinery-auth-sops-secrets.enc.yaml, key MACHINERY_AUTH_TOKEN).
+#
+# `machinery-grpcroute` (machinery-grpc.machinery-hv.sthings.lab) is NOT
+# selected yet: no gRPC client of this machinery exists (no GRPCRoute, nothing
+# in-cluster calls :50051; checked 2026-11-19), so the API stays cluster-internal
+# until one does. Adding it is one line below. A client gets the token with:
 #   sops -d --extract '["stringData"]["MACHINERY_AUTH_TOKEN"]' \
 #     clusters/machinery-hv/machinery-auth-sops-secrets.enc.yaml
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -78,8 +76,9 @@ spec:
     # The PipelineRuns every ClusterStack's ansible stages execute in, in
     # namespace tekton-ci.
     - ../components/tekton
-    # Claims dashboard, + HTTPRoute machinery.<INFRA_DOMAIN>.
-    - ../components/machinery
+    # Claims dashboard with gRPC bearer auth (token via SOPS, see above),
+    # + HTTPRoute machinery.<INFRA_DOMAIN>.
+    - ../components/machinery-auth-sops
   postBuild:
     substitute:
       APPS_SOURCE: flux-infra
