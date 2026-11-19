@@ -493,12 +493,6 @@ spec:
     - components/grafana-datasource
   prune: true
   wait: true
-  # Chart 20.0.0 dropped the bundled MinIO subchart and its schema refuses
-  # unknown top-level keys, so the release's `minio: {enabled: false}` fails
-  # every upgrade ("additional properties 'minio' not allowed", harvester#664).
-  # Storage is unaffected: filesystem on the singleBinary PVC, rendered
-  # identically by 19.4.0 and 21.x. A null removes the key and is a no-op
-  # once flux-infra's infra/loki/release.yaml drops it; then this patch goes.
   patches:
     - target:
         kind: HelmRelease
@@ -510,7 +504,6 @@ spec:
           name: loki
         spec:
           values:
-            minio: null
             # One node: the chart's required gateway anti-affinity lets no
             # surge pod schedule, so a RollingUpdate never finishes (first
             # seen on the 21.3.1 upgrade). Recreate: a few seconds without
@@ -521,7 +514,7 @@ spec:
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
-      LOKI_VERSION: "21.3.1" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
+      LOKI_VERSION: "21.4.1" # datasource=docker depName=ghcr.io/grafana-community/helm-charts/loki
       LOKI_STORAGE_CLASS: local-path
       LOKI_STORAGE_SIZE: 30Gi
       LOKI_RETENTION: 168h
