@@ -14,16 +14,20 @@
 #     render), escrowed for the master key (--escrow-recipients)
 #
 # Re-render (from the repo root):
-#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
+#   dagger call -m github.com/stuttgart-things/blueprints/flux@v3.12.2 \
 #     render-cluster-apps \
 #     --cluster-apps clusters/sthings-edge/cluster-apps.yaml \
 #     --master-age-key env:SOPS_AGE_KEY \
-#     --escrow-recipients "$(age-keygen -y <<<"$SOPS_AGE_KEY")" \
+#     --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
 #     --sops-ref-dir . \
 #     --existing-secrets clusters/sthings-edge/cluster-secrets \
 #     export --path /tmp/sthings-edge-gen
 #   cp -r /tmp/sthings-edge-gen/flux/. clusters/sthings-edge/
 # (leave out --existing-secrets on the very first render)
+# The escrow key is the master public key written out, as in
+# ../edge/cluster-apps.yaml: a $(age-keygen -y ...) once came back empty and
+# left every secret encrypted for the box key only (#535). After a render,
+# `git diff cluster-secrets/.sops.yaml` must be empty.
 kind: ClusterApps
 metadata:
   name: sthings-edge
@@ -260,6 +264,10 @@ spec:
           HOMERUN2_SCOUT_AUTH_TOKEN: ref+sops://secrets/edge/app-values.enc.yaml#/stringData/HOMERUN2_SCOUT_AUTH_TOKEN # pragma: allowlist secret
     # schmetterpause + zaehlwerk (panel: homerun2), CNPG backups into MinIO
     # with the schmetterpause-cnpg user (../terraform/minio).
+    # zaehlwerk's API as on edge's office pair (#683, decided 2026-11-19): no
+    # MATCHES_TOKEN (zaehlwerk-matches-sops), so `POST /matches` answers 503;
+    # check-in by phone and the report to schmetterpause /api work without
+    # it. The Pong sandbox (tabletennis-sandbox) stays lab-only.
     tabletennis-sops-backup:
       vars:
         TABLETENNIS_ZAEHLWERK_PANEL: homerun2

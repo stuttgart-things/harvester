@@ -402,13 +402,19 @@ encrypted for the master key. Run from the repo root, with the exports of step 4
 or the box key and all secrets are made anew:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.12.2 \
   render-cluster-apps --cluster-apps clusters/sthings-edge/cluster-apps.yaml \
-  --master-age-key env:SOPS_AGE_KEY --escrow-recipients "$(age-keygen -y $SOPS_AGE_KEY_FILE)" \
+  --master-age-key env:SOPS_AGE_KEY --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
   --sops-ref-dir . --existing-secrets clusters/sthings-edge/cluster-secrets \
   export --path /tmp/sthings-edge-gen
 cp -r /tmp/sthings-edge-gen/flux/. clusters/sthings-edge/ && rm -rf /tmp/sthings-edge-gen
+git diff --exit-code clusters/sthings-edge/cluster-secrets/.sops.yaml   # must be empty
 ```
+
+The escrow key is the master public key **written out** (#535): a `$(age-keygen -y …)` once came
+back empty and left every secret encrypted for the box key only. On macOS, sops needs
+`SOPS_AGE_KEY_FILE` (see *Troubleshooting*). The generator does not keep the Renovate comments
+(`# datasource=docker …`) in `apps/apps-platform.yaml`; put them back after the copy.
 
 **b) Hand-encrypted files for the box key.** `infra/ca/edge-ca.enc.yaml` is the lab's file with
 the box key added (same plaintext):
