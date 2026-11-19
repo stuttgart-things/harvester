@@ -80,6 +80,13 @@ spec:
 
       FLUENT_BIT_CLUSTER_NAME: homerun2-dev
       FLUENT_BIT_LOKI_HOST: loki.platform.sthings.lab
+      # The kubernetes filter's API buffer. fluent-bit logged "[http_client]
+      # cannot increase buffer: current=32000 requested=64768 max=32000" every
+      # ~5 min (#605, still on 2026-11-19): the cilium agent pod's API object
+      # is ~35 kB, so its logs reach Loki without namespace/pod labels. Read
+      # only from the flux tag that contains stuttgart-things/flux#1045;
+      # ignored before that.
+      FLUENT_BIT_K8S_BUFFER_SIZE: 128k
 
       # Set once, read by the Gateway, the wildcard certificate and every
       # HTTPRoute behind it. Keep identical to any apps bundle added later --
