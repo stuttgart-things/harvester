@@ -2,7 +2,6 @@
 extends: default
 
 ignore:
-  - claims/cli/hacky.yaml
   - claims/infra/*/harvestervm-*.yaml
   # SOPS owns the formatting of these: it emits mac/lastmodified lines well
   # past any line-length limit and re-writes comments without a leading space.
