@@ -182,11 +182,13 @@ spec:
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
+            # The night airs nothing (empty clock), like labul.
+            clocks:
+              night: {}
             # Day windows (shows). Aired since v0.4.0 (radio-pitcher#3):
             # a show may pick a named clock (`clock: <name>` from `clocks:`)
-            # and air `extra:` segments once per window. None of these has a
-            # clock of its own yet, so the clock above airs all day. A silent
-            # night is `clock: night` plus `clocks: { night: {} }`.
+            # and air `extra:` segments once per window. Only the night has
+            # a clock of its own (silent); the day shows air the clock above.
             # after-work adds the day's numbers at 17:30 (daily-summary).
             # Table tennis: the day after work. No weekly card at lunch:
             # schmetterpause counts at most 200 matches per query and the
@@ -200,7 +202,7 @@ spec:
                 extra:
                   - { segment: daily-summary, at: "17:30" }
                   - { segment: tabletennis-stats, at: "18:10", days: 1 }
-              "19:00-07:00": { show: night }
+              "19:00-07:00": { show: night, clock: night }
           sources.yaml: |
             sources:
               - name: homerun2-dev
