@@ -24,9 +24,13 @@
 # variable the flux release reads, so no patch is needed for it. Not optional:
 # without the Secret this stops instead of rolling out the `changeme` token.
 #
-# GRAFANA: https://grafana.homerun2-dev.sthings.lab, local `admin`, the password
-# the grafana chart generates (the patch drops the release's adminPassword,
-# whose fallback is the public `prom-operator`):
+# GRAFANA: https://grafana.homerun2-dev.sthings.lab, login with ZITADEL as on
+# platform and machinery-hv: client `grafana-homerun2-dev` in
+# ../platform/zitadel-config/apps.auto.tfvars, id and secret in the SOPS Secret
+# ./grafana-oidc-zitadel.enc.yaml, CA ./monitoring-trust-bundle.yaml.
+# grafana-admin => Admin, grafana-readonly => Viewer, nobody else. Fallback:
+# local `admin`, the password the grafana chart generates (the patch drops the
+# release's adminPassword, whose fallback is the public `prom-operator`):
 #   kubectl -n monitoring get secret kube-prometheus-stack-grafana \
 #     -o jsonpath='{.data.admin-password}' | base64 -d
 #
@@ -73,6 +77,37 @@ spec:
           path: /spec/values/prometheus/prometheusSpec/externalLabels
           value:
             cluster: homerun2-dev
+        # ZITADEL login, same block as ../platform/infra.yaml.
+        - op: add
+          path: /spec/values/grafana/envFromSecret
+          value: grafana-oidc-zitadel
+        - op: add
+          path: /spec/values/grafana/extraConfigmapMounts
+          value:
+            - name: trust-bundle
+              mountPath: /etc/grafana/ca
+              configMap: cluster-trust-bundle
+              readOnly: true
+        - op: add
+          path: /spec/values/grafana/grafana.ini/auth.generic_oauth
+          value:
+            enabled: true
+            name: ZITADEL
+            allow_sign_up: true
+            auto_login: false
+            scopes: openid profile email
+            auth_url: https://zitadel.platform.sthings.lab/oauth/v2/authorize
+            token_url: https://zitadel.platform.sthings.lab/oauth/v2/token
+            api_url: https://zitadel.platform.sthings.lab/oidc/v1/userinfo
+            auth_style: InHeader
+            use_pkce: true
+            login_attribute_path: preferred_username
+            name_attribute_path: name
+            email_attribute_path: email
+            role_attribute_path: >-
+              contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-admin') && 'Admin' || contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-readonly') && 'Viewer'
+            role_attribute_strict: true
+            tls_client_ca: /etc/grafana/ca/trust-bundle.pem
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
