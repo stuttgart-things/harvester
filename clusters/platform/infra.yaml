@@ -526,3 +526,77 @@ spec:
       FLUENT_BIT_VERSION: "0.58.3" # datasource=docker depName=ghcr.io/fluent/helm-charts/fluent-bit
       FLUENT_BIT_CLUSTER_NAME: platform
       FLUENT_BIT_LOKI_HOST: loki-gateway.loki.svc.cluster.local
+---
+# External Secrets Operator (harvester#753). The first ESO on this cluster, and
+# for now it serves ONE store: `vault-kubeconfigs` below, which clusterscope's
+# live mode reads the lab's other clusters through (./apps/clusterscope.yaml).
+# Everything else here stays SOPS-in-git, as before.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/external-secrets/components/install
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      EXTERNAL_SECRETS_NAMESPACE: external-secrets # pragma: allowlist secret
+      # The flux component's default; written out so Renovate and a reader see
+      # the same version.
+      EXTERNAL_SECRETS_VERSION: "2.15.0" # datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
+---
+# ClusterSecretStore `vault-kubeconfigs`: KV mount `kubeconfigs` on this
+# cluster's OpenBao (machinery-hv's ClusterStacks write one entry per built
+# cluster there, property `kubeconfig`).
+#
+# THE OPENBAO SIDE IS ./openbao/platform-eso (terraform, by hand, FIRST): the
+# auth mount platform-sthings-eso, role `eso` bound to ESO's own ServiceAccount
+# and the policy read-kubeconfigs-eso. Before that has run this store reports
+# InvalidProviderConfig -- loud, and correct.
+#
+# In-cluster over plain HTTP like cert-manager-openbao-issuer above, so it does
+# not depend on the Gateway. The CA Secret is only there because the base
+# always renders a caProvider; openbao-pki-ca is the OpenBao root
+# (./openbao-pki-ca.yaml).
+#
+# Ready=True means the LOGIN worked, not that the policy reads anything --
+# clusterscope's ExternalSecret clusterscope-kubeconfigs syncing is the proof.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets-vault-kubeconfigs
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: external-secrets
+  sourceRef:
+    kind: GitRepository
+    name: flux-infra
+  path: ./infra/external-secrets/components/cluster-store-vault
+  prune: true
+  wait: true
+  postBuild:
+    substitute:
+      VAULT_CSS_NAME: vault-kubeconfigs
+      VAULT_SERVER: http://openbao.openbao.svc.cluster.local:8200
+      VAULT_KV_PATH: kubeconfigs
+      VAULT_CA_SECRET_NAME: openbao-pki-ca # pragma: allowlist secret
+      VAULT_CA_SECRET_NAMESPACE: cert-manager # pragma: allowlist secret
+      VAULT_CA_SECRET_KEY: ca.crt # pragma: allowlist secret
+      # <cluster_name>-<name> from ./openbao/platform-eso -- mount, role and
+      # ServiceAccount move together or not at all.
+      VAULT_K8S_AUTH_MOUNT_PATH: platform-sthings-eso
+      VAULT_K8S_AUTH_ROLE: eso
+      VAULT_K8S_AUTH_SA_NAME: external-secrets
+      VAULT_K8S_AUTH_SA_NAMESPACE: external-secrets

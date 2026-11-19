@@ -3,9 +3,18 @@
 # (git-sync, the repo is public) plus live status of this cluster
 # (harvester#490). clusterscope.platform.sthings.lab.
 #
-# Live mode reads only `platform` itself, in-cluster. The other clusters need
-# kubeconfigs (components/vault-kubeconfigs), and that component reads them
-# through an ESO ClusterSecretStore, which this cluster does not run yet.
+# Live mode reads `platform` itself in-cluster and every other cluster whose
+# kubeconfig is in OpenBao (KV mount `kubeconfigs`, entry = cluster name,
+# property `kubeconfig`), through the ClusterSecretStore vault-kubeconfigs
+# (../infra.yaml, OpenBao side ../openbao/platform-eso; harvester#753).
+#
+# CLUSTERSCOPE_KUBECONFIG_CLUSTERS lists exactly the clusters that HAVE an
+# entry -- only what machinery-hv's ClusterStacks wrote, i.e. app-dev-hv
+# (checked 2026-11-19). homerun2-dev, machinery-hv, crossplane-mgmt,
+# tabletennis, harvester, edge and sthings-edge have none and stay
+# "no kubeconfig" until one is written there; add each name to the regexp then.
+# (tabletennis and the edges sit in another network and are unreachable from
+# here anyway.)
 #
 # PROBE checks every HTTPRoute URL it finds; the cluster-trust-bundle (OpenBao
 # root) is mounted so *.sthings.lab endpoints verify.
@@ -20,7 +29,13 @@ metadata:
 spec:
   force: false
   interval: '1h'
+  # The store and its CRDs come from the infra Kustomizations; without them
+  # the ExternalSecret below fails the apply.
+  dependsOn:
+    - name: external-secrets-vault-kubeconfigs
   path: './apps/clusterscope'
+  components:
+    - components/vault-kubeconfigs
   postBuild:
     substitute:
       CLUSTERSCOPE_NAMESPACE: clusterscope
@@ -29,6 +44,9 @@ spec:
       CLUSTERSCOPE_LAB: sthings-lab
       CLUSTERSCOPE_LIVE: 'true'
       CLUSTERSCOPE_SELF_CLUSTER: platform
+      CLUSTERSCOPE_KUBECONFIG_DIR: /kubeconfigs
+      CLUSTERSCOPE_KUBECONFIG_STORE: vault-kubeconfigs
+      CLUSTERSCOPE_KUBECONFIG_CLUSTERS: ^(app-dev-hv)$
       CLUSTERSCOPE_PROBE: 'true'
       CLUSTERSCOPE_TRUST_BUNDLE_CONFIGMAP: cluster-trust-bundle
       CLUSTERSCOPE_TRUST_BUNDLE_KEY: trust-bundle.pem
