@@ -310,15 +310,18 @@ spec:
 # ConfigMap trust-manager writes into every namespace. From the pitcher the
 # notification-catcher on homerun2-dev fans them out (Teams, severity >= warning).
 #
-# TOKEN: omni-pitcher has one bearer token (AUTH_TOKEN). It is already here as
-# HOMERUN2_K8S_PITCHER_AUTH_TOKEN in the Secret homerun2-k8s-pitcher-remote-sops-secrets # pragma: allowlist secret
-# (./apps/homerun2-k8s-pitcher-remote-sops-secrets.enc.yaml, the k8s-pitcher
-# pilot), so this reads that Secret instead of keeping a second copy; the patch
-# points the receiver at that variable instead of the flux release's
-# HOMERUN2_OMNI_PITCHER_AUTH_TOKEN. Rotating the pitcher token = updating that
-# one file. The patch runs before postBuild, so ${...} in it is substituted.
-# Not optional: without the Secret this Kustomization stops instead of rolling
-# out the release's `changeme` token.
+# TOKEN: omni-pitcher has one bearer token (AUTH_TOKEN, homerun2-dev's
+# homerun2-secrets-subst). Alertmanager has its own copy of it, key `token` in
+# the Secret monitoring/alertmanager-webhook-token # pragma: allowlist secret
+# (./apps/alertmanager-webhook-token.enc.yaml), mounted through
+# alertmanagerSpec.secrets and read by the receiver with credentials_file --
+# the same shape as flux-infra's components/alertmanager-webhook-token, minus
+# ESO (this cluster has none). Not in any Flux variable or HelmRelease value,
+# and no longer tied to the k8s-pitcher pilot's Secret (#753, from #605).
+# Rotating the omni-pitcher token = updating BOTH this file and
+# ./apps/homerun2-k8s-pitcher-remote-sops-secrets.enc.yaml. Without the
+# Secret the Alertmanager pod does not start (missing volume), instead of
+# rolling out the release's `changeme` token.
 #
 # GRAFANA keeps its local admin (lab rule, #574): user `admin`, the password is
 # the one the grafana chart generates into the Secret kube-prometheus-stack-grafana
@@ -361,18 +364,29 @@ spec:
           path: /spec/values/alertmanager/config/receivers/1/name
           value: msteams
         - op: replace
-          path: /spec/values/alertmanager/config/receivers/1/webhook_configs/0/http_config/authorization/credentials
-          value: ${HOMERUN2_K8S_PITCHER_AUTH_TOKEN}
+          path: /spec/values/alertmanager/config/receivers/1/webhook_configs/0/http_config/authorization
+          value:
+            type: Bearer
+            credentials_file: /etc/alertmanager/secrets/alertmanager-webhook-token/token
+        - op: add
+          path: /spec/values/alertmanager/alertmanagerSpec/secrets
+          value:
+            - alertmanager-webhook-token
         - op: remove
           path: /spec/values/grafana/adminPassword
-        # Lab dashboards (harvester#574 follow-up), folder "Lab". Grafana's
-        # init container downloads them at start, pinned: grafana.com by
-        # revision, GitHub by tag of the version that runs here. The metrics
-        # behind them: cert-manager -> apps/cert-manager-servicemonitor.yaml,
-        # ArgoCD -> apps/argocd-platform.yaml, MinIO -> apps/minio.yaml.
-        # Flux and Cilium bring their own dashboard ConfigMaps
-        # (apps/flux-monitoring.yaml, the cilium chart), Loki logs is
-        # apps/grafana-dashboard-lab-logs.yaml.
+        # Lab dashboards (harvester#574 follow-up), folder "Lab": vendored
+        # as ConfigMaps in ./apps/grafana-dashboards-lab/ (#753) -- no more
+        # download at start, so they load without internet. The sidecar puts
+        # a ConfigMap into the folder named by its annotation grafana_folder;
+        # dashboards without it (kube-prometheus-stack's, Flux's, Cilium's)
+        # stay in General. Loki logs is apps/grafana-dashboard-lab-logs.yaml.
+        - op: add
+          path: /spec/values/grafana/sidecar
+          value:
+            dashboards:
+              folderAnnotation: grafana_folder
+              provider:
+                foldersFromFilesStructure: true
         # ZITADEL login (harvester#574) NEXT TO the local admin, which stays
         # (login form on, `admin` + generated password). Client ID/secret as
         # GF_AUTH_GENERIC_OAUTH_* env from the SOPS Secret
@@ -413,39 +427,6 @@ spec:
               contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-admin') && 'Admin' || contains(keys("urn:zitadel:iam:org:project:roles" || `{}`), 'grafana-readonly') && 'Viewer'
             role_attribute_strict: true
             tls_client_ca: /etc/grafana/ca/trust-bundle.pem
-        - op: add
-          path: /spec/values/grafana/dashboardProviders
-          value:
-            dashboardproviders.yaml:
-              apiVersion: 1
-              providers:
-                - name: lab
-                  orgId: 1
-                  folder: Lab
-                  type: file
-                  disableDeletion: false
-                  editable: true
-                  options:
-                    path: /var/lib/grafana/dashboards/lab
-        - op: add
-          path: /spec/values/grafana/dashboards
-          value:
-            lab:
-              cert-manager:
-                gnetId: 20842
-                revision: 3
-              argocd:
-                url: https://raw.githubusercontent.com/argoproj/argo-cd/v3.3.4/examples/dashboard.json
-              minio:
-                url: https://raw.githubusercontent.com/minio/minio/RELEASE.2025-04-22T22-12-26Z/docs/metrics/prometheus/grafana/minio-dashboard.json
-                datasource:
-                  - name: DS_PROMETHEUS
-                    value: Prometheus
-              minio-node:
-                url: https://raw.githubusercontent.com/minio/minio/RELEASE.2025-04-22T22-12-26Z/docs/metrics/prometheus/grafana/node/minio-node.json
-                datasource:
-                  - name: DS_PROMETHEUS
-                    value: Prometheus
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
@@ -461,10 +442,6 @@ spec:
       GATEWAY_NAMESPACE: default
       HOSTNAME: grafana
       DOMAIN: platform.sthings.lab
-    substituteFrom:
-      - kind: Secret
-        name: homerun2-k8s-pitcher-remote-sops-secrets
-        optional: false
 ---
 # Loki: the lab's central log store (harvester#490). Monolithic on local-path,
 # 7 days. In-cluster loki-gateway.loki.svc, for the other clusters

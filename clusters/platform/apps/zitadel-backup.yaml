@@ -1,18 +1,65 @@
 ---
 # Nightly backup of the lab IdP (harvester#574): pg_dump of ZITADEL's database
-# plus the Terraform state of ./zitadel-config, to the bucket
-# platform-zitadel-backup on this cluster's MinIO
-# (clusters/machinery-hv/xrs/platform-zitadel-backup.yaml). 14 days kept.
+# plus the Terraform state of ./zitadel-config, to every target in
+# BACKUP_TARGETS below (harvester#753):
+#
+#   platform     this cluster's MinIO, bucket platform-zitadel-backup
+#                (clusters/machinery-hv/xrs/platform-zitadel-backup.yaml),
+#                14 days, deleted by this job;
+#   homerun2dev  the MinIO on homerun2-dev, a VM on the Harvester host -- the
+#                OFF-HOST copy (clusters/homerun2-dev/minio.yaml). 30 days,
+#                expired by that bucket's lifecycle rule: the job's user there
+#                may write and read but not delete, so a broken or hostile
+#                platform cannot wipe the copies.
 #
 # Not in it: the masterkey. It is in ./zitadel-secrets.enc.yaml (git, SOPS)
 # and must be the same on restore -- a dump without it cannot be decrypted.
+# Restore: ../zitadel-config/README.md, "Backup and restore".
 #
-# Same VM as ZITADEL: covers a deleted namespace (which also takes the
-# Terraform state), a broken database and a bad upgrade, not the loss of the
-# platform VM. Restore: ../zitadel-config/README.md, "Backup and restore".
+# THE UPLOAD IS GENERIC: rclone, one remote per target, configured entirely
+# from environment variables RCLONE_CONFIG_<REMOTE>_<OPTION> (the remote's
+# name is <REMOTE> in lower case). A target is a line in BACKUP_TARGETS:
+#
+#   <remote>:<bucket or container>[/prefix]  <retention>
+#
+# retention is an rclone duration (14d) -- the job deletes older objects by
+# their UPLOAD time -- or `-` when the store expires them itself. Every
+# target is tried; the job fails if any one failed (and the Job's retries
+# upload again, under a new timestamp, to all of them).
+#
+# Adding a target, e.g. Azure Blob (planned, nothing exists there yet):
+#   1. a SOPS Secret zitadel-backup-target-<name> in namespace zitadel with
+#      the remote's RCLONE_CONFIG_* keys. For Azure, a container-scoped SAS
+#      URL and an rclone `crypt` remote on top -- encrypted on this side, the
+#      provider sees only ciphertext:
+#        RCLONE_CONFIG_AZURE_TYPE: azureblob
+#        RCLONE_CONFIG_AZURE_SAS_URL: https://<account>.blob.core.windows.net/<container>?<sas>
+#        RCLONE_CONFIG_AZURECRYPT_TYPE: crypt
+#        RCLONE_CONFIG_AZURECRYPT_REMOTE: azure:<container>/zitadel
+#        RCLONE_CONFIG_AZURECRYPT_PASSWORD: <rclone obscure ...>
+#        RCLONE_CONFIG_AZURECRYPT_PASSWORD2: <rclone obscure ...>
+#      (keep the crypt passwords somewhere besides this cluster as well:
+#      without them the copies are noise);
+#   2. one more `- secretRef` under envFrom;
+#   3. one more line in BACKUP_TARGETS -- the crypt remote, not the raw one:
+#        azurecrypt:  -     (with an Azure lifecycle rule and a SAS without
+#                             delete), or `azurecrypt: 30d` (SAS with delete).
+#
+# TLS: SSL_CERT_FILE is platform's trust-manager bundle (public roots plus the
+# sthings.lab root), so the lab's own endpoints and public clouds verify.
 #
 # In the namespace of the zitadel component (apps-platform): removing the
-# component deletes this CronJob with the namespace, not the bucket.
+# component deletes this CronJob with the namespace, not the buckets.
+#
+# Boot race (#753): the lab is off at 02:30, so the run is the catch-up Job
+# the CronJob controller starts right after boot -- before CoreDNS,
+# zitadel-postgresql and MinIO are Ready. Until then the Services have no
+# endpoints and Cilium's socket LB answers "no route to host" (2026-11-19:
+# pods at 07:26:03 and 07:28:53, CoreDNS Ready 07:28:47, MinIO 07:29:08; the
+# third pod succeeded). So the dump waits for the database, the upload waits
+# for each target (up to 5 min each), backoffLimit leaves room for a slow
+# boot, and activeDeadlineSeconds ends a Job that hangs anyway. Missed or failed runs alert via
+# ./cronjob-alerts.yaml.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -29,7 +76,8 @@ spec:
   failedJobsHistoryLimit: 3
   jobTemplate:
     spec:
-      backoffLimit: 2
+      backoffLimit: 4
+      activeDeadlineSeconds: 1800
       ttlSecondsAfterFinished: 604800
       template:
         metadata:
@@ -53,6 +101,12 @@ spec:
               args:
                 - |
                   set -euo pipefail
+                  # Wait for DNS and the database after a boot (see above).
+                  for i in $(seq 1 30); do
+                    pg_isready -q -h zitadel-postgresql -U postgres -t 5 && break
+                    echo "zitadel-postgresql not ready yet ($i/30)"
+                    sleep 10
+                  done
                   pg_dump -h zitadel-postgresql -U postgres -d zitadel -Fc -f /work/zitadel.dump
                   # A dump pg_restore cannot read is no backup.
                   pg_restore --list /work/zitadel.dump > /dev/null
@@ -71,38 +125,100 @@ spec:
                 - name: work
                   mountPath: /work
           containers:
-            # The MinIO image of this cluster ships mc.
             - name: upload
-              image: ghcr.io/stuttgart-things/minio:2025.4.22-debian-12-r1
-              command: ["/bin/bash", "-c"]
+              image: docker.io/rclone/rclone:1.75.2 # datasource=docker depName=docker.io/rclone/rclone
+              command: ["/bin/sh", "-c"]
               args:
                 - |
-                  set -euo pipefail
+                  set -u
                   ts=$(date -u +%Y%m%dT%H%M%SZ)
-                  mc alias set backup http://minio-deployment.minio.svc.cluster.local:9000 \
-                    "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY" > /dev/null
-                  mc cp --quiet /work/zitadel.dump "backup/platform-zitadel-backup/$ts/zitadel.dump"
-                  # gzip, as the kubernetes backend stores it
-                  if [ -f /tfstate/tfstate ]; then
-                    mc cp --quiet /tfstate/tfstate "backup/platform-zitadel-backup/$ts/tfstate-zitadel-config.gz"
-                  else
-                    echo "no Terraform state Secret, skipped"
+                  failed=""
+                  # Wait for the target: after a boot the local MinIO (and
+                  # DNS) may not be Ready yet (see above).
+                  ready() {
+                    for i in $(seq 1 30); do
+                      rclone lsf --max-depth 1 --contimeout 5s --timeout 10s \
+                        --retries 1 --low-level-retries 1 "$1" > /dev/null 2>&1 && return 0
+                      echo "$1 not ready yet ($i/30)"
+                      sleep 10
+                    done
+                    return 1
+                  }
+                  upload() {
+                    target=$1 retention=$2
+                    ready "$target" || return 1
+                    rclone copyto /work/zitadel.dump "$target/$ts/zitadel.dump" || return 1
+                    # gzip, as the kubernetes backend stores it. A Secret
+                    # volume file is a symlink (..data/tfstate): without
+                    # --copy-links rclone reads it as a directory and fails.
+                    if [ -f /tfstate/tfstate ]; then
+                      rclone copyto --copy-links /tfstate/tfstate "$target/$ts/tfstate-zitadel-config.gz" || return 1
+                    else
+                      echo "no Terraform state Secret, skipped"
+                    fi
+                    if [ "$retention" != "-" ]; then
+                      # By upload time: the tfstate file's own mtime is when
+                      # the Secret was mounted, not when it was copied.
+                      rclone delete --use-server-modtime --min-age "$retention" "$target" || return 1
+                    fi
+                    rclone lsf --dirs-only "$target"
+                  }
+                  while read -r target retention; do
+                    case "$target" in ""|"#"*) continue ;; esac
+                    echo "== $target (retention ${retention:--})"
+                    if upload "$target" "${retention:--}"; then
+                      echo "== $target ok"
+                    else
+                      echo "== $target FAILED"
+                      failed="$failed $target"
+                    fi
+                  done <<EOF
+                  $BACKUP_TARGETS
+                  EOF
+                  if [ -n "$failed" ]; then
+                    echo "failed:$failed"
+                    exit 1
                   fi
-                  mc rm --recursive --force --older-than 14d backup/platform-zitadel-backup/
-                  mc ls backup/platform-zitadel-backup/
               env:
-                - name: MC_CONFIG_DIR
-                  value: /work/.mc
-                - name: AWS_ACCESS_KEY_ID
+                # <remote>:<bucket>[/prefix] <retention|->, one per line.
+                - name: BACKUP_TARGETS
+                  value: |
+                    platform:platform-zitadel-backup 14d
+                    homerun2dev:platform-zitadel-backup -
+                - name: HOME
+                  value: /work
+                - name: RCLONE_CONFIG
+                  value: /dev/null
+                - name: SSL_CERT_FILE
+                  value: /etc/ssl/lab/trust-bundle.pem
+                # Remote `platform`: this cluster's MinIO, in-cluster HTTP.
+                # The keys are the ones the bucket's XR made
+                # (./zitadel-backup-secrets.enc.yaml).
+                - name: RCLONE_CONFIG_PLATFORM_TYPE
+                  value: s3
+                - name: RCLONE_CONFIG_PLATFORM_PROVIDER
+                  value: Minio
+                - name: RCLONE_CONFIG_PLATFORM_ENDPOINT
+                  value: http://minio-deployment.minio.svc.cluster.local:9000
+                - name: RCLONE_CONFIG_PLATFORM_REGION
+                  value: us-east-1
+                - name: RCLONE_CONFIG_PLATFORM_NO_CHECK_BUCKET
+                  value: "true"
+                - name: RCLONE_CONFIG_PLATFORM_ACCESS_KEY_ID
                   valueFrom:
                     secretKeyRef:
                       name: zitadel-backup-s3
                       key: AWS_ACCESS_KEY_ID
-                - name: AWS_SECRET_ACCESS_KEY
+                - name: RCLONE_CONFIG_PLATFORM_SECRET_ACCESS_KEY
                   valueFrom:
                     secretKeyRef:
                       name: zitadel-backup-s3
                       key: AWS_SECRET_ACCESS_KEY
+              # One Secret per further remote, all of its RCLONE_CONFIG_* keys.
+              envFrom:
+                # Remote `homerun2dev` (./zitadel-backup-target-homerun2-dev.enc.yaml)
+                - secretRef:
+                    name: zitadel-backup-target-homerun2-dev
               securityContext:
                 allowPrivilegeEscalation: false
                 capabilities:
@@ -113,6 +229,9 @@ spec:
                 - name: tfstate
                   mountPath: /tfstate
                   readOnly: true
+                - name: trust-bundle
+                  mountPath: /etc/ssl/lab
+                  readOnly: true
           volumes:
             - name: work
               emptyDir: {}
@@ -121,3 +240,11 @@ spec:
               secret:
                 secretName: tfstate-default-zitadel-config # pragma: allowlist secret
                 optional: true
+            # trust-manager's bundle (cluster-trust-bundle Bundle): public
+            # roots plus the sthings.lab root of homerun2-dev's Gateway.
+            - name: trust-bundle
+              configMap:
+                name: cluster-trust-bundle
+                items:
+                  - key: trust-bundle.pem
+                    path: trust-bundle.pem

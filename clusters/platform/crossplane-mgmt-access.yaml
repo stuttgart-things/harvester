@@ -1,0 +1,140 @@
+---
+# The identity crossplane-mgmt's Crossplane is meant to use on this Rancher --
+# the `rancher-mgmt` ClusterProviderConfig on crossplane-mgmt (harvester#350).
+# The machinery-hv counterpart is ./crossplane-machinery-access.yaml; read its
+# header first, everything there about WHAT the identity may do applies here.
+#
+# WHY. As of 2026-11-17 crossplane-mgmt's `rancher-mgmt` reads
+# crossplane-system/rancher-mgmt-kubeconfig, which is platform's k3s ADMIN
+# kubeconfig: a client certificate `CN=system:admin, O=system:masters`. That is
+# not a Rancher user or token at all -- it is cluster-admin on the cluster that
+# runs Rancher, Argo CD, OpenBao, Harbor and MinIO, and Rancher records it as
+# `field.cattle.io/creatorId: system:admin`. Anything that can read
+# crossplane-system on crossplane-mgmt holds it.
+#
+# SAME GRANTS AS crossplane-machinery, ON PURPOSE. Both control planes run the
+# same rancher-cluster Composition (crossplane-mgmt v0.7.4, machinery-hv
+# v0.11.0) and compose the same five Objects against `rancher-mgmt` -- checked
+# on 2026-11-17 against tabletennis, the only RancherCluster on crossplane-mgmt:
+#
+#   provisioning.cattle.io Cluster        fleet-default  tabletennis
+#   rke-machine-config HarvesterConfig    fleet-default  tabletennis-pool1
+#   Secret (Observe, kubeconfig bridge)   fleet-default  tabletennis-kubeconfig
+#   Secret (Argo CD cluster)              argocd         tabletennis-argocd-kubeconfig
+#   ClusterbookCluster                    cluster-scoped tabletennis
+#
+# plus `get` on the Harvester cloud credential cattle-global-data/cc-cl944 for
+# the webhook's SubjectAccessReview. So this file only adds a SECOND
+# ServiceAccount and binds it to the Roles/ClusterRoles defined in
+# crossplane-machinery-access.yaml. A grant added there for a new Composition
+# version reaches both identities; that is intended -- the Composition is the
+# same. The ServiceAccount is separate so the two control planes can be told
+# apart (audit, creatorId on new clusters) and rotated independently.
+#
+# MERGING THIS FILE IS LIVE BUT INERT: Flux (config.yaml, path clusters/platform)
+# creates the Namespace, the ServiceAccount, its token and the bindings. Nothing
+# uses them until the `rancher-mgmt` ClusterProviderConfig on crossplane-mgmt is
+# pointed at a kubeconfig built from that token -- a manual step, see
+# ../crossplane-mgmt/README.md "rancher-mgmt credential (harvester#350)".
+#
+# REVERTING THIS FILE IS NOT INERT once that switch is done: Flux prunes the
+# Namespace, the token goes with it, and every tabletennis Object goes
+# `Unauthorized`. Switch the ClusterProviderConfig back FIRST, then revert.
+#
+# CREATOR RBAC. tabletennis already has `creatorId: system:admin` and keeps it
+# (the webhook refuses to change an existing creator, and the Composition does
+# not set the annotation). Only a NEW order from crossplane-mgmt would get this
+# ServiceAccount as creator -- and with it cluster-owner -- unless it sets
+# `field.cattle.io/no-creator-rbac: "true"`, which needs rancher-cluster
+# >= v0.11.0; crossplane-mgmt pins v0.7.4. See the open questions in #350.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: crossplane-mgmt-access
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: crossplane-mgmt
+  namespace: crossplane-mgmt-access
+---
+# Long-lived, for the same reason as crossplane-machinery-token:
+# provider-kubernetes reads a static kubeconfig and cannot renew a TokenRequest
+# token. Rotate by deleting this Secret (Kubernetes mints a new token) and
+# re-running the credential step in ../crossplane-mgmt/README.md.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: crossplane-mgmt-token
+  namespace: crossplane-mgmt-access
+  annotations:
+    kubernetes.io/service-account.name: crossplane-mgmt
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-mgmt
+  namespace: fleet-default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-mgmt
+    namespace: crossplane-mgmt-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-mgmt-cloud-credential
+  namespace: cattle-global-data
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery-cloud-credential
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-mgmt
+    namespace: crossplane-mgmt-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: crossplane-mgmt
+  namespace: argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: crossplane-machinery
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-mgmt
+    namespace: crossplane-mgmt-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-mgmt-registration-tokens
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crossplane-machinery-registration-tokens
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-mgmt
+    namespace: crossplane-mgmt-access
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: crossplane-mgmt-clusterbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: crossplane-machinery-clusterbook
+subjects:
+  - kind: ServiceAccount
+    name: crossplane-mgmt
+    namespace: crossplane-mgmt-access

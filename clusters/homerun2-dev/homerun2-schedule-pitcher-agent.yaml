@@ -86,6 +86,18 @@ spec:
         - op: replace
           path: /spec/schedule
           value: "21 */6 * * *"
+        # Boot race (#753): with the lab off overnight, the run is the
+        # catch-up Job the CronJob controller starts right after boot,
+        # before CoreDNS and the dev instance are Ready. Their Services have
+        # no endpoints yet, and Cilium's socket LB answers "dial udp
+        # 10.43.0.10:53: connect: no route to host" (2026-11-19: pods at
+        # 07:28:48 and 07:29:11, CoreDNS Ready 07:29:13, pitcher 07:29:38).
+        # The image's backoffLimit 1 gave up after ~20s; 4 retries with the
+        # Job's 10s/20s/40s/80s backoff span ~2.5 min, inside the 600s
+        # activeDeadlineSeconds.
+        - op: replace
+          path: /spec/jobTemplate/spec/backoffLimit
+          value: 4
         - op: add
           path: /spec/jobTemplate/spec/template/spec/automountServiceAccountToken
           value: false

@@ -16,6 +16,17 @@
 # namespace. Only this pod is selected: the rest of the namespace stays
 # without policy (none of the other homerun2 services reads the headers).
 # Egress is not touched -- the policy has no egress section.
+#
+# The two pod callers are matched by name label AND ServiceAccount (#753): a
+# label alone is set by whoever writes a pod spec in that namespace, so any
+# other workload there that copies `app.kubernetes.io/name` would get in too.
+#
+# Enforced, checked read-only on 2026-11-19 (#753): Cilium on this cluster
+# runs without policy-audit-mode, `cilium-dbg endpoint list` shows ingress
+# enforcement on the schedule-pitcher endpoint only, Hubble sees only host
+# and sthings-portal flows to it. When Prometheus comes to this cluster
+# (#753, kube-prometheus-stack), add its entry like on platform-sthings, or
+# its scrapes are dropped.
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
 metadata:
@@ -37,6 +48,7 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: homerun2
             app.kubernetes.io/name: sthings-portal
+            io.cilium.k8s.policy.serviceaccount: sthings-portal
       toPorts:
         - ports:
             - port: "8080"
@@ -45,6 +57,7 @@ spec:
         - matchLabels:
             k8s:io.kubernetes.pod.namespace: homerun2-agent
             app.kubernetes.io/name: homerun2-schedule-pitcher-agent
+            io.cilium.k8s.policy.serviceaccount: homerun2-schedule-pitcher-agent
       toPorts:
         - ports:
             - port: "8080"
