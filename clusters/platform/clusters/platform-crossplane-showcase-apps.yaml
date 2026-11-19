@@ -61,3 +61,38 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+---
+# Crossplane monitoring (harvester#753): PodMonitors for core, providers and
+# functions, crossplane-state-metrics (Ready/Synced of every XR and composed
+# MR), the alert CrossplaneXRNotReady and the Grafana folder "Crossplane".
+# Shared with machinery-hv: ../../shared/crossplane-observability/README.md.
+#
+# Its own Application, NOT part of showcase-crossplane-platform: it needs
+# kube-prometheus-stack's CRDs (kube-prometheus-stack-observability on this
+# cluster), and a missing CRD would fail -- and with it stall -- the sync of
+# the Crossplane platform layer. Here it fails alone and Argo retries. Prune on:
+# nothing here owns Crossplane objects.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: crossplane-mgmt-crossplane-observability
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/stuttgart-things/harvester.git
+    targetRevision: main
+    path: clusters/shared/crossplane-observability
+  destination:
+    name: crossplane-mgmt
+    namespace: monitoring
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m

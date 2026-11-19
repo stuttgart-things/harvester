@@ -1,0 +1,32 @@
+---
+# Crossplane monitoring (harvester#753): scraping of Crossplane core,
+# providers and functions, crossplane-state-metrics (Ready/Synced of every XR
+# and composed managed resource), the alert CrossplaneXRNotReady and the
+# Grafana folder "Crossplane". Shared with crossplane-mgmt -- the content and
+# how to extend it: ../shared/crossplane-observability/README.md.
+#
+# dependsOn kube-prometheus-stack: PodMonitor, ServiceMonitor and
+# PrometheusRule are its CRDs, and the dashboards need its Grafana sidecar.
+# Nothing in the Crossplane layers depends on this, so a failure here stalls
+# only this Kustomization.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: crossplane-observability
+  namespace: flux-system
+  labels:
+    app.kubernetes.io/managed-by: flux
+    kustomization.stuttgart-things.com/type: infrastructure
+spec:
+  interval: 1h
+  retryInterval: 2m
+  timeout: 5m
+  prune: true
+  wait: true
+  dependsOn:
+    - name: kube-prometheus-stack
+  sourceRef:
+    kind: GitRepository
+    # this repository
+    name: flux-system
+  path: ./clusters/shared/crossplane-observability

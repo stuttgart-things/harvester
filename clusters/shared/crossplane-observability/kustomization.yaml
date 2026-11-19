@@ -1,0 +1,38 @@
+---
+# Crossplane monitoring for every cluster that runs Crossplane AND a
+# kube-prometheus-stack in `monitoring` (harvester#753). See README.md.
+#
+# Applied by:
+#   crossplane-mgmt  Argo CD Application crossplane-mgmt-crossplane-observability
+#                    (../../platform/clusters/platform-crossplane-showcase-apps.yaml)
+#   machinery-hv     Flux Kustomization crossplane-observability
+#                    (../../machinery-hv/crossplane-observability.yaml)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: monitoring
+resources:
+  - crossplane-state-metrics.yaml
+  - podmonitors.yaml
+  - prometheusrule.yaml
+configMapGenerator:
+  # hashed name: a config change rolls crossplane-state-metrics
+  - name: crossplane-state-metrics-config
+    files:
+      - config.yaml=crossplane-state-metrics-config.yaml
+  # Dashboards: Grafana's sidecar picks up every ConfigMap labelled
+  # grafana_dashboard: "1" (all namespaces) and files it into the folder
+  # named by grafana_folder -- where the sidecar has folderAnnotation set
+  # (README.md), else into General.
+  - name: grafana-dashboard-crossplane-metrics
+    files:
+      - dashboards/crossplane-metrics.json
+    options: &dashboard
+      disableNameSuffixHash: true
+      labels:
+        grafana_dashboard: "1"
+      annotations:
+        grafana_folder: Crossplane
+  - name: grafana-dashboard-crossplane-xr-status
+    files:
+      - dashboards/crossplane-xr-status.json
+    options: *dashboard

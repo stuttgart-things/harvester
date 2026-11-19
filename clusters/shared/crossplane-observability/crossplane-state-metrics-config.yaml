@@ -1,0 +1,128 @@
+# Custom Resource State config for crossplane-state-metrics (see README.md).
+#
+# Crossplane's own metrics carry no per-object condition: the providers count
+# managed resources per GVK (crossplane_managed_resource_{exists,ready,synced})
+# and core counts nothing per XR at all. This turns the conditions of every
+# XR and of the composed managed resources into series per object.
+#
+# XRs: one entry per API GROUP, `kind: "*"` and `version: "*"` -- kube-state-
+# metrics watches the CRDs and picks up every kind of that group, so a new XRD
+# in an existing group needs no change here. Only stuttgart-things XRDs live in
+# these groups (checked 2026-11-19, crossplane-mgmt + machinery-hv: every CRD
+# of them is owned by a CompositeResourceDefinition). A group that does not
+# exist on a cluster resolves to nothing.
+#
+# MRs: the groups composed resources actually come from, kind pinned where the
+# group also holds provider configs. NOT a wildcard over every provider group:
+# provider-vault alone brings ~100 kinds, each one an informer here.
+#
+# ADDING a group: an entry below (copy the anchors) AND the group in
+# crossplane-state-metrics.yaml's ClusterRole -- without RBAC the watch fails
+# with `forbidden` in the pod's log and the kind stays empty.
+kind: CustomResourceStateMetrics
+spec:
+  resources:
+    # ---- composite resources (XRs) -> crossplane_xr_* ----
+    - &xr
+      groupVersionKind: {group: resources.stuttgart-things.com, version: "*", kind: "*"}
+      metricNamePrefix: crossplane_xr
+      labelsFromPath: &objectLabels
+        name: [metadata, name]
+        namespace: [metadata, namespace]
+        # the top-level XR an object belongs to (Crossplane sets it on every
+        # composed resource, nested XRs included)
+        composite: [metadata, labels, crossplane.io/composite]
+      metrics: &xrMetrics
+        - name: status_condition
+          help: "Status of a condition of the XR: 1 = True, 0 = False/Unknown. Labels type, reason."
+          each:
+            type: Gauge
+            gauge:
+              path: [status, conditions]
+              labelsFromPath:
+                type: [type]
+                reason: [reason]
+              valueFrom: [status]
+        - name: status_condition_last_transition_time
+          help: "lastTransitionTime of a condition of the XR, unix seconds."
+          each:
+            type: Gauge
+            gauge:
+              path: [status, conditions]
+              labelsFromPath:
+                type: [type]
+              valueFrom: [lastTransitionTime]
+        - name: created
+          help: "creationTimestamp of the XR, unix seconds."
+          each:
+            type: Gauge
+            gauge:
+              path: [metadata, creationTimestamp]
+        - name: info
+          help: "The XR's Composition (always 1)."
+          each:
+            type: Info
+            info:
+              labelsFromPath:
+                composition: [spec, crossplane, compositionRef, name]
+                composition_revision: [spec, crossplane, compositionRevisionRef, name]
+        - name: resource_ref
+          help: "One series per resource the XR composed (spec.crossplane.resourceRefs), always 1."
+          each:
+            type: Info
+            info:
+              path: [spec, crossplane, resourceRefs]
+              labelsFromPath:
+                ref_api_version: [apiVersion]
+                ref_kind: [kind]
+                ref_name: [name]
+    - <<: *xr
+      groupVersionKind: {group: config.stuttgart-things.com, version: "*", kind: "*"}
+    - <<: *xr
+      groupVersionKind: {group: secrets.stuttgart-things.com, version: "*", kind: "*"}
+    - <<: *xr
+      groupVersionKind: {group: storage.stuttgart-things.com, version: "*", kind: "*"}
+    - <<: *xr
+      groupVersionKind: {group: vault.stuttgart-things.com, version: "*", kind: "*"}
+
+    # ---- managed resources (MRs) -> crossplane_mr_* ----
+    - &mr
+      groupVersionKind: {group: kubernetes.m.crossplane.io, version: "*", kind: Object}
+      metricNamePrefix: crossplane_mr
+      labelsFromPath: *objectLabels
+      metrics: &mrMetrics
+        - name: status_condition
+          help: "Status of a condition of the managed resource: 1 = True, 0 = False/Unknown. Labels type, reason."
+          each:
+            type: Gauge
+            gauge:
+              path: [status, conditions]
+              labelsFromPath:
+                type: [type]
+                reason: [reason]
+              valueFrom: [status]
+        - name: status_condition_last_transition_time
+          help: "lastTransitionTime of a condition of the managed resource, unix seconds."
+          each:
+            type: Gauge
+            gauge:
+              path: [status, conditions]
+              labelsFromPath:
+                type: [type]
+              valueFrom: [lastTransitionTime]
+    - <<: *mr
+      groupVersionKind: {group: helm.m.crossplane.io, version: "*", kind: Release}
+    - <<: *mr
+      groupVersionKind: {group: opentofu.m.upbound.io, version: "*", kind: Workspace}
+    - <<: *mr
+      groupVersionKind: {group: auth.vault.m.upbound.io, version: "*", kind: Backend}
+    - <<: *mr
+      groupVersionKind: {group: kubernetes.vault.m.upbound.io, version: "*", kind: "*"}
+    - <<: *mr
+      groupVersionKind: {group: kv.vault.m.upbound.io, version: "*", kind: SecretV2}
+    - <<: *mr
+      groupVersionKind: {group: kubeconfig.stuttgart-things.com, version: "*", kind: RemoteCluster}
+    - <<: *mr
+      groupVersionKind: {group: ipreservation.clusterbook.stuttgart-things.com, version: "*", kind: "*"}
+    - <<: *mr
+      groupVersionKind: {group: virtualmachine.vspherevm.m.stuttgart-things.com, version: "*", kind: "*"}

@@ -10,6 +10,7 @@ directory onto it.
 |---|---|---|---|
 | [`platform/`](./platform/) | Application `showcase-crossplane-platform` | **off** | Crossplane Configurations, their EnvironmentConfigs, RBAC, namespaces, the PKI source Secrets. Prune is off on purpose: pruning a Configuration triggers foreground deletion and cascade-deletes every XR built from it |
 | [`xrs/`](./xrs/) | Application `showcase-crossplane-xrs` | on | The resource claims themselves — `RancherCluster`, `XVirtualMachine`, `AnsibleRun`, namespaces. `catalog-info.yaml` / `kustomization.yaml` are excluded by the Application (Backstage/kustomize artifacts, not CRDs) |
+| [`../shared/crossplane-observability/`](../shared/crossplane-observability/) | Application `crossplane-mgmt-crossplane-observability` | on | Scraping of Crossplane core/providers/functions, XR/MR Ready+Synced metrics, alert `CrossplaneXRNotReady`, Grafana folder "Crossplane". Shared with machinery-hv |
 | [`openbao/`](./openbao/) | nobody — `terraform apply` by hand | — | Vault/OpenBao auth + PKI config for this cluster |
 | `env-config-harvester.yaml` | nobody — `kubectl apply` by hand | — | See the warning below |
 
