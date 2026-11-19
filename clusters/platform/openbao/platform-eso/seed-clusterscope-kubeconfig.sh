@@ -25,6 +25,11 @@
 #
 # Nothing secret is printed. Re-running is safe: the apply is idempotent and
 # OpenBao keeps the previous version.
+#
+# A cluster built by a ClusterStack does not need this: spec.clusterscope.reader
+# (xplane-cluster 0.28.0) has its Workspace create the same RBAC and write the
+# same entry. Do not run both against one cluster -- the Workspace fails with
+# AlreadyExists on objects this script created; delete them first.
 set -euo pipefail
 
 NAME=${1:?usage: $0 <name> <admin-kubeconfig> [server-url]}
