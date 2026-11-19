@@ -152,4 +152,25 @@ apps = {
       someara  = ["grafana-readonly"]
     }
   }
+  # Grafana on homerun2-dev (Flux, like machinery-hv): SOPS Secret
+  # ../../homerun2-dev/grafana-oidc-zitadel.enc.yaml. Same role keys as `grafana`.
+  grafana-homerun2-dev = {
+    url               = "https://grafana.homerun2-dev.sthings.lab"
+    redirect_paths    = ["/login/generic_oauth"]
+    post_logout_paths = ["/login"]
+    roles = {
+      "grafana-admin"    = "Grafana admin"
+      "grafana-readonly" = "Grafana viewer"
+    }
+    users = {
+      sthings  = ["grafana-admin"]
+      indy     = ["grafana-admin"]
+      tommy    = ["grafana-admin"]
+      mcfly    = ["grafana-readonly"]
+      mcclane  = ["grafana-readonly"]
+      fmcguire = ["grafana-readonly"]
+      rdevaney = ["grafana-readonly"]
+      someara  = ["grafana-readonly"]
+    }
+  }
 }
