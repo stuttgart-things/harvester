@@ -1,0 +1,12 @@
+---
+# Vars for sthings.baseos.time_sync (ansible#1456, baseos >= 26.1116.1538), README step 5.
+#   ansible-playbook -i inventory sthings.baseos.time_sync \
+#     -e @k3s/time-sync-vars.yaml -vv
+#
+# The box's RTC resets to 2023-01-01 on every cold start (no or a dead coin cell,
+# #683). chrony also asks the Opal, which serves NTP (stratum 2) from its uplink.
+# NTS to the Ubuntu pools works on the Opal network, so the Ubuntu defaults stay:
+# this only adds the Opal next to them.
+time_sync_sources:
+  - server 192.168.8.1 iburst minpoll 6 maxpoll 10
+time_sync_disable_defaults: false
