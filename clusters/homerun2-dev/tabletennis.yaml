@@ -113,8 +113,9 @@ spec:
       # v0.41.0..v0.47.0: the players' figures and colours on Pong's board
       # (paddles, names) and on the panel, the match's length to the panel;
       # v0.47.1: ends change only between sets, never at five (zaehlwerk#232).
-      # schmetterpause v0.25.0: GET /api/statistics (ADR-0032).
-      SCHMETTERPAUSE_VERSION: v0.25.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
+      # schmetterpause v0.25.0: GET /api/statistics (ADR-0032); v0.26.0: the
+      # kiosk counts point by point (ADR-0034), unrated tournaments up to 16.
+      SCHMETTERPAUSE_VERSION: v0.26.0 # datasource=docker depName=ghcr.io/stuttgart-things/schmetterpause-kustomize
       ZAEHLWERK_VERSION: v0.47.1 # datasource=docker depName=ghcr.io/stuttgart-things/zaehlwerk-kustomize
   patches:
     # SP_PUBLIC_BASE_URL: the base ships a placeholder, and schmetterpause
