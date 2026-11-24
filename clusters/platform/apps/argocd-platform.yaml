@@ -117,7 +117,7 @@ spec:
       BUNDLE_NAME: argocd-platform
       FLUX_SOURCE: flux-apps
       ARGOCD_CATALOG_SOURCE: argocd-catalog
-      ARGO_CD_VERSION: "10.18.0" # datasource=helm depName=argo-cd registryUrl=https://argoproj.github.io/argo-helm
+      ARGO_CD_VERSION: "10.19.0" # datasource=helm depName=argo-cd registryUrl=https://argoproj.github.io/argo-helm
       ARGO_CD_NAMESPACE: argocd
       ARGO_CD_INGRESS_ENABLED: "false"
       INGRESS_HOSTNAME: argocd
