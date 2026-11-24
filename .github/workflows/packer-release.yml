@@ -199,6 +199,20 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
+      # WHY HERE AND NOT IN THE PR. The pin PR is opened with GITHUB_TOKEN, so
+      # GitHub starts no workflow for it: Pre-Commit never runs on a pin PR, and
+      # a dev pin is merged a few steps below without any check (#812). That is
+      # how #803 landed a duplicate `sthings-u26` key on main -- red on every
+      # PR after it, while ArgoCD applied it last-key-wins. So the edited file
+      # is checked here, before a PR exists, with the same hook and version as
+      # .pre-commit-config.yaml (check-yaml from pre-commit-hooks v5.0.0, which
+      # rejects duplicate keys; yq does not). A failure stops the job: no PR,
+      # no merge, and the image stays registered but unpinned.
+      - name: Validate the pin file
+        run: |
+          pipx run --spec pre-commit-hooks==5.0.0 check-yaml \
+            clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml
+
       - name: Open pin PR
         id: pr
         uses: peter-evans/create-pull-request@v8
