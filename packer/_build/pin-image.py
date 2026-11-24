@@ -29,7 +29,10 @@ PIN_FILE = os.environ.get(
     "../../clusters/crossplane-mgmt/platform/virtual-machine/env-config-virtualmachine.yaml",
 )
 # Same version shape prune-images.sh recognises: -<YY.MDD.HHMM>, optionally pr<N>.
-VERSION_RE = re.compile(r"^(.+)-((pr[0-9]+\.)?[0-9]{2}\.[0-9]{3,4}\.[0-9]{4})$")
+# Plus an optional -r<N> suffix: the 1-replica re-imports from #590 are named
+# <image>-<version>-r1. Without it, base_of() did not recognise them, so the
+# existing pin was not moved and a duplicate key was appended instead (#803).
+VERSION_RE = re.compile(r"^(.+)-((pr[0-9]+\.)?[0-9]{2}\.[0-9]{3,4}\.[0-9]{4})(-r[0-9]+)?$")
 
 
 def env(name):
