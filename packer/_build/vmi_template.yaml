@@ -12,7 +12,7 @@ kind: VirtualMachineImage
 metadata:
   name:
   annotations:
-    harvesterhci.io/storageClassName: harvester-longhorn
+    harvesterhci.io/storageClassName: harvester-longhorn-single
   labels:
     harvesterhci.io/image-type: raw_qcow2
     harvesterhci.io/os-type: linux
@@ -24,6 +24,10 @@ spec:
   url:
   # Single-node Harvester: a second or third replica can never be scheduled,
   # so 3 left every disk "degraded" and blocked PVC expansion (#573).
+  # These parameters alone are NOT enough: Harvester takes the replica count
+  # from the class in the storageClassName annotation above, which therefore
+  # must be harvester-longhorn-single (1 replica). With harvester-longhorn
+  # (3 replicas), sthings-u26-26.1119.1728 came out with 3 replicas.
   storageClassParameters:
     migratable: 'true'
     numberOfReplicas: '1'
