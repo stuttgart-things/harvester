@@ -1,0 +1,68 @@
+---
+# homerun2-sound-catcher's profile on homerun2-dev: the base profile of
+# stuttgart-things/homerun2-sound-catcher (kcl/schema.k, v0.6.1) plus the
+# radio's spoken time check, step 1 of homerun2-radio-pitcher#28.
+#
+# The sound-catcher also reads the `ambient` stream
+# (HOMERUN2_SOUND_CATCHER_STREAMS in ./homerun2-sound-catcher.yaml). Which radio
+# cards are spoken is the schedule's choice: a slot with
+# `card-tags: [speak=true]` (./homerun2-radio-pitcher.yaml, today the time
+# check at :00 and :30). The voice and volume are this profile's. The text is
+# the card's title and line as the pitcher wrote them ("It's 11:30, Wednesday,
+# 25 November 2026"): the time check has the time in the title and the date
+# on the line. Never the model's numbers.
+#
+# Rules are tried top to bottom, first match wins: the radio rules must stay
+# above `quiet` (info), and `radio` keeps the rest of the programme silent.
+# Radio cards are INFO, so quietHours keeps them silent 18:00-08:00 and on
+# weekends. Until homerun2-sound-catcher#20 (ambient priority) a notification
+# waits for a spoken time check to finish (a few seconds).
+#
+# HOMERUN2_SOUND_CATCHER_PROFILE_CM in ./homerun2-sound-catcher.yaml names
+# this ConfigMap; Reloader (./infra-platform.yaml) rolls the pod when it changes.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: homerun2-sound-catcher-profile-dev
+  namespace: homerun2
+data:
+  profile.yaml: |
+    quietHours:
+      from: "18:00"
+      to: "08:00"
+      weekends: true
+      timezone: Europe/Berlin
+      allow: [critical]
+    rules:
+      critical:
+        severity: [critical]
+        sound: alarm.wav
+        say: "Critical{% if system not in spoken_title %} on {{ system }}{% endif %}: {{ spoken_title }}"
+      errors:
+        severity: [error]
+        sound: chime.wav
+        say: "Error{% if system not in spoken_title %} on {{ system }}{% endif %}: {{ spoken_title }}"
+        volume: 85
+      warnings:
+        severity: [warning]
+        sound: ding.wav
+        say: "Warning{% if system not in spoken_title %} from {{ system }}{% endif %}: {{ spoken_title }}"
+        volume: 70
+      success:
+        severity: [success]
+        sound: success.wav
+        volume: 60
+      # The radio (homerun2-radio-pitcher, stream `ambient`): cards the
+      # schedule marks speak=true are read out, the rest stays silent.
+      radio-spoken:
+        systems: [radio]
+        severity: [info]
+        tags: [speak=true]
+        say: "{{ title }}, {{ message }}."
+        volume: 40
+      radio:
+        systems: [radio]
+        silent: true
+      quiet:
+        severity: [info, debug]
+        silent: true

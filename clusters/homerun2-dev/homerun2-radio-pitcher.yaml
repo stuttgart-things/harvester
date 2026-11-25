@@ -189,8 +189,10 @@ spec:
               # 20 s (./homerun2-led-catcher-profile.yaml, the Pi's
               # ../../hosts/matrix/profile.yaml), so they come 23 s apart. A
               # segment with nothing new is left out.
+              # The time check carries speak=true: the sound-catcher reads it
+              # out (./homerun2-sound-catcher-profile.yaml, radio-pitcher#28).
               ":00":
-                - { segment: time-check }
+                - { segment: time-check, card-tags: [speak=true] }
                 - { segment: news, count: 3, mix: true, spacing: 23s, card-tags: [show=news] }
                 - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
@@ -200,7 +202,7 @@ spec:
               ":20": { segment: spots }
               ":25": { segment: news, count: 1, feeds: [cncf, kubernetes] }
               ":30":
-                - { segment: time-check }
+                - { segment: time-check, card-tags: [speak=true] }
                 - { segment: news, count: 3, mix: true, spacing: 23s, card-tags: [show=news] }
                 - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
