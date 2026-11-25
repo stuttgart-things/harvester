@@ -15,8 +15,8 @@
 # Rules are tried top to bottom, first match wins: the radio rules must stay
 # above `quiet` (info), and `radio` keeps the rest of the programme silent.
 # Radio cards are INFO, so quietHours keeps them silent 18:00-08:00 and on
-# weekends. Until homerun2-sound-catcher#20 (ambient priority) a notification
-# waits for a spoken time check to finish (a few seconds).
+# weekends. `ambient: true` (homerun2-sound-catcher v0.7.0+, #20): the time
+# check plays only on an idle player and any notification cuts it off.
 #
 # HOMERUN2_SOUND_CATCHER_PROFILE_CM in ./homerun2-sound-catcher.yaml names
 # this ConfigMap; Reloader (./infra-platform.yaml) rolls the pod when it changes.
@@ -60,6 +60,7 @@ data:
         tags: [speak=true]
         say: "{{ title }}, {{ message }}."
         volume: 40
+        ambient: true
       radio:
         systems: [radio]
         silent: true
