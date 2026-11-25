@@ -111,7 +111,7 @@ spec:
   postBuild:
     substitute:
       KPS_NAMESPACE: monitoring
-      KPS_VERSION: "93.9.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
+      KPS_VERSION: "93.11.0" # datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
       KPS_PROMETHEUS_STORAGE_CLASS: openebs-hostpath
       KPS_PROMETHEUS_STORAGE_SIZE: 10Gi
       KPS_PROMETHEUS_RETENTION: 7d
