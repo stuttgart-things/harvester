@@ -13,8 +13,12 @@
 # Its own Kustomization because profiles/sops does not carry it. Mirrors
 # platform-sthings' apps/homerun2-sound-catcher.yaml.
 #
-# No Reloader on this cluster, so the component's reloader annotation is inert:
-# a profile change needs a manual rollout restart.
+# Reloader (./infra-platform.yaml) rolls the pod when its profile ConfigMap
+# changes (the component's reloader annotation).
+#
+# Streams `messages` and `ambient`: the radio's cards marked speak=true (the
+# time check) are read out, everything else from the radio stays silent
+# (./homerun2-sound-catcher-profile.yaml, homerun2-radio-pitcher#28 step 1).
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -47,3 +51,5 @@ spec:
       # Image and kustomize artifact share this tag.
       HOMERUN2_SOUND_CATCHER_VERSION: v0.6.1 # datasource=docker depName=ghcr.io/stuttgart-things/homerun2-sound-catcher
       HOMERUN2_SOUND_CATCHER_BASE_PATH: /sound
+      HOMERUN2_SOUND_CATCHER_STREAMS: messages,ambient
+      HOMERUN2_SOUND_CATCHER_PROFILE_CM: homerun2-sound-catcher-profile-dev
