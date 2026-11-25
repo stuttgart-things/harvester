@@ -222,6 +222,23 @@ Swap must be off before k3s (already the case on the box):
 sudo swapoff -a && sudo sed -i '/swap.img/d' /etc/fstab && sudo rm -f /swap.img
 ```
 
+**Time: the Opal as a fallback NTP source (#683).** The box's RTC loses its time whenever
+the box has no power (missing or dead coin cell: `journalctl -k -b | grep "PM: RTC"` shows
+`2023-01-01` after every cold start). Until chrony reaches an NTP server, the clock sits at
+systemd's minimum date, so certificates count as not yet valid. Besides the Ubuntu pools
+(NTS, kept), chrony also asks the Opal, which serves NTP (stratum 2) from its own uplink.
+`sthings.baseos.time_sync` (baseos >= 26.1116.1538) writes it to
+`/etc/chrony/sources.d/sthings.sources` and fails unless the clock is synchronized:
+
+```bash
+ansible-playbook -i inventory sthings.baseos.time_sync \
+  -e @k3s/time-sync-vars.yaml -vv
+chronyc -n sources   # on the box: 192.168.8.1 listed, Reach > 0
+```
+
+The Opal has no RTC either, so this helps only while the Opal itself has time (the box
+rebooted alone, or the uplink lost after the Opal synced). It does not replace the coin cell.
+
 ## 6. Tools
 
 ```bash
@@ -396,13 +413,19 @@ encrypted for the master key. Run from the repo root, with the exports of step 4
 or the box key and all secrets are made anew:
 
 ```bash
-env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.11.0 \
+env -u SSH_AUTH_SOCK dagger call -m github.com/stuttgart-things/blueprints/flux@v3.12.2 \
   render-cluster-apps --cluster-apps clusters/sthings-edge/cluster-apps.yaml \
-  --master-age-key env:SOPS_AGE_KEY --escrow-recipients "$(age-keygen -y $SOPS_AGE_KEY_FILE)" \
+  --master-age-key env:SOPS_AGE_KEY --escrow-recipients age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm \
   --sops-ref-dir . --existing-secrets clusters/sthings-edge/cluster-secrets \
   export --path /tmp/sthings-edge-gen
 cp -r /tmp/sthings-edge-gen/flux/. clusters/sthings-edge/ && rm -rf /tmp/sthings-edge-gen
+git diff --exit-code clusters/sthings-edge/cluster-secrets/.sops.yaml   # must be empty
 ```
+
+The escrow key is the master public key **written out** (#535): a `$(age-keygen -y …)` once came
+back empty and left every secret encrypted for the box key only. On macOS, sops needs
+`SOPS_AGE_KEY_FILE` (see *Troubleshooting*). The generator does not keep the Renovate comments
+(`# datasource=docker …`) in `apps/apps-platform.yaml`; put them back after the copy.
 
 **b) Hand-encrypted files for the box key.** `infra/ca/edge-ca.enc.yaml` is the lab's file with
 the box key added (same plaintext):
