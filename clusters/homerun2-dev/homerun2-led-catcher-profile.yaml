@@ -29,6 +29,18 @@ metadata:
 data:
   profile.yaml: |
     displayRules:
+      # A radio card with a picture (tag gif=<image>: a gif spot or a slot's
+      # jingle): the picture first, then the card as radio-show or radio
+      # draws it. Without gif= the image renders empty and this rule does not
+      # match. Must stay above radio-show and radio.
+      radio-gif:
+        systems: [radio]
+        severity: [INFO]
+        kind: gif
+        image: "{{ tag('gif') }}"
+        overlay: true
+        duration: 6
+        ambient: true
       # The radio's news show (card tag show=news): held longer to read.
       # Before radio, first match wins; the radio spaces these cards 23 s.
       radio-show:

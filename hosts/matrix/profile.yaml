@@ -22,6 +22,22 @@
 # per event. A card, unlike `text`, honours it -- also mid-scroll: a long
 # message does not finish in 10 s.
 displayRules:
+  # A radio card with a picture (homerun2-radio-pitcher: a gif spot, or a
+  # slot's jingle on its first card) carries the tag gif=<image>, a file in
+  # visual_aid/ or an https:// URL (e.g. the homerun2-visuals bucket,
+  # homerun2-radio-pitcher#68). The picture plays first, then `overlay` hands
+  # the same card to the next matching rule (radio-show or radio). A card
+  # without gif= renders an empty image and this rule does not match. Must
+  # stay above radio-show and radio; `ambient` like them, so a picture never
+  # pushes a notification aside.
+  radio-gif:
+    systems: [radio]
+    severity: [INFO]
+    kind: gif
+    image: "{{ tag('gif') }}"
+    overlay: true
+    duration: 6
+    ambient: true
   # The radio's news show (card tag show=news, homerun2-radio-pitcher
   # v0.17.0+): held longer to read. Before radio, first match wins; the radio
   # spaces these cards 23 s apart.
