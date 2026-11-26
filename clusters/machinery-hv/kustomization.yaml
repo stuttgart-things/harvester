@@ -20,8 +20,11 @@ resources:
   - secrets.yaml
   - git-repos.yaml
   - infra-platform.yaml
-  # CA ConfigMaps for fluent-bit (logging) and Alertmanager (monitoring)
+  # CA ConfigMaps for fluent-bit (logging), Alertmanager (monitoring) and
+  # flux-web (flux-system)
   - observability-trust-bundle.yaml
+  # Flux web UI: who may do what after the ZITADEL login (#719)
+  - flux-web-rbac.yaml
   # metrics + alerts; its token Secret (SOPS)
   - kube-prometheus-stack.yaml
   - kube-prometheus-stack-secrets.enc.yaml
