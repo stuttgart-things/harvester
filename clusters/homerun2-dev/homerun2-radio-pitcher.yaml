@@ -282,3 +282,22 @@ spec:
                 kind: quote
                 text: "The most dangerous phrase in the language is: we've always done it this way."
                 author: Grace Hopper
+              # gif spots (harvester#819): the sthings cat, 64x64, from the
+              # homerun2-visuals bucket on platform's MinIO
+              # (../machinery-hv/xrs/homerun2-visuals.yaml). The catcher's
+              # radio-gif rule plays the picture 6 s, then the card. One
+              # mood in all three backgrounds, to compare on the panel which
+              # reads best (black = LEDs off, grey 40 = #404040, grey 60 =
+              # #606060). A changed picture gets a new file name (-v2).
+              - id: cat-schwarz
+                kind: gif
+                image: https://artifacts.platform.sthings.lab/homerun2-visuals/sthings-froehlich-schwarz-v1.gif
+                title: "sthings cat (black)"
+              - id: cat-grau40
+                kind: gif
+                image: https://artifacts.platform.sthings.lab/homerun2-visuals/sthings-froehlich-grau40-v1.gif
+                title: "sthings cat (grey 40)"
+              - id: cat-grau60
+                kind: gif
+                image: https://artifacts.platform.sthings.lab/homerun2-visuals/sthings-froehlich-grau60-v1.gif
+                title: "sthings cat (grey 60)"
