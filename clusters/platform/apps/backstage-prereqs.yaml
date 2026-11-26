@@ -34,10 +34,56 @@ data:
   # proxyPaths, v1.27.0-v1.28.0 live facts + Flux/Argo CD on
   # kubernetes-cluster entities (opt-in, no entry here), v1.29.0 template
   # groups and the Backstage monorepo update (#185), v1.30.0 HTTPRoutes as
-  # links on cluster entities (#222). harvester#675.
+  # links on cluster entities (#222). harvester#675. v1.31.0-v1.39.1:
+  # announcements, home page, offerings, Backstage 1.57.1 (v1.35.1), live VM
+  # card and list-live-vms (v1.36/v1.39), and an MCP server for AI clients
+  # (v1.38.0) -- read-only only through backstage-actions-config below.
   #
   # This ConfigMap WINS over BACKSTAGE_IMAGE_TAG in backstage.yaml: bump both.
-  imageTag: "v1.30.0"
+  imageTag: "v1.39.1"
+---
+# Actions and MCP server (image >= v1.38.0, sthings-backstage#277, its
+# docs/mcp.md). Mounted as app-config.actions.yaml through extraAppConfig in
+# backstage.yaml.
+#
+# WHY HERE: the pod starts with explicit --config files, so the image's own
+# app-config.yaml -- where sthings-backstage keeps this filter -- is NOT
+# loaded. Without this file the MCP server at /api/mcp-actions/v1 would offer
+# every registered action, also writing ones, to any holder of a static token
+# (backend.auth.externalAccess has one). Same content as the image's
+# app-config.yaml at v1.39.1: only read-only actions of catalog, search,
+# techdocs and vm-info; no kubernetes (its proxy writes to clusters), no
+# scaffolder, no announcements. Keep it in step with the image on a bump.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backstage-actions-config
+  namespace: backstage
+data:
+  app-config.actions.yaml: |
+    backend:
+      actions:
+        pluginSources:
+          - catalog
+          - search
+          - techdocs
+          - vm-info
+        filter:
+          include:
+            - attributes:
+                readOnly: true
+    mcpActions:
+      name: sthings-portal
+      description: stuttgart-things developer portal (Backstage), read-only
+      instructions: >-
+        The stuttgart-things developer portal. Use it to find who owns a
+        service, API, VM or cluster, where it runs and what its docs say.
+        Catalog entities are identified by refs like
+        component:default/homerun2-core-catcher or
+        resource:default/<vm>-<cloud>-vm. Query the catalog first, then use
+        TechDocs, search or live VM info for details. VM status in the
+        catalog is the last inventory run; vm-info gives the current state.
+        Everything here is read-only.
 ---
 # Sets NODE_EXTRA_CA_CERTS to the trust bundle mounted by backstage.yaml's
 # extraVolumeMounts, so Node trusts the cluster CA (e.g. for https calls to
