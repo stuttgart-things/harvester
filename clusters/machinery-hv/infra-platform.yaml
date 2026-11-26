@@ -117,17 +117,19 @@ spec:
                           groups: "variables.groups"
                     userActions:
                       audit: ["*"]
+                # A values file merged at the root, NOT targetPath: ZITADEL's
+                # client ID is all digits, and targetPath's --set parsing made
+                # it a number -- helm-controller v1.5.3 then never matched the
+                # release to the object and upgraded in a loop (v3..v12 within
+                # minutes, 2026-11-26). `literal: true` would fix that, but
+                # needs a newer helm-controller than this cluster runs. The
+                # Secret's values.yaml quotes the ID, so it stays a string.
                 - op: add
                   path: /spec/valuesFrom
                   value:
                     - kind: Secret
                       name: flux-web-oidc-zitadel
-                      valuesKey: client-id
-                      targetPath: web.config.authentication.oauth2.clientID
-                    - kind: Secret
-                      name: flux-web-oidc-zitadel
-                      valuesKey: client-secret
-                      targetPath: web.config.authentication.oauth2.clientSecret
+                      valuesKey: values.yaml
                 - op: add
                   path: /spec/values/extraVolumes
                   value:
