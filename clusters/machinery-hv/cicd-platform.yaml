@@ -79,6 +79,34 @@ spec:
     # Claims dashboard with gRPC bearer auth (token via SOPS, see above),
     # + HTTPRoute machinery.<INFRA_DOMAIN>.
     - ../components/machinery-auth-sops
+  # TEKTON DASHBOARD READ-ONLY. The operator installs the Dashboard with
+  # readonly: false unless TektonConfig says otherwise, and the upstream
+  # TektonConfig (flux:cicd/tekton/components/config) sets nothing. So
+  # tekton.machinery-hv.sthings.lab -- no login in front of it -- let anyone in
+  # the lab network create and delete PipelineRuns, Tasks and Triggers
+  # (found 2026-11-26, harvester#719). crossplane-mgmt's Dashboard is read-only
+  # already (ArgoCD ApplicationSet tekton-config-cicd).
+  #
+  # The TektonConfig belongs to the CHILD Kustomization `tekton` that the
+  # ../components/tekton component creates, so this patches that child to
+  # patch the TektonConfig in turn. Drop it once the flux bundle sets
+  # dashboard.readonly itself.
+  patches:
+    - target:
+        kind: Kustomization
+        name: tekton
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                kind: TektonConfig
+                name: config
+              patch: |
+                - op: add
+                  path: /spec/dashboard
+                  value:
+                    readonly: true
   postBuild:
     substitute:
       APPS_SOURCE: flux-infra

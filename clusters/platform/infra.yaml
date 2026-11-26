@@ -488,6 +488,24 @@ spec:
             gateway:
               deploymentStrategy:
                 type: Recreate
+    # PUSH ONLY through the Gateway. Loki runs with auth_enabled: false and the
+    # gateway has no basic auth, so the upstream route (PathPrefix /) let anyone
+    # in the lab network query every log and reach /flush, /ingester/* and the
+    # delete API (found 2026-11-26, harvester#719). The only users of this
+    # route are the fluent-bits on homerun2-dev, machinery-hv, app-dev-hv and
+    # crossplane-mgmt, and they only push; platform's Grafana and fluent-bit
+    # use loki-gateway.loki.svc in-cluster. Querying from outside the cluster
+    # needs a login in front first (basic auth or OIDC), not a wider route.
+    - target:
+        kind: HTTPRoute
+        name: loki
+      patch: |
+        - op: replace
+          path: /spec/rules/0/matches
+          value:
+            - path:
+                type: PathPrefix
+                value: /loki/api/v1/push
   postBuild:
     substitute:
       LOKI_NAMESPACE: loki
