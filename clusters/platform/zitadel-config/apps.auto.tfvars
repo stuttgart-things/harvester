@@ -199,4 +199,25 @@ apps = {
       someara  = ["flux-readonly"]
     }
   }
+  # Flux web UI on homerun2-dev (harvester#719), same as flux-web-machinery-hv
+  # above: groups zitadel:<role key>, ../../homerun2-dev/flux-web-rbac.yaml,
+  # SOPS Secret ../../homerun2-dev/flux-web-oidc-zitadel.enc.yaml.
+  flux-web-homerun2-dev = {
+    url            = "https://flux.homerun2-dev.sthings.lab"
+    redirect_paths = ["/oauth2/callback"]
+    roles = {
+      "flux-admin"    = "Flux web admin"
+      "flux-readonly" = "Flux web read-only"
+    }
+    users = {
+      sthings  = ["flux-admin"]
+      indy     = ["flux-admin"]
+      tommy    = ["flux-admin"]
+      mcfly    = ["flux-readonly"]
+      mcclane  = ["flux-readonly"]
+      fmcguire = ["flux-readonly"]
+      rdevaney = ["flux-readonly"]
+      someara  = ["flux-readonly"]
+    }
+  }
 }

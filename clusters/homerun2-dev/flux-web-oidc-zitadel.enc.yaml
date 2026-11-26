@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Secret
+metadata:
+    name: flux-web-oidc-zitadel
+    namespace: flux-system
+type: Opaque
+stringData:
+    values.yaml: ENC[AES256_GCM,data:tANSbyqQ1Lv1kDF/tOkdQldExCzVGiXEOamtJBUIowEPwc1nZbSLhDSNJL3IJuEqmurgURmx6CAfKzioeekzs47t7FGGx28JmEIJJ7J3QW41yRq391xRUSz0NyghScINUhTSiya3fxMvKOQkVxVFPlOh56x9IOI4IXfVDXmBL4BhXgwpozuuf81zl2nHD5taOZeTC3WhPcmlXu0dMdUqwW1K3E3dQnX0MWX8TD8SyFk=,iv:9YL+NXjRh7F5VeTDmvM2+4LseG5AS7/JLf9tugyL0ak=,tag:XycWgXWIIQBCMIFvoDqJnQ==,type:str]
+sops:
+    age:
+        - recipient: age19vgzvmpt9tdlcsu8rzaacj397yz8gguz38nsmuy6eeelt5vjsyms542xtm
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA1SExLRHNsSElmVzE1WHFN
+            dWdBUHc5VTh6TWdBWVEreXN5Q3g4NzZFR0FRClFQdEFwVXRycythTVVXQlhCaGJj
+            SUxrOTd3UElSNDRHWlMvbjQwbFpZVVUKLS0tIEF4SUM0VUlLV3h0MW8xQi9kK3Vs
+            eVY5RVFZclhBNmt3NWpiSklUd0tzNlkKrDBMo8iF+390bGU0bDPZmmV3l2oNQlEN
+            9LvVGkhCDEFRB/NcfyLi4Ix3PKMV1xp6PEHMjSj4jbIeYaSkgq1N0A==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-11-26T12:46:37Z"
+    mac: ENC[AES256_GCM,data:ZZR7anXO+r2XTNjMzSP/QKe1iDTdIBaOAbUKpdIuehdPTf+YmXQaSDKrqVj6ro+mxlhQufL5/zQF6jGuPj73/vhSTyJfNQhtcKea77RfJ+7dC2cVf8aAAp1aLwQbE9E+D2azQERqbeJ9RzJemTTIFk6sfv2JLPPC8j92NLrq2iw=,iv:VAlz157Oex6gAjczJjTjXFzOQ89oiMdH1Xwtqoi0bEU=,tag:6Jtr9na4LP5sBvdvXdjAmQ==,type:str]
+    encrypted_regex: ^(data|stringData)$
+    version: 3.11.0
