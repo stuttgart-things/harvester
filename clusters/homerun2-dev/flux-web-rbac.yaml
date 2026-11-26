@@ -1,0 +1,109 @@
+---
+# Same as ../machinery-hv/flux-web-rbac.yaml, API groups of this cluster.
+# Who may do what in the Flux web UI (https://flux.homerun2-dev.sthings.lab)
+# after the ZITADEL login (harvester#719). flux-web impersonates every logged-in
+# user: username `zitadel:<email>`, groups `zitadel:<role key>` from ZITADEL's
+# role map (CEL in infra-platform.yaml). Roles of the client
+# `flux-web-homerun2-dev`, ../platform/zitadel-config/apps.auto.tfvars:
+#
+#   flux-admin    -> flux-web-admin (the chart's role): read everything, plus
+#                    reconcile / suspend / resume / download on Flux objects,
+#                    restart on workloads, delete pods
+#   flux-readonly -> flux-web-readonly (below): read, no Secrets, no actions
+#
+# A user without either role never gets a token (ZITADEL role check) and is
+# refused by flux-web's validation in addition. The `zitadel:` prefix is set by
+# flux-web, not taken from the token, so no claim can name a group such as
+# system:masters -- flux-web's service account may impersonate any user/group.
+#
+# Fallback (#574): flux-web has no local login. The admin kubeconfig plus the
+# flux CLI do everything the UI does; revert the PR to get the anonymous
+# read-only UI back.
+#
+# WHY NOT flux-web-user for read-only: it is get/list/watch on */*, Secrets
+# included. RBAC cannot subtract, so this role lists what to read instead: the
+# core group without secrets, and the API groups the UI shows (Flux, workloads,
+# routing, certificates, monitoring, CNPG, homerun2). Objects of
+# other groups in an inventory show as forbidden for read-only users; add the
+# group here if one is missed.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: flux-web-readonly
+rules:
+  - apiGroups: [""]
+    resources:
+      - configmaps
+      - endpoints
+      - events
+      - limitranges
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - pods
+      - pods/log
+      - podtemplates
+      - replicationcontrollers
+      - resourcequotas
+      - serviceaccounts
+      - services
+    verbs: [get, list, watch]
+  - apiGroups:
+      # Flux
+      - fluxcd.controlplane.io
+      - source.toolkit.fluxcd.io
+      - source.extensions.fluxcd.io
+      - kustomize.toolkit.fluxcd.io
+      - helm.toolkit.fluxcd.io
+      - image.toolkit.fluxcd.io
+      - notification.toolkit.fluxcd.io
+      # workloads + the resource usage charts
+      - apps
+      - batch
+      - autoscaling
+      - policy
+      - metrics.k8s.io
+      - events.k8s.io
+      - discovery.k8s.io
+      # routing, storage, definitions
+      - networking.k8s.io
+      - gateway.networking.k8s.io
+      - cilium.io
+      - storage.k8s.io
+      - apiextensions.k8s.io
+      - rbac.authorization.k8s.io
+      # what the bundles here install
+      - cert-manager.io
+      - monitoring.coreos.com
+      - postgresql.cnpg.io
+      - barmancloud.cnpg.io
+      - homerun2.stuttgart-things.com
+    resources: ["*"]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-web-zitadel-admin
+subjects:
+  - kind: Group
+    name: zitadel:flux-admin
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: flux-web-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: flux-web-zitadel-readonly
+subjects:
+  - kind: Group
+    name: zitadel:flux-readonly
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: flux-web-readonly
+  apiGroup: rbac.authorization.k8s.io
