@@ -59,6 +59,92 @@ spec:
     # its Gateway, as on homerun2-dev (harvester#490, #753). Needs flux#822,
     # in the pinned tag since v1.233.0. CA: observability-trust-bundle.yaml.
     - ../components/fluent-bit-remote
+  # FLUX WEB UI BEHIND ZITADEL (harvester#719). Without a web config the UI at
+  # flux.machinery-hv.sthings.lab was open, read-only, to the lab network. Now
+  # it needs a ZITADEL login (client `flux-web-machinery-hv`,
+  # ../platform/zitadel-config/apps.auto.tfvars) and impersonates the user:
+  # `zitadel:<email>` plus a group `zitadel:<role key>` per role of ZITADEL's
+  # role map. The prefix is added here, so a token cannot name a group such as
+  # system:masters. No role -> no login. What each group may do:
+  # ./flux-web-rbac.yaml (flux-admin: actions, flux-readonly: read, no Secrets).
+  # Id/secret: ./flux-web-oidc-zitadel.enc.yaml (SOPS). ZITADEL's CA:
+  # cluster-trust-bundle in flux-system (./observability-trust-bundle.yaml).
+  # Scopes without the defaults offline_access/groups: the client has no
+  # refresh-token grant and ZITADEL has no groups scope.
+  #
+  # Fallback (#574): flux-web has no local login -- the admin kubeconfig and
+  # the flux CLI. To get the anonymous UI back, revert this patch.
+  #
+  # The HelmRelease belongs to the CHILD Kustomization `flux-web` that
+  # ../components/flux-web creates, so this patches that child to patch the
+  # HelmRelease in turn (as cicd-platform.yaml does for tekton). No dollar
+  # sign in the CEL below: both Kustomizations run postBuild substitution.
+  patches:
+    - target:
+        kind: Kustomization
+        name: flux-web
+      patch: |
+        - op: add
+          path: /spec/patches
+          value:
+            - target:
+                kind: HelmRelease
+                name: flux-web
+              patch: |
+                - op: add
+                  path: /spec/values/web/config
+                  value:
+                    baseURL: https://flux.machinery-hv.sthings.lab
+                    authentication:
+                      type: OAuth2
+                      sessionDuration: 12h
+                      oauth2:
+                        provider: OIDC
+                        issuerURL: https://zitadel.platform.sthings.lab
+                        scopes: [openid, profile, email]
+                        variables:
+                          - name: roles
+                            expression: "'urn:zitadel:iam:org:project:roles' in claims ? claims['urn:zitadel:iam:org:project:roles'] : {}"
+                          - name: groups
+                            expression: "variables.roles.map(r, 'zitadel:' + r)"
+                        validations:
+                          - expression: "size(variables.groups) > 0"
+                            message: "no Flux web role in ZITADEL (flux-admin or flux-readonly)"
+                          - expression: "has(claims.email) && claims.email != ''"
+                            message: "ZITADEL sent no email claim"
+                        impersonation:
+                          username: "'zitadel:' + claims.email"
+                          groups: "variables.groups"
+                    userActions:
+                      audit: ["*"]
+                - op: add
+                  path: /spec/valuesFrom
+                  value:
+                    - kind: Secret
+                      name: flux-web-oidc-zitadel
+                      valuesKey: client-id
+                      targetPath: web.config.authentication.oauth2.clientID
+                    - kind: Secret
+                      name: flux-web-oidc-zitadel
+                      valuesKey: client-secret
+                      targetPath: web.config.authentication.oauth2.clientSecret
+                - op: add
+                  path: /spec/values/extraVolumes
+                  value:
+                    - name: trust-bundle
+                      configMap:
+                        name: cluster-trust-bundle
+                - op: add
+                  path: /spec/values/extraVolumeMounts
+                  value:
+                    - name: trust-bundle
+                      mountPath: /etc/ssl/lab
+                      readOnly: true
+                - op: add
+                  path: /spec/values/extraEnvs
+                  value:
+                    - name: SSL_CERT_FILE
+                      value: /etc/ssl/lab/trust-bundle.pem
   postBuild:
     substitute:
       FLUX_SOURCE: flux-infra

@@ -173,4 +173,30 @@ apps = {
       someara  = ["grafana-readonly"]
     }
   }
+  # Flux web UI (flux-operator, serverOnly) on machinery-hv (harvester#719):
+  # one client per cluster (one base URL). flux-web maps the role keys of the
+  # role map to Kubernetes groups `zitadel:<key>` by CEL and impersonates them;
+  # ../../machinery-hv/flux-web-rbac.yaml binds flux-admin => flux-web-admin
+  # (actions), flux-readonly => flux-web-readonly (read, no Secrets). Id and
+  # secret: SOPS Secret ../../machinery-hv/flux-web-oidc-zitadel.enc.yaml.
+  # Callback /oauth2/callback. No local login in flux-web: fallback is the
+  # admin kubeconfig + flux CLI (#574).
+  flux-web-machinery-hv = {
+    url            = "https://flux.machinery-hv.sthings.lab"
+    redirect_paths = ["/oauth2/callback"]
+    roles = {
+      "flux-admin"    = "Flux web admin"
+      "flux-readonly" = "Flux web read-only"
+    }
+    users = {
+      sthings  = ["flux-admin"]
+      indy     = ["flux-admin"]
+      tommy    = ["flux-admin"]
+      mcfly    = ["flux-readonly"]
+      mcclane  = ["flux-readonly"]
+      fmcguire = ["flux-readonly"]
+      rdevaney = ["flux-readonly"]
+      someara  = ["flux-readonly"]
+    }
+  }
 }
