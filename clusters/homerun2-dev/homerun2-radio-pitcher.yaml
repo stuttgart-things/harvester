@@ -197,6 +197,11 @@ spec:
                 - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
                 - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
+              # TEST 2026-11-26: spots and facts on the free 5-minute marks
+              # too (:05, :10, :35, :50), so the panel airs something every
+              # 5 minutes instead of ~5 min per hour. Revert if it is too much.
+              ":05": { segment: infra-facts, count: 1 }
+              ":10": { segment: spots }
               ":15": { segment: infra-facts, count: 2 }
               # Breaks (v0.18.0): a spot from spots.yaml below.
               ":20": { segment: spots }
@@ -207,8 +212,10 @@ spec:
                 - { segment: releases, count: 1, spacing: 23s, card-tags: [show=news] }
                 - { segment: rollouts, count: 2, spacing: 23s, card-tags: [show=news] }
                 - { segment: infra-facts, count: 1, spacing: 23s, card-tags: [show=news] }
+              ":35": { segment: infra-facts, count: 1 }
               ":40": { segment: spots }
               ":45": { segment: infra-facts, count: 2, sources: [harvester] }
+              ":50": { segment: spots }
               ":55": { segment: news, count: 1, feeds: [hn] }
               default: { segment: idle-clock, style: rotate }
             # The night airs nothing (empty clock), like labul.
