@@ -1,0 +1,51 @@
+---
+# Pictures for the homerun2 radio (gif spots, jingles) on platform's MinIO, the
+# lab's counterpart of `homerun2-visuals` on the LabUL MinIO
+# (stuttgart-things/homerun2-radio-pitcher#68). The matrix Pi cannot reach
+# LabUL, but it reaches https://artifacts.platform.sthings.lab and trusts the
+# lab CA (checked 2026-11-26, harvester#819).
+#
+#   MinioBucket (storage/minio, ProviderConfig `minio` = platform's MinIO)
+#     -> bucket homerun2-visuals, anonymous GetObject by exact name
+#     -> policy + user homerun2-visuals-writer, keys in Secret
+#        default/homerun2-visuals on THIS cluster (for uploads with mc)
+#
+# A spot names the object, e.g.
+#   image: https://artifacts.platform.sthings.lab/homerun2-visuals/sthings-froehlich-schwarz-v1.gif
+# Rules (radio-pitcher README, "Pictures"): own work only, panel size, a
+# changed picture gets a NEW file name (the catcher caches by URL), listing
+# the bucket stays forbidden.
+#
+# `deletionPolicy` stays at Orphan and pruning is off. Rule 1 of README.md
+# applies.
+apiVersion: storage.stuttgart-things.com/v1alpha1
+kind: MinioBucket
+metadata:
+  name: homerun2-visuals
+  annotations:
+    stuttgart-things.com/management-cluster: machinery-hv
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  providerConfigRef:
+    name: minio
+  bucketName: homerun2-visuals
+  region: us-east-1
+  # Anonymous read of single objects only: no s3:ListBucket.
+  bucketPolicy: |
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Principal": {"AWS": ["*"]},
+          "Action": ["s3:GetObject"],
+          "Resource": ["arn:aws:s3:::homerun2-visuals/*"]
+        }
+      ]
+    }
+  access:
+    - name: writer
+      scope: bucket
+      connectionSecret:
+        name: homerun2-visuals
+        namespace: default
