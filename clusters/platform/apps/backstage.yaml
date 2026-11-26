@@ -27,7 +27,7 @@ spec:
       BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
       # Only a fallback: imageTag in backstage-helm-overrides
       # (backstage-prereqs.yaml) wins. Keep both on the same tag.
-      BACKSTAGE_IMAGE_TAG: v1.30.0
+      BACKSTAGE_IMAGE_TAG: v1.39.1
       BACKSTAGE_STORAGE_CLASS: local-path
       BACKSTAGE_REPLICAS: "1"
       BACKSTAGE_APP_TITLE: Stuttgart Things Backstage
@@ -187,3 +187,32 @@ spec:
                   configMapRef: backstage-catalog-config
                 - filename: app-config.vms.yaml
                   configMapRef: backstage-vms-config
+                # MCP/actions read-only filter (backstage-prereqs.yaml): the
+                # image's app-config.yaml is not loaded, see there.
+                - filename: app-config.actions.yaml
+                  configMapRef: backstage-actions-config
+              # WAIT FOR THE RAG DATABASE. The rag-ai plugin connects once at
+              # startup and is allowed to fail: after a lab boot Backstage came
+              # up before rag-postgres (EHOSTUNREACH rag-postgres-rw:5432,
+              # 2026-11-26), started WITHOUT rag-ai, and every Ask AI request
+              # was a 404 until the next restart. Wait up to 5 minutes, then
+              # start anyway -- RAG stays optional, a missing database must not
+              # keep the portal down.
+              initContainers:
+                - name: wait-for-rag-postgres
+                  image: busybox:1.36
+                  command:
+                    - sh
+                    - -c
+                    - |
+                      for i in $(seq 1 60); do
+                        nc -z -w 2 rag-postgres-rw 5432 && echo "rag-postgres-rw reachable" && exit 0
+                        echo "waiting for rag-postgres-rw:5432 ($i/60)"; sleep 5
+                      done
+                      echo "rag-postgres-rw not reachable after 5m, starting without waiting"; exit 0
+                  resources:
+                    requests:
+                      cpu: 10m
+                      memory: 16Mi
+                    limits:
+                      memory: 32Mi
