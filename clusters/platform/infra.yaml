@@ -37,7 +37,7 @@ spec:
   postBuild:
     substitute:
       CERT_MANAGER_NAMESPACE: cert-manager
-      CERT_MANAGER_VERSION: v1.21.3
+      CERT_MANAGER_VERSION: v1.21.3 # datasource=github-releases depName=cert-manager/cert-manager
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -165,7 +165,7 @@ spec:
   postBuild:
     substitute:
       TRUST_MANAGER_NAMESPACE: cert-manager
-      TRUST_MANAGER_VERSION: "0.22.0"
+      TRUST_MANAGER_VERSION: "0.22.0" # datasource=helm depName=trust-manager registryUrl=https://charts.jetstack.io
       TRUST_BUNDLE_NAME: cluster-trust-bundle
       TRUST_BUNDLE_CA_SECRET: cluster-ca-secret # pragma: allowlist secret
       TRUST_BUNDLE_CA_KEY: ca.crt

@@ -20,7 +20,7 @@ spec:
       INGRESS_HOSTNAME: rancher
       RANCHER_NAMESPACE: cattle-system
       RANCHER_REPLICAS: '1'
-      RANCHER_VERSION: 2.14.3
+      RANCHER_VERSION: 2.14.3 # datasource=helm depName=rancher registryUrl=https://releases.rancher.com/server-charts/stable
     substituteFrom:
     - kind: Secret
       name: rancher-secrets

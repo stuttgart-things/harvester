@@ -23,7 +23,7 @@ spec:
       # ingress is disabled.
       INGRESS_ENABLED: 'false'
       INGRESS_CLASS_NAME: nginx
-      HARBOR_PROJECT_PROXY_VERSION: '0.0.1'
+      HARBOR_PROJECT_PROXY_VERSION: '0.0.1' # datasource=docker depName=ghcr.io/hiddenmarten/harbor-project-proxy
   prune: true
   retryInterval: '1m'
   sourceRef:
