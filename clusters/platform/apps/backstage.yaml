@@ -22,7 +22,7 @@ spec:
       BACKSTAGE_NAMESPACE: backstage
       # Chart 2.10.2, the app's own default and what sthings-platform (LabDA)
       # runs with the same patches as below.
-      BACKSTAGE_VERSION: "2.10.2"
+      BACKSTAGE_VERSION: "2.10.2" # datasource=docker depName=ghcr.io/backstage/charts/backstage
       BACKSTAGE_IMAGE_REGISTRY: ghcr.io
       BACKSTAGE_IMAGE_REPOSITORY: stuttgart-things/sthings-backstage
       # Only a fallback: imageTag in backstage-helm-overrides

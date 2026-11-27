@@ -14,7 +14,7 @@ spec:
   postBuild:
     substitute:
       MINIO_NAMESPACE: minio
-      MINIO_VERSION: '16.0.10'
+      MINIO_VERSION: '16.0.10' # datasource=docker depName=ghcr.io/stuttgart-things/charts/minio/minio
       MINIO_INGRESS_ENABLED: 'false'
       CLUSTER_ISSUER: openbao-pki
       INGRESS_HOSTNAME_CONSOLE: artifacts-console

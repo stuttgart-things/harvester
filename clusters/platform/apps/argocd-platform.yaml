@@ -149,7 +149,7 @@ spec:
       # network AppSets gate on since stuttgart-things/argocd#566 (2026-09-30).
       # On v0.20.0 no cluster had it, so every network AppSet matched nothing
       # (demo-hv never got cert-manager; app-dev-hv's cert-manager app vanished).
-      CLUSTERBOOK_OPERATOR_VERSION: v0.21.0
+      CLUSTERBOOK_OPERATOR_VERSION: v0.21.0 # datasource=docker depName=ghcr.io/stuttgart-things/clusterbook-operator-kustomize
       # clusterbook backend for the bundled ClusterbookProviderConfig/default.
       # apps/clusterbook-operator-config.yaml applies the same object from the
       # flux-system Kustomization, so both must name the same URL -- otherwise

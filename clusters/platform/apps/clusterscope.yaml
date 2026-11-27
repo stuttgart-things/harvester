@@ -51,7 +51,7 @@ spec:
   postBuild:
     substitute:
       CLUSTERSCOPE_NAMESPACE: clusterscope
-      CLUSTERSCOPE_VERSION: v0.28.0
+      CLUSTERSCOPE_VERSION: v0.28.0 # datasource=docker depName=ghcr.io/stuttgart-things/clusterscope-kustomize
       CLUSTERSCOPE_TECH: flux
       CLUSTERSCOPE_LAB: sthings-lab
       CLUSTERSCOPE_LIVE: 'true'

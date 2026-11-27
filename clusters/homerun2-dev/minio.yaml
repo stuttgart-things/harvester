@@ -84,7 +84,7 @@ spec:
       # 16.x only, NOT renovate-annotated (as platform's minio.yaml): the flux
       # repo holds chart 17 back (console image), see
       # apps/minio/README.md there.
-      MINIO_VERSION: "16.0.10"
+      MINIO_VERSION: "16.0.10" # datasource=docker depName=ghcr.io/stuttgart-things/charts/minio/minio
       MINIO_INGRESS_ENABLED: "false"
       # Only for the two Certificates the base renders; the Gateway terminates
       # TLS with the wildcard, as for every other route here.
