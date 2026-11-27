@@ -30,6 +30,17 @@
     },
     {
       "customType": "regex",
+      "description": "workstation/tools.yaml: the jump host's CLI pins (`<tool>_version: <v> # datasource=<ds> depName=<dep>`, the sthings.container.tools convention of stuttgart-things/ansible). The cluster manager above only reads clusters/ and upper-case *_VERSION keys, so these sat unmanaged (#843 comparison). kubectl is tracked via kubernetes/kubernetes releases: kubernetes/kubectl only carries v0.x staging tags, so a v1.x pin there never moves.",
+      "managerFilePatterns": [
+        "/^workstation/.+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "\\s*(?<binName>[a-z0-9_]+)_version:\\s[\"']?(?<currentValue>v?\\d+\\.\\d+\\.\\d+)[\"']?\\s*#\\s*datasource=(?<datasource>[^\\s]+)\\s+depName=(?<depName>[^\\s]+)"
+      ],
+      "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
       "description": "Track both edge Flux repo pins without modifying generated YAML just to add annotations. ClusterApps lists url before tag; the generated OCIRepository lists ref.tag before url.",
       "managerFilePatterns": [
         "/^clusters/edge/(?:cluster-apps|apps)\\.yaml$/"
@@ -125,6 +136,16 @@
       ],
       "groupName": "homerun2-dev Flux sources",
       "groupSlug": "homerun2-dev-flux-sources"
+    },
+    {
+      "description": "homerun2: one PR per component, so its image and its -kustomize artifact move together instead of two PRs that change adjacent lines and conflict when merged one by one (same rule as stuttgart-things/stuttgart-things and stuttgart-things/flux#208; here #666/#667 and #669/#686 came apart). Edge keeps its own groups (the edge rules below come later and win); sthings-edge is frozen (#683).",
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "ghcr.io/stuttgart-things/homerun2-**"
+      ],
+      "groupName": "homerun2 {{{replace '-kustomize$' '' (replace '^ghcr\\.io/stuttgart-things/homerun2-' '' depName)}}}"
     },
     {
       "matchManagers": [
