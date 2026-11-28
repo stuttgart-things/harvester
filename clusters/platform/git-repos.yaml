@@ -45,5 +45,5 @@ metadata:
 spec:
   interval: 1m0s
   ref:
-    tag: v0.119.0 # datasource=github-tags depName=stuttgart-things/argocd
+    tag: v0.128.0 # datasource=github-tags depName=stuttgart-things/argocd
   url: https://github.com/stuttgart-things/argocd.git
