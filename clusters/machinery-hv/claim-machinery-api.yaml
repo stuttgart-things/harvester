@@ -1,7 +1,8 @@
 ---
 # claim-machinery-api on machinery-hv (harvester#676, #681): renders Crossplane
-# claims from ../../api-templates-profiles.yaml, as on LabUL machinery-labul and
-# LabDA machinery. claims.machinery-hv.sthings.lab, through the cluster Gateway.
+# claims from the harvester profile of claim-machinery-api (profiles/harvester.yaml,
+# moved there from ../../api-templates-profiles.yaml, claim-machinery-api#153), as
+# on LabUL machinery-labul and LabDA machinery. claims.machinery-hv.sthings.lab, through the cluster Gateway.
 #
 # The old instance on platform (clusters/platform/apps/claim-machinery-api.yaml,
 # v0.21.1, no auth) stays until Backstage and the other clients are switched
@@ -50,9 +51,12 @@ spec:
       # v0.30.0: the UI shows the login, owner choices and an order
       # confirmation. All 15 templates of the profile render with their
       # defaults on v0.30.0 (checked 2026-11-17, harvester#676).
-      CLAIM_MACHINERY_API_VERSION: v0.31.0 # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
+      # v0.33.0: profile template URLs pinned to kcl module tags
+      # (claim-machinery-api#153); no code change since v0.31.0.
+      CLAIM_MACHINERY_API_VERSION: v0.33.0 # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
       CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
-      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/api-templates-profiles.yaml"
+      # The profile at the image tag: renovate moves both in one PR (same dep).
+      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/claim-machinery-api/v0.33.0/profiles/harvester.yaml"
       FLUX_SOURCE_API_VERSION: v1
       GATEWAY_NAME: machinery-hv-sthings-gateway
       GATEWAY_NAMESPACE: default

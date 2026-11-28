@@ -21,7 +21,11 @@ spec:
     substitute:
       CLAIM_MACHINERY_API_VERSION: "v0.21.1" # datasource=docker depName=ghcr.io/stuttgart-things/claim-machinery-api
       CLAIM_MACHINERY_API_NAMESPACE: claim-machinery
-      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/harvester/refs/heads/main/api-templates-profiles.yaml"
+      # Pinned profile (claim-machinery-api#153) instead of harvester main; same
+      # 12 templates. The image stays v0.21.1 on purpose: this old instance is
+      # removed once its clients are switched to machinery-hv (#681). v0.21.1
+      # reads the profile `name:` field, so the v0.33.0 profile loads as is.
+      CLAIM_MACHINERY_PROFILE_PATH: "https://raw.githubusercontent.com/stuttgart-things/claim-machinery-api/v0.33.0/profiles/harvester.yaml"
       CLAIM_MACHINERY_ENABLE_HOMERUN: "false"
       FLUX_SOURCE_API_VERSION: v1
       GATEWAY_NAME: platform-sthings-gateway
