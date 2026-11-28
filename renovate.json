@@ -105,6 +105,19 @@
       "datasourceTemplate": "docker",
       "depNameTemplate": "ghcr.io/stuttgart-things/charts/minio/minio",
       "versioningTemplate": "semver"
+    },
+    {
+      "customType": "regex",
+      "description": "claim-machinery-api profile URLs in CLAIM_MACHINERY_PROFILE_PATH sit at a claim-machinery-api release tag (claim-machinery-api#153); same dep as CLAIM_MACHINERY_API_VERSION, so image and profile move in one PR.",
+      "matchStrings": [
+        "https://raw\\.githubusercontent\\.com/stuttgart-things/claim-machinery-api/(?<currentValue>v\\d+\\.\\d+\\.\\d+)/profiles/"
+      ],
+      "datasourceTemplate": "docker",
+      "depNameTemplate": "ghcr.io/stuttgart-things/claim-machinery-api",
+      "versioningTemplate": "semver",
+      "managerFilePatterns": [
+        "/^clusters/.+\\.ya?ml$/"
+      ]
     }
   ],
   "packageRules": [
